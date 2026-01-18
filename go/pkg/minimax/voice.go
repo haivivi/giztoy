@@ -25,7 +25,13 @@ func (s *VoiceService) List(ctx context.Context, voiceType VoiceType) (*VoiceLis
 		BaseResp *baseResp   `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "GET", "/v1/voice/list?voice_type="+string(voiceType), nil, &resp)
+	req := struct {
+		VoiceType VoiceType `json:"voice_type"`
+	}{
+		VoiceType: voiceType,
+	}
+
+	err := s.client.http.request(ctx, "POST", "/v1/voice/list", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +108,7 @@ func (s *VoiceService) Clone(ctx context.Context, req *VoiceCloneRequest) (*Voic
 		BaseResp  *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/voice/clone", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/voice_clone", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +139,7 @@ func (s *VoiceService) Design(ctx context.Context, req *VoiceDesignRequest) (*Vo
 		BaseResp  *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/voice/design", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/voice_design", req, &resp)
 	if err != nil {
 		return nil, err
 	}

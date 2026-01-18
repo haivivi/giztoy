@@ -36,7 +36,7 @@ type musicResponse struct {
 func (s *MusicService) Generate(ctx context.Context, req *MusicRequest) (*MusicResponse, error) {
 	var apiResp musicResponse
 
-	err := s.client.http.request(ctx, "POST", "/v1/music/generation", req, &apiResp)
+	err := s.client.http.request(ctx, "POST", "/v1/music_generation", req, &apiResp)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 // FileService provides file management operations.
@@ -44,24 +45,18 @@ func (s *FileService) Upload(ctx context.Context, file io.Reader, filename strin
 func (s *FileService) List(ctx context.Context, opts *FileListOptions) (*FileListResponse, error) {
 	path := "/v1/files"
 	if opts != nil {
-		query := ""
+		query := url.Values{}
 		if opts.Purpose != "" {
-			query += "purpose=" + string(opts.Purpose)
+			query.Set("purpose", string(opts.Purpose))
 		}
 		if opts.Limit > 0 {
-			if query != "" {
-				query += "&"
-			}
-			query += fmt.Sprintf("limit=%d", opts.Limit)
+			query.Set("limit", fmt.Sprintf("%d", opts.Limit))
 		}
 		if opts.After != "" {
-			if query != "" {
-				query += "&"
-			}
-			query += "after=" + opts.After
+			query.Set("after", opts.After)
 		}
-		if query != "" {
-			path += "?" + query
+		if len(query) > 0 {
+			path += "?" + query.Encode()
 		}
 	}
 
@@ -125,5 +120,5 @@ func (s *FileService) Download(ctx context.Context, fileID string) (io.ReadClose
 
 // Delete deletes a file.
 func (s *FileService) Delete(ctx context.Context, fileID string) error {
-	return s.client.http.request(ctx, "DELETE", "/v1/files/"+fileID, nil, nil)
+	return s.client.http.request(ctx, "POST", "/v1/files/"+fileID+"/delete", nil, nil)
 }

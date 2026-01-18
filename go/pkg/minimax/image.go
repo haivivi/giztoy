@@ -32,7 +32,7 @@ func (s *ImageService) Generate(ctx context.Context, req *ImageGenerateRequest) 
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/image/generation", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/image_generation", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (s *ImageService) GenerateWithReference(ctx context.Context, req *ImageRefe
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/image/generation", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/image_generation", req, &resp)
 	if err != nil {
 		return nil, err
 	}

@@ -11,21 +11,24 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // httpClient handles HTTP communication with the MiniMax API.
 type httpClient struct {
-	client  *http.Client
-	baseURL string
-	apiKey  string
+	client     *http.Client
+	baseURL    string
+	apiKey     string
+	maxRetries int
 }
 
 // newHTTPClient creates a new HTTP client.
 func newHTTPClient(cfg *clientConfig) *httpClient {
 	return &httpClient{
-		client:  cfg.httpClient,
-		baseURL: cfg.baseURL,
-		apiKey:  cfg.apiKey,
+		client:     cfg.httpClient,
+		baseURL:    cfg.baseURL,
+		apiKey:     cfg.apiKey,
+		maxRetries: cfg.maxRetries,
 	}
 }
 
@@ -40,17 +43,57 @@ type baseResp struct {
 	StatusMsg  string `json:"status_msg"`
 }
 
-// request makes an HTTP request to the API.
+// request makes an HTTP request to the API with retry support.
 func (h *httpClient) request(ctx context.Context, method, path string, body any, result any) error {
-	url := h.baseURL + path
-
-	var bodyReader io.Reader
+	var bodyData []byte
 	if body != nil {
-		data, err := json.Marshal(body)
+		var err error
+		bodyData, err = json.Marshal(body)
 		if err != nil {
 			return fmt.Errorf("marshal request body: %w", err)
 		}
-		bodyReader = bytes.NewReader(data)
+	}
+
+	var lastErr error
+	for attempt := 0; attempt <= h.maxRetries; attempt++ {
+		if attempt > 0 {
+			// Exponential backoff: 1s, 2s, 4s, ...
+			backoff := time.Duration(1<<uint(attempt-1)) * time.Second
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(backoff):
+			}
+		}
+
+		err := h.doRequest(ctx, method, path, bodyData, result)
+		if err == nil {
+			return nil
+		}
+
+		lastErr = err
+
+		// Check if error is retryable
+		if apiErr, ok := AsError(err); ok {
+			if !apiErr.Retryable() {
+				return err
+			}
+		} else {
+			// Non-API errors (network errors) are retryable
+			continue
+		}
+	}
+
+	return lastErr
+}
+
+// doRequest performs a single HTTP request.
+func (h *httpClient) doRequest(ctx context.Context, method, path string, bodyData []byte, result any) error {
+	url := h.baseURL + path
+
+	var bodyReader io.Reader
+	if bodyData != nil {
+		bodyReader = bytes.NewReader(bodyData)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
@@ -59,7 +102,7 @@ func (h *httpClient) request(ctx context.Context, method, path string, body any,
 	}
 
 	h.setHeaders(req)
-	if body != nil {
+	if bodyData != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
@@ -173,14 +216,7 @@ func (h *httpClient) handleResponse(resp *http.Response, result any) error {
 		return h.parseError(body, resp.StatusCode)
 	}
 
-	// Parse response
-	if result != nil {
-		if err := json.Unmarshal(body, result); err != nil {
-			return fmt.Errorf("unmarshal response: %w", err)
-		}
-	}
-
-	// Check API-level error in base_resp
+	// First check for API-level error in base_resp
 	var apiResp apiResponse
 	if err := json.Unmarshal(body, &apiResp); err == nil {
 		if apiResp.BaseResp != nil && apiResp.BaseResp.StatusCode != 0 {
@@ -189,6 +225,13 @@ func (h *httpClient) handleResponse(resp *http.Response, result any) error {
 				StatusMsg:  apiResp.BaseResp.StatusMsg,
 				HTTPStatus: resp.StatusCode,
 			}
+		}
+	}
+
+	// Parse response into result if provided
+	if result != nil {
+		if err := json.Unmarshal(body, result); err != nil {
+			return fmt.Errorf("unmarshal response: %w", err)
 		}
 	}
 

@@ -39,6 +39,18 @@ func (t *Task[T]) Wait(ctx context.Context) (*T, error) {
 
 // WaitWithInterval waits for the task to complete with a custom polling interval.
 func (t *Task[T]) WaitWithInterval(ctx context.Context, interval time.Duration) (*T, error) {
+	// Query immediately before first ticker interval
+	result, status, err := t.query(ctx)
+	if err != nil {
+		return nil, err
+	}
+	switch status {
+	case TaskStatusSuccess:
+		return result, nil
+	case TaskStatusFailed:
+		return nil, fmt.Errorf("task %s failed with status %s", t.ID, status)
+	}
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -56,7 +68,7 @@ func (t *Task[T]) WaitWithInterval(ctx context.Context, interval time.Duration) 
 			case TaskStatusSuccess:
 				return result, nil
 			case TaskStatusFailed:
-				return nil, fmt.Errorf("task failed: %s", t.ID)
+				return nil, fmt.Errorf("task %s failed with status %s", t.ID, status)
 			case TaskStatusPending, TaskStatusProcessing:
 				// Continue waiting
 			default:
@@ -93,13 +105,7 @@ func (t *Task[T]) queryVideoTask(ctx context.Context) (*T, TaskStatus, error) {
 		BaseResp *baseResp  `json:"base_resp,omitempty"`
 	}
 
-	req := struct {
-		TaskID string `json:"task_id"`
-	}{
-		TaskID: t.ID,
-	}
-
-	err := t.client.http.request(ctx, "POST", "/v1/video/generation/query", req, &resp)
+	err := t.client.http.request(ctx, "GET", "/v1/video_generation/"+t.ID, nil, &resp)
 	if err != nil {
 		return nil, "", err
 	}
@@ -125,13 +131,7 @@ func (t *Task[T]) querySpeechAsyncTask(ctx context.Context) (*T, TaskStatus, err
 		BaseResp  *baseResp  `json:"base_resp,omitempty"`
 	}
 
-	req := struct {
-		TaskID string `json:"task_id"`
-	}{
-		TaskID: t.ID,
-	}
-
-	err := t.client.http.request(ctx, "POST", "/v1/t2a_async/query", req, &resp)
+	err := t.client.http.request(ctx, "GET", "/v1/t2a_async/"+t.ID, nil, &resp)
 	if err != nil {
 		return nil, "", err
 	}

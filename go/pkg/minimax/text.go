@@ -19,7 +19,7 @@ func newTextService(client *Client) *TextService {
 // CreateChatCompletion creates a chat completion.
 func (s *TextService) CreateChatCompletion(ctx context.Context, req *ChatCompletionRequest) (*ChatCompletionResponse, error) {
 	var resp ChatCompletionResponse
-	err := s.client.http.request(ctx, "POST", "/v1/text/chatcompletion_v2", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/chat/completions", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,9 @@ func (s *TextService) CreateChatCompletion(ctx context.Context, req *ChatComplet
 //	    if err != nil {
 //	        return err
 //	    }
-//	    fmt.Print(chunk.Choices[0].Delta.Content)
+//	    if len(chunk.Choices) > 0 {
+//	        fmt.Print(chunk.Choices[0].Delta.Content)
+//	    }
 //	}
 func (s *TextService) CreateChatCompletionStream(ctx context.Context, req *ChatCompletionRequest) iter.Seq2[*ChatCompletionChunk, error] {
 	return func(yield func(*ChatCompletionChunk, error) bool) {
@@ -50,7 +52,7 @@ func (s *TextService) CreateChatCompletionStream(ctx context.Context, req *ChatC
 			Stream:                true,
 		}
 
-		resp, err := s.client.http.requestStream(ctx, "POST", "/v1/text/chatcompletion_v2", streamReq)
+		resp, err := s.client.http.requestStream(ctx, "POST", "/v1/chat/completions", streamReq)
 		if err != nil {
 			yield(nil, err)
 			return

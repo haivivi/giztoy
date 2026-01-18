@@ -1,25 +1,25 @@
 // Package minimax provides a Go client for the MiniMax API.
 //
-// This package implements the interfaces defined in minimax_interface package,
-// providing actual HTTP communication with MiniMax API endpoints.
+// This package provides HTTP communication with MiniMax API endpoints
+// for text generation, speech synthesis, video generation, and more.
 //
 // # Basic Usage
 //
 //	client := minimax.NewClient("your-api-key")
 //
 //	// Text generation
-//	resp, err := client.Text.CreateChatCompletion(ctx, &minimax_interface.ChatCompletionRequest{
-//	    Model: "abab6.5s-chat",
-//	    Messages: []minimax_interface.Message{
+//	resp, err := client.Text.CreateChatCompletion(ctx, &minimax.ChatCompletionRequest{
+//	    Model: "MiniMax-M2.1",
+//	    Messages: []minimax.Message{
 //	        {Role: "user", Content: "Hello!"},
 //	    },
 //	})
 //
 //	// Speech synthesis
-//	resp, err := client.Speech.Synthesize(ctx, &minimax_interface.SpeechRequest{
-//	    Model: "speech-01-turbo",
+//	resp, err := client.Speech.Synthesize(ctx, &minimax.SpeechRequest{
+//	    Model: "speech-2.6-hd",
 //	    Text:  "Hello, world!",
-//	    VoiceSetting: &minimax_interface.VoiceSetting{
+//	    VoiceSetting: &minimax.VoiceSetting{
 //	        VoiceID: "male-qn-qingse",
 //	    },
 //	})
@@ -32,7 +32,9 @@
 //	    if err != nil {
 //	        return err
 //	    }
-//	    fmt.Print(chunk.Delta.Content)
+//	    if len(chunk.Choices) > 0 {
+//	        fmt.Print(chunk.Choices[0].Delta.Content)
+//	    }
 //	}
 //
 // # Async Tasks
@@ -54,7 +56,7 @@
 //
 //	resp, err := client.Text.CreateChatCompletion(ctx, req)
 //	if err != nil {
-//	    if e, ok := minimax_interface.AsError(err); ok {
+//	    if e, ok := minimax.AsError(err); ok {
 //	        if e.IsRateLimit() {
 //	            // Handle rate limiting
 //	        }

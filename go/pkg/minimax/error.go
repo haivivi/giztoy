@@ -5,6 +5,16 @@ import (
 	"fmt"
 )
 
+// API error status codes.
+const (
+	StatusCodeInvalidAPIKey    = 1001
+	StatusCodeRateLimit        = 1002
+	StatusCodeInsufficientQuota = 1003
+	StatusCodeInvalidRequestMin = 2000
+	StatusCodeInvalidRequestMax = 2999
+	StatusCodeServerErrorMin   = 5000
+)
+
 // Error represents a MiniMax API error.
 type Error struct {
 	// StatusCode is the API error code.
@@ -27,27 +37,27 @@ func (e *Error) Error() string {
 
 // IsRateLimit returns true if this is a rate limit error.
 func (e *Error) IsRateLimit() bool {
-	return e.StatusCode == 1002 || e.HTTPStatus == 429
+	return e.StatusCode == StatusCodeRateLimit || e.HTTPStatus == 429
 }
 
 // IsInvalidAPIKey returns true if this is an invalid API key error.
 func (e *Error) IsInvalidAPIKey() bool {
-	return e.StatusCode == 1001 || e.HTTPStatus == 401
+	return e.StatusCode == StatusCodeInvalidAPIKey || e.HTTPStatus == 401
 }
 
 // IsInsufficientQuota returns true if this is an insufficient quota error.
 func (e *Error) IsInsufficientQuota() bool {
-	return e.StatusCode == 1003
+	return e.StatusCode == StatusCodeInsufficientQuota
 }
 
 // IsInvalidRequest returns true if this is an invalid request error.
 func (e *Error) IsInvalidRequest() bool {
-	return e.StatusCode >= 2000 && e.StatusCode < 3000
+	return e.StatusCode >= StatusCodeInvalidRequestMin && e.StatusCode <= StatusCodeInvalidRequestMax
 }
 
 // IsServerError returns true if this is a server-side error.
 func (e *Error) IsServerError() bool {
-	return e.StatusCode >= 5000 || e.HTTPStatus >= 500
+	return e.StatusCode >= StatusCodeServerErrorMin || e.HTTPStatus >= 500
 }
 
 // Retryable returns true if the request can be retried.

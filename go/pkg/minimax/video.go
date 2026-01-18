@@ -34,7 +34,7 @@ func (s *VideoService) CreateTextToVideo(ctx context.Context, req *TextToVideoRe
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/video/generation", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/video_generation", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (s *VideoService) CreateImageToVideo(ctx context.Context, req *ImageToVideo
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/video/generation", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/video_generation", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (s *VideoService) CreateFrameToVideo(ctx context.Context, req *FrameToVideo
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/video/generation", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/video_generation", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (s *VideoService) CreateSubjectRefVideo(ctx context.Context, req *SubjectRe
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/video/generation", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/video_generation", req, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +119,7 @@ func (s *VideoService) CreateAgentTask(ctx context.Context, req *VideoAgentReque
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/video/agent/generation", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/video_agent", req, &resp)
 	if err != nil {
 		return nil, err
 	}
