@@ -123,6 +123,7 @@ func (s *SpeechService) SynthesizeStream(ctx context.Context, req *SpeechRequest
 			chunk := &SpeechChunk{
 				Status:    streamResp.Data.Status,
 				ExtraInfo: streamResp.ExtraInfo,
+				Subtitle:  streamResp.Subtitle,
 				TraceID:   streamResp.TraceID,
 			}
 
@@ -145,10 +146,11 @@ func (s *SpeechService) SynthesizeStream(ctx context.Context, req *SpeechRequest
 
 // speechStreamResponse is the streaming response for speech synthesis.
 type speechStreamResponse struct {
-	Data      speechData `json:"data"`
-	ExtraInfo *AudioInfo `json:"extra_info,omitempty"`
-	TraceID   string     `json:"trace_id,omitempty"`
-	BaseResp  *baseResp  `json:"base_resp,omitempty"`
+	Data      speechData       `json:"data"`
+	ExtraInfo *AudioInfo       `json:"extra_info,omitempty"`
+	Subtitle  *SubtitleSegment `json:"subtitle,omitempty"`
+	TraceID   string           `json:"trace_id,omitempty"`
+	BaseResp  *baseResp        `json:"base_resp,omitempty"`
 }
 
 // CreateAsyncTask creates an async speech synthesis task.
