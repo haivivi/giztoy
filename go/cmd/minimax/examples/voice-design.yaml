@@ -1,0 +1,7 @@
+# Example: Voice design request
+# Usage: minimax -c myctx voice design -f voice-design.yaml
+
+prompt: A warm, friendly female voice with a slight accent, suitable for audiobooks
+preview_text: Hello, this is a preview of the designed voice. It sounds warm and friendly.
+voice_id: my-designed-voice
+model: speech-2.6-hd

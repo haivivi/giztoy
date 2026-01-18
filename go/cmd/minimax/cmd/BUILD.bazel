@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cmd",
+    srcs = [
+        "config.go",
+        "file.go",
+        "image.go",
+        "interactive.go",
+        "music.go",
+        "root.go",
+        "speech.go",
+        "text.go",
+        "util.go",
+        "video.go",
+        "voice.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/cmd/minimax/cmd",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/cli",
+        "//go/pkg/minimax_interface",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)
