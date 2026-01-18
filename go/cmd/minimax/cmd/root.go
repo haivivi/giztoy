@@ -12,7 +12,7 @@ import (
 const appName = "minimax"
 
 var (
-	// 全局 flags
+	// Global flags
 	cfgFile     string
 	contextName string
 	outputFile  string
@@ -20,7 +20,7 @@ var (
 	outputJSON  bool
 	verbose     bool
 
-	// 全局配置
+	// Global configuration
 	globalConfig *cli.Config
 )
 
