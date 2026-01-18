@@ -22,6 +22,20 @@ giztoy/
 │       └── ci.yaml           # GitHub Actions CI
 ├── README.md
 │
+├── docs/                     # 项目文档
+│   ├── doubaospeech/         # 豆包语音 API 文档
+│   │   ├── README.md
+│   │   ├── api.md
+│   │   ├── request.md
+│   │   ├── response.md
+│   │   └── examples.md
+│   └── minimax/              # MiniMax API 文档
+│       ├── README.md
+│       ├── api.md
+│       ├── request.md
+│       ├── response.md
+│       └── examples.md
+│
 ├── go/                       # Go 代码根目录
 │   ├── BUILD.bazel
 │   ├── go.mod                # Go 模块定义
