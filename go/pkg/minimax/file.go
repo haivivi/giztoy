@@ -111,7 +111,7 @@ func (s *FileService) Download(ctx context.Context, fileID string) (io.ReadClose
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
+		defer resp.Body.Close()
 		return nil, s.client.http.handleErrorResponse(resp)
 	}
 

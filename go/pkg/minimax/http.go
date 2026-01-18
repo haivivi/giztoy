@@ -153,36 +153,50 @@ func (h *httpClient) requestStream(ctx context.Context, method, path string, bod
 	return resp, nil
 }
 
-// uploadFile uploads a file using multipart form data.
+// uploadFile uploads a file using multipart form data with streaming.
+// This avoids loading the entire file into memory.
 func (h *httpClient) uploadFile(ctx context.Context, path string, file io.Reader, filename string, fields map[string]string, result any) error {
 	url := h.baseURL + path
 
-	// Create multipart form
-	var buf bytes.Buffer
-	writer := multipart.NewWriter(&buf)
+	// Use io.Pipe for streaming upload to avoid loading entire file into memory
+	pr, pw := io.Pipe()
+	writer := multipart.NewWriter(pw)
 
-	// Add file field
-	part, err := writer.CreateFormFile("file", filename)
-	if err != nil {
-		return fmt.Errorf("create form file: %w", err)
-	}
-	if _, err := io.Copy(part, file); err != nil {
-		return fmt.Errorf("copy file: %w", err)
-	}
+	// Write multipart data in a goroutine
+	errCh := make(chan error, 1)
+	go func() {
+		defer pw.Close()
 
-	// Add other fields
-	for key, value := range fields {
-		if err := writer.WriteField(key, value); err != nil {
-			return fmt.Errorf("write field %s: %w", key, err)
+		// Add file field
+		part, err := writer.CreateFormFile("file", filename)
+		if err != nil {
+			errCh <- fmt.Errorf("create form file: %w", err)
+			return
 		}
-	}
+		if _, err := io.Copy(part, file); err != nil {
+			errCh <- fmt.Errorf("copy file: %w", err)
+			return
+		}
 
-	if err := writer.Close(); err != nil {
-		return fmt.Errorf("close writer: %w", err)
-	}
+		// Add other fields
+		for key, value := range fields {
+			if err := writer.WriteField(key, value); err != nil {
+				errCh <- fmt.Errorf("write field %s: %w", key, err)
+				return
+			}
+		}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &buf)
+		if err := writer.Close(); err != nil {
+			errCh <- fmt.Errorf("close writer: %w", err)
+			return
+		}
+
+		errCh <- nil
+	}()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, pr)
 	if err != nil {
+		pr.Close()
 		return fmt.Errorf("create request: %w", err)
 	}
 
@@ -194,6 +208,11 @@ func (h *httpClient) uploadFile(ctx context.Context, path string, file io.Reader
 		return fmt.Errorf("do request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Check for errors from the goroutine
+	if writeErr := <-errCh; writeErr != nil {
+		return writeErr
+	}
 
 	return h.handleResponse(resp, result)
 }
