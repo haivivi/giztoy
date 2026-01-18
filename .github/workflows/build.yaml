@@ -1,0 +1,61 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+  push:
+    branches:
+      - main
+      - master
+
+# Cancel in-progress runs for the same PR/branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.14.0
+        with:
+          # Avoid downloading Bazel every time
+          bazelisk-cache: true
+          # Store build cache per workflow
+          disk-cache: ${{ github.workflow }}
+          # Share repository cache between workflows
+          repository-cache: true
+          # Cache external repositories
+          external-cache: |
+            name: external
+            manifest:
+              crates: rust/Cargo.Bazel.lock
+              go: go/go.sum
+              npm: package-lock.json
+
+      - name: Build all targets
+        run: bazel build //...
+
+      - name: Test all targets
+        run: bazel test //...
+
+      - name: Show build info
+        if: always()
+        run: |
+          echo "=== Bazel Version ==="
+          bazel version
+          echo ""
+          echo "=== Build Configuration ==="
+          bazel info
