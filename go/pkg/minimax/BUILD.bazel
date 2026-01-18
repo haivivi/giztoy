@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "minimax",
+    srcs = [
+        "client.go",
+        "doc.go",
+        "error.go",
+        "file.go",
+        "http.go",
+        "image.go",
+        "music.go",
+        "speech.go",
+        "task.go",
+        "text.go",
+        "types.go",
+        "video.go",
+        "voice.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/minimax",
+    visibility = ["//visibility:public"],
+)
