@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "doubao_speech_interface",
+    srcs = [
+        "asr.go",
+        "client.go",
+        "console.go",
+        "doc.go",
+        "error.go",
+        "media.go",
+        "meeting.go",
+        "models.go",
+        "podcast.go",
+        "protocol.go",
+        "realtime.go",
+        "task.go",
+        "translation.go",
+        "tts.go",
+        "voice_clone.go",
+    ],
+    importpath = "giztoy/go/pkg/doubao_speech_interface",
+    visibility = ["//visibility:public"],
+)

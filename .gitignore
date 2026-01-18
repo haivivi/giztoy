@@ -40,6 +40,7 @@ zig/zig-out/
 /dist/
 /out/
 /build/
+/tmp/
 
 # Logs
 *.log
