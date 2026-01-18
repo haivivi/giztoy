@@ -40,8 +40,14 @@ Examples:
 			return err
 		}
 
-		purpose, _ := cmd.Flags().GetString("purpose")
-		limit, _ := cmd.Flags().GetInt("limit")
+		purpose, err := cmd.Flags().GetString("purpose")
+		if err != nil {
+			return fmt.Errorf("failed to read 'purpose' flag: %w", err)
+		}
+		limit, err := cmd.Flags().GetInt("limit")
+		if err != nil {
+			return fmt.Errorf("failed to read 'limit' flag: %w", err)
+		}
 
 		printVerbose("Using context: %s", ctx.Name)
 		if purpose != "" {
@@ -80,7 +86,10 @@ Examples:
 			return err
 		}
 
-		purpose, _ := cmd.Flags().GetString("purpose")
+		purpose, err := cmd.Flags().GetString("purpose")
+		if err != nil {
+			return fmt.Errorf("failed to read 'purpose' flag: %w", err)
+		}
 		if purpose == "" {
 			return fmt.Errorf("--purpose is required")
 		}
@@ -212,12 +221,18 @@ Examples:
 			return err
 		}
 
-		purpose, _ := cmd.Flags().GetString("purpose")
+		purpose, err := cmd.Flags().GetString("purpose")
+		if err != nil {
+			return fmt.Errorf("failed to read 'purpose' flag: %w", err)
+		}
 		if purpose == "" {
 			return fmt.Errorf("--purpose is required")
 		}
 
-		ext, _ := cmd.Flags().GetString("ext")
+		ext, err := cmd.Flags().GetString("ext")
+		if err != nil {
+			return fmt.Errorf("failed to read 'ext' flag: %w", err)
+		}
 
 		// Find files
 		var files []string

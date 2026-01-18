@@ -36,7 +36,10 @@ Examples:
 			return err
 		}
 
-		voiceType, _ := cmd.Flags().GetString("type")
+		voiceType, err := cmd.Flags().GetString("type")
+		if err != nil {
+			return fmt.Errorf("failed to read 'type' flag: %w", err)
+		}
 		if voiceType == "" {
 			voiceType = string(mm.VoiceTypeAll)
 		}

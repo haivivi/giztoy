@@ -33,16 +33,34 @@ Example:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		apiKey, _ := cmd.Flags().GetString("api-key")
+		apiKey, err := cmd.Flags().GetString("api-key")
+		if err != nil {
+			return fmt.Errorf("failed to read 'api-key' flag: %w", err)
+		}
 		if apiKey == "" {
 			return fmt.Errorf("--api-key is required")
 		}
 
-		baseURL, _ := cmd.Flags().GetString("base-url")
-		timeout, _ := cmd.Flags().GetInt("timeout")
-		maxRetries, _ := cmd.Flags().GetInt("max-retries")
-		defaultModel, _ := cmd.Flags().GetString("default-model")
-		defaultVoice, _ := cmd.Flags().GetString("default-voice")
+		baseURL, err := cmd.Flags().GetString("base-url")
+		if err != nil {
+			return fmt.Errorf("failed to read 'base-url' flag: %w", err)
+		}
+		timeout, err := cmd.Flags().GetInt("timeout")
+		if err != nil {
+			return fmt.Errorf("failed to read 'timeout' flag: %w", err)
+		}
+		maxRetries, err := cmd.Flags().GetInt("max-retries")
+		if err != nil {
+			return fmt.Errorf("failed to read 'max-retries' flag: %w", err)
+		}
+		defaultModel, err := cmd.Flags().GetString("default-model")
+		if err != nil {
+			return fmt.Errorf("failed to read 'default-model' flag: %w", err)
+		}
+		defaultVoice, err := cmd.Flags().GetString("default-voice")
+		if err != nil {
+			return fmt.Errorf("failed to read 'default-voice' flag: %w", err)
+		}
 
 		ctx := &cli.Context{
 			APIKey:     apiKey,
