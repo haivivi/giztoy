@@ -1,0 +1,14 @@
+load("@gazelle//:def.bzl", "gazelle")
+
+# gazelle:prefix github.com/haivivi/giztoy
+gazelle(name = "gazelle")
+
+gazelle(
+    name = "gazelle-update-repos",
+    args = [
+        "-from_file=go/go.mod",
+        "-to_macro=deps.bzl%go_dependencies",
+        "-prune",
+    ],
+    command = "update-repos",
+)

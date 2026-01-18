@@ -1,0 +1,11 @@
+# Build options
+build --enable_bzlmod
+
+# Test options
+test --test_output=errors
+
+# Cache
+build --disk_cache=~/.cache/bazel
+
+# Platform
+build --incompatible_enable_cc_toolchain_resolution
