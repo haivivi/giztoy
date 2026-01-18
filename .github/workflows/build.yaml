@@ -49,7 +49,9 @@ jobs:
         run: bazel build //...
 
       - name: Test all targets
-        run: bazel test //...
+        run: |
+          # Exit code 4 means "no test targets found", which is OK
+          bazel test //... || [ $? -eq 4 ]
 
       - name: Show build info
         if: always()
