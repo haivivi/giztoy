@@ -42,13 +42,6 @@ const (
 	// Compression Types
 	compressionNone compressionType = 0b0000
 	compressionGzip compressionType = 0b0001
-
-	// Protocol Event Types
-	eventSessionStart        int32 = 1
-	eventSessionFinish       int32 = 2
-	eventConnectionStarted   int32 = 50
-	eventConnectionFailed    int32 = 51
-	eventConnectionFinished  int32 = 52
 )
 
 // ================== 协议结构 ==================
@@ -130,10 +123,7 @@ func (p *binaryProtocol) marshal(msg *message) ([]byte, error) {
 		}
 
 		// Session ID (for non-connection events)
-		if msg.event != eventSessionStart && msg.event != eventSessionFinish &&
-			msg.event != eventConnectionStarted &&
-			msg.event != eventConnectionFailed &&
-			msg.event != eventConnectionFinished {
+		if msg.event != 1 && msg.event != 2 && msg.event != 50 && msg.event != 51 && msg.event != 52 {
 			if err := binary.Write(buf, binary.BigEndian, uint32(len(msg.sessionID))); err != nil {
 				return nil, fmt.Errorf("write session id length: %w", err)
 			}
@@ -201,10 +191,7 @@ func (p *binaryProtocol) unmarshal(data []byte) (*message, error) {
 		}
 
 		// Read session ID (for non-connection events)
-		if msg.event != eventSessionStart && msg.event != eventSessionFinish &&
-			msg.event != eventConnectionStarted &&
-			msg.event != eventConnectionFailed &&
-			msg.event != eventConnectionFinished {
+		if msg.event != 1 && msg.event != 2 && msg.event != 50 && msg.event != 51 && msg.event != 52 {
 			var sessionIDLen uint32
 			if err := binary.Read(buf, binary.BigEndian, &sessionIDLen); err != nil {
 				return nil, fmt.Errorf("read session id length: %w", err)
@@ -219,9 +206,7 @@ func (p *binaryProtocol) unmarshal(data []byte) (*message, error) {
 		}
 
 		// Read connect ID for connection events
-		if msg.event == eventConnectionStarted ||
-			msg.event == eventConnectionFailed ||
-			msg.event == eventConnectionFinished {
+		if msg.event == 50 || msg.event == 51 || msg.event == 52 {
 			var connectIDLen uint32
 			if err := binary.Read(buf, binary.BigEndian, &connectIDLen); err != nil {
 				return nil, fmt.Errorf("read connect id length: %w", err)

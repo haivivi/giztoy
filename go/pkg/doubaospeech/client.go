@@ -2,7 +2,6 @@ package doubaospeech
 
 import (
 	"net/http"
-	"net/url"
 	"time"
 
 	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
@@ -170,13 +169,12 @@ func (c *Client) setAuthHeaders(req *http.Request) {
 
 // getWSAuthParams 获取 WebSocket 认证参数
 func (c *Client) getWSAuthParams() string {
-	params := url.Values{}
-	params.Set("appid", c.config.appID)
+	params := "appid=" + c.config.appID
 	if c.config.accessToken != "" {
-		params.Set("token", c.config.accessToken)
+		params += "&token=" + c.config.accessToken
 	}
 	if c.config.cluster != "" {
-		params.Set("cluster", c.config.cluster)
+		params += "&cluster=" + c.config.cluster
 	}
-	return params.Encode()
+	return params
 }
