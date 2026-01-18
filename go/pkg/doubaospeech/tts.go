@@ -27,60 +27,24 @@ func newTTSService(c *Client) iface.TTSService {
 	return &ttsService{client: c}
 }
 
+// ttsAPIResponse TTS API 响应结构
+type ttsAPIResponse struct {
+	ReqID    string `json:"reqid"`
+	Code     int    `json:"code"`
+	Message  string `json:"message"`
+	Data     string `json:"data"`
+	Addition struct {
+		Duration string `json:"duration"`
+	} `json:"addition"`
+}
+
 // Synthesize 同步语音合成
 func (s *ttsService) Synthesize(ctx context.Context, req *iface.TTSRequest) (*iface.TTSResponse, error) {
 	ttsReq := s.buildRequest(req)
 
-	var respBody []byte
-	var logID string
-
-	// 构建请求
-	jsonBytes, err := json.Marshal(ttsReq)
-	if err != nil {
-		return nil, wrapError(err, "marshal request")
-	}
-
-	url := s.client.config.baseURL + "/api/v1/tts"
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(jsonBytes))
-	if err != nil {
-		return nil, wrapError(err, "create request")
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	s.client.setAuthHeaders(httpReq)
-
-	resp, err := s.client.config.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, wrapError(err, "send request")
-	}
-	defer resp.Body.Close()
-
-	respBody, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, wrapError(err, "read response")
-	}
-
-	logID = resp.Header.Get("X-Tt-Logid")
-
-	if resp.StatusCode != http.StatusOK {
-		if apiErr := parseAPIError(resp.StatusCode, respBody, logID); apiErr != nil {
-			return nil, apiErr
-		}
-	}
-
-	// 解析响应
-	var apiResp struct {
-		ReqID    string `json:"reqid"`
-		Code     int    `json:"code"`
-		Message  string `json:"message"`
-		Data     string `json:"data"`
-		Addition struct {
-			Duration string `json:"duration"`
-		} `json:"addition"`
-	}
-
-	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return nil, wrapError(err, "unmarshal response")
+	var apiResp ttsAPIResponse
+	if err := s.client.doJSONRequest(ctx, http.MethodPost, "/api/v1/tts", ttsReq, &apiResp); err != nil {
+		return nil, err
 	}
 
 	if apiResp.Code != CodeSuccess {
@@ -88,7 +52,6 @@ func (s *ttsService) Synthesize(ctx context.Context, req *iface.TTSRequest) (*if
 			Code:    apiResp.Code,
 			Message: apiResp.Message,
 			ReqID:   apiResp.ReqID,
-			LogID:   logID,
 		}
 	}
 
@@ -189,7 +152,12 @@ func (s *ttsService) SynthesizeStream(ctx context.Context, req *iface.TTSRequest
 
 			var audioData []byte
 			if chunk.Data != "" {
-				audioData, _ = base64.StdEncoding.DecodeString(chunk.Data)
+				var err error
+				audioData, err = base64.StdEncoding.DecodeString(chunk.Data)
+				if err != nil {
+					yield(nil, wrapError(err, "decode audio data"))
+					return
+				}
 			}
 
 			duration := 0

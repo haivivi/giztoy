@@ -2,6 +2,7 @@ package doubaospeech
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"iter"
 	"sync"
@@ -375,8 +376,10 @@ func (s *realtimeSession) parseJSONEvent(data []byte) *iface.RealtimeEvent {
 		event.Type = iface.EventAudioReceived
 		// Audio is base64 encoded
 		if jsonMsg.Data.Audio != "" {
-			// Decode would be needed here
-			event.Audio = []byte(jsonMsg.Data.Audio)
+			audioData, err := base64.StdEncoding.DecodeString(jsonMsg.Data.Audio)
+			if err == nil {
+				event.Audio = audioData
+			}
 		}
 	case "status":
 		// Map status to event type
