@@ -68,9 +68,14 @@
 //
 //	client := minimax.NewClient("api-key",
 //	    minimax.WithBaseURL("https://api.minimax.chat"),
-//	    minimax.WithTimeout(30*time.Second),
 //	    minimax.WithRetry(3),
 //	)
+//
+// Request timeouts should be controlled via context.Context:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+//	defer cancel()
+//	result, err := client.Text.CreateChatCompletion(ctx, req)
 //
 // For more information, see: https://platform.minimaxi.com/docs
 package minimax

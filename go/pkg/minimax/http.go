@@ -205,6 +205,8 @@ func (h *httpClient) uploadFile(ctx context.Context, path string, file io.Reader
 
 	resp, err := h.client.Do(req)
 	if err != nil {
+		// Close the pipe reader to unblock the writer goroutine
+		pr.CloseWithError(err)
 		return fmt.Errorf("do request: %w", err)
 	}
 	defer resp.Body.Close()

@@ -2,15 +2,11 @@ package minimax
 
 import (
 	"net/http"
-	"time"
 )
 
 const (
 	// DefaultBaseURL is the default MiniMax API base URL.
 	DefaultBaseURL = "https://api.minimax.chat"
-
-	// DefaultTimeout is the default request timeout.
-	DefaultTimeout = 30 * time.Second
 
 	// DefaultMaxRetries is the default maximum number of retries.
 	DefaultMaxRetries = 3
@@ -48,7 +44,6 @@ type clientConfig struct {
 	apiKey     string
 	baseURL    string
 	httpClient *http.Client
-	timeout    time.Duration
 	maxRetries int
 }
 
@@ -63,16 +58,16 @@ func WithBaseURL(url string) Option {
 }
 
 // WithHTTPClient sets a custom HTTP client.
+// Use this to configure timeouts, transport settings, or other HTTP options.
+//
+// Example:
+//
+//	client := minimax.NewClient(apiKey, minimax.WithHTTPClient(&http.Client{
+//	    Timeout: 60 * time.Second,
+//	}))
 func WithHTTPClient(client *http.Client) Option {
 	return func(c *clientConfig) {
 		c.httpClient = client
-	}
-}
-
-// WithTimeout sets the request timeout.
-func WithTimeout(timeout time.Duration) Option {
-	return func(c *clientConfig) {
-		c.timeout = timeout
 	}
 }
 
@@ -86,16 +81,26 @@ func WithRetry(maxRetries int) Option {
 // NewClient creates a new MiniMax API client.
 //
 // The apiKey is required and can be obtained from the MiniMax platform.
+// Request timeouts should be controlled via context.Context.
+//
+// NewClient panics if apiKey is empty.
 //
 // Example:
 //
 //	client := minimax.NewClient("your-api-key")
-//	client := minimax.NewClient("your-api-key", minimax.WithTimeout(60*time.Second))
+//
+//	// With timeout per request:
+//	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+//	defer cancel()
+//	result, err := client.Text.CreateChatCompletion(ctx, req)
 func NewClient(apiKey string, opts ...Option) *Client {
+	if apiKey == "" {
+		panic("minimax: apiKey must be non-empty")
+	}
+
 	cfg := &clientConfig{
 		apiKey:     apiKey,
 		baseURL:    DefaultBaseURL,
-		timeout:    DefaultTimeout,
 		maxRetries: DefaultMaxRetries,
 	}
 
@@ -104,9 +109,7 @@ func NewClient(apiKey string, opts ...Option) *Client {
 	}
 
 	if cfg.httpClient == nil {
-		cfg.httpClient = &http.Client{
-			Timeout: cfg.timeout,
-		}
+		cfg.httpClient = &http.Client{}
 	}
 
 	c := &Client{
