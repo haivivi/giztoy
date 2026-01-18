@@ -1,0 +1,34 @@
+# Meeting Transcription request example
+# Usage: doubao -c myctx meeting create -f meeting.yaml
+
+# Audio URL of the meeting recording
+audio_url: https://example.com/meeting-recording.mp3
+
+# Or provide audio data
+# audio_data: SGVsbG8gV29ybGQ=...
+
+# Audio format
+format: mp3
+
+# Language of the meeting
+language: zh-CN
+
+# Expected number of speakers (helps with diarization)
+speaker_count: 3
+
+# Enable speaker diarization (identify who said what)
+enable_speaker_diarization: true
+
+# Enable timestamps
+enable_timestamp: true
+
+# Enable punctuation
+enable_punc: true
+
+# Callback URL for task completion (optional)
+# callback_url: https://your-server.com/webhook/meeting-complete
+
+# Hotwords for improved recognition (optional)
+# hotwords:
+#   - 项目进度
+#   - 季度目标

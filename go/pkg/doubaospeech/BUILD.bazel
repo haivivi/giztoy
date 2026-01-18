@@ -1,0 +1,29 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "doubaospeech",
+    srcs = [
+        "asr.go",
+        "client.go",
+        "console.go",
+        "doc.go",
+        "error.go",
+        "media.go",
+        "meeting.go",
+        "podcast.go",
+        "protocol.go",
+        "realtime.go",
+        "request.go",
+        "task.go",
+        "translation.go",
+        "tts.go",
+        "voice_clone.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/doubaospeech",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/doubao_speech_interface",
+        "@com_github_google_uuid//:uuid",
+        "@com_github_gorilla_websocket//:websocket",
+    ],
+)

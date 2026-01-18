@@ -1,0 +1,29 @@
+# Voice Clone Training request example
+# Usage: doubao -c myctx voice train -f voice-train.yaml
+
+# Unique speaker ID for your custom voice
+speaker_id: my_custom_voice
+
+# Audio sample URLs (3-5 samples recommended, 10-60 seconds each)
+audio_urls:
+  - https://example.com/sample1.wav
+  - https://example.com/sample2.wav
+  - https://example.com/sample3.wav
+
+# Or provide audio data directly
+# audio_data:
+#   - SGVsbG8gV29ybGQ=...
+
+# Language of the voice
+language: zh-CN
+
+# Model type
+# - standard: Standard quality, faster training
+# - high_fidelity: Higher quality, longer training time
+model_type: standard
+
+# Description (optional)
+description: 我的自定义音色
+
+# Callback URL for training completion (optional)
+# callback_url: https://your-server.com/webhook/voice-trained

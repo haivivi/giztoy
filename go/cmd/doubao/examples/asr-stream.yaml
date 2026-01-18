@@ -1,0 +1,34 @@
+# ASR Streaming Recognition config example
+# Usage: doubao -c myctx asr stream -f asr-stream.yaml --audio input.pcm
+
+# Audio format (pcm is recommended for streaming)
+format: pcm
+
+# Sample rate in Hz
+sample_rate: 16000
+
+# Bits per sample
+bits: 16
+
+# Number of channels
+channel: 1
+
+# Language code
+language: zh-CN
+
+# Enable Inverse Text Normalization
+enable_itn: true
+
+# Enable punctuation
+enable_punc: true
+
+# Enable word-level timestamps
+enable_timestamp: false
+
+# Hotwords for improved recognition (optional)
+# hotwords:
+#   - 豆包
+#   - 火山引擎
+
+# Custom vocabulary (optional)
+# vocabulary_id: your_vocabulary_id

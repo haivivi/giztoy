@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cmd",
+    srcs = [
+        "asr.go",
+        "config.go",
+        "console.go",
+        "interactive.go",
+        "media.go",
+        "meeting.go",
+        "podcast.go",
+        "realtime.go",
+        "root.go",
+        "translation.go",
+        "tts.go",
+        "util.go",
+        "voice.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/cmd/doubao/cmd",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/cli",
+        "//go/pkg/doubao_speech_interface",
+        "@com_github_spf13_cobra//:cobra",
+        "@in_gopkg_yaml_v3//:yaml_v3",
+    ],
+)
