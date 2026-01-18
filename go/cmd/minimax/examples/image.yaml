@@ -1,0 +1,8 @@
+# Example: Image generation request
+# Usage: minimax -c myctx image generate -f image.yaml
+
+model: image-01
+prompt: A beautiful sunset over mountains, photorealistic, 8k resolution
+aspect_ratio: "16:9"
+n: 1
+prompt_optimizer: true

@@ -1,0 +1,9 @@
+# Example: Voice cloning request
+# Usage: 
+#   1. First upload audio: minimax -c myctx file upload audio.mp3 --purpose voice_clone
+#   2. Then clone: minimax -c myctx voice clone -f voice-clone.yaml
+
+file_id: "your-uploaded-file-id"
+voice_id: my-custom-voice
+model: speech-2.6-hd
+text: Hello, this is a test for voice cloning.

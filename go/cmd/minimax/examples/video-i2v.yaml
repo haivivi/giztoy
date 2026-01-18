@@ -1,0 +1,7 @@
+# Example: Image to video request
+# Usage: minimax -c myctx video i2v -f video-i2v.yaml
+
+model: I2V-01
+prompt: The cat slowly turns its head and looks at the camera
+first_frame_image: https://example.com/cat.jpg
+duration: 6

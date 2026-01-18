@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cli",
+    srcs = [
+        "config.go",
+        "doc.go",
+        "format.go",
+        "output.go",
+        "paths.go",
+        "request.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/cli",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@in_gopkg_yaml_v3//:yaml_v3",
+    ],
+)

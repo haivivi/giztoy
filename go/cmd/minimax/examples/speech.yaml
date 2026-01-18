@@ -1,0 +1,19 @@
+# Example: Speech synthesis request
+# Usage: minimax -c myctx speech synthesize -f speech.yaml -o output.mp3
+
+model: speech-2.6-hd
+text: 你好，这是一段测试语音合成的文本。
+
+voice_setting:
+  voice_id: female-shaonv
+  speed: 1.0
+  vol: 1.0
+  emotion: happy
+
+audio_setting:
+  format: mp3
+  sample_rate: 32000
+  bitrate: 128000
+  channel: 1
+
+language_boost: Chinese

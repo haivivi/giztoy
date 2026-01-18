@@ -16,6 +16,6 @@ go_library(
         "video.go",
         "voice.go",
     ],
-    importpath = "github.com/haivivi/giztoy/go/pkg/minimax_interface",
+    importpath = "github.com/haivivi/giztoy/pkg/minimax_interface",
     visibility = ["//visibility:public"],
 )

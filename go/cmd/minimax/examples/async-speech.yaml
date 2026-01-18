@@ -1,0 +1,32 @@
+# Example: Async long-text speech synthesis request
+# Usage: minimax -c myctx speech async -f async-speech.yaml
+# Supports up to 1,000,000 characters
+
+model: speech-2.6-hd
+
+# Use either text or file_id (not both)
+text: |
+  这是一段很长的文本，用于异步语音合成。
+  异步合成支持最长 100 万字符的文本。
+  
+  第一章
+  
+  在很久很久以前，有一个美丽的国度...
+  
+  （此处省略大量文本）
+
+# Or use file_id if you've uploaded a text file:
+# file_id: "your-uploaded-text-file-id"
+
+voice_setting:
+  voice_id: audiobook_female_1
+  speed: 1.0
+  vol: 1.0
+
+audio_setting:
+  format: mp3
+  sample_rate: 44100
+  bitrate: 128000
+
+language_boost: Chinese
+subtitle_enable: true

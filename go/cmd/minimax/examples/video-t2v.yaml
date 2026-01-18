@@ -1,0 +1,7 @@
+# Example: Text to video request
+# Usage: minimax -c myctx video t2v -f video-t2v.yaml
+
+model: MiniMax-Hailuo-2.3
+prompt: A cat playing with a ball in a sunny garden, cinematic lighting
+duration: 6
+resolution: 1080P

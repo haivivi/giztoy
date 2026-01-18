@@ -1,0 +1,22 @@
+# Example: Music generation request
+# Usage: minimax -c myctx music generate -f music.yaml -o song.mp3
+
+model: music-2.0
+prompt: Pop music, upbeat, suitable for summer, happy mood
+
+lyrics: |
+  [Verse]
+  Walking down the street
+  Feeling the summer heat
+  Sun is shining bright
+  Everything feels right
+  
+  [Chorus]
+  Life is beautiful
+  Every day is wonderful
+  Dancing in the rain
+  Washing away the pain
+
+sample_rate: 44100
+bitrate: 128000
+format: mp3
