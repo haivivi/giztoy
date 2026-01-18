@@ -1,0 +1,55 @@
+# Bazel
+/bazel-*
+.bazelrc.user
+
+# Go
+go/vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Rust
+rust/target/
+**/*.rs.bk
+Cargo.lock
+
+# Zig
+zig/zig-cache/
+zig/zig-out/
+*.o
+*.a
+
+# C/C++
+*.obj
+*.lib
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+/dist/
+/out/
+/build/
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+*.coverprofile
