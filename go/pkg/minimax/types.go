@@ -409,17 +409,17 @@ func (r *VoiceListResponse) AllVoices() []VoiceInfo {
 	all := make([]VoiceInfo, 0, len(r.SystemVoices)+len(r.CloningVoices)+len(r.GenerationVoices))
 	for i := range r.SystemVoices {
 		voice := r.SystemVoices[i]
-		voice.Type = "system"
+		voice.Type = string(VoiceTypeSystem)
 		all = append(all, voice)
 	}
 	for i := range r.CloningVoices {
 		voice := r.CloningVoices[i]
-		voice.Type = "voice_cloning"
+		voice.Type = string(VoiceTypeCloning)
 		all = append(all, voice)
 	}
 	for i := range r.GenerationVoices {
 		voice := r.GenerationVoices[i]
-		voice.Type = "voice_generation"
+		voice.Type = string(VoiceTypeGeneration)
 		all = append(all, voice)
 	}
 	return all

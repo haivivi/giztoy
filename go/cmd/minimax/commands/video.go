@@ -303,24 +303,9 @@ Examples:
 		if outputFile != "" && result.DownloadURL != "" {
 			printInfo("Downloading video to %s...", outputFile)
 
-			resp, err := http.Get(result.DownloadURL)
-			if err != nil {
-				return fmt.Errorf("download video failed: %w", err)
+			if err := downloadFile(result.DownloadURL, outputFile); err != nil {
+				return err
 			}
-			defer resp.Body.Close()
-
-			out, err := os.Create(outputFile)
-			if err != nil {
-				return fmt.Errorf("create output file failed: %w", err)
-			}
-			defer out.Close()
-
-			written, err := io.Copy(out, resp.Body)
-			if err != nil {
-				return fmt.Errorf("write video failed: %w", err)
-			}
-
-			printSuccess("Video saved to %s (%s)", outputFile, formatBytes(int(written)))
 		}
 
 		output := map[string]any{
@@ -361,24 +346,9 @@ func waitAndDownloadVideo(client *minimax.Client, taskID string) error {
 	if outputFile != "" && result.DownloadURL != "" {
 		printInfo("Downloading video to %s...", outputFile)
 
-		resp, err := http.Get(result.DownloadURL)
-		if err != nil {
-			return fmt.Errorf("download video failed: %w", err)
+		if err := downloadFile(result.DownloadURL, outputFile); err != nil {
+			return err
 		}
-		defer resp.Body.Close()
-
-		out, err := os.Create(outputFile)
-		if err != nil {
-			return fmt.Errorf("create output file failed: %w", err)
-		}
-		defer out.Close()
-
-		written, err := io.Copy(out, resp.Body)
-		if err != nil {
-			return fmt.Errorf("write video failed: %w", err)
-		}
-
-		printSuccess("Video saved to %s (%s)", outputFile, formatBytes(int(written)))
 		return nil
 	}
 
@@ -390,6 +360,49 @@ func waitAndDownloadVideo(client *minimax.Client, taskID string) error {
 	}
 
 	return outputResult(output, "", isJSONOutput())
+}
+
+// downloadFile downloads a file from URL with timeout and proper error handling.
+func downloadFile(url, outputFile string) error {
+	// Create HTTP client with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Minute, // Allow up to 10 minutes for large video downloads
+	}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("download failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download failed: HTTP %d", resp.StatusCode)
+	}
+
+	// Create output file
+	out, err := os.Create(outputFile)
+	if err != nil {
+		return fmt.Errorf("create output file failed: %w", err)
+	}
+
+	// Copy content and track bytes written
+	written, copyErr := io.Copy(out, resp.Body)
+
+	// Always try to close the file
+	closeErr := out.Close()
+
+	// Handle errors - prefer copyErr over closeErr
+	if copyErr != nil {
+		os.Remove(outputFile) // Clean up partial file
+		return fmt.Errorf("write file failed: %w", copyErr)
+	}
+	if closeErr != nil {
+		os.Remove(outputFile) // Clean up on close error
+		return fmt.Errorf("close file failed: %w", closeErr)
+	}
+
+	printSuccess("File saved to %s (%s)", outputFile, formatBytes(int(written)))
+	return nil
 }
 
 func init() {

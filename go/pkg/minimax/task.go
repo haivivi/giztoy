@@ -3,6 +3,7 @@ package minimax
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -126,7 +127,7 @@ func (t *Task[T]) queryVideoTask(ctx context.Context) (*T, TaskStatus, error) {
 	}
 
 	// Use query parameter instead of path parameter
-	err := t.client.http.request(ctx, "GET", "/v1/query/video_generation?task_id="+t.ID, nil, &resp)
+	err := t.client.http.request(ctx, "GET", "/v1/query/video_generation?task_id="+url.QueryEscape(t.ID), nil, &resp)
 	if err != nil {
 		return nil, "", err
 	}
@@ -141,7 +142,7 @@ func (t *Task[T]) queryVideoTask(ctx context.Context) (*T, TaskStatus, error) {
 				} `json:"file"`
 				BaseResp *baseResp `json:"base_resp,omitempty"`
 			}
-			fileErr := t.client.http.request(ctx, "GET", "/v1/files/retrieve?file_id="+resp.FileID, nil, &fileResp)
+			fileErr := t.client.http.request(ctx, "GET", "/v1/files/retrieve?file_id="+url.QueryEscape(resp.FileID), nil, &fileResp)
 			if fileErr == nil {
 				downloadURL = fileResp.File.DownloadURL
 			}
@@ -171,7 +172,7 @@ func (t *Task[T]) querySpeechAsyncTask(ctx context.Context) (*T, TaskStatus, err
 	}
 
 	// Use query parameter: /v1/query/t2a_async_query_v2?task_id=xxx
-	err := t.client.http.request(ctx, "GET", "/v1/query/t2a_async_query_v2?task_id="+t.ID, nil, &resp)
+	err := t.client.http.request(ctx, "GET", "/v1/query/t2a_async_query_v2?task_id="+url.QueryEscape(t.ID), nil, &resp)
 	if err != nil {
 		return nil, "", err
 	}
