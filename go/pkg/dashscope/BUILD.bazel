@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "dashscope",
+    srcs = [
+        "client.go",
+        "doc.go",
+        "error.go",
+        "event.go",
+        "realtime.go",
+        "types.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/dashscope",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+        "@com_github_gorilla_websocket//:websocket",
+    ],
+)

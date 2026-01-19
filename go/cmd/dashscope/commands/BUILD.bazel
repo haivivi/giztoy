@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "commands",
+    srcs = [
+        "config.go",
+        "omni.go",
+        "root.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/cmd/dashscope/commands",
+    visibility = ["//go/cmd/dashscope:__subpackages__"],
+    deps = [
+        "//go/pkg/cli",
+        "//go/pkg/dashscope",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)
