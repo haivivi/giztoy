@@ -46,7 +46,7 @@ Example config file (omni-chat.yaml):
     type: server_vad
     threshold: 0.5
     prefix_padding_ms: 300
-    silence_duration_ms: 500
+    silence_duration_ms: 800
   audio_file: input.pcm  # Optional: auto-send this file
 
 Examples:
