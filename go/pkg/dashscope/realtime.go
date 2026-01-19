@@ -88,7 +88,7 @@ type eventOrError struct {
 
 // generateEventID generates a unique event ID.
 func generateEventID() string {
-	return "event_" + uuid.New().String()[:8]
+	return "event_" + uuid.New().String()[:12]
 }
 
 // UpdateSession updates the session configuration.
@@ -112,12 +112,12 @@ func (s *RealtimeSession) UpdateSession(config *SessionConfig) error {
 		sessionConfig["instructions"] = config.Instructions
 	}
 	if config.EnableInputAudioTranscription {
-		// Only send if model is specified, otherwise server uses default
+		// Send transcription config; if model not specified, server uses default
+		transcription := map[string]interface{}{}
 		if config.InputAudioTranscriptionModel != "" {
-			sessionConfig["input_audio_transcription"] = map[string]interface{}{
-				"model": config.InputAudioTranscriptionModel,
-			}
+			transcription["model"] = config.InputAudioTranscriptionModel
 		}
+		sessionConfig["input_audio_transcription"] = transcription
 	}
 	if config.TurnDetection != nil {
 		turnDetection := map[string]interface{}{
@@ -337,7 +337,9 @@ func (s *RealtimeSession) readLoop() {
 		// Extract event type
 		var eventType string
 		if typeRaw, ok := rawEvent["type"]; ok {
-			json.Unmarshal(typeRaw, &eventType)
+			if err := json.Unmarshal(typeRaw, &eventType); err != nil && s.client.config.debug {
+				fmt.Printf("[DEBUG] Failed to unmarshal event type: %v\n", err)
+			}
 		}
 
 		// Check for error event

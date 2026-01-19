@@ -18,10 +18,10 @@ const (
 
 // Voice IDs for TTS output.
 const (
-	VoiceCherry = "Cherry"
-	VoiceSerena = "Serena"
-	VoiceEthan  = "Ethan"
-	VoiceChelsea = "Chelsea"
+	VoiceChelsie = "Chelsie" // Default voice
+	VoiceCherry  = "Cherry"
+	VoiceSerena  = "Serena"
+	VoiceEthan   = "Ethan"
 )
 
 // VAD modes for voice activity detection.
