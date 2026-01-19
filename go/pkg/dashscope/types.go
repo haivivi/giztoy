@@ -6,11 +6,14 @@ const (
 	ModelQwenOmniTurboRealtime = "qwen-omni-turbo-realtime"
 	// ModelQwenOmniTurboRealtimeLatest is the latest version of Qwen-Omni-Turbo for Realtime API.
 	ModelQwenOmniTurboRealtimeLatest = "qwen-omni-turbo-realtime-latest"
+	// ModelQwen3OmniFlashRealtime is the Qwen3-Omni-Flash model for Realtime API (faster, 10 languages, 49 voices).
+	ModelQwen3OmniFlashRealtime = "qwen3-omni-flash-realtime"
 )
 
 // Audio formats supported by DashScope.
+// Note: Input audio is 16kHz, output audio is 24kHz for Turbo models.
 const (
-	AudioFormatPCM16 = "pcm16" // 16-bit PCM, 24kHz, mono (for input and Turbo output)
+	AudioFormatPCM16 = "pcm16" // 16-bit PCM (input: 16kHz, output: 24kHz)
 	AudioFormatPCM24 = "pcm24" // 24-bit PCM (for Flash output)
 	AudioFormatWAV   = "wav"   // WAV format
 	AudioFormatMP3   = "mp3"   // MP3 format
@@ -39,7 +42,7 @@ const (
 // RealtimeConfig is the configuration for establishing a realtime session.
 type RealtimeConfig struct {
 	// Model is the model ID to use.
-	// Default: qwen-omni-turbo-latest
+	// Default: qwen-omni-turbo-realtime-latest
 	Model string `json:"model,omitempty"`
 }
 

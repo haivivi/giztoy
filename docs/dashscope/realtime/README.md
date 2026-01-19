@@ -73,7 +73,7 @@ DashScope Realtime API 虽然事件格式类似 OpenAI，但有重要差异：
 ### 端点
 
 ```
-wss://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-realtime/realtime
+wss://dashscope.aliyuncs.com/api-ws/v1/realtime?model={model}
 ```
 
 ### 连接示例

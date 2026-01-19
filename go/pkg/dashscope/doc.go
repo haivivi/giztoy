@@ -15,7 +15,7 @@
 //	defer session.Close()
 //
 //	// Send audio
-//	session.SendAudio(audioData)
+//	session.AppendAudio(audioData)
 //
 //	// Receive events
 //	for event, err := range session.Events() {
