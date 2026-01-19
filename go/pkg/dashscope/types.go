@@ -93,7 +93,7 @@ type TurnDetection struct {
 	PrefixPaddingMs int `json:"prefix_padding_ms,omitempty"`
 
 	// SilenceDurationMs is the silence duration to detect end of speech (ms).
-	// Default: 500
+	// Range: [200, 6000]. Default: 800
 	SilenceDurationMs int `json:"silence_duration_ms,omitempty"`
 
 	// Threshold is the VAD sensitivity (0.0-1.0).

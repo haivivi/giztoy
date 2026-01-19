@@ -6,6 +6,7 @@ go_library(
         "config.go",
         "omni.go",
         "root.go",
+        "util.go",
     ],
     importpath = "github.com/haivivi/giztoy/cmd/dashscope/commands",
     visibility = ["//go/cmd/dashscope:__subpackages__"],

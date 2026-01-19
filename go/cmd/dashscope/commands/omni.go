@@ -30,18 +30,39 @@ var omniChatCmd = &cobra.Command{
 	Short: "Start an interactive chat session",
 	Long: `Start an interactive chat session with Qwen-Omni-Realtime.
 
-This is an audio-first API. Use --audio to send an audio file, or enter
-interactive mode to send audio chunks.
+This is an audio-first API. Use -f to specify a config file, or use flags
+to override specific settings.
 
-Audio format: 16-bit PCM, 24kHz, mono
+Audio format: Input 16-bit PCM 16kHz mono, Output 16-bit PCM 24kHz mono
+
+Example config file (omni-chat.yaml):
+  model: qwen-omni-turbo-realtime-latest
+  voice: Chelsie
+  input_audio_format: pcm16
+  output_audio_format: pcm16
+  enable_input_audio_transcription: true
+  input_audio_transcription_model: gummy-realtime-v1
+  turn_detection:
+    type: server_vad
+    threshold: 0.5
+    prefix_padding_ms: 300
+    silence_duration_ms: 500
+  audio_file: input.pcm  # Optional: auto-send this file
 
 Examples:
+  # Interactive mode with defaults
   dashscope -c myctx omni chat
-  dashscope -c myctx omni chat --audio input.pcm -o output.pcm`,
+
+  # Use config file
+  dashscope -c myctx omni chat -f omni-chat.yaml -o output.pcm
+
+  # Override specific settings
+  dashscope -c myctx omni chat --voice Cherry --audio input.pcm -o output.pcm`,
 	RunE: runOmniChat,
 }
 
 var (
+	// Flags can override config file settings
 	omniModel        string
 	omniVoice        string
 	omniAudioFile    string
@@ -49,10 +70,10 @@ var (
 )
 
 func init() {
-	omniChatCmd.Flags().StringVar(&omniModel, "model", dashscope.ModelQwenOmniTurboRealtimeLatest, "Model to use")
-	omniChatCmd.Flags().StringVar(&omniVoice, "voice", "Chelsie", "Voice for audio output (Chelsie, Cherry, Serena, Ethan)")
-	omniChatCmd.Flags().StringVar(&omniAudioFile, "audio", "", "Input audio file (16-bit PCM, 16kHz)")
-	omniChatCmd.Flags().StringVar(&omniInstructions, "instructions", "", "System instructions")
+	omniChatCmd.Flags().StringVar(&omniModel, "model", "", "Model to use (overrides config file)")
+	omniChatCmd.Flags().StringVar(&omniVoice, "voice", "", "Voice for audio output (overrides config file)")
+	omniChatCmd.Flags().StringVar(&omniAudioFile, "audio", "", "Input audio file (overrides config file)")
+	omniChatCmd.Flags().StringVar(&omniInstructions, "instructions", "", "System instructions (overrides config file)")
 
 	omniCmd.AddCommand(omniChatCmd)
 }
@@ -63,9 +84,37 @@ func runOmniChat(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Load config: start with defaults, merge file config, then apply flag overrides
+	config := DefaultOmniChatConfig()
+
+	// Load from file if specified
+	if inputFile := getInputFile(); inputFile != "" {
+		fileConfig := &OmniChatConfig{}
+		if err := loadRequest(inputFile, fileConfig); err != nil {
+			return fmt.Errorf("failed to load config file: %w", err)
+		}
+		// Merge file config into defaults
+		mergeConfig(config, fileConfig)
+		printVerbose("Loaded config from: %s", inputFile)
+	}
+
+	// Apply flag overrides
+	if omniModel != "" {
+		config.Model = omniModel
+	}
+	if omniVoice != "" {
+		config.Voice = omniVoice
+	}
+	if omniAudioFile != "" {
+		config.AudioFile = omniAudioFile
+	}
+	if omniInstructions != "" {
+		config.Instructions = omniInstructions
+	}
+
 	printVerbose("Using context: %s", ctx.Name)
-	printVerbose("Model: %s", omniModel)
-	printVerbose("Voice: %s", omniVoice)
+	printVerbose("Model: %s", config.Model)
+	printVerbose("Voice: %s", config.Voice)
 
 	// Create DashScope client
 	client := createDashScopeClient(ctx)
@@ -75,7 +124,7 @@ func runOmniChat(cmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	session, err := client.Realtime.Connect(connectCtx, &dashscope.RealtimeConfig{
-		Model: omniModel,
+		Model: config.Model,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
@@ -105,23 +154,9 @@ func runOmniChat(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("timeout waiting for session.created")
 	}
 
-	// Configure session with VAD mode (server-side voice activity detection)
+	// Configure session
 	printVerbose("Updating session config...")
-	err = session.UpdateSession(&dashscope.SessionConfig{
-		Modalities:         []string{dashscope.ModalityText, dashscope.ModalityAudio},
-		Voice:              omniVoice,
-		InputAudioFormat:   "pcm16",  // 16-bit PCM, 16kHz mono
-		OutputAudioFormat:  "pcm16",  // 16-bit PCM, 24kHz mono
-		EnableInputAudioTranscription: true,
-		InputAudioTranscriptionModel:  "gummy-realtime-v1",
-		TurnDetection: &dashscope.TurnDetection{
-			Type:              dashscope.VADModeServerVAD,
-			Threshold:         0.2,
-			PrefixPaddingMs:   300,
-			SilenceDurationMs: 800,
-		},
-	})
-	if err != nil {
+	if err := session.UpdateSession(config.ToSessionConfig()); err != nil {
 		cli.PrintError("Failed to update session: %v", err)
 		session.Close()
 		return err
@@ -136,8 +171,8 @@ func runOmniChat(cmd *cobra.Command, args []string) error {
 	}
 
 	// Audio file mode
-	if omniAudioFile != "" {
-		if err := sendAudioFile(session, omniAudioFile); err != nil {
+	if config.AudioFile != "" {
+		if err := sendAudioFile(session, config.AudioFile); err != nil {
 			return err
 		}
 		// Wait a bit for response
@@ -186,6 +221,54 @@ func runOmniChat(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// mergeConfig merges src into dst (non-zero values only)
+func mergeConfig(dst, src *OmniChatConfig) {
+	if src.Model != "" {
+		dst.Model = src.Model
+	}
+	if src.Voice != "" {
+		dst.Voice = src.Voice
+	}
+	if src.Instructions != "" {
+		dst.Instructions = src.Instructions
+	}
+	if src.InputAudioFormat != "" {
+		dst.InputAudioFormat = src.InputAudioFormat
+	}
+	if src.OutputAudioFormat != "" {
+		dst.OutputAudioFormat = src.OutputAudioFormat
+	}
+	if len(src.Modalities) > 0 {
+		dst.Modalities = src.Modalities
+	}
+	if src.EnableInputAudioTranscription {
+		dst.EnableInputAudioTranscription = src.EnableInputAudioTranscription
+	}
+	if src.InputAudioTranscriptionModel != "" {
+		dst.InputAudioTranscriptionModel = src.InputAudioTranscriptionModel
+	}
+	if src.TurnDetection != nil {
+		if dst.TurnDetection == nil {
+			dst.TurnDetection = &TurnDetectionConfig{}
+		}
+		if src.TurnDetection.Type != "" {
+			dst.TurnDetection.Type = src.TurnDetection.Type
+		}
+		if src.TurnDetection.Threshold > 0 {
+			dst.TurnDetection.Threshold = src.TurnDetection.Threshold
+		}
+		if src.TurnDetection.PrefixPaddingMs > 0 {
+			dst.TurnDetection.PrefixPaddingMs = src.TurnDetection.PrefixPaddingMs
+		}
+		if src.TurnDetection.SilenceDurationMs > 0 {
+			dst.TurnDetection.SilenceDurationMs = src.TurnDetection.SilenceDurationMs
+		}
+	}
+	if src.AudioFile != "" {
+		dst.AudioFile = src.AudioFile
+	}
+}
+
 func sendAudioFile(session *dashscope.RealtimeSession, filepath string) error {
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -196,7 +279,7 @@ func sendAudioFile(session *dashscope.RealtimeSession, filepath string) error {
 	cli.PrintInfo("Sending audio file: %s", filepath)
 
 	// Read and send in chunks (16kHz * 2 bytes * 0.1s = 3200 bytes per chunk)
-	chunkSize := 3200
+	const chunkSize = 3200
 	buf := make([]byte, chunkSize)
 	totalBytes := 0
 
@@ -222,10 +305,6 @@ func sendAudioFile(session *dashscope.RealtimeSession, filepath string) error {
 
 	// In server_vad mode, the server will automatically detect speech end
 	// and create a response. We just need to wait.
-	// If you need manual mode, uncomment the following:
-	// time.Sleep(1 * time.Second)
-	// session.CommitInput()
-	// session.CreateResponse(nil)
 
 	return nil
 }
@@ -278,24 +357,7 @@ func handleEventsWithSignals(session *dashscope.RealtimeSession, sessionCreated,
 				fmt.Println() // New line when done
 				// Save audio if we have any
 				if len(audioChunks) > 0 {
-					totalSize := 0
-					for _, chunk := range audioChunks {
-						totalSize += len(chunk)
-					}
-					printVerbose("Audio received: %d bytes", totalSize)
-
-					outputPath := getOutputFile()
-					if outputPath != "" {
-						audio := make([]byte, 0, totalSize)
-						for _, chunk := range audioChunks {
-							audio = append(audio, chunk...)
-						}
-						if err := cli.OutputBytes(audio, outputPath); err != nil {
-							cli.PrintError("Failed to save audio: %v", err)
-						} else {
-							cli.PrintSuccess("Audio saved to: %s", outputPath)
-						}
-					}
+					saveAudioChunks(audioChunks)
 				}
 			}
 
@@ -323,24 +385,7 @@ func handleEventsWithSignals(session *dashscope.RealtimeSession, sessionCreated,
 		case dashscope.EventTypeResponseAudioDone:
 			// Audio complete - save if output file specified
 			if len(audioChunks) > 0 {
-				totalSize := 0
-				for _, chunk := range audioChunks {
-					totalSize += len(chunk)
-				}
-				printVerbose("Audio received: %d bytes", totalSize)
-
-				outputPath := getOutputFile()
-				if outputPath != "" {
-					audio := make([]byte, 0, totalSize)
-					for _, chunk := range audioChunks {
-						audio = append(audio, chunk...)
-					}
-					if err := cli.OutputBytes(audio, outputPath); err != nil {
-						cli.PrintError("Failed to save audio: %v", err)
-					} else {
-						cli.PrintSuccess("Audio saved to: %s (%d bytes)", outputPath, totalSize)
-					}
-				}
+				saveAudioChunks(audioChunks)
 			}
 
 		case dashscope.EventTypeResponseTranscriptDelta:
@@ -379,6 +424,27 @@ func handleEventsWithSignals(session *dashscope.RealtimeSession, sessionCreated,
 	}
 }
 
+func saveAudioChunks(audioChunks [][]byte) {
+	totalSize := 0
+	for _, chunk := range audioChunks {
+		totalSize += len(chunk)
+	}
+	printVerbose("Audio received: %d bytes", totalSize)
+
+	outputPath := getOutputFile()
+	if outputPath != "" {
+		audio := make([]byte, 0, totalSize)
+		for _, chunk := range audioChunks {
+			audio = append(audio, chunk...)
+		}
+		if err := cli.OutputBytes(audio, outputPath); err != nil {
+			cli.PrintError("Failed to save audio: %v", err)
+		} else {
+			cli.PrintSuccess("Audio saved to: %s (%d bytes)", outputPath, totalSize)
+		}
+	}
+}
+
 func handleCommand(session *dashscope.RealtimeSession, input string) bool {
 	parts := strings.Fields(input)
 	cmd := strings.ToLower(parts[0])
@@ -406,7 +472,9 @@ func handleCommand(session *dashscope.RealtimeSession, input string) bool {
 
 	case "/voice":
 		if len(parts) < 2 {
-			cli.PrintInfo("Available voices: Chelsie, Cherry, Serena, Ethan")
+			cli.PrintInfo("Available voices: %s, %s, %s, %s",
+				dashscope.VoiceChelsie, dashscope.VoiceCherry,
+				dashscope.VoiceSerena, dashscope.VoiceEthan)
 		} else {
 			newVoice := parts[1]
 			if err := session.UpdateSession(&dashscope.SessionConfig{
@@ -431,25 +499,4 @@ func handleCommand(session *dashscope.RealtimeSession, input string) bool {
 	}
 
 	return false
-}
-
-func createDashScopeClient(ctx *cli.Context) *dashscope.Client {
-	var opts []dashscope.Option
-
-	// Use workspace if configured
-	if workspace := ctx.GetExtra("workspace"); workspace != "" {
-		opts = append(opts, dashscope.WithWorkspace(workspace))
-	}
-
-	// Use custom base URL if configured
-	if ctx.BaseURL != "" {
-		opts = append(opts, dashscope.WithBaseURL(ctx.BaseURL))
-	}
-
-	// Enable debug mode in verbose mode
-	if isVerbose() {
-		opts = append(opts, dashscope.WithDebug(true))
-	}
-
-	return dashscope.NewClient(ctx.APIKey, opts...)
 }

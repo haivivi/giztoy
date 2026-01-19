@@ -23,26 +23,24 @@ Qwen-Omni-Realtime API 是阿里云百炼提供的实时多模态对话 API，�
 
 ## ⚠️ 与 OpenAI Realtime API 的关键差异
 
-DashScope Realtime API 虽然事件格式类似 OpenAI，但有重要差异：
+DashScope Realtime API 与 OpenAI Realtime API 有重要差异：
 
 | 特性 | DashScope | OpenAI Realtime |
 |------|-----------|-----------------|
-| **response.create** | 必须包含顶层 `messages` 字段 | 使用已提交的音频/文本 |
+| **输入方式** | **仅支持音频/图像输入** | 支持音频和文本输入 |
+| **文本输入** | ❌ 不支持 | ✅ 支持 `conversation.item.create` |
 | **响应格式** | `choices` 数组格式 | `response.text.delta` 等事件 |
-| **instructions** | 仅用于角色设定，不作为 prompt | 可作为 system prompt |
+| **instructions** | 仅用于角色设定 | 可作为 system prompt |
 
-### 正确的 response.create 格式
+### ⚠️ 重要：DashScope Realtime 不支持纯文本输入
 
-```json
-{
-  "event_id": "evt_1",
-  "type": "response.create",
-  "messages": [
-    {"role": "system", "content": "你是一个AI助手"},
-    {"role": "user", "content": "你好"}
-  ]
-}
-```
+DashScope Realtime API 是**音频优先**的设计：
+- ❌ **没有** `conversation.item.create` 事件
+- ❌ **没有** `input_text_buffer` 事件
+- ❌ `response.create` **不支持** `messages` 参数
+- ✅ **必须**通过 `input_audio_buffer.append` 发送音频
+
+如果需要发送文本，必须先通过 TTS 转换为音频。
 
 ### 响应格式（choices）
 

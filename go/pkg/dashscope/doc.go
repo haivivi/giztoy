@@ -7,7 +7,7 @@
 //
 //	client := dashscope.NewClient("your-api-key")
 //	session, err := client.Realtime.Connect(ctx, &dashscope.RealtimeConfig{
-//	    Model: "qwen-omni-turbo-latest",
+//	    Model: dashscope.ModelQwenOmniTurboRealtimeLatest,
 //	})
 //	if err != nil {
 //	    log.Fatal(err)

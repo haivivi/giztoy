@@ -43,8 +43,8 @@ Examples:
   # Start interactive omni conversation
   dashscope -c myctx omni chat
 
-  # Chat with text input
-  dashscope -c myctx omni chat --text "Hello, who are you?"
+  # Use config file for custom settings
+  dashscope -c myctx omni chat -f omni-chat.yaml -o output.pcm
 `,
 	SilenceUsage:  true,
 	SilenceErrors: true,

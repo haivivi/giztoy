@@ -48,7 +48,7 @@ func (s *RealtimeService) Connect(ctx context.Context, config *RealtimeConfig) (
 		if resp != nil {
 			return nil, &Error{
 				Code:       "ConnectionFailed",
-				Message:    fmt.Sprintf("failed to connect: %v", err),
+				Message:    fmt.Sprintf("dashscope: failed to connect: %v", err),
 				HTTPStatus: resp.StatusCode,
 			}
 		}
@@ -194,20 +194,36 @@ func (s *RealtimeSession) ClearInput() error {
 // CreateResponse requests the model to generate a response.
 // In server_vad mode, this is called automatically by the server.
 // In manual mode, call this after CommitInput to trigger response generation.
+//
+// For text-only input (without audio), use Messages field:
+//
+//	session.CreateResponse(&ResponseCreateOptions{
+//	    Messages: []map[string]string{
+//	        {"role": "user", "content": "Hello, who are you?"},
+//	    },
+//	})
 func (s *RealtimeSession) CreateResponse(opts *ResponseCreateOptions) error {
 	event := map[string]interface{}{
 		"event_id": generateEventID(),
 		"type":     "response.create",
-		"response": map[string]interface{}{},
 	}
 
 	if opts != nil {
-		response := event["response"].(map[string]interface{})
+		// Messages go at the top level (DashScope-specific)
+		if len(opts.Messages) > 0 {
+			event["messages"] = opts.Messages
+		}
+
+		// Other options go in the response object
+		response := map[string]interface{}{}
 		if opts.Instructions != "" {
 			response["instructions"] = opts.Instructions
 		}
 		if len(opts.Modalities) > 0 {
 			response["modalities"] = opts.Modalities
+		}
+		if len(response) > 0 {
+			event["response"] = response
 		}
 	}
 
@@ -508,8 +524,24 @@ func (s *RealtimeSession) parseEvent(eventType string, message []byte) *Realtime
 
 // ResponseCreateOptions contains options for creating a response.
 type ResponseCreateOptions struct {
+	// Messages is the conversation history for text input.
+	// This is the DashScope-specific way to send text input (not via audio).
+	// Note: DashScope Realtime API may not fully support text-only input.
+	// For text input, consider using audio input via TTS conversion.
+	Messages []SimpleMessage
 	// Instructions override for this response (optional)
 	Instructions string
 	// Output modalities for this response (optional)
 	Modalities []string
+}
+
+// SimpleMessage represents a simple message with role and content.
+type SimpleMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+// NewTextMessage creates a simple text message.
+func NewTextMessage(role, text string) SimpleMessage {
+	return SimpleMessage{Role: role, Content: text}
 }
