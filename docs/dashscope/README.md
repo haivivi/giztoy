@@ -20,7 +20,7 @@ DashScope 是阿里云大模型服务平台百炼（Model Studio）提供的 API
 
 - **文本生成** - 通义千问（Qwen）系列大语言模型，兼容 OpenAI API
 - **多模态** - 图像理解、音频理解
-- **实时对话** - Qwen-Omni-Realtime 实时语音/图像对话
+- **实时对话** - Qwen-Omni-Realtime 实时音频/视频对话
 - **智能体应用** - 调用已配置的 Agent/工作流应用
 - **知识库** - 文档上传、索引、检索增强生成（RAG）
 
@@ -162,6 +162,22 @@ config.BaseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 client := openai.NewClientWithConfig(config)
 ```
+
+### Go (giztoy/dashscope) - Realtime API
+
+本项目提供了原生 Go SDK 支持 Qwen-Omni-Realtime API：
+
+```go
+import "github.com/haivivi/giztoy/pkg/dashscope"
+
+client := dashscope.NewClient(os.Getenv("DASHSCOPE_API_KEY"))
+session, err := client.Realtime.Connect(ctx, &dashscope.RealtimeConfig{
+    Model: dashscope.ModelQwenOmniTurboRealtimeLatest,
+})
+// 发送音频、接收事件...
+```
+
+CLI 工具: `bazel run //go/cmd/dashscope -- omni chat`
 
 ### 官方 SDK
 

@@ -393,9 +393,18 @@ func handleEventsWithSignals(session *dashscope.RealtimeSession, sessionCreated,
 			printVerbose("[transcript] %s", event.Delta)
 
 		case dashscope.EventTypeResponseDone:
-			if event.Response != nil && event.Response.Status == "failed" {
-				if event.Response.StatusDetail != nil && event.Response.StatusDetail.Error != nil {
-					cli.PrintError("Response failed: %s", event.Response.StatusDetail.Error.Message)
+			if event.Response != nil {
+				switch event.Response.Status {
+				case "failed":
+					if event.Response.StatusDetail != nil && event.Response.StatusDetail.Error != nil {
+						cli.PrintError("Response failed: %s", event.Response.StatusDetail.Error.Message)
+					} else {
+						cli.PrintError("Response failed")
+					}
+				case "cancelled":
+					cli.PrintWarning("Response cancelled")
+				case "incomplete":
+					cli.PrintWarning("Response incomplete (may have been truncated)")
 				}
 			}
 			if event.Usage != nil {

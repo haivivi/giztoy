@@ -28,9 +28,10 @@ const (
 	EventTypeResponseTextDone        = "response.text.done"
 	EventTypeResponseAudioDelta      = "response.audio.delta"
 	EventTypeResponseAudioDone       = "response.audio.done"
-	EventTypeResponseTranscriptDelta = "response.audio_transcript.delta"
-	EventTypeResponseTranscriptDone  = "response.audio_transcript.done"
-	EventTypeError                   = "error"
+	EventTypeResponseTranscriptDelta          = "response.audio_transcript.delta"
+	EventTypeResponseTranscriptDone           = "response.audio_transcript.done"
+	EventTypeInputAudioTranscriptionCompleted = "conversation.item.input_audio_transcription.completed"
+	EventTypeError                            = "error"
 
 	// DashScope-specific: "choices" format response (different from OpenAI Realtime)
 	EventTypeChoicesResponse = "choices"

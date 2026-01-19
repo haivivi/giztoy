@@ -56,10 +56,13 @@ func (s *RealtimeService) Connect(ctx context.Context, config *RealtimeConfig) (
 	}
 
 	session := &RealtimeSession{
-		conn:     conn,
-		config:   config,
-		client:   s.client,
-		closeCh:  make(chan struct{}),
+		conn:   conn,
+		config: config,
+		client: s.client,
+		closeCh: make(chan struct{}),
+		// eventsCh uses a buffer of 100 events. If events arrive faster than
+		// they are consumed, the readLoop will block, applying backpressure
+		// to the WebSocket. Callers should drain events promptly.
 		eventsCh: make(chan eventOrError, 100),
 	}
 
@@ -285,7 +288,10 @@ func (s *RealtimeSession) Close() error {
 }
 
 // SessionID returns the session ID assigned by the server.
+// This method is thread-safe.
 func (s *RealtimeSession) SessionID() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	return s.sessionID
 }
 
@@ -492,7 +498,7 @@ func (s *RealtimeSession) parseEvent(eventType string, message []byte) *Realtime
 			event.Delta = data.Delta
 		}
 
-	case "conversation.item.input_audio_transcription.completed":
+	case EventTypeInputAudioTranscriptionCompleted:
 		var data struct {
 			Transcript string `json:"transcript"`
 		}

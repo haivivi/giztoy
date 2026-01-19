@@ -56,7 +56,7 @@
 | voice | string | 音色，详见音色列表。默认：Qwen3-Omni-Flash 为 Cherry，Qwen-Omni-Turbo 为 Chelsie |
 | input_audio_format | string | 输入音频格式，仅支持 `pcm16` |
 | output_audio_format | string | 输出音频格式：Flash 为 `pcm24`，Turbo 为 `pcm16` |
-| smooth_output | boolean/null | 是否口语化回复（仅 Flash 模型）。true=口语化，false=书面化，null=自动 |
+| smooth_output | boolean/null | 是否口语化回复（仅 Flash 模型，Turbo 模型会忽略此参数）。true=口语化，false=书面化，null=自动 |
 | instructions | string | 系统消息，设定模型目标或角色 |
 | turn_detection | object/null | VAD 配置，null 表示禁用 VAD |
 | temperature | float | 采样温度 [0, 2)，Flash 默认 0.9，Turbo 默认 1.0（不可改） |
