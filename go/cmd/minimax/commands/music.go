@@ -1,9 +1,13 @@
-package cmd
+package commands
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 
-	mm "github.com/haivivi/giztoy/pkg/minimax_interface"
+	"github.com/haivivi/giztoy/pkg/minimax"
 )
 
 var musicCmd = &cobra.Command{
@@ -45,27 +49,49 @@ Examples:
 			return err
 		}
 
-		var req mm.MusicRequest
+		var req minimax.MusicRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
 		}
 
 		if req.Model == "" {
-			req.Model = mm.ModelMusic20
+			req.Model = minimax.ModelMusic20
 		}
 
 		printVerbose("Using context: %s", ctx.Name)
 		printVerbose("Model: %s", req.Model)
 		printVerbose("Prompt: %s", req.Prompt)
 
-		// TODO: Implement actual API call
-		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"request":  req,
+		// Create API client
+		client := createClient(ctx)
+
+		// Call API - music generation can take a while
+		reqCtx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		defer cancel()
+
+		resp, err := client.Music.Generate(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("music generation failed: %w", err)
 		}
 
-		return outputResult(result, getOutputFile(), isJSONOutput())
+		// Output audio to file if specified
+		outputPath := getOutputFile()
+		if outputPath != "" && len(resp.Audio) > 0 {
+			if err := outputBytes(resp.Audio, outputPath); err != nil {
+				return fmt.Errorf("failed to write audio file: %w", err)
+			}
+			printSuccess("Music saved to: %s (%s)", outputPath, formatBytes(len(resp.Audio)))
+		}
+
+		// Output result
+		result := map[string]any{
+			"audio_size":  len(resp.Audio),
+			"duration_ms": resp.Duration,
+			"extra_info":  resp.ExtraInfo,
+			"output_file": outputPath,
+		}
+
+		return outputResult(result, "", isJSONOutput())
 	},
 }
 

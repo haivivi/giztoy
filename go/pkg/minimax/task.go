@@ -3,6 +3,7 @@ package minimax
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -21,6 +22,24 @@ type Task[T any] struct {
 
 	client   *Client
 	taskType taskType
+}
+
+// NewVideoTask creates a Task for querying an existing video generation task.
+func (c *Client) NewVideoTask(taskID string) *Task[VideoResult] {
+	return &Task[VideoResult]{
+		ID:       taskID,
+		client:   c,
+		taskType: taskTypeVideo,
+	}
+}
+
+// NewSpeechAsyncTask creates a Task for querying an existing async speech task.
+func (c *Client) NewSpeechAsyncTask(taskID string) *Task[SpeechAsyncResult] {
+	return &Task[SpeechAsyncResult]{
+		ID:       taskID,
+		client:   c,
+		taskType: taskTypeSpeechAsync,
+	}
 }
 
 // Wait waits for the task to complete and returns the result.
@@ -69,7 +88,7 @@ func (t *Task[T]) WaitWithInterval(ctx context.Context, interval time.Duration) 
 				return result, nil
 			case TaskStatusFailed:
 				return nil, fmt.Errorf("task %s failed with status %s", t.ID, status)
-			case TaskStatusPending, TaskStatusProcessing:
+			case TaskStatusPending, TaskStatusQueueing, TaskStatusPreparing, TaskStatusProcessing:
 				// Continue waiting
 			default:
 				return nil, fmt.Errorf("unknown task status: %s", status)
@@ -99,20 +118,41 @@ func (t *Task[T]) query(ctx context.Context) (*T, TaskStatus, error) {
 // queryVideoTask queries a video generation task.
 func (t *Task[T]) queryVideoTask(ctx context.Context) (*T, TaskStatus, error) {
 	var resp struct {
-		TaskID   string     `json:"task_id"`
-		Status   TaskStatus `json:"status"`
-		FileID   string     `json:"file_id,omitempty"`
-		BaseResp *baseResp  `json:"base_resp,omitempty"`
+		TaskID      string     `json:"task_id"`
+		Status      TaskStatus `json:"status"`
+		FileID      string     `json:"file_id,omitempty"`
+		VideoWidth  int        `json:"video_width,omitempty"`
+		VideoHeight int        `json:"video_height,omitempty"`
+		BaseResp    *baseResp  `json:"base_resp,omitempty"`
 	}
 
-	err := t.client.http.request(ctx, "GET", "/v1/video_generation/"+t.ID, nil, &resp)
+	// Use query parameter instead of path parameter
+	err := t.client.http.request(ctx, "GET", "/v1/query/video_generation?task_id="+url.QueryEscape(t.ID), nil, &resp)
 	if err != nil {
 		return nil, "", err
 	}
 
 	if resp.Status == TaskStatusSuccess {
+		// Get download URL from file retrieve API
+		downloadURL := ""
+		if resp.FileID != "" {
+			var fileResp struct {
+				File struct {
+					DownloadURL string `json:"download_url"`
+				} `json:"file"`
+				BaseResp *baseResp `json:"base_resp,omitempty"`
+			}
+			fileErr := t.client.http.request(ctx, "GET", "/v1/files/retrieve?file_id="+url.QueryEscape(resp.FileID), nil, &fileResp)
+			if fileErr == nil {
+				downloadURL = fileResp.File.DownloadURL
+			}
+		}
+
 		result := any(&VideoResult{
-			FileID: resp.FileID,
+			FileID:      resp.FileID,
+			DownloadURL: downloadURL,
+			VideoWidth:  resp.VideoWidth,
+			VideoHeight: resp.VideoHeight,
 		})
 		return result.(*T), resp.Status, nil
 	}
@@ -123,22 +163,23 @@ func (t *Task[T]) queryVideoTask(ctx context.Context) (*T, TaskStatus, error) {
 // querySpeechAsyncTask queries an async speech task.
 func (t *Task[T]) querySpeechAsyncTask(ctx context.Context) (*T, TaskStatus, error) {
 	var resp struct {
-		TaskID    string     `json:"task_id"`
+		TaskID    int64      `json:"task_id"`
 		Status    TaskStatus `json:"status"`
-		FileID    string     `json:"file_id,omitempty"`
+		FileID    int64      `json:"file_id,omitempty"`
 		ExtraInfo *AudioInfo `json:"extra_info,omitempty"`
 		Subtitle  *Subtitle  `json:"subtitle,omitempty"`
 		BaseResp  *baseResp  `json:"base_resp,omitempty"`
 	}
 
-	err := t.client.http.request(ctx, "GET", "/v1/t2a_async/"+t.ID, nil, &resp)
+	// Use query parameter: /v1/query/t2a_async_query_v2?task_id=xxx
+	err := t.client.http.request(ctx, "GET", "/v1/query/t2a_async_query_v2?task_id="+url.QueryEscape(t.ID), nil, &resp)
 	if err != nil {
 		return nil, "", err
 	}
 
 	if resp.Status == TaskStatusSuccess {
 		result := any(&SpeechAsyncResult{
-			FileID:    resp.FileID,
+			FileID:    fmt.Sprintf("%d", resp.FileID),
 			AudioInfo: resp.ExtraInfo,
 			Subtitle:  resp.Subtitle,
 		})

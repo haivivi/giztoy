@@ -5,8 +5,11 @@ import (
 )
 
 const (
-	// DefaultBaseURL is the default MiniMax API base URL.
-	DefaultBaseURL = "https://api.minimax.chat"
+	// DefaultBaseURL is the default MiniMax API base URL (China).
+	DefaultBaseURL = "https://api.minimaxi.com"
+
+	// BaseURLGlobal is the MiniMax API base URL for global/overseas users.
+	BaseURLGlobal = "https://api.minimaxi.chat"
 
 	// DefaultMaxRetries is the default maximum number of retries.
 	DefaultMaxRetries = 3

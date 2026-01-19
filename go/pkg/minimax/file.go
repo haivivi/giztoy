@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 // FileService provides file management operations.
@@ -41,28 +42,13 @@ func (s *FileService) Upload(ctx context.Context, file io.Reader, filename strin
 
 // List returns a list of files.
 //
-// Use FileListOptions to filter and paginate results.
-func (s *FileService) List(ctx context.Context, opts *FileListOptions) (*FileListResponse, error) {
-	path := "/v1/files"
-	if opts != nil {
-		query := url.Values{}
-		if opts.Purpose != "" {
-			query.Set("purpose", string(opts.Purpose))
-		}
-		if opts.Limit > 0 {
-			query.Set("limit", fmt.Sprintf("%d", opts.Limit))
-		}
-		if opts.After != "" {
-			query.Set("after", opts.After)
-		}
-		if len(query) > 0 {
-			path += "?" + query.Encode()
-		}
-	}
+// The purpose parameter is required and specifies the file category to list.
+// See FilePurpose type constants for the set of valid values.
+func (s *FileService) List(ctx context.Context, purpose FilePurpose) (*FileListResponse, error) {
+	path := "/v1/files/list?purpose=" + url.QueryEscape(string(purpose))
 
 	var resp struct {
-		Data     []FileInfo `json:"data"`
-		HasMore  bool       `json:"has_more"`
+		Files    []FileInfo `json:"files"`
 		BaseResp *baseResp  `json:"base_resp"`
 	}
 
@@ -72,8 +58,7 @@ func (s *FileService) List(ctx context.Context, opts *FileListOptions) (*FileLis
 	}
 
 	return &FileListResponse{
-		Data:    resp.Data,
-		HasMore: resp.HasMore,
+		Files: resp.Files,
 	}, nil
 }
 
@@ -84,7 +69,8 @@ func (s *FileService) Get(ctx context.Context, fileID string) (*FileInfo, error)
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
-	err := s.client.http.request(ctx, "GET", "/v1/files/"+fileID, nil, &resp)
+	path := "/v1/files/retrieve?file_id=" + url.QueryEscape(fileID)
+	err := s.client.http.request(ctx, "GET", path, nil, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -96,9 +82,9 @@ func (s *FileService) Get(ctx context.Context, fileID string) (*FileInfo, error)
 //
 // The returned io.ReadCloser must be closed by the caller.
 func (s *FileService) Download(ctx context.Context, fileID string) (io.ReadCloser, error) {
-	url := s.client.config.baseURL + "/v1/files/" + fileID + "/content"
+	downloadURL := s.client.config.baseURL + "/v1/files/retrieve_content?file_id=" + url.QueryEscape(fileID)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -119,6 +105,22 @@ func (s *FileService) Download(ctx context.Context, fileID string) (io.ReadClose
 }
 
 // Delete deletes a file.
-func (s *FileService) Delete(ctx context.Context, fileID string) error {
-	return s.client.http.request(ctx, "POST", "/v1/files/"+fileID+"/delete", nil, nil)
+//
+// The purpose parameter is required and must match the purpose used when uploading the file.
+// See FilePurpose type constants for the set of valid values.
+func (s *FileService) Delete(ctx context.Context, fileID string, purpose FilePurpose) error {
+	// Convert fileID string to int64 (API requires numeric file_id)
+	fileIDNum, err := strconv.ParseInt(fileID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid file_id format, expected numeric string but got: %q", fileID)
+	}
+
+	req := struct {
+		FileID  int64  `json:"file_id"`
+		Purpose string `json:"purpose"`
+	}{
+		FileID:  fileIDNum,
+		Purpose: string(purpose),
+	}
+	return s.client.http.request(ctx, "POST", "/v1/files/delete", req, nil)
 }

@@ -1,9 +1,10 @@
-package cmd
+package commands
 
 import (
 	"fmt"
 
 	"github.com/haivivi/giztoy/pkg/cli"
+	"github.com/haivivi/giztoy/pkg/minimax"
 )
 
 // loadRequest loads a request from a YAML or JSON file
@@ -47,4 +48,21 @@ func formatDuration(ms int) string {
 // formatBytes formats bytes to human readable string
 func formatBytes(bytes int) string {
 	return cli.FormatBytesInt(bytes)
+}
+
+// createClient creates a MiniMax API client from context configuration
+func createClient(ctx *cli.Context) *minimax.Client {
+	var opts []minimax.Option
+	
+	// Use custom base URL if configured
+	if ctx.BaseURL != "" {
+		opts = append(opts, minimax.WithBaseURL(ctx.BaseURL))
+	}
+	
+	// Use custom retry count if configured
+	if ctx.MaxRetries > 0 {
+		opts = append(opts, minimax.WithRetry(ctx.MaxRetries))
+	}
+	
+	return minimax.NewClient(ctx.APIKey, opts...)
 }

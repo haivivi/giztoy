@@ -22,13 +22,15 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/haivivi/giztoy/cmd/minimax/cmd"
+	"github.com/haivivi/giztoy/cmd/minimax/commands"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	if err := commands.Execute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }

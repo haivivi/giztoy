@@ -67,7 +67,7 @@
 // # Configuration
 //
 //	client := minimax.NewClient("api-key",
-//	    minimax.WithBaseURL("https://api.minimax.chat"),
+//	    minimax.WithBaseURL("https://api.minimaxi.chat"),
 //	    minimax.WithRetry(3),
 //	)
 //

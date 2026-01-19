@@ -1,6 +1,6 @@
 # 声音管理 API
 
-> **官方文档**: https://platform.minimaxi.com/docs/api-reference/speech-voice-management
+> **官方文档**: https://platform.minimaxi.com/docs/api-reference/voice-management-get
 
 ## 概述
 
@@ -18,20 +18,20 @@
 ### 端点
 
 ```
-POST https://api.minimaxi.com/v1/voice/list
+POST https://api.minimaxi.com/v1/get_voice
 ```
 
 ### 请求参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| voice_type | string | 否 | 音色类型：`all`（默认）、`system`、`voice_cloning` |
+| voice_type | string | 否 | 音色类型：`all`（默认）、`system`、`voice_cloning`、`voice_generation` |
 
 ### 请求示例
 
 ```bash
 curl --request POST \
-  --url https://api.minimaxi.com/v1/voice/list \
+  --url https://api.minimaxi.com/v1/get_voice \
   --header 'Authorization: Bearer <your_api_key>' \
   --header 'Content-Type: application/json' \
   --data '{
@@ -43,26 +43,30 @@ curl --request POST \
 
 ```json
 {
-  "voices": [
+  "system_voice": [
     {
       "voice_id": "male-qn-qingse",
-      "name": "青涩青年音",
-      "type": "system",
-      "language": ["Chinese", "English"],
-      "description": "青涩的年轻男性声音"
+      "voice_name": "青涩青年音",
+      "description": ["青涩的年轻男性声音"]
     },
     {
       "voice_id": "female-shaonv",
-      "name": "少女音",
-      "type": "system",
-      "language": ["Chinese", "English"],
-      "description": "清脆的少女声音"
-    },
+      "voice_name": "少女音",
+      "description": ["清脆的少女声音"]
+    }
+  ],
+  "voice_cloning": [
     {
-      "voice_id": "my_custom_voice",
-      "name": "我的自定义音色",
-      "type": "voice_cloning",
-      "created_at": "2024-01-15T10:30:00Z"
+      "voice_id": "my_cloned_voice",
+      "voice_name": "我的克隆音色",
+      "created_time": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "voice_generation": [
+    {
+      "voice_id": "my_designed_voice",
+      "voice_name": "我的设计音色",
+      "created_time": "2024-01-16T14:20:00Z"
     }
   ],
   "base_resp": {
@@ -78,7 +82,7 @@ curl --request POST \
 |------|------|
 | system | 系统预置音色，300+ 种可选 |
 | voice_cloning | 用户通过音色复刻创建的音色 |
-| voice_design | 用户通过音色设计创建的音色 |
+| voice_generation | 用户通过音色设计创建的音色 |
 
 ## 常用系统音色
 
@@ -102,7 +106,7 @@ curl --request POST \
 ### 端点
 
 ```
-POST https://api.minimaxi.com/v1/voice/delete
+POST https://api.minimaxi.com/v1/delete_voice
 ```
 
 ### 请求参数
@@ -110,16 +114,18 @@ POST https://api.minimaxi.com/v1/voice/delete
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | voice_id | string | 是 | 要删除的音色 ID |
+| voice_type | string | 是 | 音色类型：`voice_cloning` 或 `voice_generation` |
 
 ### 请求示例
 
 ```bash
 curl --request POST \
-  --url https://api.minimaxi.com/v1/voice/delete \
+  --url https://api.minimaxi.com/v1/delete_voice \
   --header 'Authorization: Bearer <your_api_key>' \
   --header 'Content-Type: application/json' \
   --data '{
-    "voice_id": "my_custom_voice"
+    "voice_id": "my_custom_voice",
+    "voice_type": "voice_cloning"
   }'
 ```
 
@@ -127,6 +133,9 @@ curl --request POST \
 
 ```json
 {
+  "voice_id": "my_custom_voice",
+  "description": null,
+  "created_time": "",
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
@@ -136,7 +145,7 @@ curl --request POST \
 
 ## 注意事项
 
-1. **系统音色**: 系统音色不可删除
-2. **自定义音色**: 只能删除用户自己创建的音色（复刻或设计的音色）
-3. **临时音色**: 未使用的自定义音色会在 7 天后自动删除
+1. **系统音色**: 系统音色不可删除，只能删除 `voice_cloning` 和 `voice_generation` 类型的音色
+2. **voice_type 必填**: 删除时必须指定音色类型
+3. **临时音色**: 未使用的自定义音色会在 168 小时（7 天）后自动删除
 4. **音色数量**: 系统提供 300+ 种预置音色可供选择

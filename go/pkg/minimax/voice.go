@@ -2,6 +2,7 @@ package minimax
 
 import (
 	"context"
+	"fmt"
 	"io"
 )
 
@@ -18,11 +19,13 @@ func newVoiceService(client *Client) *VoiceService {
 // List returns the list of available voices.
 //
 // Use VoiceTypeAll to list all voices, VoiceTypeSystem for system voices,
-// or VoiceTypeCloning for cloned voices.
+// VoiceTypeCloning for cloned voices, or VoiceTypeGeneration for designed voices.
 func (s *VoiceService) List(ctx context.Context, voiceType VoiceType) (*VoiceListResponse, error) {
 	var resp struct {
-		Voices   []VoiceInfo `json:"voices"`
-		BaseResp *baseResp   `json:"base_resp"`
+		SystemVoices     []VoiceInfo `json:"system_voice"`
+		CloningVoices    []VoiceInfo `json:"voice_cloning"`
+		GenerationVoices []VoiceInfo `json:"voice_generation"`
+		BaseResp         *baseResp   `json:"base_resp"`
 	}
 
 	req := struct {
@@ -31,25 +34,38 @@ func (s *VoiceService) List(ctx context.Context, voiceType VoiceType) (*VoiceLis
 		VoiceType: voiceType,
 	}
 
-	err := s.client.http.request(ctx, "POST", "/v1/voice/list", req, &resp)
+	err := s.client.http.request(ctx, "POST", "/v1/get_voice", req, &resp)
 	if err != nil {
 		return nil, err
 	}
 
 	return &VoiceListResponse{
-		Voices: resp.Voices,
+		SystemVoices:     resp.SystemVoices,
+		CloningVoices:    resp.CloningVoices,
+		GenerationVoices: resp.GenerationVoices,
 	}, nil
 }
 
 // Delete deletes a custom voice.
-func (s *VoiceService) Delete(ctx context.Context, voiceID string) error {
-	req := struct {
-		VoiceID string `json:"voice_id"`
-	}{
-		VoiceID: voiceID,
+//
+// The voiceType must be either VoiceTypeCloning or VoiceTypeGeneration.
+// System voices cannot be deleted.
+func (s *VoiceService) Delete(ctx context.Context, voiceID string, voiceType VoiceType) error {
+	// Validate voice type - only custom voices can be deleted
+	if voiceType != VoiceTypeCloning && voiceType != VoiceTypeGeneration {
+		return fmt.Errorf("invalid voice_type: must be %q or %q, got %q",
+			VoiceTypeCloning, VoiceTypeGeneration, voiceType)
 	}
 
-	return s.client.http.request(ctx, "POST", "/v1/voice/delete", req, nil)
+	req := struct {
+		VoiceID   string    `json:"voice_id"`
+		VoiceType VoiceType `json:"voice_type"`
+	}{
+		VoiceID:   voiceID,
+		VoiceType: voiceType,
+	}
+
+	return s.client.http.request(ctx, "POST", "/v1/delete_voice", req, nil)
 }
 
 // UploadCloneAudio uploads an audio file for voice cloning.
@@ -57,7 +73,9 @@ func (s *VoiceService) Delete(ctx context.Context, voiceID string) error {
 // The returned file_id can be used in the Clone method.
 func (s *VoiceService) UploadCloneAudio(ctx context.Context, file io.Reader, filename string) (*UploadResponse, error) {
 	var resp struct {
-		FileID   string    `json:"file_id"`
+		File struct {
+			FileID FlexibleID `json:"file_id"`
+		} `json:"file"`
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
@@ -71,7 +89,7 @@ func (s *VoiceService) UploadCloneAudio(ctx context.Context, file io.Reader, fil
 	}
 
 	return &UploadResponse{
-		FileID: resp.FileID,
+		FileID: resp.File.FileID.String(),
 	}, nil
 }
 
@@ -80,12 +98,14 @@ func (s *VoiceService) UploadCloneAudio(ctx context.Context, file io.Reader, fil
 // This is optional and can enhance the cloning quality.
 func (s *VoiceService) UploadDemoAudio(ctx context.Context, file io.Reader, filename string) (*UploadResponse, error) {
 	var resp struct {
-		FileID   string    `json:"file_id"`
+		File struct {
+			FileID FlexibleID `json:"file_id"`
+		} `json:"file"`
 		BaseResp *baseResp `json:"base_resp"`
 	}
 
 	fields := map[string]string{
-		"purpose": string(FilePurposeVoiceCloneDemo),
+		"purpose": string(FilePurposePromptAudio),
 	}
 
 	err := s.client.http.uploadFile(ctx, "/v1/files/upload", file, filename, fields, &resp)
@@ -94,7 +114,7 @@ func (s *VoiceService) UploadDemoAudio(ctx context.Context, file io.Reader, file
 	}
 
 	return &UploadResponse{
-		FileID: resp.FileID,
+		FileID: resp.File.FileID.String(),
 	}, nil
 }
 

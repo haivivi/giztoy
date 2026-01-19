@@ -108,23 +108,27 @@ curl --request POST \
 
 ## 查询语音生成任务状态
 
+> **官方文档**: https://platform.minimaxi.com/docs/api-reference/speech-t2a-async-query
+
 ### 端点
 
 ```
-GET https://api.minimaxi.com/v1/t2a_async/{task_id}
+GET https://api.minimaxi.com/v1/query/t2a_async_query_v2
 ```
 
-### 路径参数
+### 查询参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| task_id | string | 是 | 任务 ID |
+| task_id | integer | 是 | 任务 ID，提交任务时返回的信息 |
+
+**注：该 API 限制每秒最多查询 10 次。**
 
 ### 请求示例
 
 ```bash
 curl --request GET \
-  --url https://api.minimaxi.com/v1/t2a_async/abc123456 \
+  --url 'https://api.minimaxi.com/v1/query/t2a_async_query_v2?task_id=95157322514444' \
   --header 'Authorization: Bearer <your_api_key>'
 ```
 
@@ -132,28 +136,9 @@ curl --request GET \
 
 ```json
 {
-  "task_id": "abc123456",
+  "task_id": 95157322514444,
   "status": "Success",
-  "file_id": "file_xyz789",
-  "extra_info": {
-    "audio_length": 120000,
-    "audio_sample_rate": 32000,
-    "audio_size": 1920000,
-    "bitrate": 128000,
-    "word_count": 5000,
-    "usage_characters": 5000,
-    "audio_format": "mp3",
-    "audio_channel": 1
-  },
-  "subtitle": {
-    "segments": [
-      {
-        "start_time": 0,
-        "end_time": 1500,
-        "text": "这是第一句话"
-      }
-    ]
-  },
+  "file_id": 95157322514496,
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
@@ -165,10 +150,10 @@ curl --request GET \
 
 | 状态 | 说明 |
 |------|------|
-| Pending | 任务等待中 |
 | Processing | 任务处理中 |
 | Success | 任务完成 |
 | Failed | 任务失败 |
+| Expired | 任务已过期 |
 
 ## 下载音频文件
 
@@ -176,7 +161,7 @@ curl --request GET \
 
 ```bash
 curl --request GET \
-  --url "https://api.minimaxi.com/v1/files/{file_id}/content" \
+  --url "https://api.minimaxi.com/v1/files/retrieve_content?file_id=95157322514496" \
   --header 'Authorization: Bearer <your_api_key>' \
   --output output.mp3
 ```

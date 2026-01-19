@@ -1,11 +1,13 @@
-package cmd
+package commands
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
-	mm "github.com/haivivi/giztoy/pkg/minimax_interface"
+	"github.com/haivivi/giztoy/pkg/minimax"
 )
 
 var textCmd = &cobra.Command{
@@ -44,7 +46,7 @@ Examples:
 			return err
 		}
 
-		var req mm.ChatCompletionRequest
+		var req minimax.ChatCompletionRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
 		}
@@ -53,6 +55,8 @@ Examples:
 		if req.Model == "" {
 			if defaultModel := ctx.GetExtra("default_model"); defaultModel != "" {
 				req.Model = defaultModel
+			} else {
+				req.Model = minimax.ModelM2_1
 			}
 		}
 
@@ -60,15 +64,19 @@ Examples:
 		printVerbose("Model: %s", req.Model)
 		printVerbose("Messages: %d", len(req.Messages))
 
-		// TODO: Implement actual API call
-		// For now, show the request that would be made
-		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"request":  req,
+		// Create API client
+		client := createClient(ctx)
+
+		// Call API
+		reqCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancel()
+
+		resp, err := client.Text.CreateChatCompletion(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("chat completion failed: %w", err)
 		}
 
-		return outputResult(result, getOutputFile(), isJSONOutput())
+		return outputResult(resp, getOutputFile(), isJSONOutput())
 	},
 }
 
@@ -91,7 +99,7 @@ Examples:
 			return err
 		}
 
-		var req mm.ChatCompletionRequest
+		var req minimax.ChatCompletionRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
 		}
@@ -100,6 +108,8 @@ Examples:
 		if req.Model == "" {
 			if defaultModel := ctx.GetExtra("default_model"); defaultModel != "" {
 				req.Model = defaultModel
+			} else {
+				req.Model = minimax.ModelM2_1
 			}
 		}
 
@@ -107,9 +117,27 @@ Examples:
 		printVerbose("Model: %s", req.Model)
 		printVerbose("Streaming mode enabled")
 
-		// TODO: Implement actual streaming API call
-		fmt.Println("[Streaming not implemented yet]")
-		fmt.Printf("Would stream chat with model %s\n", req.Model)
+		// Create API client
+		client := createClient(ctx)
+
+		// Call streaming API
+		reqCtx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		defer cancel()
+
+		var fullContent string
+		for chunk, err := range client.Text.CreateChatCompletionStream(reqCtx, &req) {
+			if err != nil {
+				return fmt.Errorf("streaming failed: %w", err)
+			}
+			if len(chunk.Choices) > 0 && chunk.Choices[0].Delta != nil {
+				content := chunk.Choices[0].Delta.Content
+				fmt.Print(content)
+				fullContent += content
+			}
+		}
+		fmt.Println() // New line after streaming
+
+		printVerbose("Total content length: %d characters", len(fullContent))
 
 		return nil
 	},

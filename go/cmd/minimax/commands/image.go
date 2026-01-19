@@ -1,9 +1,13 @@
-package cmd
+package commands
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 
-	mm "github.com/haivivi/giztoy/pkg/minimax_interface"
+	"github.com/haivivi/giztoy/pkg/minimax"
 )
 
 var imageCmd = &cobra.Command{
@@ -39,27 +43,37 @@ Examples:
 			return err
 		}
 
-		var req mm.ImageGenerateRequest
+		var req minimax.ImageGenerateRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
 		}
 
 		if req.Model == "" {
-			req.Model = mm.ModelImage01
+			req.Model = minimax.ModelImage01
 		}
 
 		printVerbose("Using context: %s", ctx.Name)
 		printVerbose("Model: %s", req.Model)
 		printVerbose("Prompt: %s", req.Prompt)
 
-		// TODO: Implement actual API call
-		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"request":  req,
+		// Create API client
+		client := createClient(ctx)
+
+		// Call API
+		reqCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancel()
+
+		resp, err := client.Image.Generate(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("image generation failed: %w", err)
 		}
 
-		return outputResult(result, getOutputFile(), isJSONOutput())
+		// Output image URLs
+		for i, img := range resp.Images {
+			printSuccess("Image %d: %s", i+1, img.URL)
+		}
+
+		return outputResult(resp, getOutputFile(), isJSONOutput())
 	},
 }
 
@@ -87,26 +101,36 @@ Examples:
 			return err
 		}
 
-		var req mm.ImageReferenceRequest
+		var req minimax.ImageReferenceRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
 		}
 
 		if req.Model == "" {
-			req.Model = mm.ModelImage01
+			req.Model = minimax.ModelImage01
 		}
 
 		printVerbose("Using context: %s", ctx.Name)
 		printVerbose("Model: %s", req.Model)
 
-		// TODO: Implement actual API call
-		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"request":  req,
+		// Create API client
+		client := createClient(ctx)
+
+		// Call API
+		reqCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancel()
+
+		resp, err := client.Image.GenerateWithReference(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("image generation failed: %w", err)
 		}
 
-		return outputResult(result, getOutputFile(), isJSONOutput())
+		// Output image URLs
+		for i, img := range resp.Images {
+			printSuccess("Image %d: %s", i+1, img.URL)
+		}
+
+		return outputResult(resp, getOutputFile(), isJSONOutput())
 	},
 }
 
