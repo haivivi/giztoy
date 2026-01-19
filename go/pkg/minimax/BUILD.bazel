@@ -9,6 +9,7 @@ go_library(
         "file.go",
         "http.go",
         "image.go",
+        "models.go",
         "music.go",
         "speech.go",
         "task.go",

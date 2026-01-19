@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/haivivi/giztoy/cmd/minimax",
     visibility = ["//visibility:private"],
     deps = [
-        "//go/cmd/minimax/cmd",
+        "//go/cmd/minimax/commands",
     ],
 )
 

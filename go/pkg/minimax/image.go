@@ -27,7 +27,7 @@ func newImageService(client *Client) *ImageService {
 func (s *ImageService) Generate(ctx context.Context, req *ImageGenerateRequest) (*ImageResponse, error) {
 	var resp struct {
 		Data struct {
-			Images []ImageData `json:"images"`
+			ImageURLs []string `json:"image_urls"`
 		} `json:"data"`
 		BaseResp *baseResp `json:"base_resp"`
 	}
@@ -37,8 +37,14 @@ func (s *ImageService) Generate(ctx context.Context, req *ImageGenerateRequest) 
 		return nil, err
 	}
 
+	// Convert URLs to ImageData
+	images := make([]ImageData, len(resp.Data.ImageURLs))
+	for i, url := range resp.Data.ImageURLs {
+		images[i] = ImageData{URL: url}
+	}
+
 	return &ImageResponse{
-		Images: resp.Data.Images,
+		Images: images,
 	}, nil
 }
 
@@ -49,7 +55,7 @@ func (s *ImageService) Generate(ctx context.Context, req *ImageGenerateRequest) 
 func (s *ImageService) GenerateWithReference(ctx context.Context, req *ImageReferenceRequest) (*ImageResponse, error) {
 	var resp struct {
 		Data struct {
-			Images []ImageData `json:"images"`
+			ImageURLs []string `json:"image_urls"`
 		} `json:"data"`
 		BaseResp *baseResp `json:"base_resp"`
 	}
@@ -59,7 +65,13 @@ func (s *ImageService) GenerateWithReference(ctx context.Context, req *ImageRefe
 		return nil, err
 	}
 
+	// Convert URLs to ImageData
+	images := make([]ImageData, len(resp.Data.ImageURLs))
+	for i, url := range resp.Data.ImageURLs {
+		images[i] = ImageData{URL: url}
+	}
+
 	return &ImageResponse{
-		Images: resp.Data.Images,
+		Images: images,
 	}, nil
 }

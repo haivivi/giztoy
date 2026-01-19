@@ -35,7 +35,7 @@
 ### 端点
 
 ```
-POST https://api.minimaxi.com/v1/files
+POST https://api.minimaxi.com/v1/files/upload
 ```
 
 ### 请求参数
@@ -51,20 +51,18 @@ POST https://api.minimaxi.com/v1/files
 
 | 值 | 说明 |
 |-----|------|
-| voice_clone | 音色复刻音频 |
-| voice_clone_demo | 音色复刻示例音频 |
-| t2a_async | 异步语音合成文本文件 |
-| fine-tune | 微调数据文件 |
-| assistants | 助手文件 |
+| voice_clone | 音色复刻原始音频 |
+| prompt_audio | 音色复刻示例音频 |
+| t2a_async_input | 异步语音合成文本文件 |
 
 ### 请求示例
 
 ```bash
 curl --request POST \
-  --url https://api.minimaxi.com/v1/files \
+  --url https://api.minimaxi.com/v1/files/upload \
   --header 'Authorization: Bearer <your_api_key>' \
   --form 'file=@document.txt' \
-  --form 'purpose=t2a_async'
+  --form 'purpose=t2a_async_input'
 ```
 
 ### 响应格式
@@ -76,7 +74,7 @@ curl --request POST \
     "filename": "document.txt",
     "bytes": 1024,
     "created_at": 1704067200,
-    "purpose": "t2a_async"
+    "purpose": "t2a_async_input"
   },
   "base_resp": {
     "status_code": 0,
@@ -90,22 +88,20 @@ curl --request POST \
 ### 端点
 
 ```
-GET https://api.minimaxi.com/v1/files
+GET https://api.minimaxi.com/v1/files/list
 ```
 
 ### 查询参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| purpose | string | 否 | 按用途筛选 |
-| limit | int | 否 | 返回数量限制，默认 20 |
-| after | string | 否 | 分页游标 |
+| purpose | string | 是 | 按用途筛选，可选值：`voice_clone`, `prompt_audio`, `t2a_async_input` |
 
 ### 请求示例
 
 ```bash
 curl --request GET \
-  --url 'https://api.minimaxi.com/v1/files?purpose=t2a_async&limit=10' \
+  --url 'https://api.minimaxi.com/v1/files/list?purpose=voice_clone' \
   --header 'Authorization: Bearer <your_api_key>'
 ```
 
@@ -113,23 +109,22 @@ curl --request GET \
 
 ```json
 {
-  "data": [
+  "files": [
     {
-      "file_id": "file_abc123",
-      "filename": "document.txt",
-      "bytes": 1024,
-      "created_at": 1704067200,
-      "purpose": "t2a_async"
+      "file_id": "297990555456011",
+      "bytes": 5896337,
+      "created_at": 1699964873,
+      "filename": "audio.mp3",
+      "purpose": "voice_clone"
     },
     {
-      "file_id": "file_def456",
-      "filename": "audio.mp3",
-      "bytes": 2048000,
-      "created_at": 1704067100,
+      "file_id": "297990555456911",
+      "bytes": 5896337,
+      "created_at": 1700469398,
+      "filename": "audio2.mp3",
       "purpose": "voice_clone"
     }
   ],
-  "has_more": false,
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
@@ -142,10 +137,10 @@ curl --request GET \
 ### 端点
 
 ```
-GET https://api.minimaxi.com/v1/files/{file_id}
+GET https://api.minimaxi.com/v1/files/retrieve
 ```
 
-### 路径参数
+### 查询参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -155,7 +150,7 @@ GET https://api.minimaxi.com/v1/files/{file_id}
 
 ```bash
 curl --request GET \
-  --url https://api.minimaxi.com/v1/files/file_abc123 \
+  --url 'https://api.minimaxi.com/v1/files/retrieve?file_id=file_abc123' \
   --header 'Authorization: Bearer <your_api_key>'
 ```
 
@@ -168,7 +163,7 @@ curl --request GET \
     "filename": "document.txt",
     "bytes": 1024,
     "created_at": 1704067200,
-    "purpose": "t2a_async",
+    "purpose": "t2a_async_input",
     "status": "processed"
   },
   "base_resp": {
@@ -183,20 +178,20 @@ curl --request GET \
 ### 端点
 
 ```
-GET https://api.minimaxi.com/v1/files/{file_id}/content
+GET https://api.minimaxi.com/v1/files/retrieve_content
 ```
 
-### 路径参数
+### 查询参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| file_id | string | 是 | 文件 ID |
+| file_id | integer | 是 | 需要下载的文件 ID |
 
 ### 请求示例
 
 ```bash
 curl --request GET \
-  --url https://api.minimaxi.com/v1/files/file_abc123/content \
+  --url 'https://api.minimaxi.com/v1/files/retrieve_content?file_id=file_abc123' \
   --header 'Authorization: Bearer <your_api_key>' \
   --output downloaded_file.txt
 ```
@@ -210,10 +205,10 @@ curl --request GET \
 ### 端点
 
 ```
-POST https://api.minimaxi.com/v1/files/{file_id}/delete
+POST https://api.minimaxi.com/v1/files/delete
 ```
 
-### 路径参数
+### 请求参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -223,8 +218,10 @@ POST https://api.minimaxi.com/v1/files/{file_id}/delete
 
 ```bash
 curl --request POST \
-  --url https://api.minimaxi.com/v1/files/file_abc123/delete \
-  --header 'Authorization: Bearer <your_api_key>'
+  --url https://api.minimaxi.com/v1/files/delete \
+  --header 'Authorization: Bearer <your_api_key>' \
+  --header 'Content-Type: application/json' \
+  --data '{"file_id": "file_abc123"}'
 ```
 
 ### 响应格式
@@ -254,35 +251,37 @@ HEADERS = {
 # 1. 上传文件
 with open("document.txt", "rb") as f:
     response = requests.post(
-        f"{BASE_URL}/files",
+        f"{BASE_URL}/files/upload",
         headers=HEADERS,
         files={"file": f},
-        data={"purpose": "t2a_async"}
+        data={"purpose": "t2a_async_input"}
     )
 file_id = response.json()["file"]["file_id"]
 print(f"Uploaded: {file_id}")
 
 # 2. 列出文件
 response = requests.get(
-    f"{BASE_URL}/files",
+    f"{BASE_URL}/files/list",
     headers=HEADERS,
-    params={"limit": 10}
+    params={"purpose": "t2a_async_input"}
 )
-files = response.json()["data"]
+files = response.json()["files"]
 print(f"Total files: {len(files)}")
 
 # 3. 检索文件信息
 response = requests.get(
-    f"{BASE_URL}/files/{file_id}",
-    headers=HEADERS
+    f"{BASE_URL}/files/retrieve",
+    headers=HEADERS,
+    params={"file_id": file_id}
 )
 file_info = response.json()["file"]
 print(f"File info: {file_info}")
 
 # 4. 下载文件
 response = requests.get(
-    f"{BASE_URL}/files/{file_id}/content",
-    headers=HEADERS
+    f"{BASE_URL}/files/retrieve_content",
+    headers=HEADERS,
+    params={"file_id": file_id}
 )
 with open("downloaded.txt", "wb") as f:
     f.write(response.content)
@@ -290,8 +289,9 @@ print("File downloaded!")
 
 # 5. 删除文件
 response = requests.post(
-    f"{BASE_URL}/files/{file_id}/delete",
-    headers=HEADERS
+    f"{BASE_URL}/files/delete",
+    headers={**HEADERS, "Content-Type": "application/json"},
+    json={"file_id": file_id}
 )
 print(f"Deleted: {response.json()['deleted']}")
 ```
@@ -301,4 +301,4 @@ print(f"Deleted: {response.json()['deleted']}")
 1. **容量限制**: 总容量 100 GB，单个文件最大 512 MB
 2. **文件有效期**: 某些类型的文件（如视频生成结果）有下载有效期
 3. **用途匹配**: 上传文件时需要指定正确的 `purpose`，以便与相应的 API 配合使用
-4. **文件状态**: 上传后的文件可能需要处理，可通过检索接口查看状态
+4. **列出文件必填参数**: `purpose` 参数是必填的，不能列出所有文件

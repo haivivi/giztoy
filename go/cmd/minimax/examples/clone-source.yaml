@@ -1,0 +1,14 @@
+# Example: Long speech for voice cloning source
+# Usage: minimax -c myctx speech synthesize -f clone-source.yaml -o clone_source.mp3
+# Note: Voice cloning requires audio files longer than 10 seconds
+
+model: speech-2.6-hd
+text: 你好，我是一个测试音频，用于音色克隆功能的测试。这段音频需要足够长，大概需要十秒钟以上的时长，所以我要多说一些内容。让我们来测试一下音色克隆功能是否正常工作。希望这个测试能够顺利完成。
+
+voice_setting:
+  voice_id: female-shaonv
+  speed: 0.9
+
+audio_setting:
+  format: mp3
+  sample_rate: 32000

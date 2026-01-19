@@ -1,11 +1,14 @@
-package cmd
+package commands
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
-	mm "github.com/haivivi/giztoy/pkg/minimax_interface"
+	"github.com/haivivi/giztoy/pkg/minimax"
 )
 
 var speechCmd = &cobra.Command{
@@ -49,14 +52,14 @@ Examples:
 			return err
 		}
 
-		var req mm.SpeechRequest
+		var req minimax.SpeechRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
 		}
 
 		// Use defaults if not specified
 		if req.Model == "" {
-			req.Model = mm.ModelSpeech26HD
+			req.Model = minimax.ModelSpeech26HD
 		}
 		if req.VoiceSetting != nil && req.VoiceSetting.VoiceID == "" {
 			if defaultVoice := ctx.GetExtra("default_voice"); defaultVoice != "" {
@@ -68,14 +71,37 @@ Examples:
 		printVerbose("Model: %s", req.Model)
 		printVerbose("Text length: %d characters", len(req.Text))
 
-		// TODO: Implement actual API call
-		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"request":  req,
+		// Create API client
+		client := createClient(ctx)
+
+		// Call API
+		reqCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancel()
+
+		resp, err := client.Speech.Synthesize(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("speech synthesis failed: %w", err)
 		}
 
-		return outputResult(result, getOutputFile(), isJSONOutput())
+		// Output audio to file if specified
+		outputPath := getOutputFile()
+		if outputPath != "" && len(resp.Audio) > 0 {
+			if err := outputBytes(resp.Audio, outputPath); err != nil {
+				return fmt.Errorf("failed to write audio file: %w", err)
+			}
+			printVerbose("Audio saved to: %s", outputPath)
+		}
+
+		// Output result
+		result := map[string]any{
+			"audio_size":   len(resp.Audio),
+			"audio_url":    resp.AudioURL,
+			"trace_id":     resp.TraceID,
+			"extra_info":   resp.ExtraInfo,
+			"output_file":  outputPath,
+		}
+
+		return outputResult(result, "", isJSONOutput())
 	},
 }
 
@@ -103,17 +129,56 @@ Examples:
 			return err
 		}
 
-		var req mm.SpeechRequest
+		var req minimax.SpeechRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
+		}
+
+		// Use defaults if not specified
+		if req.Model == "" {
+			req.Model = minimax.ModelSpeech26HD
 		}
 
 		printVerbose("Using context: %s", ctx.Name)
 		printVerbose("Streaming to: %s", outputPath)
 
-		// TODO: Implement actual streaming API call
-		fmt.Println("[Streaming not implemented yet]")
-		fmt.Printf("Would stream speech to %s\n", outputPath)
+		// Create API client
+		client := createClient(ctx)
+
+		// Call streaming API
+		reqCtx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		defer cancel()
+
+		var audioBuf bytes.Buffer
+		var lastChunk *minimax.SpeechChunk
+
+		for chunk, err := range client.Speech.SynthesizeStream(reqCtx, &req) {
+			if err != nil {
+				return fmt.Errorf("streaming failed: %w", err)
+			}
+			if chunk.Audio != nil {
+				audioBuf.Write(chunk.Audio)
+			}
+			lastChunk = chunk
+		}
+
+		// Write audio to file
+		if err := outputBytes(audioBuf.Bytes(), outputPath); err != nil {
+			return fmt.Errorf("failed to write audio file: %w", err)
+		}
+
+		printSuccess("Audio saved to: %s (%s)", outputPath, formatBytes(audioBuf.Len()))
+
+		// Output final info
+		if lastChunk != nil && lastChunk.ExtraInfo != nil {
+			result := map[string]any{
+				"audio_size":  audioBuf.Len(),
+				"extra_info":  lastChunk.ExtraInfo,
+				"trace_id":    lastChunk.TraceID,
+				"output_file": outputPath,
+			}
+			return outputResult(result, "", isJSONOutput())
+		}
 
 		return nil
 	},
@@ -145,20 +210,36 @@ Examples:
 			return err
 		}
 
-		var req mm.AsyncSpeechRequest
+		var req minimax.AsyncSpeechRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
+		}
+
+		// Use defaults if not specified
+		if req.Model == "" {
+			req.Model = minimax.ModelSpeech26HD
 		}
 
 		printVerbose("Using context: %s", ctx.Name)
 		printVerbose("Text length: %d characters", len(req.Text))
 
-		// TODO: Implement actual API call
+		// Create API client
+		client := createClient(ctx)
+
+		// Call API
+		reqCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		task, err := client.Speech.CreateAsyncTask(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("create async task failed: %w", err)
+		}
+
+		printSuccess("Async task created: %s", task.ID)
+
 		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"request":  req,
-			"task_id":  "placeholder-task-id",
+			"task_id": task.ID,
+			"status":  "created",
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())

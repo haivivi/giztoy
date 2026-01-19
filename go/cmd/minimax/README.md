@@ -26,15 +26,24 @@ go install
 ### 1. 添加 Context
 
 ```bash
-# 添加一个新的 context
-minimax config add-context myctx --api-key YOUR_API_KEY
+# 添加国内 context（默认使用 https://api.minimaxi.com）
+minimax config add-context cn --api-key YOUR_API_KEY
+
+# 添加海外 context（使用 https://api.minimaxi.chat）
+minimax config add-context global --api-key YOUR_API_KEY --base-url https://api.minimaxi.chat
 
 # 设置为默认 context
-minimax config use-context myctx
+minimax config use-context cn
 
 # 查看所有 context
 minimax config list-contexts
 ```
+
+**API 端点:**
+| 区域 | Base URL |
+|------|----------|
+| 国内 | `https://api.minimaxi.com` (默认) |
+| 海外 | `https://api.minimaxi.chat` |
 
 ### 2. 测试 API
 
@@ -120,10 +129,13 @@ minimax speech async -f request.yaml
 ### video - 视频生成
 
 ```bash
-minimax video t2v -f request.yaml      # 文生视频
-minimax video i2v -f request.yaml      # 图生视频
-minimax video frame -f request.yaml    # 首尾帧生成视频
-minimax video status <task_id>         # 查询任务状态
+minimax video t2v -f request.yaml              # 文生视频（创建任务）
+minimax video t2v -f request.yaml --wait       # 文生视频（等待完成）
+minimax video t2v -f request.yaml --wait -o video.mp4  # 等待并下载
+minimax video i2v -f request.yaml              # 图生视频
+minimax video frame -f request.yaml            # 首尾帧生成视频
+minimax video status <task_id>                 # 查询任务状态
+minimax video wait <task_id> -o video.mp4      # 等待任务并下载
 ```
 
 ### image - 图片生成
@@ -203,15 +215,44 @@ contexts:
 - `voice-clone.yaml` - 音色复刻
 - `voice-design.yaml` - 音色设计
 
-## 开发状态
+## 示例脚本
 
-⚠️ **注意**：当前版本 CLI 框架已完成，但实际 API 调用尚未实现。运行命令会显示请求内容预览。
+提供了完整的示例脚本，使用 `examples/` 目录下的 YAML 文件验证所有 API 功能：
 
-待实现：
-- [ ] 实际 API 调用
-- [ ] 流式输出支持
-- [ ] 异步任务轮询
-- [ ] 更丰富的 TUI 界面
+```bash
+cd go/cmd/minimax
+
+# 先配置 context
+go run ./main.go config add-context minimax_cn --api-key YOUR_API_KEY
+
+# 运行示例
+./examples.sh all      # 全部测试
+./examples.sh quick    # 快速测试（基础 + 声音管理）
+./examples.sh 1        # 只运行阶段 1（TTS, Chat）
+```
+
+### 测试阶段
+
+| 阶段 | 内容 | 使用的示例文件 |
+|------|------|---------------|
+| 1 | 基础测试 (TTS, Chat) | `speech.yaml`, `chat.yaml` |
+| 2 | 图片生成测试 | `image.yaml` |
+| 3 | 流式测试 | `speech.yaml`, `chat.yaml` |
+| 4 | 视频任务测试 | `video-t2v.yaml` |
+| 5 | 声音管理测试 | `voice-design.yaml` |
+| 6 | 音色克隆测试 | `voice-clone.yaml` |
+| 7 | 文件管理测试 | - |
+| 8 | 音乐生成测试 | `music.yaml` |
+
+### 环境变量
+
+```bash
+# 通过环境变量设置 API Key（可选）
+MINIMAX_API_KEY=xxx ./examples.sh all
+
+# 指定 context 名称（默认 minimax_cn）
+MINIMAX_CONTEXT=myctx ./examples.sh all
+```
 
 ## License
 

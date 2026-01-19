@@ -160,10 +160,10 @@ POST https://api.minimaxi.com/v1/video_generation
 ### 端点
 
 ```
-GET https://api.minimaxi.com/v1/video_generation/{task_id}
+GET https://api.minimaxi.com/v1/query/video_generation
 ```
 
-### 路径参数
+### 查询参数
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -173,7 +173,7 @@ GET https://api.minimaxi.com/v1/video_generation/{task_id}
 
 ```bash
 curl --request GET \
-  --url https://api.minimaxi.com/v1/video_generation/task_abc123 \
+  --url 'https://api.minimaxi.com/v1/query/video_generation?task_id=task_abc123' \
   --header 'Authorization: Bearer <your_api_key>'
 ```
 
@@ -183,7 +183,9 @@ curl --request GET \
 {
   "task_id": "task_abc123",
   "status": "Success",
-  "file_id": "file_xyz789",
+  "file_id": "357248197701747",
+  "video_width": 1366,
+  "video_height": 768,
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
@@ -205,14 +207,20 @@ curl --request GET \
 ### 端点
 
 ```
-GET https://api.minimaxi.com/v1/files/{file_id}/content
+GET https://api.minimaxi.com/v1/files/retrieve_content
 ```
+
+### 查询参数
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file_id | string | 是 | 文件 ID |
 
 ### 请求示例
 
 ```bash
 curl --request GET \
-  --url "https://api.minimaxi.com/v1/files/file_xyz789/content" \
+  --url "https://api.minimaxi.com/v1/files/retrieve_content?file_id=357248197701747" \
   --header 'Authorization: Bearer <your_api_key>' \
   --output output.mp4
 ```
@@ -246,8 +254,9 @@ print(f"Task created: {task_id}")
 # 2. 轮询任务状态
 while True:
     response = requests.get(
-        f"{BASE_URL}/video_generation/{task_id}",
-        headers=HEADERS
+        f"{BASE_URL}/query/video_generation",
+        headers=HEADERS,
+        params={"task_id": task_id}
     )
     result = response.json()
     status = result["status"]
@@ -263,8 +272,9 @@ while True:
 
 # 3. 下载视频
 response = requests.get(
-    f"{BASE_URL}/files/{file_id}/content",
-    headers=HEADERS
+    f"{BASE_URL}/files/retrieve_content",
+    headers=HEADERS,
+    params={"file_id": file_id}
 )
 with open("output.mp4", "wb") as f:
     f.write(response.content)

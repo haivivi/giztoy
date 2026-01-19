@@ -28,7 +28,7 @@
 ### 端点
 
 ```
-POST https://api.minimaxi.com/v1/voice_clone/upload
+POST https://api.minimaxi.com/v1/files/upload
 ```
 
 ### 请求参数
@@ -56,7 +56,7 @@ POST https://api.minimaxi.com/v1/voice_clone/upload
 
 ```bash
 curl --request POST \
-  --url https://api.minimaxi.com/v1/voice_clone/upload \
+  --url https://api.minimaxi.com/v1/files/upload \
   --header 'Authorization: Bearer <your_api_key>' \
   --form 'file=@voice_sample.mp3' \
   --form 'purpose=voice_clone'
@@ -66,7 +66,13 @@ curl --request POST \
 
 ```json
 {
-  "file_id": "file_abc123",
+  "file": {
+    "file_id": 123456789,
+    "bytes": 12345,
+    "created_at": 1234567890,
+    "filename": "voice_sample.mp3",
+    "purpose": "voice_clone"
+  },
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
@@ -79,7 +85,7 @@ curl --request POST \
 ### 端点
 
 ```
-POST https://api.minimaxi.com/v1/voice_clone/upload_demo
+POST https://api.minimaxi.com/v1/files/upload
 ```
 
 ### 请求参数
@@ -87,23 +93,29 @@ POST https://api.minimaxi.com/v1/voice_clone/upload_demo
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | file | file | 是 | 示例音频文件 |
-| purpose | string | 是 | 固定为 `voice_clone_demo` |
+| purpose | string | 是 | 固定为 `prompt_audio` |
 
 ### 请求示例
 
 ```bash
 curl --request POST \
-  --url https://api.minimaxi.com/v1/voice_clone/upload_demo \
+  --url https://api.minimaxi.com/v1/files/upload \
   --header 'Authorization: Bearer <your_api_key>' \
   --form 'file=@demo_sample.mp3' \
-  --form 'purpose=voice_clone_demo'
+  --form 'purpose=prompt_audio'
 ```
 
 ### 响应格式
 
 ```json
 {
-  "file_id": "file_demo456",
+  "file": {
+    "file_id": 123456789,
+    "bytes": 12345,
+    "created_at": 1234567890,
+    "filename": "demo_sample.mp3",
+    "purpose": "prompt_audio"
+  },
   "base_resp": {
     "status_code": 0,
     "status_msg": "success"
