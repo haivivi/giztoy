@@ -292,7 +292,7 @@ print("File downloaded!")
 response = requests.post(
     f"{BASE_URL}/files/delete",
     headers={**HEADERS, "Content-Type": "application/json"},
-    json={"file_id": file_id, "purpose": "voice_clone"}
+    json={"file_id": file_id, "purpose": "t2a_async_input"}
 )
 print(f"Deleted: {response.json()['deleted']}")
 ```
