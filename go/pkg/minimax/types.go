@@ -404,20 +404,23 @@ type VoiceListResponse struct {
 	GenerationVoices []VoiceInfo `json:"voice_generation"`
 }
 
-// AllVoices returns all voices combined into a single slice.
+// AllVoices returns all voices combined into a single slice with Type field set.
 func (r *VoiceListResponse) AllVoices() []VoiceInfo {
 	all := make([]VoiceInfo, 0, len(r.SystemVoices)+len(r.CloningVoices)+len(r.GenerationVoices))
-	for _, v := range r.SystemVoices {
-		v.Type = "system"
-		all = append(all, v)
+	for i := range r.SystemVoices {
+		voice := r.SystemVoices[i]
+		voice.Type = "system"
+		all = append(all, voice)
 	}
-	for _, v := range r.CloningVoices {
-		v.Type = "voice_cloning"
-		all = append(all, v)
+	for i := range r.CloningVoices {
+		voice := r.CloningVoices[i]
+		voice.Type = "voice_cloning"
+		all = append(all, voice)
 	}
-	for _, v := range r.GenerationVoices {
-		v.Type = "voice_generation"
-		all = append(all, v)
+	for i := range r.GenerationVoices {
+		voice := r.GenerationVoices[i]
+		voice.Type = "voice_generation"
+		all = append(all, voice)
 	}
 	return all
 }

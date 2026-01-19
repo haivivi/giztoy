@@ -2,6 +2,7 @@ package minimax
 
 import (
 	"context"
+	"fmt"
 	"io"
 )
 
@@ -50,6 +51,12 @@ func (s *VoiceService) List(ctx context.Context, voiceType VoiceType) (*VoiceLis
 // The voiceType must be either VoiceTypeCloning or VoiceTypeGeneration.
 // System voices cannot be deleted.
 func (s *VoiceService) Delete(ctx context.Context, voiceID string, voiceType VoiceType) error {
+	// Validate voice type - only custom voices can be deleted
+	if voiceType != VoiceTypeCloning && voiceType != VoiceTypeGeneration {
+		return fmt.Errorf("invalid voice_type: must be %q or %q, got %q",
+			VoiceTypeCloning, VoiceTypeGeneration, voiceType)
+	}
+
 	req := struct {
 		VoiceID   string    `json:"voice_id"`
 		VoiceType VoiceType `json:"voice_type"`

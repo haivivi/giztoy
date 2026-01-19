@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 // FileService provides file management operations.
@@ -42,7 +43,7 @@ func (s *FileService) Upload(ctx context.Context, file io.Reader, filename strin
 // List returns a list of files.
 //
 // The purpose parameter is required and specifies the file category to list.
-// Valid values: voice_clone, prompt_audio, t2a_async_input
+// See FilePurpose type constants for the set of valid values.
 func (s *FileService) List(ctx context.Context, purpose FilePurpose) (*FileListResponse, error) {
 	path := "/v1/files/list?purpose=" + url.QueryEscape(string(purpose))
 
@@ -105,12 +106,13 @@ func (s *FileService) Download(ctx context.Context, fileID string) (io.ReadClose
 
 // Delete deletes a file.
 //
-// The purpose parameter must match the purpose used when uploading the file.
+// The purpose parameter is required and must match the purpose used when uploading the file.
+// See FilePurpose type constants for the set of valid values.
 func (s *FileService) Delete(ctx context.Context, fileID string, purpose FilePurpose) error {
 	// Convert fileID string to int64 (API requires numeric file_id)
-	var fileIDNum int64
-	if _, err := fmt.Sscanf(fileID, "%d", &fileIDNum); err != nil {
-		return fmt.Errorf("invalid file_id format: %s", fileID)
+	fileIDNum, err := strconv.ParseInt(fileID, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid file_id format, expected numeric string but got: %q", fileID)
 	}
 
 	req := struct {

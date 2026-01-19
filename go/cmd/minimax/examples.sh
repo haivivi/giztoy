@@ -209,7 +209,7 @@ test_level_6() {
     UPLOAD_RESULT=$($MINIMAX_CMD -c $CONTEXT_NAME voice upload "$OUTPUT_DIR/clone_source.mp3" --json 2>&1)
     
     if echo "$UPLOAD_RESULT" | grep -q "file_id"; then
-        CLONE_FILE_ID=$(echo "$UPLOAD_RESULT" | grep -o '"file_id":[[:space:]]*[0-9]*' | grep -o '[0-9]*' | head -1)
+        CLONE_FILE_ID=$(echo "$UPLOAD_RESULT" | jq -r '.file_id // empty' 2>/dev/null)
         log_success "上传克隆音频成功，file_id: $CLONE_FILE_ID"
         
         if [ -n "$CLONE_FILE_ID" ]; then
@@ -261,7 +261,7 @@ test_level_7() {
         UPLOAD_RESULT=$($MINIMAX_CMD -c $CONTEXT_NAME file upload "$OUTPUT_DIR/speech.mp3" --purpose voice_clone --json 2>&1)
         
         if echo "$UPLOAD_RESULT" | grep -q "file_id"; then
-            TEST_FILE_ID=$(echo "$UPLOAD_RESULT" | grep -o '"file_id":[[:space:]]*[0-9]*' | grep -o '[0-9]*' | head -1)
+            TEST_FILE_ID=$(echo "$UPLOAD_RESULT" | jq -r '.file_id // empty' 2>/dev/null)
             log_success "上传文件成功，file_id: $TEST_FILE_ID"
             
             run_test_verbose "列出文件 (voice_clone)" \

@@ -212,7 +212,8 @@ POST https://api.minimaxi.com/v1/files/delete
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| file_id | string | 是 | 文件 ID |
+| file_id | int64 | 是 | 文件 ID（数字类型） |
+| purpose | string | 是 | 文件用途，必须与上传时指定的用途一致。可选值：`voice_clone`、`prompt_audio`、`t2a_async_input` |
 
 ### 请求示例
 
@@ -221,7 +222,7 @@ curl --request POST \
   --url https://api.minimaxi.com/v1/files/delete \
   --header 'Authorization: Bearer <your_api_key>' \
   --header 'Content-Type: application/json' \
-  --data '{"file_id": "file_abc123"}'
+  --data '{"file_id": 123456789, "purpose": "voice_clone"}'
 ```
 
 ### 响应格式
@@ -291,7 +292,7 @@ print("File downloaded!")
 response = requests.post(
     f"{BASE_URL}/files/delete",
     headers={**HEADERS, "Content-Type": "application/json"},
-    json={"file_id": file_id}
+    json={"file_id": file_id, "purpose": "voice_clone"}
 )
 print(f"Deleted: {response.json()['deleted']}")
 ```
