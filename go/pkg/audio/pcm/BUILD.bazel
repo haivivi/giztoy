@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "pcm",
+    srcs = [
+        "atomic.go",
+        "doc.go",
+        "io.go",
+        "mixer.go",
+        "pcm.go",
+        "track.go",
+        "track_ctrl.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/audio/pcm",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/resampler",
+    ],
+)
+
+go_test(
+    name = "pcm_test",
+    srcs = ["mixer_test.go"],
+    embed = [":pcm"],
+)

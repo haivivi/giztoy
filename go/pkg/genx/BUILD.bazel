@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "genx",
+    srcs = [
+        "error.go",
+        "func_tool.go",
+        "gemini.go",
+        "genx.go",
+        "json.go",
+        "message.go",
+        "model_context_builder.go",
+        "model_context_multi.go",
+        "openai.go",
+        "stream_builder.go",
+        "stream_iter.go",
+    ],
+    embedsrcs = ["inspect_model_context.gotmpl"],
+    importpath = "github.com/haivivi/giztoy/pkg/genx",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/buffer",
+        "@com_github_goccy_go_yaml//:go-yaml",
+        "@com_github_google_jsonschema_go//jsonschema",
+        "@com_github_googleapis_gax_go_v2//apierror",
+        "@com_github_kaptinlin_jsonrepair//:jsonrepair",
+        "@com_github_openai_openai_go//:openai-go",
+        "@com_github_openai_openai_go//packages/param",
+        "@com_github_openai_openai_go//packages/ssestream",
+        "@org_golang_google_genai//:genai",
+    ],
+)

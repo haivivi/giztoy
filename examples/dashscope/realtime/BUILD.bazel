@@ -1,9 +1,16 @@
-load("@rules_go//go:def.bzl", "go_binary")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_binary(
     name = "realtime",
-    srcs = ["main.go"],
+    embed = [":realtime_lib"],
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "realtime_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/examples/dashscope/realtime",
+    visibility = ["//visibility:private"],
     deps = [
         "//go/pkg/dashscope",
         "//go/pkg/minimax",

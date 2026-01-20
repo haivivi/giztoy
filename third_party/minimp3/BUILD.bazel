@@ -1,0 +1,8 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "minimp3",
+    hdrs = ["minimp3.h"],
+    includes = ["."],
+    visibility = ["//visibility:public"],
+)

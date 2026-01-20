@@ -1,0 +1,78 @@
+load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+
+# Use Zig as C compiler to build libopus
+genrule(
+    name = "opus_static",
+    srcs = [
+        "@opus//:opus_srcs",
+        "@opus//:opus_public_headers",
+        "@opus//:opus_internal_headers",
+        "config.h",
+    ],
+    outs = ["libopus.a"],
+    cmd = """
+        set -e
+        export HOME=/tmp
+        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
+        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
+        mkdir -p /tmp/zig-cache
+        
+        OUTDIR=$$(mktemp -d)
+        CONFIG_DIR=$$(mktemp -d)
+        cp $(location config.h) $$CONFIG_DIR/config.h
+        
+        for src in $(locations @opus//:opus_srcs); do
+            base=$$(basename $$src .c)
+            zig cc -c $$src -o $$OUTDIR/$$base.o \
+                -I$$CONFIG_DIR \
+                -Iexternal/+audio_libs+opus/include \
+                -Iexternal/+audio_libs+opus/celt \
+                -Iexternal/+audio_libs+opus/silk \
+                -Iexternal/+audio_libs+opus/silk/float \
+                -Iexternal/+audio_libs+opus \
+                -DHAVE_CONFIG_H \
+                -DOPUS_BUILD \
+                -fno-sanitize=undefined \
+                -O2 \
+                -w
+        done
+        
+        ar rcs $@ $$OUTDIR/*.o
+        rm -rf $$OUTDIR $$CONFIG_DIR
+    """,
+    visibility = ["//visibility:private"],
+)
+
+genrule(
+    name = "opus_headers",
+    srcs = ["@opus//:opus_public_headers"],
+    outs = [
+        "include/opus.h",
+        "include/opus_custom.h",
+        "include/opus_defines.h",
+        "include/opus_multistream.h",
+        "include/opus_projection.h",
+        "include/opus_types.h",
+    ],
+    cmd = """
+        mkdir -p $(@D)/include
+        for f in $(SRCS); do
+            cp $$f $(@D)/include/
+        done
+    """,
+    visibility = ["//visibility:private"],
+)
+
+cc_import(
+    name = "opus_import",
+    static_library = ":opus_static",
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "opus",
+    hdrs = [":opus_headers"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [":opus_import"],
+)

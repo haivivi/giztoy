@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "buffer",
+    srcs = [
+        "block_buffer.go",
+        "buffer.go",
+        "bytes.go",
+        "doc.go",
+        "ring_buffer.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/buffer",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "buffer_test",
+    srcs = [
+        "block_buffer_test.go",
+        "ring_buffer_test.go",
+    ],
+    embed = [":buffer"],
+)

@@ -29,6 +29,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install lame opus
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libmp3lame-dev libopus-dev libasound2-dev
+
       - name: Setup Bazel
         uses: bazel-contrib/setup-bazel@0.14.0
         with:
@@ -47,12 +60,12 @@ jobs:
               npm: package-lock.json
 
       - name: Build all targets
-        run: bazel build //...
+        run: bazel build //... --action_env=PATH
 
       - name: Test all targets
         run: |
           # Exit code 4 means "no test targets found", which is OK
-          bazel test //... || [ $? -eq 4 ]
+          bazel test //... --action_env=PATH || [ $? -eq 4 ]
 
       - name: Show build info
         if: always()

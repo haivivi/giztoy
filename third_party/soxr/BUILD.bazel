@@ -1,0 +1,62 @@
+load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+
+# Use Zig as C compiler to build soxr
+genrule(
+    name = "soxr_static",
+    srcs = [
+        "@soxr//:soxr_c_srcs",
+        "@soxr//:soxr_headers",
+        "@soxr//:soxr_templates",
+        "soxr-config.h",
+    ],
+    outs = ["libsoxr.a"],
+    cmd = """
+        set -e
+        export HOME=/tmp
+        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
+        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
+        mkdir -p /tmp/zig-cache
+        
+        OUTDIR=$$(mktemp -d)
+        CONFIG_DIR=$$(mktemp -d)
+        cp $(location soxr-config.h) $$CONFIG_DIR/soxr-config.h
+        
+        for src in $(locations @soxr//:soxr_c_srcs); do
+            base=$$(basename $$src .c)
+            zig cc -c $$src -o $$OUTDIR/$$base.o \
+                -I$$CONFIG_DIR \
+                -Iexternal/+audio_libs+soxr/src \
+                -include $$CONFIG_DIR/soxr-config.h \
+                -DSOXR_LIB \
+                -fno-sanitize=undefined \
+                -O2 \
+                -w
+        done
+        
+        ar rcs $@ $$OUTDIR/*.o
+        rm -rf $$OUTDIR $$CONFIG_DIR
+    """,
+    visibility = ["//visibility:private"],
+)
+
+genrule(
+    name = "soxr_header",
+    srcs = ["@soxr//:soxr_headers"],
+    outs = ["include/soxr.h"],
+    cmd = "mkdir -p $$(dirname $@) && cp external/+audio_libs+soxr/src/soxr.h $@",
+    visibility = ["//visibility:private"],
+)
+
+cc_import(
+    name = "soxr_import",
+    static_library = ":soxr_static",
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "soxr",
+    hdrs = [":soxr_header"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [":soxr_import"],
+)

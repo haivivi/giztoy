@@ -1,0 +1,42 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mp3",
+    srcs = [
+        "decoder.go",
+        "encoder.go",
+    ],
+    cdeps = [
+        "//third_party/lame:lame",
+        "//third_party/minimp3:minimp3",
+    ],
+    cgo = True,
+    clinkopts = select({
+        "@rules_go//go/platform:darwin": [
+            "-L/opt/homebrew/lib -lmp3lame",
+        ],
+        "@rules_go//go/platform:ios": [
+            "-L/opt/homebrew/lib -lmp3lame",
+        ],
+        "//conditions:default": [],
+    }),
+    copts = [
+        "-Igo/pkg/audio/codec/mp3/go/third_party/minimp3",
+    ] + select({
+        "@rules_go//go/platform:darwin": [
+            "-I/opt/homebrew/include",
+        ],
+        "@rules_go//go/platform:ios": [
+            "-I/opt/homebrew/include",
+        ],
+        "//conditions:default": [],
+    }),
+    importpath = "github.com/haivivi/giztoy/pkg/audio/codec/mp3",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "mp3_test",
+    srcs = ["mp3_test.go"],
+    embed = [":mp3"],
+)

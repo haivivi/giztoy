@@ -1,0 +1,92 @@
+load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+
+# Use Zig as C compiler to build LAME
+genrule(
+    name = "lame_static",
+    srcs = [
+        "@lame//:lame_srcs",
+        "@lame//:lame_headers",
+        "@lame//:mpglib_srcs",
+        "@lame//:mpglib_headers",
+        "config.h",
+    ],
+    outs = ["libmp3lame.a"],
+    cmd = """
+        set -e
+        export HOME=/tmp
+        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
+        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
+        mkdir -p /tmp/zig-cache
+        
+        OUTDIR=$$(mktemp -d)
+        CONFIG_DIR=$$(mktemp -d)
+        cp $(location config.h) $$CONFIG_DIR/config.h
+        
+        # Compile LAME sources
+        for src in $(locations @lame//:lame_srcs); do
+            base=$$(basename $$src .c)
+            zig cc -c $$src -o $$OUTDIR/lame_$$base.o \
+                -I$$CONFIG_DIR \
+                -Iexternal/+audio_libs+lame/include \
+                -Iexternal/+audio_libs+lame/libmp3lame \
+                -Iexternal/+audio_libs+lame/mpglib \
+                -DHAVE_CONFIG_H \
+                -DSTDC_HEADERS=1 \
+                -fno-sanitize=undefined \
+                -O2 \
+                -Wno-implicit-function-declaration \
+                -w
+        done
+        
+        # Compile mpglib sources
+        for src in $(locations @lame//:mpglib_srcs); do
+            base=$$(basename $$src .c)
+            zig cc -c $$src -o $$OUTDIR/mpglib_$$base.o \
+                -I$$CONFIG_DIR \
+                -Iexternal/+audio_libs+lame/include \
+                -Iexternal/+audio_libs+lame/libmp3lame \
+                -Iexternal/+audio_libs+lame/mpglib \
+                -DHAVE_CONFIG_H \
+                -DSTDC_HEADERS=1 \
+                -fno-sanitize=undefined \
+                -O2 \
+                -Wno-implicit-function-declaration \
+                -w
+        done
+        
+        ar rcs $@ $$OUTDIR/*.o
+        rm -rf $$OUTDIR $$CONFIG_DIR
+    """,
+    visibility = ["//visibility:private"],
+)
+
+genrule(
+    name = "lame_header",
+    srcs = ["@lame//:lame_headers"],
+    outs = ["include/lame/lame.h"],
+    cmd = """
+        mkdir -p $$(dirname $@)
+        for f in $(SRCS); do
+            case $$f in
+                */include/lame.h)
+                    cp $$f $@
+                    ;;
+            esac
+        done
+    """,
+    visibility = ["//visibility:private"],
+)
+
+cc_import(
+    name = "lame_import",
+    static_library = ":lame_static",
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "lame",
+    hdrs = [":lame_header"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [":lame_import"],
+)

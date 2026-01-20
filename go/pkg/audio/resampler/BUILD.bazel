@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "resampler",
+    srcs = [
+        "doc.go",
+        "format.go",
+        "sample_reader.go",
+        "soxr.go",
+    ],
+    cdeps = [
+        "//third_party/soxr",
+    ],
+    cgo = True,
+    importpath = "github.com/haivivi/giztoy/pkg/audio/resampler",
+    visibility = ["//visibility:public"],
+)

@@ -5,9 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/haivivi/giztoy/cmd/doubao",
     visibility = ["//visibility:private"],
-    deps = [
-        "//go/cmd/doubao/commands",
-    ],
+    deps = ["//go/cmd/doubao/commands"],
 )
 
 go_binary(

@@ -47,23 +47,21 @@ minimax config list-contexts
 
 ### 2. 测试 API
 
-示例请求文件位于 `examples/minimax/commands/` 目录下：
-
 ```bash
 # 文本生成
-minimax -c myctx text chat -f examples/minimax/commands/chat.yaml
+minimax -c myctx text chat -f examples/chat.yaml
 
 # 语音合成
-minimax -c myctx speech synthesize -f examples/minimax/commands/speech.yaml -o output.mp3
+minimax -c myctx speech synthesize -f examples/speech.yaml -o output.mp3
 
 # 视频生成
-minimax -c myctx video t2v -f examples/minimax/commands/video-t2v.yaml
+minimax -c myctx video t2v -f examples/video-t2v.yaml
 
 # 图片生成
-minimax -c myctx image generate -f examples/minimax/commands/image.yaml
+minimax -c myctx image generate -f examples/image.yaml
 
 # 音乐生成
-minimax -c myctx music generate -f examples/minimax/commands/music.yaml -o song.mp3
+minimax -c myctx music generate -f examples/music.yaml -o song.mp3
 ```
 
 ### 3. Pipe 多个命令
@@ -205,7 +203,7 @@ contexts:
 
 > **注意**：目前推荐使用 JSON 格式的请求文件，因为 YAML 解析依赖 interface 包的 yaml 标签支持（待完善）。
 
-请参考 `examples/minimax/commands/` 目录下的示例文件（Go 和 Rust CLI 共用）：
+请参考 `examples/` 目录下的示例文件：
 
 - `chat.yaml` - 文本聊天
 - `speech.yaml` - 语音合成
@@ -219,24 +217,18 @@ contexts:
 
 ## 示例脚本
 
-提供了完整的示例脚本，同时支持 Go 和 Rust CLI 测试：
+提供了完整的示例脚本，使用 `examples/` 目录下的 YAML 文件验证所有 API 功能：
 
 ```bash
-cd examples/minimax
+cd go/cmd/minimax
 
 # 先配置 context
-minimax config add-context minimax_cn --api-key YOUR_API_KEY
+go run ./main.go config add-context minimax_cn --api-key YOUR_API_KEY
 
-# 使用 Go CLI 运行测试
-./run.sh go all       # 全部测试
-./run.sh go quick     # 快速测试（基础 + 声音管理）
-./run.sh go 1         # 只运行阶段 1（TTS, Chat）
-
-# 使用 Rust CLI 运行测试
-./run.sh rust all
-
-# 同时测试 Go 和 Rust
-./run.sh both quick
+# 运行示例
+./examples.sh all      # 全部测试
+./examples.sh quick    # 快速测试（基础 + 声音管理）
+./examples.sh 1        # 只运行阶段 1（TTS, Chat）
 ```
 
 ### 测试阶段
@@ -256,10 +248,10 @@ minimax config add-context minimax_cn --api-key YOUR_API_KEY
 
 ```bash
 # 通过环境变量设置 API Key（可选）
-MINIMAX_API_KEY=xxx ./run.sh go all
+MINIMAX_API_KEY=xxx ./examples.sh all
 
 # 指定 context 名称（默认 minimax_cn）
-MINIMAX_CONTEXT=myctx ./run.sh rust all
+MINIMAX_CONTEXT=myctx ./examples.sh all
 ```
 
 ## License

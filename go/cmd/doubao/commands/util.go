@@ -9,7 +9,7 @@ import (
 
 	"github.com/haivivi/giztoy/pkg/cli"
 	ds "github.com/haivivi/giztoy/pkg/doubaospeech"
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 )
 
 // loadRequest loads a request from a YAML or JSON file

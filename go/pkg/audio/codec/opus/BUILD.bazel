@@ -1,0 +1,49 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "opus",
+    srcs = [
+        "decoder.go",
+        "encoder.go",
+        "frame.go",
+        "toc.go",
+    ],
+    cdeps = ["//third_party/opus:opus"],
+    cgo = True,
+    importpath = "github.com/haivivi/giztoy/pkg/audio/codec/opus",
+    visibility = ["//visibility:public"],
+)
+
+# Pure Go library for TOC parsing only (no CGO)
+go_library(
+    name = "opus_toc",
+    srcs = [
+        "frame.go",
+        "toc.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/audio/codec/opus",
+    visibility = ["//visibility:public"],
+)
+
+# TOC tests - pure Go, no CGO required
+go_test(
+    name = "toc_test",
+    srcs = ["toc_test.go"],
+    embed = [":opus_toc"],
+)
+
+# Codec tests - requires libopus
+go_test(
+    name = "codec_test",
+    srcs = ["codec_test.go"],
+    embed = [":opus"],
+)
+
+go_test(
+    name = "opus_test",
+    srcs = [
+        "codec_test.go",
+        "toc_test.go",
+    ],
+    embed = [":opus"],
+)

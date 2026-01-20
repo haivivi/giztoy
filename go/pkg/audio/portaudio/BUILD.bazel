@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "portaudio",
+    srcs = [
+        "portaudio.go",
+        "stream.go",
+    ],
+    cdeps = [
+        "//third_party/portaudio",
+    ],
+    cgo = True,
+    importpath = "github.com/haivivi/giztoy/pkg/audio/portaudio",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/pcm",
+    ],
+)
