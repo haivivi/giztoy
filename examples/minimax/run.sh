@@ -58,7 +58,10 @@ build_cli() {
                 log_info "构建 Rust CLI (bazel build //rust/cmd/minimax)..."
                 if ! (cd "$PROJECT_ROOT" && bazel build //rust/cmd/minimax); then
                     log_warn "Bazel 构建失败，回退到 Cargo..."
-                    (cd "$PROJECT_ROOT/rust" && cargo build --release --bin minimax)
+                    if ! (cd "$PROJECT_ROOT/rust" && cargo build --release --bin minimax); then
+                        log_error "Cargo 构建也失败，请检查构建环境..."
+                        exit 1
+                    fi
                 fi
             fi
             ;;
