@@ -20,7 +20,7 @@ giztoy-cli = { path = "cli" }
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
-# HTTP client (rustls for hermetic builds without system OpenSSL)
+# HTTP client (rustls-tls for pure Rust TLS, ring for crypto)
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "multipart", "rustls-tls"] }
 
 # Serialization
