@@ -1,0 +1,36 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mqtt",
+    srcs = [
+        "conn.go",
+        "dialer.go",
+        "serve_mux.go",
+        "server.go",
+        "topic.go",
+        "trie.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/mqtt",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_eclipse_paho_golang//autopaho",
+        "@com_github_eclipse_paho_golang//packets",
+        "@com_github_eclipse_paho_golang//paho",
+        "@com_github_mochi_mqtt_server_v2//:server",
+        "@com_github_mochi_mqtt_server_v2//hooks/auth",
+        "@com_github_mochi_mqtt_server_v2//listeners",
+        "@com_github_mochi_mqtt_server_v2//packets",
+    ],
+)
+
+go_test(
+    name = "mqtt_test",
+    srcs = [
+        "server_test.go",
+        "trie_test.go",
+    ],
+    embed = [":mqtt"],
+    deps = [
+        "@com_github_mochi_mqtt_server_v2//listeners",
+    ],
+)
