@@ -7,6 +7,7 @@ genrule(
         "@ogg//:ogg_srcs",
         "@ogg//:ogg_headers",
         "@ogg//:ogg_internal_headers",
+        "config_types.h",
     ],
     outs = ["libogg.a"],
     cmd = """
@@ -28,6 +29,9 @@ genrule(
         for hdr in $(locations @ogg//:ogg_headers); do
             cp $$hdr $$WORK/include/ogg/
         done
+        
+        # Copy config_types.h (platform-specific type definitions)
+        cp $(location config_types.h) $$WORK/include/ogg/
         
         # Copy internal headers
         for hdr in $(locations @ogg//:ogg_internal_headers); do
@@ -58,20 +62,25 @@ genrule(
 
 genrule(
     name = "ogg_headers_gen",
-    srcs = ["@ogg//:ogg_headers"],
+    srcs = [
+        "@ogg//:ogg_headers",
+        "config_types.h",
+    ],
     outs = [
         "include/ogg/ogg.h",
         "include/ogg/os_types.h",
+        "include/ogg/config_types.h",
     ],
     cmd = """
         mkdir -p $$(dirname $(location include/ogg/ogg.h))
-        for f in $(SRCS); do
+        for f in $(locations @ogg//:ogg_headers); do
             base=$$(basename $$f)
             case "$$base" in
                 ogg.h) cp $$f $(location include/ogg/ogg.h) ;;
                 os_types.h) cp $$f $(location include/ogg/os_types.h) ;;
             esac
         done
+        cp $(location config_types.h) $(location include/ogg/config_types.h)
     """,
     visibility = ["//visibility:private"],
 )
