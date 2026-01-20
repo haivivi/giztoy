@@ -7,7 +7,10 @@ import (
 )
 
 func TestSyncState(t *testing.T) {
-	sync := NewSyncState()
+	sync, err := NewSyncState()
+	if err != nil {
+		t.Fatalf("NewSyncState failed: %v", err)
+	}
 	defer sync.Clear()
 
 	// Write some data (not valid Ogg, just testing the interface)
@@ -29,7 +32,10 @@ func TestSyncState(t *testing.T) {
 }
 
 func TestStreamState(t *testing.T) {
-	stream := NewStreamState(12345)
+	stream, err := NewStreamState(12345)
+	if err != nil {
+		t.Fatalf("NewStreamState failed: %v", err)
+	}
 	defer stream.Clear()
 
 	if stream.SerialNo() != 12345 {
@@ -83,10 +89,16 @@ func TestEncoderDecoder(t *testing.T) {
 	t.Logf("Encoded %d bytes", buf.Len())
 
 	// Decode
-	dec := NewDecoder(&buf)
+	dec, err := NewDecoder(&buf)
+	if err != nil {
+		t.Fatalf("NewDecoder failed: %v", err)
+	}
 	defer dec.Close()
 
-	stream := NewStreamState(enc.SerialNo())
+	stream, err := NewStreamState(enc.SerialNo())
+	if err != nil {
+		t.Fatalf("NewStreamState failed: %v", err)
+	}
 	defer stream.Clear()
 
 	var decoded [][]byte
@@ -181,7 +193,10 @@ func TestPacketWriter(t *testing.T) {
 
 func TestEncoderWithSerial(t *testing.T) {
 	var buf bytes.Buffer
-	enc := NewEncoderWithSerial(&buf, 54321)
+	enc, err := NewEncoderWithSerial(&buf, 54321)
+	if err != nil {
+		t.Fatalf("NewEncoderWithSerial failed: %v", err)
+	}
 
 	if enc.SerialNo() != 54321 {
 		t.Errorf("SerialNo() = %d, want 54321", enc.SerialNo())
@@ -198,7 +213,10 @@ func TestPageHelpers(t *testing.T) {
 	enc.Close()
 
 	// Read the page
-	dec := NewDecoder(&buf)
+	dec, err := NewDecoder(&buf)
+	if err != nil {
+		t.Fatalf("NewDecoder failed: %v", err)
+	}
 	defer dec.Close()
 
 	page, err := dec.ReadPage()
@@ -245,11 +263,17 @@ func TestPacketHelpers(t *testing.T) {
 	enc.Close()
 
 	// Read and parse
-	dec := NewDecoder(&buf)
+	dec, err := NewDecoder(&buf)
+	if err != nil {
+		t.Fatalf("NewDecoder failed: %v", err)
+	}
 	defer dec.Close()
 
 	page, _ := dec.ReadPage()
-	stream := NewStreamState(page.SerialNo())
+	stream, err := NewStreamState(page.SerialNo())
+	if err != nil {
+		t.Fatalf("NewStreamState failed: %v", err)
+	}
 	defer stream.Clear()
 
 	stream.PageIn(page)
@@ -284,7 +308,10 @@ func TestPacketHelpers(t *testing.T) {
 }
 
 func TestStreamResetSerialNo(t *testing.T) {
-	stream := NewStreamState(100)
+	stream, err := NewStreamState(100)
+	if err != nil {
+		t.Fatalf("NewStreamState failed: %v", err)
+	}
 	defer stream.Clear()
 
 	if stream.SerialNo() != 100 {
@@ -299,7 +326,10 @@ func TestStreamResetSerialNo(t *testing.T) {
 }
 
 func TestSyncStateBuffer(t *testing.T) {
-	sync := NewSyncState()
+	sync, err := NewSyncState()
+	if err != nil {
+		t.Fatalf("NewSyncState failed: %v", err)
+	}
 	defer sync.Clear()
 
 	// Get buffer and write to it
@@ -319,7 +349,10 @@ func TestSyncStateBuffer(t *testing.T) {
 }
 
 func TestSyncStateReset(t *testing.T) {
-	sync := NewSyncState()
+	sync, err := NewSyncState()
+	if err != nil {
+		t.Fatalf("NewSyncState failed: %v", err)
+	}
 	defer sync.Clear()
 
 	// Write some data
@@ -329,7 +362,7 @@ func TestSyncStateReset(t *testing.T) {
 	sync.Reset()
 
 	// Should be able to write again
-	_, err := sync.Write([]byte("new data"))
+	_, err = sync.Write([]byte("new data"))
 	if err != nil {
 		t.Errorf("Write after Reset failed: %v", err)
 	}
@@ -357,11 +390,17 @@ func TestEncoderFlush(t *testing.T) {
 
 func TestMultipleClearCalls(t *testing.T) {
 	// Test that Clear() is idempotent
-	sync := NewSyncState()
+	sync, err := NewSyncState()
+	if err != nil {
+		t.Fatalf("NewSyncState failed: %v", err)
+	}
 	sync.Clear()
 	sync.Clear() // Should not panic
 
-	stream := NewStreamState(100)
+	stream, err := NewStreamState(100)
+	if err != nil {
+		t.Fatalf("NewStreamState failed: %v", err)
+	}
 	stream.Clear()
 	stream.Clear() // Should not panic
 }

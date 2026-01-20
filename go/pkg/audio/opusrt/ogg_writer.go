@@ -19,7 +19,7 @@ const (
 	pageHeaderTypeContinuationOfStream = 0x00
 	pageHeaderTypeBeginningOfStream    = 0x02
 	pageHeaderTypeEndOfStream          = 0x04
-	defaultPreSkip                     = 3840 // 3840 recommended in the RFC
+	defaultPreSkip                     = 3840 // RFC 7845 §5.1 recommends 80ms pre-skip (3840 samples at 48kHz)
 	idPageSignature                    = "OpusHead"
 	commentPageSignature               = "OpusTags"
 	pageHeaderSignature                = "OggS"
@@ -109,12 +109,12 @@ func (w *OggWriter) writeHeaders() error {
 	}
 	w.pageIndex++
 
-	// Comment Header
-	oggCommentHeader := make([]byte, 24)
+	// Comment Header (RFC 7845 §5.2)
+	oggCommentHeader := make([]byte, 22)
 	copy(oggCommentHeader[0:], commentPageSignature)        // Magic Signature 'OpusTags'
-	binary.LittleEndian.PutUint32(oggCommentHeader[8:], 8)  // Vendor Length
-	copy(oggCommentHeader[12:], "giztoy\x00\x00")           // Vendor name
-	binary.LittleEndian.PutUint32(oggCommentHeader[20:], 0) // User Comment List Length
+	binary.LittleEndian.PutUint32(oggCommentHeader[8:], 6)  // Vendor Length (UTF-8 string length, no null terminator per RFC)
+	copy(oggCommentHeader[12:], "giztoy")                   // Vendor name (6 bytes)
+	binary.LittleEndian.PutUint32(oggCommentHeader[18:], 0) // User Comment List Length
 
 	data = w.createPage(oggCommentHeader, pageHeaderTypeContinuationOfStream, 0, w.pageIndex)
 	if err := w.writeToStream(data); err != nil {

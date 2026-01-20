@@ -105,7 +105,10 @@ func TestOggReader_Basic(t *testing.T) {
 	writer.Close()
 
 	// Now read it back
-	reader := NewOggReader(bytes.NewReader(oggBuf.Bytes()))
+	reader, err := NewOggReader(bytes.NewReader(oggBuf.Bytes()))
+	if err != nil {
+		t.Fatalf("NewOggReader() error: %v", err)
+	}
 	defer reader.Close()
 
 	// Read frames
@@ -141,7 +144,10 @@ func TestOggReader_FrameDuration(t *testing.T) {
 	writer.Close()
 
 	// Read and check durations
-	reader := NewOggReader(bytes.NewReader(oggBuf.Bytes()))
+	reader, err := NewOggReader(bytes.NewReader(oggBuf.Bytes()))
+	if err != nil {
+		t.Fatalf("NewOggReader() error: %v", err)
+	}
 	defer reader.Close()
 
 	for {

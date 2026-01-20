@@ -12,6 +12,12 @@ import (
 // ErrDone is returned when the stream is exhausted.
 var ErrDone = errors.New("opusrt: done")
 
+// timestampEpsilon is the tolerance in milliseconds for timestamp comparisons.
+// This accounts for minor timing variations in real-time audio streaming.
+// A 2ms tolerance is chosen as it's smaller than the shortest Opus frame
+// duration (2.5ms) while allowing for reasonable clock drift.
+const timestampEpsilon = 2
+
 // RealtimeBuffer wraps a Buffer to simulate real-time playback.
 //
 // It reads frames from the underlying buffer and generates loss events
@@ -43,8 +49,6 @@ type frameAndLoss struct {
 }
 
 func (rtb *RealtimeBuffer) takeOne() (frame Frame, loss time.Duration, nextReadTick EpochMillis, ok bool) {
-	const epsilon = 2
-
 	rtb.opus.mu.Lock()
 	defer rtb.opus.mu.Unlock()
 
@@ -60,15 +64,15 @@ func (rtb *RealtimeBuffer) takeOne() (frame Frame, loss time.Duration, nextReadT
 	}
 
 	// Check for gap (packet loss)
-	if loss := int64(top.stamp) - int64(rtb.readTick-rtb.offset); loss > epsilon {
+	if loss := int64(top.stamp) - int64(rtb.readTick-rtb.offset); loss > timestampEpsilon {
 		rtb.opus.tail = top.stamp
-		rt := (rtb.opus.tail - epsilon) + rtb.offset
+		rt := (rtb.opus.tail - timestampEpsilon) + rtb.offset
 		return nil, EpochMillis(loss).Duration(), rt, true
 	}
 
 	rtb.opus.tail = top.endStamp()
 	rtb.opus.pop()
-	rt := (rtb.opus.tail - epsilon) + rtb.offset
+	rt := (rtb.opus.tail - timestampEpsilon) + rtb.offset
 	return top.frame, 0, rt, true
 }
 

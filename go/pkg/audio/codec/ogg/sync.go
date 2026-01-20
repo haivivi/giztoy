@@ -45,11 +45,15 @@ type SyncState struct {
 }
 
 // NewSyncState creates and initializes a new SyncState.
-func NewSyncState() *SyncState {
+// Returns an error if memory allocation fails.
+func NewSyncState() (*SyncState, error) {
 	state := C.alloc_sync_state()
+	if state == nil {
+		return nil, errors.New("ogg: failed to allocate sync state")
+	}
 	s := &SyncState{state: state}
 	s.cleanup = runtime.AddCleanup(s, freeSyncState, uintptr(unsafe.Pointer(state)))
-	return s
+	return s, nil
 }
 
 // freeSyncState releases C resources.
@@ -143,12 +147,16 @@ type Decoder struct {
 }
 
 // NewDecoder creates a new Ogg decoder.
-func NewDecoder(r io.Reader) *Decoder {
+func NewDecoder(r io.Reader) (*Decoder, error) {
+	sync, err := NewSyncState()
+	if err != nil {
+		return nil, err
+	}
 	return &Decoder{
 		r:    r,
-		sync: NewSyncState(),
+		sync: sync,
 		buf:  make([]byte, 4096),
-	}
+	}, nil
 }
 
 // Close releases resources.

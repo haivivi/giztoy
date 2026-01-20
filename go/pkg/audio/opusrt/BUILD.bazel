@@ -26,6 +26,8 @@ go_test(
     srcs = [
         "buffer_test.go",
         "frame_test.go",
+        "ogg_rw_test.go",
+        "realtime_test.go",
     ],
     embed = [":opusrt"],
 )

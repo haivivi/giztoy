@@ -76,8 +76,6 @@ var ErrDisorderedPacket = errors.New("opusrt: disordered packet")
 //   - loss: If non-zero, indicates the duration of lost data
 //   - err: io.EOF when buffer is empty
 func (buf *Buffer) Frame() (Frame, time.Duration, error) {
-	const epsilon = 2 // ms tolerance for timestamp comparison
-
 	buf.mu.Lock()
 	defer buf.mu.Unlock()
 
@@ -88,7 +86,7 @@ func (buf *Buffer) Frame() (Frame, time.Duration, error) {
 	first := buf.heap[0]
 
 	// Check for gap (packet loss)
-	if loss := int64(first.stamp) - int64(buf.tail); buf.tail > 0 && loss > epsilon {
+	if loss := int64(first.stamp) - int64(buf.tail); buf.tail > 0 && loss > timestampEpsilon {
 		buf.tail = first.stamp
 		return nil, EpochMillis(loss).Duration(), nil
 	}

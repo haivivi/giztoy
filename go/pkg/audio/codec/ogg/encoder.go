@@ -23,15 +23,19 @@ func NewEncoder(w io.Writer) (*Encoder, error) {
 	if err := binary.Read(rand.Reader, binary.LittleEndian, &serialNo); err != nil {
 		return nil, err
 	}
-	return NewEncoderWithSerial(w, serialNo), nil
+	return NewEncoderWithSerial(w, serialNo)
 }
 
 // NewEncoderWithSerial creates a new Ogg encoder with a specific serial number.
-func NewEncoderWithSerial(w io.Writer, serialNo int32) *Encoder {
+func NewEncoderWithSerial(w io.Writer, serialNo int32) (*Encoder, error) {
+	stream, err := NewStreamState(serialNo)
+	if err != nil {
+		return nil, err
+	}
 	return &Encoder{
 		w:      w,
-		stream: NewStreamState(serialNo),
-	}
+		stream: stream,
+	}, nil
 }
 
 // SerialNo returns the stream serial number.

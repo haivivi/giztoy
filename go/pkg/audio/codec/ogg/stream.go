@@ -142,15 +142,19 @@ func freeStreamState(ptr uintptr) {
 }
 
 // NewStreamState creates a new stream state with the given serial number.
-func NewStreamState(serialNo int32) *StreamState {
+// Returns an error if memory allocation fails.
+func NewStreamState(serialNo int32) (*StreamState, error) {
 	state := C.alloc_stream_state()
+	if state == nil {
+		return nil, errors.New("ogg: failed to allocate stream state")
+	}
 	s := &StreamState{
 		state:    state,
 		serialNo: serialNo,
 	}
 	C.stream_init(s.state, C.int(serialNo))
 	s.cleanup = runtime.AddCleanup(s, freeStreamState, uintptr(unsafe.Pointer(state)))
-	return s
+	return s, nil
 }
 
 // Clear releases resources. Safe to call multiple times.
@@ -240,8 +244,12 @@ func (s *StreamState) EOS() bool {
 // --- Encoding functions ---
 
 // PacketIn submits a packet for page generation.
-// The data is copied internally.
+// The data is copied internally. Returns an error if data is empty.
 func (s *StreamState) PacketIn(data []byte, granulePos, packetNo int64, bos, eos bool) error {
+	if len(data) == 0 {
+		return errors.New("ogg: empty packet data")
+	}
+
 	var cPacket C.ogg_packet
 
 	// Allocate and copy data to C memory

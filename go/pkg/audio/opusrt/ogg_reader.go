@@ -18,10 +18,14 @@ type OggReader struct {
 }
 
 // NewOggReader creates a new OGG Opus reader.
-func NewOggReader(r io.Reader) *OggReader {
-	return &OggReader{
-		decoder: ogg.NewDecoder(r),
+func NewOggReader(r io.Reader) (*OggReader, error) {
+	decoder, err := ogg.NewDecoder(r)
+	if err != nil {
+		return nil, err
 	}
+	return &OggReader{
+		decoder: decoder,
+	}, nil
 }
 
 // Frame returns the next Opus frame from the OGG container.
@@ -66,7 +70,11 @@ func (o *OggReader) Frame() (Frame, time.Duration, error) {
 
 		// Initialize stream with serial number from first page
 		if o.stream == nil {
-			o.stream = ogg.NewStreamState(page.SerialNo())
+			stream, err := ogg.NewStreamState(page.SerialNo())
+			if err != nil {
+				return nil, 0, err
+			}
+			o.stream = stream
 		}
 
 		// Submit page to stream
