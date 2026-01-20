@@ -15,7 +15,7 @@ go/vendor/
 # Rust
 rust/target/
 **/*.rs.bk
-Cargo.lock
+# Note: Cargo.lock is committed for applications (reproducible builds)
 
 # Zig
 zig/zig-cache/
