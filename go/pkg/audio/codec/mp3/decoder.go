@@ -87,11 +87,14 @@ import "C"
 import (
 	"errors"
 	"io"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
 // Decoder decodes MP3 audio to PCM.
+// Must call Close() when done to release resources.
 type Decoder struct {
 	r io.Reader
 
@@ -102,11 +105,18 @@ type Decoder struct {
 	bufLen  int    // valid bytes in buf
 	initErr error
 	inited  bool
+	closed  atomic.Bool
+	cleanup runtime.Cleanup
 
 	// Audio format (available after first frame decoded)
 	sampleRate int
 	channels   int
 	bitrate    int
+}
+
+// freeMP3Decoder releases C resources.
+func freeMP3Decoder(ptr uintptr) {
+	C.mp3_decoder_destroy((*C.mp3_decoder_t)(unsafe.Pointer(ptr)))
 }
 
 // NewDecoder creates a new MP3 decoder reading from r.
@@ -133,17 +143,22 @@ func (d *Decoder) init() error {
 		return d.initErr
 	}
 
+	// Register cleanup after successful initialization
+	d.cleanup = runtime.AddCleanup(d, freeMP3Decoder, uintptr(unsafe.Pointer(d.dec)))
 	return nil
 }
 
-// Close releases decoder resources.
+// Close releases decoder resources. Safe to call multiple times.
 func (d *Decoder) Close() error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	if d.closed.CompareAndSwap(false, true) {
+		d.mu.Lock()
+		defer d.mu.Unlock()
 
-	if d.dec != nil {
-		C.mp3_decoder_destroy(d.dec)
-		d.dec = nil
+		if d.dec != nil {
+			d.cleanup.Stop()
+			C.mp3_decoder_destroy(d.dec)
+			d.dec = nil
+		}
 	}
 	return nil
 }

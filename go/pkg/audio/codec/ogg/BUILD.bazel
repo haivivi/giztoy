@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "ogg",
+    srcs = [
+        "encoder.go",
+        "ogg.go",
+        "stream.go",
+        "sync.go",
+    ],
+    cdeps = ["//third_party/ogg"],
+    cgo = True,
+    importpath = "github.com/haivivi/giztoy/pkg/audio/codec/ogg",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "ogg_test",
+    srcs = ["ogg_test.go"],
+    embed = [":ogg"],
+)

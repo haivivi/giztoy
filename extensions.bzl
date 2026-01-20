@@ -81,6 +81,7 @@ _SOXR_VERSION = "0.1.3"
 _PORTAUDIO_VERSION = "v19.7.0"
 _OPUS_VERSION = "1.5.2"
 _LAME_VERSION = "3.100"
+_OGG_VERSION = "1.3.6"
 
 def _soxr_repo_impl(ctx):
     """Download and setup soxr source."""
@@ -266,12 +267,49 @@ _lame_repo = repository_rule(
     implementation = _lame_repo_impl,
 )
 
+def _ogg_repo_impl(ctx):
+    """Download and setup libogg source."""
+    ctx.download_and_extract(
+        url = "https://downloads.xiph.org/releases/ogg/libogg-{}.tar.gz".format(_OGG_VERSION),
+        stripPrefix = "libogg-{}".format(_OGG_VERSION),
+    )
+    ctx.file("BUILD.bazel", """
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "ogg_srcs",
+    srcs = [
+        "src/bitwise.c",
+        "src/framing.c",
+    ],
+)
+
+filegroup(
+    name = "ogg_internal_headers",
+    srcs = glob(["src/*.h"]),
+)
+
+filegroup(
+    name = "ogg_headers",
+    srcs = glob(["include/ogg/*.h"]),
+)
+
+exports_files(glob(["include/ogg/*.h"]))
+exports_files(glob(["src/*.c"]))
+exports_files(glob(["src/*.h"]))
+""")
+
+_ogg_repo = repository_rule(
+    implementation = _ogg_repo_impl,
+)
+
 def _audio_libs_impl(ctx):
     """Module extension for audio libraries."""
     _soxr_repo(name = "soxr")
     _portaudio_repo(name = "portaudio")
     _opus_repo(name = "opus")
     _lame_repo(name = "lame")
+    _ogg_repo(name = "ogg")
 
 audio_libs = module_extension(
     implementation = _audio_libs_impl,
