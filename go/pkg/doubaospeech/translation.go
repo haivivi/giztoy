@@ -7,23 +7,23 @@ import (
 	"iter"
 	"sync"
 
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
-
 	"github.com/gorilla/websocket"
 )
 
-// translationService 同声传译服务实现
-type translationService struct {
+// TranslationService represents simultaneous translation service
+// translationService provides translation operations
+// TranslationService provides real-time speech translation functionality
+type TranslationService struct {
 	client *Client
 }
 
-// newTranslationService 创建同声传译服务
-func newTranslationService(c *Client) iface.TranslationService {
-	return &translationService{client: c}
+// newTranslationService creates translation service
+func newTranslationService(c *Client) *TranslationService {
+	return &TranslationService{client: c}
 }
 
-// OpenSession 打开同传会话
-func (s *translationService) OpenSession(ctx context.Context, config *iface.TranslationConfig) (iface.TranslationSession, error) {
+// OpenSession opens translation session
+func (s *TranslationService) OpenSession(ctx context.Context, config *TranslationConfig) (*TranslationSession, error) {
 	url := s.client.config.wsURL + "/api/v2/st?" + s.client.getWSAuthParams()
 
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
@@ -31,32 +31,32 @@ func (s *translationService) OpenSession(ctx context.Context, config *iface.Tran
 		return nil, wrapError(err, "connect websocket")
 	}
 
-	session := &translationSession{
+	session := &TranslationSession{
 		conn:      conn,
 		client:    s.client,
 		config:    config,
 		reqID:     generateReqID(),
-		recvChan:  make(chan *iface.TranslationChunk, 100),
+		recvChan:  make(chan *TranslationChunk, 100),
 		errChan:   make(chan error, 1),
 		closeChan: make(chan struct{}),
 	}
 
-	// 发送开始请求
-	startReq := map[string]interface{}{
-		"app": map[string]interface{}{
+	// Send start request
+	startReq := map[string]any{
+		"app": map[string]any{
 			"appid":   s.client.config.appID,
 			"cluster": s.client.config.cluster,
 		},
-		"user": map[string]interface{}{
+		"user": map[string]any{
 			"uid": s.client.config.userID,
 		},
-		"audio": map[string]interface{}{
+		"audio": map[string]any{
 			"format":      string(config.AudioConfig.Format),
 			"sample_rate": int(config.AudioConfig.SampleRate),
 			"channel":     config.AudioConfig.Channel,
 			"bits":        config.AudioConfig.Bits,
 		},
-		"request": map[string]interface{}{
+		"request": map[string]any{
 			"reqid":           session.reqID,
 			"source_language": string(config.SourceLanguage),
 			"target_language": string(config.TargetLanguage),
@@ -66,7 +66,7 @@ func (s *translationService) OpenSession(ctx context.Context, config *iface.Tran
 	}
 
 	if config.EnableTTS && config.TTSVoice != "" {
-		startReq["request"].(map[string]interface{})["tts_voice_type"] = config.TTSVoice
+		startReq["request"].(map[string]any)["tts_voice_type"] = config.TTSVoice
 	}
 
 	if err := conn.WriteJSON(startReq); err != nil {
@@ -74,36 +74,37 @@ func (s *translationService) OpenSession(ctx context.Context, config *iface.Tran
 		return nil, wrapError(err, "send start request")
 	}
 
-	// 启动接收协程
+	// Start receive loop
 	go session.receiveLoop()
 
 	return session, nil
 }
 
-// ================== 同传会话实现 ==================
+// ================== Translation Session Implementation ==================
 
-type translationSession struct {
+// TranslationSession represents an active translation session
+type TranslationSession struct {
 	conn      *websocket.Conn
 	client    *Client
-	config    *iface.TranslationConfig
+	config    *TranslationConfig
 	reqID     string
-	recvChan  chan *iface.TranslationChunk
+	recvChan  chan *TranslationChunk
 	errChan   chan error
 	closeChan chan struct{}
 	closeOnce sync.Once
 	sequence  int32
 }
 
-func (s *translationSession) SendAudio(ctx context.Context, audio []byte, isLast bool) error {
-	// 发送音频数据（二进制帧）
+func (s *TranslationSession) SendAudio(ctx context.Context, audio []byte, isLast bool) error {
+	// Send audio data (binary frame)
 	if err := s.conn.WriteMessage(websocket.BinaryMessage, audio); err != nil {
 		return wrapError(err, "send audio")
 	}
 
-	// 如果是最后一帧，发送结束命令
+	// If last frame, send finish command
 	if isLast {
-		finishReq := map[string]interface{}{
-			"request": map[string]interface{}{
+		finishReq := map[string]any{
+			"request": map[string]any{
 				"reqid":   s.reqID,
 				"command": "finish",
 			},
@@ -116,8 +117,8 @@ func (s *translationSession) SendAudio(ctx context.Context, audio []byte, isLast
 	return nil
 }
 
-func (s *translationSession) Recv() iter.Seq2[*iface.TranslationChunk, error] {
-	return func(yield func(*iface.TranslationChunk, error) bool) {
+func (s *TranslationSession) Recv() iter.Seq2[*TranslationChunk, error] {
+	return func(yield func(*TranslationChunk, error) bool) {
 		for {
 			select {
 			case chunk, ok := <-s.recvChan:
@@ -140,7 +141,7 @@ func (s *translationSession) Recv() iter.Seq2[*iface.TranslationChunk, error] {
 	}
 }
 
-func (s *translationSession) Close() error {
+func (s *TranslationSession) Close() error {
 	s.closeOnce.Do(func() {
 		close(s.closeChan)
 		s.conn.Close()
@@ -148,7 +149,7 @@ func (s *translationSession) Close() error {
 	return nil
 }
 
-func (s *translationSession) receiveLoop() {
+func (s *TranslationSession) receiveLoop() {
 	defer close(s.recvChan)
 
 	for {
@@ -169,7 +170,7 @@ func (s *translationSession) receiveLoop() {
 			return
 		}
 
-		// 解析 JSON 响应
+		// Parse JSON response
 		var resp struct {
 			Type string `json:"type"`
 			Data struct {
@@ -185,7 +186,7 @@ func (s *translationSession) receiveLoop() {
 		}
 
 		if err := json.Unmarshal(data, &resp); err != nil {
-			// 可能是二进制音频数据，跳过
+			// May be binary audio data, skip
 			continue
 		}
 
@@ -201,7 +202,7 @@ func (s *translationSession) receiveLoop() {
 		}
 
 		s.sequence++
-		chunk := &iface.TranslationChunk{
+		chunk := &TranslationChunk{
 			SourceText: resp.Data.SourceText,
 			TargetText: resp.Data.TargetText,
 			IsDefinite: resp.Data.IsFinal,
@@ -209,7 +210,7 @@ func (s *translationSession) receiveLoop() {
 			Sequence:   s.sequence,
 		}
 
-		// 解码音频（如果有）
+		// Decode audio if present
 		if resp.Data.Audio != "" {
 			audioData, err := base64.StdEncoding.DecodeString(resp.Data.Audio)
 			if err == nil {
@@ -217,7 +218,7 @@ func (s *translationSession) receiveLoop() {
 			}
 		}
 
-		// 如果 type 是 asr，使用 text 作为 source
+		// If type is asr, use text as source
 		if resp.Type == "asr" {
 			chunk.SourceText = resp.Data.Text
 		} else if resp.Type == "translation" {
@@ -236,7 +237,3 @@ func (s *translationSession) receiveLoop() {
 		}
 	}
 }
-
-// 注册实现验证
-var _ iface.TranslationService = (*translationService)(nil)
-var _ iface.TranslationSession = (*translationSession)(nil)

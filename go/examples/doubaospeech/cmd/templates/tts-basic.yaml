@@ -1,0 +1,15 @@
+# TTS 基本请求模板
+# 变量: APP_ID, TTS_CLUSTER, VOICE_TYPE, REQID, TEXT
+app:
+  appid: "${APP_ID}"
+  cluster: "${TTS_CLUSTER}"
+user:
+  uid: "test_user"
+audio:
+  voice_type: "${VOICE_TYPE}"
+  encoding: "mp3"
+request:
+  reqid: "${REQID}"
+  text: "${TEXT}"
+  text_type: "plain"
+  operation: "query"

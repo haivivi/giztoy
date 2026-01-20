@@ -10,26 +10,25 @@ import (
 	"net/http"
 	"sync"
 
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
-
 	"github.com/gorilla/websocket"
 )
 
-// asrService ASR 服务实现
-type asrService struct {
+// asrService provides ASR operations
+// ASRService provides automatic speech recognition functionality
+type ASRService struct {
 	client *Client
 }
 
-// newASRService 创建 ASR 服务
-func newASRService(c *Client) iface.ASRService {
-	return &asrService{client: c}
+// newASRService creates ASR service
+func newASRService(c *Client) *ASRService {
+	return &ASRService{client: c}
 }
 
-// RecognizeOneSentence 一句话识别（ASR 1.0）
-func (s *asrService) RecognizeOneSentence(ctx context.Context, req *iface.OneSentenceRequest) (*iface.ASRResult, error) {
+// RecognizeOneSentence performs one-sentence recognition (ASR 1.0)
+func (s *ASRService) RecognizeOneSentence(ctx context.Context, req *OneSentenceRequest) (*ASRResult, error) {
 	asrReq := s.client.buildASRRequest(string(req.Format))
 
-	// 设置音频数据
+	// Set audio data
 	if req.AudioURL != "" {
 		asrReq.Audio.URL = req.AudioURL
 	} else if req.Audio != nil {
@@ -52,7 +51,7 @@ func (s *asrService) RecognizeOneSentence(ctx context.Context, req *iface.OneSen
 	asrReq.Request.EnablePunc = req.EnablePunc
 	asrReq.Request.EnableDDC = req.EnableDDC
 
-	// 发送请求
+	// Send request
 	jsonBytes, err := json.Marshal(asrReq)
 	if err != nil {
 		return nil, wrapError(err, "marshal request")
@@ -86,7 +85,7 @@ func (s *asrService) RecognizeOneSentence(ctx context.Context, req *iface.OneSen
 		}
 	}
 
-	// 解析响应
+	// Parse response
 	var apiResp struct {
 		ReqID   string `json:"reqid"`
 		Code    int    `json:"code"`
@@ -110,14 +109,14 @@ func (s *asrService) RecognizeOneSentence(ctx context.Context, req *iface.OneSen
 		}
 	}
 
-	return &iface.ASRResult{
+	return &ASRResult{
 		Text:     apiResp.Result.Text,
 		Duration: apiResp.Result.Duration,
 	}, nil
 }
 
-// OpenStreamSession 打开流式识别会话（ASR 2.0）
-func (s *asrService) OpenStreamSession(ctx context.Context, config *iface.StreamASRConfig) (iface.ASRStreamSession, error) {
+// OpenStreamSession opens streaming ASR session (ASR 2.0)
+func (s *ASRService) OpenStreamSession(ctx context.Context, config *StreamASRConfig) (*ASRStreamSession, error) {
 	url := s.client.config.wsURL + "/api/v2/asr?" + s.client.getWSAuthParams()
 
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
@@ -125,32 +124,32 @@ func (s *asrService) OpenStreamSession(ctx context.Context, config *iface.Stream
 		return nil, wrapError(err, "connect websocket")
 	}
 
-	session := &asrStreamSession{
+	session := &ASRStreamSession{
 		conn:      conn,
 		client:    s.client,
 		config:    config,
 		reqID:     generateReqID(),
-		recvChan:  make(chan *iface.ASRChunk, 100),
+		recvChan:  make(chan *ASRChunk, 100),
 		errChan:   make(chan error, 1),
 		closeChan: make(chan struct{}),
 	}
 
-	// 发送开始请求
-	startReq := map[string]interface{}{
-		"app": map[string]interface{}{
+	// Send start request
+	startReq := map[string]any{
+		"app": map[string]any{
 			"appid":   s.client.config.appID,
 			"cluster": s.client.config.cluster,
 		},
-		"user": map[string]interface{}{
+		"user": map[string]any{
 			"uid": s.client.config.userID,
 		},
-		"audio": map[string]interface{}{
+		"audio": map[string]any{
 			"format":      string(config.Format),
 			"sample_rate": int(config.SampleRate),
 			"channel":     config.Channel,
 			"bits":        config.Bits,
 		},
-		"request": map[string]interface{}{
+		"request": map[string]any{
 			"reqid":           session.reqID,
 			"workflow":        "audio_in,resample,partition,vad,fe,decode,itn,nlu_punctuate",
 			"show_utterances": config.ShowUtterances,
@@ -159,7 +158,7 @@ func (s *asrService) OpenStreamSession(ctx context.Context, config *iface.Stream
 	}
 
 	if config.Language != "" {
-		startReq["request"].(map[string]interface{})["language"] = string(config.Language)
+		startReq["request"].(map[string]any)["language"] = string(config.Language)
 	}
 
 	if err := conn.WriteJSON(startReq); err != nil {
@@ -167,20 +166,20 @@ func (s *asrService) OpenStreamSession(ctx context.Context, config *iface.Stream
 		return nil, wrapError(err, "send start request")
 	}
 
-	// 启动接收协程
+	// Start receive loop
 	go session.receiveLoop()
 
 	return session, nil
 }
 
-// RecognizeFile 文件识别（ASR 2.0）
-func (s *asrService) RecognizeFile(ctx context.Context, req *iface.FileASRRequest) (*iface.Task[iface.ASRResult], error) {
+// RecognizeFile performs file recognition (ASR 2.0)
+func (s *ASRService) RecognizeFile(ctx context.Context, req *FileASRRequest) (*Task[ASRResult], error) {
 	submitReq := &asyncASRSubmitRequest{
-		AppID:       s.client.config.appID,
-		ReqID:       generateReqID(),
-		AudioURL:    req.AudioURL,
-		EnableITN:   req.EnableITN,
-		EnablePunc:  req.EnablePunc,
+		AppID:      s.client.config.appID,
+		ReqID:      generateReqID(),
+		AudioURL:   req.AudioURL,
+		EnableITN:  req.EnableITN,
+		EnablePunc: req.EnablePunc,
 	}
 
 	if req.Language != "" {
@@ -203,33 +202,34 @@ func (s *asrService) RecognizeFile(ctx context.Context, req *iface.FileASRReques
 		}
 	}
 
-	return newTask[iface.ASRResult](resp.TaskID, s.client, taskTypeASRFile, submitReq.ReqID), nil
+	return newTask[ASRResult](resp.TaskID, s.client, taskTypeASRFile, submitReq.ReqID), nil
 }
 
-// ================== 流式识别会话实现 ==================
+// ================== Streaming ASR Session Implementation ==================
 
-type asrStreamSession struct {
+// ASRStreamSession represents an active streaming ASR session
+type ASRStreamSession struct {
 	conn      *websocket.Conn
 	client    *Client
-	config    *iface.StreamASRConfig
+	config    *StreamASRConfig
 	reqID     string
-	recvChan  chan *iface.ASRChunk
+	recvChan  chan *ASRChunk
 	errChan   chan error
 	closeChan chan struct{}
 	closeOnce sync.Once
 	sequence  int32
 }
 
-func (s *asrStreamSession) SendAudio(ctx context.Context, audio []byte, isLast bool) error {
-	// 发送音频数据（二进制帧）
+func (s *ASRStreamSession) SendAudio(ctx context.Context, audio []byte, isLast bool) error {
+	// Send audio data (binary frame)
 	if err := s.conn.WriteMessage(websocket.BinaryMessage, audio); err != nil {
 		return wrapError(err, "send audio")
 	}
 
-	// 如果是最后一帧，发送结束命令
+	// If last frame, send finish command
 	if isLast {
-		finishReq := map[string]interface{}{
-			"request": map[string]interface{}{
+		finishReq := map[string]any{
+			"request": map[string]any{
 				"reqid":   s.reqID,
 				"command": "finish",
 			},
@@ -242,8 +242,8 @@ func (s *asrStreamSession) SendAudio(ctx context.Context, audio []byte, isLast b
 	return nil
 }
 
-func (s *asrStreamSession) Recv() iter.Seq2[*iface.ASRChunk, error] {
-	return func(yield func(*iface.ASRChunk, error) bool) {
+func (s *ASRStreamSession) Recv() iter.Seq2[*ASRChunk, error] {
+	return func(yield func(*ASRChunk, error) bool) {
 		for {
 			select {
 			case chunk, ok := <-s.recvChan:
@@ -266,7 +266,7 @@ func (s *asrStreamSession) Recv() iter.Seq2[*iface.ASRChunk, error] {
 	}
 }
 
-func (s *asrStreamSession) Close() error {
+func (s *ASRStreamSession) Close() error {
 	s.closeOnce.Do(func() {
 		close(s.closeChan)
 		s.conn.Close()
@@ -274,7 +274,7 @@ func (s *asrStreamSession) Close() error {
 	return nil
 }
 
-func (s *asrStreamSession) receiveLoop() {
+func (s *ASRStreamSession) receiveLoop() {
 	defer close(s.recvChan)
 
 	for {
@@ -295,7 +295,7 @@ func (s *asrStreamSession) receiveLoop() {
 			return
 		}
 
-		// 解析 JSON 响应
+		// Parse JSON response
 		var resp struct {
 			ReqID   string `json:"reqid"`
 			Code    int    `json:"code"`
@@ -317,7 +317,7 @@ func (s *asrStreamSession) receiveLoop() {
 		}
 
 		if err := json.Unmarshal(data, &resp); err != nil {
-			// 可能是二进制音频数据，跳过
+			// May be binary audio data, skip
 			continue
 		}
 
@@ -333,17 +333,17 @@ func (s *asrStreamSession) receiveLoop() {
 			return
 		}
 
-		// 转换 utterances
-		var utterances []iface.Utterance
+		// Convert utterances
+		var utterances []Utterance
 		for _, u := range resp.Result.Utterances {
-			utt := iface.Utterance{
+			utt := Utterance{
 				Text:      u.Text,
 				StartTime: u.StartTime,
 				EndTime:   u.EndTime,
 				Definite:  resp.Result.IsFinal,
 			}
 			for _, w := range u.Words {
-				utt.Words = append(utt.Words, iface.Word{
+				utt.Words = append(utt.Words, Word{
 					Text:      w.Text,
 					StartTime: w.StartTime,
 					EndTime:   w.EndTime,
@@ -353,7 +353,7 @@ func (s *asrStreamSession) receiveLoop() {
 		}
 
 		s.sequence++
-		chunk := &iface.ASRChunk{
+		chunk := &ASRChunk{
 			Text:       resp.Result.Text,
 			IsDefinite: resp.Result.IsFinal,
 			IsFinal:    resp.Result.IsFinal,
@@ -372,7 +372,3 @@ func (s *asrStreamSession) receiveLoop() {
 		}
 	}
 }
-
-// 注册实现验证
-var _ iface.ASRService = (*asrService)(nil)
-var _ iface.ASRStreamSession = (*asrStreamSession)(nil)

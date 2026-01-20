@@ -2,101 +2,169 @@ package doubaospeech
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"iter"
 	"sync"
 
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
-
 	"github.com/gorilla/websocket"
 )
 
-// realtimeService 实时对话服务实现
-type realtimeService struct {
+// ================== Realtime Types ==================
+
+// RealtimeEventType represents realtime event type
+type RealtimeEventType int32
+
+const (
+	EventSessionStarted RealtimeEventType = 50
+	EventSessionFailed  RealtimeEventType = 51
+	EventSessionEnded   RealtimeEventType = 52
+	EventASRStarted     RealtimeEventType = 100
+	EventASRFinished    RealtimeEventType = 101
+	EventTTSStarted     RealtimeEventType = 102
+	EventTTSFinished    RealtimeEventType = 103
+	EventAudioReceived  RealtimeEventType = 104
+)
+
+// RealtimeConfig represents realtime session configuration
+type RealtimeConfig struct {
+	ASR    RealtimeASRConfig    `json:"asr"`
+	TTS    RealtimeTTSConfig    `json:"tts"`
+	Dialog RealtimeDialogConfig `json:"dialog"`
+}
+
+// RealtimeASRConfig represents ASR configuration
+type RealtimeASRConfig struct {
+	Extra map[string]any `json:"extra,omitempty"`
+}
+
+// RealtimeTTSConfig represents TTS configuration
+type RealtimeTTSConfig struct {
+	Speaker     string                   `json:"speaker"`
+	AudioConfig RealtimeAudioConfig      `json:"audio_config"`
+	Extra       map[string]any           `json:"extra,omitempty"`
+}
+
+// RealtimeAudioConfig represents audio configuration
+type RealtimeAudioConfig struct {
+	Channel    int    `json:"channel"`
+	Format     string `json:"format"`
+	SampleRate int    `json:"sample_rate"`
+}
+
+// RealtimeDialogConfig represents dialog configuration
+type RealtimeDialogConfig struct {
+	BotName           string          `json:"bot_name,omitempty"`
+	SystemRole        string          `json:"system_role,omitempty"`
+	SpeakingStyle     string          `json:"speaking_style,omitempty"`
+	CharacterManifest string          `json:"character_manifest,omitempty"`
+	Location          *LocationInfo   `json:"location,omitempty"`
+	Extra             map[string]any  `json:"extra,omitempty"`
+}
+
+// RealtimeEvent represents a realtime event
+type RealtimeEvent struct {
+	Type      RealtimeEventType `json:"type"`
+	SessionID string            `json:"session_id"`
+	Text      string            `json:"text,omitempty"`
+	Audio     []byte            `json:"audio,omitempty"`
+	Payload   []byte            `json:"payload,omitempty"`
+	ASRInfo   *RealtimeASRInfo  `json:"asr_info,omitempty"`
+	TTSInfo   *RealtimeTTSInfo  `json:"tts_info,omitempty"`
+	Error     *Error            `json:"error,omitempty"`
+}
+
+// RealtimeASRInfo represents ASR information in event
+type RealtimeASRInfo struct {
+	Text       string      `json:"text"`
+	IsFinal    bool        `json:"is_final"`
+	Utterances []Utterance `json:"utterances,omitempty"`
+}
+
+// RealtimeTTSInfo represents TTS information in event
+type RealtimeTTSInfo struct {
+	TTSType string `json:"tts_type"`
+	Content string `json:"content"`
+}
+
+// ================== Implementation ==================
+
+// realtimeService provides realtime conversation operations
+// RealtimeService provides real-time speech-to-speech functionality
+type RealtimeService struct {
 	client *Client
 }
 
-// newRealtimeService 创建实时对话服务
-func newRealtimeService(c *Client) iface.RealtimeService {
-	return &realtimeService{client: c}
+// newRealtimeService creates a new realtime conversation service
+func newRealtimeService(c *Client) *RealtimeService {
+	return &RealtimeService{client: c}
 }
 
-// Connect 建立实时对话连接
-func (s *realtimeService) Connect(ctx context.Context, config *iface.RealtimeConfig) (iface.RealtimeSession, error) {
-	url := s.client.config.wsURL + "/api/v3/saas/chat?" + s.client.getWSAuthParams()
+// Dial establishes a WebSocket connection to the Realtime dialogue endpoint
+//
+// This uses the endpoint: WSS /api/v3/realtime/dialogue
+// Resource ID: volc.speech.dialog
+func (s *RealtimeService) Dial(ctx context.Context) (*RealtimeConnection, error) {
+	url := s.client.config.wsURL + "/api/v3/realtime/dialogue"
+	reqID := generateReqID()
 
-	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
+	// Use V2 authentication headers
+	headers := s.client.getV2WSHeaders(ResourceRealtime, reqID)
+	headers.Set("X-Api-Request-Id", reqID)
+
+	wsConn, _, err := websocket.DefaultDialer.DialContext(ctx, url, headers)
 	if err != nil {
 		return nil, wrapError(err, "connect websocket")
 	}
 
-	session := &realtimeSession{
-		conn:      conn,
+	conn := &RealtimeConnection{
+		conn:      wsConn,
 		client:    s.client,
-		config:    config,
+		service:   s,
 		proto:     newBinaryProtocol(),
-		recvChan:  make(chan *iface.RealtimeEvent, 100),
-		errChan:   make(chan error, 1),
 		closeChan: make(chan struct{}),
 	}
 
-	// 发送开始请求
-	startReq := s.buildStartRequest(config)
-	if err := conn.WriteJSON(startReq); err != nil {
-		conn.Close()
-		return nil, wrapError(err, "send start request")
+	// Start connection-level receive loop
+	go conn.receiveLoop()
+
+	return conn, nil
+}
+
+// Connect establishes connection and starts a session (convenience method)
+func (s *RealtimeService) Connect(ctx context.Context, config *RealtimeConfig) (*RealtimeSession, error) {
+	conn, err := s.Dial(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	// 等待连接确认
-	_, data, err := conn.ReadMessage()
+	session, err := conn.StartSession(ctx, config)
 	if err != nil {
 		conn.Close()
-		return nil, wrapError(err, "read connect response")
+		return nil, err
 	}
-
-	msg, err := session.proto.unmarshal(data)
-	if err == nil && msg.flags&msgFlagWithEvent != 0 {
-		if msg.event == int32(iface.EventConnectionStarted) {
-			session.connectID = msg.connectID
-		}
-
-		// 解析会话信息
-		if len(msg.payload) > 0 {
-			var payload struct {
-				SessionID string `json:"session_id"`
-				DialogID  string `json:"dialog_id"`
-			}
-			if json.Unmarshal(msg.payload, &payload) == nil {
-				session.sessionID = payload.SessionID
-				session.dialogID = payload.DialogID
-			}
-		}
-	}
-
-	// 启动接收协程
-	go session.receiveLoop()
 
 	return session, nil
 }
 
-func (s *realtimeService) buildStartRequest(config *iface.RealtimeConfig) map[string]interface{} {
-	req := map[string]interface{}{
+func (s *RealtimeService) buildStartRequest(config *RealtimeConfig) map[string]any {
+	req := map[string]any{
 		"type": "start",
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"session_id": generateReqID(),
-			"config": map[string]interface{}{
-				"asr": map[string]interface{}{
+			"config": map[string]any{
+				"asr": map[string]any{
 					"extra": config.ASR.Extra,
 				},
-				"tts": map[string]interface{}{
+				"tts": map[string]any{
 					"speaker": config.TTS.Speaker,
-					"audio_config": map[string]interface{}{
+					"audio_config": map[string]any{
 						"channel":     config.TTS.AudioConfig.Channel,
 						"format":      config.TTS.AudioConfig.Format,
 						"sample_rate": config.TTS.AudioConfig.SampleRate,
 					},
 				},
-				"dialog": map[string]interface{}{
+				"dialog": map[string]any{
 					"bot_name":           config.Dialog.BotName,
 					"system_role":        config.Dialog.SystemRole,
 					"speaking_style":     config.Dialog.SpeakingStyle,
@@ -108,7 +176,7 @@ func (s *realtimeService) buildStartRequest(config *iface.RealtimeConfig) map[st
 	}
 
 	if config.Dialog.Location != nil {
-		req["data"].(map[string]interface{})["config"].(map[string]interface{})["dialog"].(map[string]interface{})["location"] = map[string]interface{}{
+		req["data"].(map[string]any)["config"].(map[string]any)["dialog"].(map[string]any)["location"] = map[string]any{
 			"longitude":    config.Dialog.Location.Longitude,
 			"latitude":     config.Dialog.Location.Latitude,
 			"city":         config.Dialog.Location.City,
@@ -124,74 +192,363 @@ func (s *realtimeService) buildStartRequest(config *iface.RealtimeConfig) map[st
 	return req
 }
 
-// ================== 实时对话会话实现 ==================
+// ================== Connection Implementation ==================
 
-type realtimeSession struct {
+// RealtimeConnection represents an active WebSocket connection to the realtime service
+type RealtimeConnection struct {
 	conn      *websocket.Conn
 	client    *Client
-	config    *iface.RealtimeConfig
+	service   *RealtimeService
 	proto     *binaryProtocol
+	closeChan chan struct{}
+	closeOnce sync.Once
+
+	// Current active session
+	sessionMu      sync.RWMutex
+	currentSession *RealtimeSession
+}
+
+// StartSession starts a new session on this connection
+func (c *RealtimeConnection) StartSession(ctx context.Context, config *RealtimeConfig) (*RealtimeSession, error) {
+	c.sessionMu.Lock()
+	defer c.sessionMu.Unlock()
+
+	// Close active session if exists
+	if c.currentSession != nil && !c.currentSession.isClosed() {
+		c.currentSession.close()
+	}
+
+	session := &RealtimeSession{
+		conn:      c,
+		config:    config,
+		recvChan:  make(chan *RealtimeEvent, 100),
+		errChan:   make(chan error, 1),
+		closeChan: make(chan struct{}),
+	}
+
+	// Send start request
+	startReq := c.service.buildStartRequest(config)
+	if err := c.conn.WriteJSON(startReq); err != nil {
+		return nil, wrapError(err, "send start request")
+	}
+
+	// Set as current active session
+	c.currentSession = session
+
+	// Wait for connection confirmation (from receiveLoop)
+	select {
+	case event := <-session.recvChan:
+		if event != nil {
+			session.sessionID = event.SessionID
+		}
+	case err := <-session.errChan:
+		c.currentSession = nil
+		return nil, err
+	case <-ctx.Done():
+		c.currentSession = nil
+		return nil, ctx.Err()
+	}
+
+	return session, nil
+}
+
+// Close closes the connection
+func (c *RealtimeConnection) Close() error {
+	c.closeOnce.Do(func() {
+		close(c.closeChan)
+
+		// Close current session
+		c.sessionMu.Lock()
+		if c.currentSession != nil {
+			c.currentSession.close()
+			c.currentSession = nil
+		}
+		c.sessionMu.Unlock()
+
+		c.conn.Close()
+	})
+	return nil
+}
+
+// receiveLoop is the connection-level message receive loop
+func (c *RealtimeConnection) receiveLoop() {
+	for {
+		select {
+		case <-c.closeChan:
+			return
+		default:
+		}
+
+		_, data, err := c.conn.ReadMessage()
+		if err != nil {
+			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+				c.dispatchError(wrapError(err, "read message"))
+			}
+			return
+		}
+
+		// Parse and dispatch event
+		event := c.parseMessage(data)
+		if event != nil {
+			c.dispatchEvent(event)
+		}
+	}
+}
+
+// dispatchEvent dispatches an event to the current session
+func (c *RealtimeConnection) dispatchEvent(event *RealtimeEvent) {
+	c.sessionMu.RLock()
+	session := c.currentSession
+	c.sessionMu.RUnlock()
+
+	if session != nil && !session.isClosed() {
+		select {
+		case session.recvChan <- event:
+		case <-session.closeChan:
+		default:
+			// Channel full, drop event to avoid blocking
+		}
+	}
+}
+
+// dispatchError dispatches an error to the current session
+func (c *RealtimeConnection) dispatchError(err error) {
+	c.sessionMu.RLock()
+	session := c.currentSession
+	c.sessionMu.RUnlock()
+
+	if session != nil && !session.isClosed() {
+		select {
+		case session.errChan <- err:
+		default:
+		}
+	}
+}
+
+// parseMessage parses a message
+func (c *RealtimeConnection) parseMessage(data []byte) *RealtimeEvent {
+	// Try to parse as binary protocol message
+	msg, err := c.proto.unmarshal(data)
+	if err == nil && msg.flags&msgFlagWithEvent != 0 {
+		return c.parseProtocolEvent(msg)
+	}
+
+	// Try to parse as JSON message
+	return c.parseJSONEvent(data)
+}
+
+func (c *RealtimeConnection) parseProtocolEvent(msg *message) *RealtimeEvent {
+	event := &RealtimeEvent{
+		Type:      RealtimeEventType(msg.event),
+		SessionID: msg.sessionID,
+	}
+
+	if msg.isAudioOnly() {
+		event.Audio = msg.payload
+		event.Type = EventAudioReceived
+	} else if len(msg.payload) > 0 {
+		event.Payload = msg.payload
+
+		// Try to parse info from payload
+		var payload struct {
+			Text      string `json:"text"`
+			SessionID string `json:"session_id"`
+			DialogID  string `json:"dialog_id"`
+			ASRInfo   *struct {
+				Text       string      `json:"text"`
+				IsFinal    bool        `json:"is_final"`
+				Utterances []Utterance `json:"utterances,omitempty"`
+			} `json:"asr_info,omitempty"`
+			TTSInfo *struct {
+				TTSType string `json:"tts_type"`
+				Content string `json:"content"`
+			} `json:"tts_info,omitempty"`
+		}
+
+		if json.Unmarshal(msg.payload, &payload) == nil {
+			if payload.SessionID != "" {
+				event.SessionID = payload.SessionID
+			}
+			event.Text = payload.Text
+			if payload.ASRInfo != nil {
+				event.ASRInfo = &RealtimeASRInfo{
+					Text:       payload.ASRInfo.Text,
+					IsFinal:    payload.ASRInfo.IsFinal,
+					Utterances: payload.ASRInfo.Utterances,
+				}
+			}
+			if payload.TTSInfo != nil {
+				event.TTSInfo = &RealtimeTTSInfo{
+					TTSType: payload.TTSInfo.TTSType,
+					Content: payload.TTSInfo.Content,
+				}
+			}
+		}
+	}
+
+	if msg.isError() {
+		event.Error = &Error{
+			Code:    int(msg.errorCode),
+			Message: string(msg.payload),
+		}
+	}
+
+	return event
+}
+
+func (c *RealtimeConnection) parseJSONEvent(data []byte) *RealtimeEvent {
+	var jsonMsg struct {
+		Type string `json:"type"`
+		Data struct {
+			SessionID string `json:"session_id"`
+			DialogID  string `json:"dialog_id"`
+			Role      string `json:"role"`
+			Content   string `json:"content"`
+			Text      string `json:"text"`
+			IsFinal   bool   `json:"is_final"`
+			Audio     string `json:"audio"`
+			Sequence  int32  `json:"sequence"`
+		} `json:"data"`
+	}
+
+	if err := json.Unmarshal(data, &jsonMsg); err != nil {
+		return nil
+	}
+
+	event := &RealtimeEvent{
+		SessionID: jsonMsg.Data.SessionID,
+	}
+
+	switch jsonMsg.Type {
+	case "text":
+		if jsonMsg.Data.Role == "user" {
+			event.Type = EventASRFinished
+			event.ASRInfo = &RealtimeASRInfo{
+				Text:    jsonMsg.Data.Content,
+				IsFinal: jsonMsg.Data.IsFinal,
+			}
+		} else {
+			event.Type = EventTTSStarted
+			event.Text = jsonMsg.Data.Content
+		}
+	case "audio":
+		event.Type = EventAudioReceived
+		// Audio is base64 encoded
+		if jsonMsg.Data.Audio != "" {
+			audioData, err := base64.StdEncoding.DecodeString(jsonMsg.Data.Audio)
+			if err == nil {
+				event.Audio = audioData
+			}
+		}
+	case "status":
+		// Map status to event type
+		event.Type = EventSessionStarted
+	case "error":
+		event.Type = EventSessionFailed
+		event.Error = &Error{
+			Message: jsonMsg.Data.Content,
+		}
+	default:
+		return nil
+	}
+
+	return event
+}
+
+// writeJSON writes JSON message (thread-safe via gorilla/websocket)
+func (c *RealtimeConnection) writeJSON(v any) error {
+	return c.conn.WriteJSON(v)
+}
+
+// writeMessage writes binary message (thread-safe via gorilla/websocket)
+func (c *RealtimeConnection) writeMessage(messageType int, data []byte) error {
+	return c.conn.WriteMessage(messageType, data)
+}
+
+// ================== Session Implementation ==================
+
+// RealtimeSession represents an active realtime speech-to-speech session
+type RealtimeSession struct {
+	conn      *RealtimeConnection
+	config    *RealtimeConfig
 	sessionID string
 	dialogID  string
-	connectID string
-	recvChan  chan *iface.RealtimeEvent
+	recvChan  chan *RealtimeEvent
 	errChan   chan error
 	closeChan chan struct{}
 	closeOnce sync.Once
+	closed    bool
+	closedMu  sync.RWMutex
 }
 
-func (s *realtimeSession) SendAudio(ctx context.Context, audio []byte) error {
-	// 构建音频消息
+func (s *RealtimeSession) SendAudio(ctx context.Context, audio []byte) error {
+	if s.isClosed() {
+		return wrapError(nil, "session closed")
+	}
+
+	// Build audio message
 	msg := &message{
 		msgType:   msgTypeAudioOnlyClient,
 		flags:     msgFlagWithEvent,
-		event:     int32(iface.EventAudioReceived),
+		event:     int32(EventAudioReceived),
 		sessionID: s.sessionID,
 		payload:   audio,
 	}
 
-	data, err := s.proto.marshal(msg)
+	data, err := s.conn.proto.marshal(msg)
 	if err != nil {
 		return wrapError(err, "marshal audio message")
 	}
 
-	return s.conn.WriteMessage(websocket.BinaryMessage, data)
+	return s.conn.writeMessage(websocket.BinaryMessage, data)
 }
 
-func (s *realtimeSession) SendText(ctx context.Context, text string) error {
-	msg := map[string]interface{}{
+func (s *RealtimeSession) SendText(ctx context.Context, text string) error {
+	if s.isClosed() {
+		return wrapError(nil, "session closed")
+	}
+
+	msg := map[string]any{
 		"type": "text",
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"session_id": s.sessionID,
 			"text":       text,
 		},
 	}
-	return s.conn.WriteJSON(msg)
+	return s.conn.writeJSON(msg)
 }
 
-func (s *realtimeSession) SayHello(ctx context.Context, content string) error {
-	msg := map[string]interface{}{
+func (s *RealtimeSession) SayHello(ctx context.Context, content string) error {
+	if s.isClosed() {
+		return wrapError(nil, "session closed")
+	}
+
+	msg := map[string]any{
 		"type": "say_hello",
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"session_id": s.sessionID,
 			"content":    content,
 		},
 	}
-	return s.conn.WriteJSON(msg)
+	return s.conn.writeJSON(msg)
 }
 
-func (s *realtimeSession) Interrupt(ctx context.Context) error {
-	msg := map[string]interface{}{
+func (s *RealtimeSession) Interrupt(ctx context.Context) error {
+	if s.isClosed() {
+		return wrapError(nil, "session closed")
+	}
+
+	msg := map[string]any{
 		"type": "cancel",
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"session_id": s.sessionID,
 		},
 	}
-	return s.conn.WriteJSON(msg)
+	return s.conn.writeJSON(msg)
 }
 
-func (s *realtimeSession) Recv() iter.Seq2[*iface.RealtimeEvent, error] {
-	return func(yield func(*iface.RealtimeEvent, error) bool) {
+func (s *RealtimeSession) Recv() iter.Seq2[*RealtimeEvent, error] {
+	return func(yield func(*RealtimeEvent, error) bool) {
 		for {
 			select {
 			case event, ok := <-s.recvChan:
@@ -211,188 +568,45 @@ func (s *realtimeSession) Recv() iter.Seq2[*iface.RealtimeEvent, error] {
 	}
 }
 
-func (s *realtimeSession) SessionID() string {
+func (s *RealtimeSession) SessionID() string {
 	return s.sessionID
 }
 
-func (s *realtimeSession) DialogID() string {
+func (s *RealtimeSession) DialogID() string {
 	return s.dialogID
 }
 
-func (s *realtimeSession) Close() error {
-	s.closeOnce.Do(func() {
-		close(s.closeChan)
-		// 发送结束消息
-		finishMsg := map[string]interface{}{
-			"type": "finish",
-			"data": map[string]interface{}{
-				"session_id": s.sessionID,
-			},
-		}
-		s.conn.WriteJSON(finishMsg)
-		s.conn.Close()
-	})
+func (s *RealtimeSession) Close() error {
+	s.close()
 	return nil
 }
 
-func (s *realtimeSession) receiveLoop() {
-	defer close(s.recvChan)
+// close is the internal close method
+func (s *RealtimeSession) close() {
+	s.closeOnce.Do(func() {
+		s.closedMu.Lock()
+		s.closed = true
+		s.closedMu.Unlock()
 
-	for {
-		select {
-		case <-s.closeChan:
-			return
-		default:
-		}
+		close(s.closeChan)
 
-		_, data, err := s.conn.ReadMessage()
-		if err != nil {
-			if !websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-				select {
-				case s.errChan <- wrapError(err, "read message"):
-				default:
-				}
-			}
-			return
+		// Send finish message (don't close connection)
+		finishMsg := map[string]any{
+			"type": "finish",
+			"data": map[string]any{
+				"session_id": s.sessionID,
+			},
 		}
-
-		// 尝试解析为二进制协议消息
-		msg, err := s.proto.unmarshal(data)
-		if err == nil && msg.flags&msgFlagWithEvent != 0 {
-			event := s.parseProtocolEvent(msg)
-			if event != nil {
-				select {
-				case s.recvChan <- event:
-				case <-s.closeChan:
-					return
-				}
-			}
-			continue
-		}
-
-		// 尝试解析为 JSON 消息
-		event := s.parseJSONEvent(data)
-		if event != nil {
-			select {
-			case s.recvChan <- event:
-			case <-s.closeChan:
-				return
-			}
-		}
-	}
+		s.conn.writeJSON(finishMsg)
+	})
 }
 
-func (s *realtimeSession) parseProtocolEvent(msg *message) *iface.RealtimeEvent {
-	event := &iface.RealtimeEvent{
-		Type:      iface.RealtimeEventType(msg.event),
-		SessionID: msg.sessionID,
-	}
-
-	if msg.isAudioOnly() {
-		event.Audio = msg.payload
-		event.Type = iface.EventAudioReceived
-	} else if len(msg.payload) > 0 {
-		event.Payload = msg.payload
-
-		// 尝试解析 payload 中的信息
-		var payload struct {
-			Text      string `json:"text"`
-			SessionID string `json:"session_id"`
-			ASRInfo   *struct {
-				Text       string             `json:"text"`
-				IsFinal    bool               `json:"is_final"`
-				Utterances []iface.Utterance  `json:"utterances,omitempty"`
-			} `json:"asr_info,omitempty"`
-			TTSInfo *struct {
-				TTSType string `json:"tts_type"`
-				Content string `json:"content"`
-			} `json:"tts_info,omitempty"`
-		}
-
-		if json.Unmarshal(msg.payload, &payload) == nil {
-			event.Text = payload.Text
-			if payload.ASRInfo != nil {
-				event.ASRInfo = &iface.RealtimeASRInfo{
-					Text:       payload.ASRInfo.Text,
-					IsFinal:    payload.ASRInfo.IsFinal,
-					Utterances: payload.ASRInfo.Utterances,
-				}
-			}
-			if payload.TTSInfo != nil {
-				event.TTSInfo = &iface.RealtimeTTSInfo{
-					TTSType: payload.TTSInfo.TTSType,
-					Content: payload.TTSInfo.Content,
-				}
-			}
-		}
-	}
-
-	if msg.isError() {
-		event.Error = &iface.Error{
-			Code:    int(msg.errorCode),
-			Message: string(msg.payload),
-		}
-	}
-
-	return event
+func (s *RealtimeSession) isClosed() bool {
+	s.closedMu.RLock()
+	defer s.closedMu.RUnlock()
+	return s.closed
 }
 
-func (s *realtimeSession) parseJSONEvent(data []byte) *iface.RealtimeEvent {
-	var jsonMsg struct {
-		Type string `json:"type"`
-		Data struct {
-			SessionID string `json:"session_id"`
-			Role      string `json:"role"`
-			Content   string `json:"content"`
-			Text      string `json:"text"`
-			IsFinal   bool   `json:"is_final"`
-			Audio     string `json:"audio"`
-			Sequence  int32  `json:"sequence"`
-		} `json:"data"`
-	}
-
-	if err := json.Unmarshal(data, &jsonMsg); err != nil {
-		return nil
-	}
-
-	event := &iface.RealtimeEvent{
-		SessionID: jsonMsg.Data.SessionID,
-	}
-
-	switch jsonMsg.Type {
-	case "text":
-		if jsonMsg.Data.Role == "user" {
-			event.Type = iface.EventASRFinished
-			event.ASRInfo = &iface.RealtimeASRInfo{
-				Text:    jsonMsg.Data.Content,
-				IsFinal: jsonMsg.Data.IsFinal,
-			}
-		} else {
-			event.Type = iface.EventTTSStarted
-			event.Text = jsonMsg.Data.Content
-		}
-	case "audio":
-		event.Type = iface.EventAudioReceived
-		// Audio is base64 encoded
-		if jsonMsg.Data.Audio != "" {
-			// Decode would be needed here
-			event.Audio = []byte(jsonMsg.Data.Audio)
-		}
-	case "status":
-		// Map status to event type
-		event.Type = iface.EventSessionStarted
-	case "error":
-		event.Type = iface.EventSessionFailed
-		event.Error = &iface.Error{
-			Message: jsonMsg.Data.Content,
-		}
-	default:
-		return nil
-	}
-
-	return event
+func (s *RealtimeSession) Connection() *RealtimeConnection {
+	return s.conn
 }
-
-// 注册实现验证
-var _ iface.RealtimeService = (*realtimeService)(nil)
-var _ iface.RealtimeSession = (*realtimeSession)(nil)

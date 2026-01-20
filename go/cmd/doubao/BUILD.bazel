@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/haivivi/giztoy/cmd/doubao",
     visibility = ["//visibility:private"],
     deps = [
-        "//go/cmd/doubao/cmd",
+        "//go/cmd/doubao/commands",
     ],
 )
 

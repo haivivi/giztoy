@@ -3,107 +3,298 @@ package doubaospeech
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
+	"strings"
 	"time"
-
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
 )
 
 const (
-	consoleAPIURL     = "https://open.volcengineapi.com"
-	consoleAPIVersion = "2024-01-01"
+	consoleBaseURL = "https://open.volcengineapi.com"
+	consoleService = "speech_saas_prod"
+	consoleRegion  = "cn-north-1"
 )
 
-// consoleService 控制台服务实现
-type consoleService struct {
-	client *Client
-	timbre *timbreService
-	apiKey *apiKeyService
-	svc    *serviceManageService
-	mon    *monitoringService
-	vc     *voiceCloneManageService
+// Console represents Volcengine Console API client
+// Supports two authentication methods:
+//  1. API Key (recommended): Use NewConsoleWithAPIKey
+//  2. AK/SK signature: Use NewConsole
+type Console struct {
+	config *consoleConfig
 }
 
-// newConsoleService 创建控制台服务
-func newConsoleService(c *Client) iface.ConsoleService {
-	cs := &consoleService{client: c}
-	cs.timbre = &timbreService{console: cs}
-	cs.apiKey = &apiKeyService{console: cs}
-	cs.svc = &serviceManageService{console: cs}
-	cs.mon = &monitoringService{console: cs}
-	cs.vc = &voiceCloneManageService{console: cs}
-	return cs
+// consoleConfig represents console client configuration
+type consoleConfig struct {
+	// API Key authentication (simple)
+	apiKey string
+
+	// AK/SK authentication (advanced)
+	accessKey string // Volcengine Access Key
+	secretKey string // Volcengine Secret Key
+
+	baseURL    string
+	httpClient *http.Client
+	timeout    time.Duration
 }
 
-func (s *consoleService) Timbre() iface.TimbreService {
-	return s.timbre
+// ConsoleOption represents configuration option function for Console
+type ConsoleOption func(*consoleConfig)
+
+// NewConsoleWithAPIKey creates Console client using API Key authentication
+//
+// apiKey is from Volcengine console:
+// https://console.volcengine.com/speech/new/setting/apikeys
+//
+// This is the recommended authentication method for Console API.
+func NewConsoleWithAPIKey(apiKey string, opts ...ConsoleOption) *Console {
+	config := &consoleConfig{
+		apiKey:  apiKey,
+		baseURL: consoleBaseURL,
+		timeout: defaultTimeout,
+	}
+
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	if config.httpClient == nil {
+		config.httpClient = &http.Client{
+			Timeout: config.timeout,
+		}
+	}
+
+	return &Console{
+		config: config,
+	}
 }
 
-func (s *consoleService) APIKey() iface.APIKeyService {
-	return s.apiKey
+// NewConsole creates Console client using AK/SK signature authentication
+//
+// accessKey and secretKey are from Volcengine IAM console
+func NewConsole(accessKey, secretKey string, opts ...ConsoleOption) *Console {
+	config := &consoleConfig{
+		accessKey: accessKey,
+		secretKey: secretKey,
+		baseURL:   consoleBaseURL,
+		timeout:   defaultTimeout,
+	}
+
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	if config.httpClient == nil {
+		config.httpClient = &http.Client{
+			Timeout: config.timeout,
+		}
+	}
+
+	return &Console{
+		config: config,
+	}
 }
 
-func (s *consoleService) Service() iface.ServiceManageService {
-	return s.svc
+// ConsoleWithBaseURL sets console API base URL
+func ConsoleWithBaseURL(url string) ConsoleOption {
+	return func(c *consoleConfig) {
+		c.baseURL = url
+	}
 }
 
-func (s *consoleService) Monitoring() iface.MonitoringService {
-	return s.mon
+// ConsoleWithHTTPClient sets custom HTTP client
+func ConsoleWithHTTPClient(client *http.Client) ConsoleOption {
+	return func(c *consoleConfig) {
+		c.httpClient = client
+	}
 }
 
-func (s *consoleService) VoiceCloneManage() iface.VoiceCloneManageService {
-	return s.vc
+// ConsoleWithTimeout sets request timeout
+func ConsoleWithTimeout(timeout time.Duration) ConsoleOption {
+	return func(c *consoleConfig) {
+		c.timeout = timeout
+	}
 }
 
-// doConsoleRequest 发送控制台 API 请求
-func (s *consoleService) doConsoleRequest(ctx context.Context, action string, params map[string]string, body interface{}, result interface{}) error {
-	// 构建 URL
-	u, _ := url.Parse(consoleAPIURL)
+// ListTimbresRequest represents timbre list request
+type ListTimbresRequest struct {
+	PageNumber int    `json:"PageNumber,omitempty"`
+	PageSize   int    `json:"PageSize,omitempty"`
+	TimbreType string `json:"TimbreType,omitempty"`
+}
+
+// ListTimbresResponse represents timbre list response
+type ListTimbresResponse struct {
+	Timbres []TimbreInfo `json:"Timbres"`
+}
+
+// TimbreInfo represents big model timbre information
+type TimbreInfo struct {
+	SpeakerID   string             `json:"SpeakerID"`
+	TimbreInfos []TimbreDetailInfo `json:"TimbreInfos"`
+}
+
+// TimbreDetailInfo represents timbre detail info
+type TimbreDetailInfo struct {
+	SpeakerName string           `json:"SpeakerName"`
+	Gender      string           `json:"Gender"`
+	Age         string           `json:"Age"`
+	Categories  []TimbreCategory `json:"Categories"`
+	Emotions    []TimbreEmotion  `json:"Emotions"`
+}
+
+// TimbreCategory represents timbre category
+type TimbreCategory struct {
+	Category string `json:"Category"`
+}
+
+// TimbreEmotion represents timbre emotion
+type TimbreEmotion struct {
+	Emotion     string `json:"Emotion"`
+	EmotionType string `json:"EmotionType"`
+	DemoText    string `json:"DemoText"`
+	DemoURL     string `json:"DemoURL"`
+}
+
+// ListSpeakersRequest represents speaker list request
+type ListSpeakersRequest struct {
+	PageNumber  int    `json:"PageNumber,omitempty"`
+	PageSize    int    `json:"PageSize,omitempty"`
+	SpeakerType string `json:"SpeakerType,omitempty"`
+	Language    string `json:"Language,omitempty"`
+}
+
+// ListSpeakersResponse represents speaker list response
+type ListSpeakersResponse struct {
+	Total    int           `json:"Total"`
+	Speakers []SpeakerInfo `json:"Speakers"`
+}
+
+// SpeakerInfo represents speaker information (new API)
+type SpeakerInfo struct {
+	ID        string `json:"ID"`
+	VoiceType string `json:"VoiceType"`
+	Name      string `json:"Name"`
+	Avatar    string `json:"Avatar"`
+	Gender    string `json:"Gender"`
+	Age       string `json:"Age"`
+	TrialURL  string `json:"TrialURL,omitempty"`
+}
+
+// VoiceCloneTrainStatus represents voice clone training status
+type VoiceCloneTrainStatus struct {
+	SpeakerID     string `json:"SpeakerID"`
+	InstanceNO    string `json:"InstanceNO"`
+	IsActivatable bool   `json:"IsActivatable"`
+	State         string `json:"State"`
+	DemoAudio     string `json:"DemoAudio,omitempty"`
+	Version       string `json:"Version"`
+	CreateTime    int64  `json:"CreateTime"`
+	ExpireTime    int64  `json:"ExpireTime"`
+	Alias         string `json:"Alias,omitempty"`
+	ResourceID    string `json:"ResourceID"`
+}
+
+// ListVoiceCloneStatusRequest represents list voice clone status request
+type ListVoiceCloneStatusRequest struct {
+	AppID      string `json:"AppID"`
+	PageNumber int    `json:"PageNumber,omitempty"`
+	PageSize   int    `json:"PageSize,omitempty"`
+	Status     string `json:"Status,omitempty"`
+}
+
+// ListVoiceCloneStatusResponse represents list voice clone status response
+type ListVoiceCloneStatusResponse struct {
+	Total    int                     `json:"Total"`
+	Statuses []VoiceCloneTrainStatus `json:"Statuses"`
+}
+
+// ListTimbres lists available TTS timbres (big model)
+// API: ListBigModelTTSTimbres, Version: 2025-05-20
+// Doc: https://www.volcengine.com/docs/6561/1770994
+func (c *Console) ListTimbres(ctx context.Context, req *ListTimbresRequest) (*ListTimbresResponse, error) {
+	var resp ListTimbresResponse
+	if err := c.doRequest(ctx, "ListBigModelTTSTimbres", "2025-05-20", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListSpeakers lists available speakers (new API)
+// API: ListSpeakers, Version: 2025-05-20
+// Doc: https://www.volcengine.com/docs/6561/2160690
+func (c *Console) ListSpeakers(ctx context.Context, req *ListSpeakersRequest) (*ListSpeakersResponse, error) {
+	var resp ListSpeakersResponse
+	if err := c.doRequest(ctx, "ListSpeakers", "2025-05-20", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ListVoiceCloneStatus lists voice clone training status
+func (c *Console) ListVoiceCloneStatus(ctx context.Context, req *ListVoiceCloneStatusRequest) (*ListVoiceCloneStatusResponse, error) {
+	var resp ListVoiceCloneStatusResponse
+	if err := c.doRequest(ctx, "ListMegaTTSTrainStatus", "2023-11-07", req, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// doRequest makes a request to Volcengine OpenAPI
+func (c *Console) doRequest(ctx context.Context, action, version string, body any, result any) error {
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("marshal request body: %w", err)
+	}
+
+	// Build URL
+	u, err := url.Parse(c.config.baseURL)
+	if err != nil {
+		return fmt.Errorf("parse base URL: %w", err)
+	}
 	q := u.Query()
 	q.Set("Action", action)
-	q.Set("Version", consoleAPIVersion)
-	for k, v := range params {
-		q.Set(k, v)
-	}
+	q.Set("Version", version)
 	u.RawQuery = q.Encode()
 
-	method := http.MethodGet
-	var bodyReader io.Reader
-	if body != nil {
-		method = http.MethodPost
-		jsonBytes, err := json.Marshal(body)
-		if err != nil {
-			return wrapError(err, "marshal request body")
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	// Set authentication
+	if c.config.apiKey != "" {
+		// API Key authentication (simple)
+		req.Header.Set("x-api-key", c.config.apiKey)
+	} else if c.config.accessKey != "" && c.config.secretKey != "" {
+		// AK/SK signature authentication
+		if err := c.signRequest(req, bodyBytes); err != nil {
+			return fmt.Errorf("sign request: %w", err)
 		}
-		bodyReader = io.NopCloser(bytes.NewReader(jsonBytes))
+	} else {
+		return fmt.Errorf("no authentication configured: use API Key or AK/SK")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), bodyReader)
+	resp, err := c.config.httpClient.Do(req)
 	if err != nil {
-		return wrapError(err, "create request")
-	}
-
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-	s.client.setAuthHeaders(req)
-
-	resp, err := s.client.config.httpClient.Do(req)
-	if err != nil {
-		return wrapError(err, "send request")
+		return fmt.Errorf("do request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return wrapError(err, "read response")
+		return fmt.Errorf("read response: %w", err)
 	}
 
-	// 解析响应
+	// Parse response
 	var apiResp struct {
 		ResponseMetadata struct {
 			RequestID string `json:"RequestId"`
@@ -111,6 +302,7 @@ func (s *consoleService) doConsoleRequest(ctx context.Context, action string, pa
 			Version   string `json:"Version"`
 			Error     *struct {
 				Code    string `json:"Code"`
+				CodeN   int    `json:"CodeN"`
 				Message string `json:"Message"`
 			} `json:"Error,omitempty"`
 		} `json:"ResponseMetadata"`
@@ -118,350 +310,108 @@ func (s *consoleService) doConsoleRequest(ctx context.Context, action string, pa
 	}
 
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return wrapError(err, "unmarshal response")
+		return fmt.Errorf("unmarshal response: %w (body: %s)", err, string(respBody))
 	}
 
 	if apiResp.ResponseMetadata.Error != nil {
 		return &Error{
+			Code:    apiResp.ResponseMetadata.Error.CodeN,
 			Message: apiResp.ResponseMetadata.Error.Message,
-			TraceID: apiResp.ResponseMetadata.RequestID,
 		}
 	}
 
-	if result != nil && apiResp.Result != nil {
+	if result != nil && len(apiResp.Result) > 0 {
 		if err := json.Unmarshal(apiResp.Result, result); err != nil {
-			return wrapError(err, "unmarshal result")
+			return fmt.Errorf("unmarshal result: %w", err)
 		}
 	}
 
 	return nil
 }
 
-// ================== 音色服务 ==================
+// signRequest signs the request using Volcengine V4 signature
+func (c *Console) signRequest(req *http.Request, body []byte) error {
+	now := time.Now().UTC()
+	dateStr := now.Format("20060102T150405Z")
+	shortDate := now.Format("20060102")
 
-type timbreService struct {
-	console *consoleService
-}
+	// Set required headers
+	req.Header.Set("X-Date", dateStr)
+	req.Header.Set("Host", req.URL.Host)
 
-func (s *timbreService) ListBigModelTTSTimbres(ctx context.Context, req *iface.ListTimbresRequest) (*iface.ListTimbresResponse, error) {
-	params := make(map[string]string)
-	if req.PageNumber > 0 {
-		params["PageNumber"] = fmt.Sprintf("%d", req.PageNumber)
-	}
-	if req.PageSize > 0 {
-		params["PageSize"] = fmt.Sprintf("%d", req.PageSize)
-	}
-	if req.TimbreType != "" {
-		params["TimbreType"] = req.TimbreType
-	}
+	// Calculate content hash
+	contentHash := sha256Hex(body)
+	req.Header.Set("X-Content-Sha256", contentHash)
 
-	var result struct {
-		Total   int `json:"Total"`
-		Timbres []struct {
-			TimbreId    string `json:"TimbreId"`
-			TimbreName  string `json:"TimbreName"`
-			Language    string `json:"Language"`
-			Gender      string `json:"Gender"`
-			Description string `json:"Description,omitempty"`
-		} `json:"Timbres"`
+	// Build canonical request
+	canonicalURI := req.URL.Path
+	if canonicalURI == "" {
+		canonicalURI = "/"
 	}
+	canonicalQueryString := req.URL.RawQuery
 
-	if err := s.console.doConsoleRequest(ctx, "ListBigModelTTSTimbres", params, nil, &result); err != nil {
-		return nil, err
-	}
+	// Signed headers
+	signedHeaders := []string{"content-type", "host", "x-content-sha256", "x-date"}
+	sort.Strings(signedHeaders)
 
-	resp := &iface.ListTimbresResponse{
-		Total:   result.Total,
-		Timbres: make([]iface.TimbreInfo, len(result.Timbres)),
-	}
-	for i, t := range result.Timbres {
-		resp.Timbres[i] = iface.TimbreInfo{
-			TimbreId:    t.TimbreId,
-			TimbreName:  t.TimbreName,
-			Language:    t.Language,
-			Gender:      t.Gender,
-			Description: t.Description,
+	var canonicalHeaders strings.Builder
+	for _, h := range signedHeaders {
+		value := req.Header.Get(h)
+		if h == "host" {
+			value = req.URL.Host
 		}
+		canonicalHeaders.WriteString(strings.ToLower(h))
+		canonicalHeaders.WriteString(":")
+		canonicalHeaders.WriteString(strings.TrimSpace(value))
+		canonicalHeaders.WriteString("\n")
 	}
 
-	return resp, nil
+	canonicalRequest := fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s",
+		req.Method,
+		canonicalURI,
+		canonicalQueryString,
+		canonicalHeaders.String(),
+		strings.Join(signedHeaders, ";"),
+		contentHash,
+	)
+
+	// Build string to sign
+	credentialScope := fmt.Sprintf("%s/%s/%s/request", shortDate, consoleRegion, consoleService)
+	stringToSign := fmt.Sprintf("HMAC-SHA256\n%s\n%s\n%s",
+		dateStr,
+		credentialScope,
+		sha256Hex([]byte(canonicalRequest)),
+	)
+
+	// Calculate signature
+	kDate := hmacSHA256([]byte(c.config.secretKey), shortDate)
+	kRegion := hmacSHA256(kDate, consoleRegion)
+	kService := hmacSHA256(kRegion, consoleService)
+	kSigning := hmacSHA256(kService, "request")
+	signature := hex.EncodeToString(hmacSHA256(kSigning, stringToSign))
+
+	// Build authorization header
+	authorization := fmt.Sprintf("HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s",
+		c.config.accessKey,
+		credentialScope,
+		strings.Join(signedHeaders, ";"),
+		signature,
+	)
+
+	req.Header.Set("Authorization", authorization)
+
+	return nil
 }
 
-func (s *timbreService) ListSpeakers(ctx context.Context, req *iface.ListSpeakersRequest) (*iface.ListSpeakersResponse, error) {
-	params := make(map[string]string)
-	if req.PageNumber > 0 {
-		params["PageNumber"] = fmt.Sprintf("%d", req.PageNumber)
-	}
-	if req.PageSize > 0 {
-		params["PageSize"] = fmt.Sprintf("%d", req.PageSize)
-	}
-	if req.SpeakerType != "" {
-		params["SpeakerType"] = req.SpeakerType
-	}
-	if req.Language != "" {
-		params["Language"] = req.Language
-	}
-
-	var result struct {
-		Total    int `json:"Total"`
-		Speakers []struct {
-			SpeakerId      string `json:"SpeakerId"`
-			SpeakerName    string `json:"SpeakerName"`
-			Language       string `json:"Language"`
-			Gender         string `json:"Gender"`
-			SampleAudioUrl string `json:"SampleAudioUrl,omitempty"`
-		} `json:"Speakers"`
-	}
-
-	if err := s.console.doConsoleRequest(ctx, "ListSpeakers", params, nil, &result); err != nil {
-		return nil, err
-	}
-
-	resp := &iface.ListSpeakersResponse{
-		Total:    result.Total,
-		Speakers: make([]iface.SpeakerInfo, len(result.Speakers)),
-	}
-	for i, sp := range result.Speakers {
-		resp.Speakers[i] = iface.SpeakerInfo{
-			SpeakerId:      sp.SpeakerId,
-			SpeakerName:    sp.SpeakerName,
-			Language:       sp.Language,
-			Gender:         sp.Gender,
-			SampleAudioUrl: sp.SampleAudioUrl,
-		}
-	}
-
-	return resp, nil
+// sha256Hex calculates SHA256 hash and returns hex string
+func sha256Hex(data []byte) string {
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:])
 }
 
-// ================== API Key 服务 ==================
-
-type apiKeyService struct {
-	console *consoleService
+// hmacSHA256 calculates HMAC-SHA256
+func hmacSHA256(key []byte, data string) []byte {
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(data))
+	return h.Sum(nil)
 }
-
-func (s *apiKeyService) List(ctx context.Context) (*iface.ListAPIKeysResponse, error) {
-	var result struct {
-		APIKeys []struct {
-			APIKeyId    string    `json:"APIKeyId"`
-			Name        string    `json:"Name"`
-			Status      string    `json:"Status"`
-			Description string    `json:"Description,omitempty"`
-			CreatedAt   time.Time `json:"CreatedAt"`
-			ExpiredAt   time.Time `json:"ExpiredAt,omitempty"`
-		} `json:"APIKeys"`
-	}
-
-	if err := s.console.doConsoleRequest(ctx, "ListAPIKeys", nil, nil, &result); err != nil {
-		return nil, err
-	}
-
-	resp := &iface.ListAPIKeysResponse{
-		APIKeys: make([]iface.APIKeyInfo, len(result.APIKeys)),
-	}
-	for i, k := range result.APIKeys {
-		resp.APIKeys[i] = iface.APIKeyInfo{
-			APIKeyId:    k.APIKeyId,
-			Name:        k.Name,
-			Status:      k.Status,
-			Description: k.Description,
-			CreatedAt:   k.CreatedAt,
-			ExpiredAt:   k.ExpiredAt,
-		}
-	}
-
-	return resp, nil
-}
-
-func (s *apiKeyService) Create(ctx context.Context, req *iface.CreateAPIKeyRequest) (*iface.CreateAPIKeyResponse, error) {
-	body := map[string]interface{}{
-		"Name": req.Name,
-	}
-	if !req.ExpiredAt.IsZero() {
-		body["ExpiredAt"] = req.ExpiredAt.Format(time.RFC3339)
-	}
-	if req.Description != "" {
-		body["Description"] = req.Description
-	}
-
-	var result struct {
-		APIKeyId     string `json:"APIKeyId"`
-		APIKeySecret string `json:"APIKeySecret"`
-		Name         string `json:"Name"`
-	}
-
-	if err := s.console.doConsoleRequest(ctx, "CreateAPIKey", nil, body, &result); err != nil {
-		return nil, err
-	}
-
-	return &iface.CreateAPIKeyResponse{
-		APIKeyId:     result.APIKeyId,
-		APIKeySecret: result.APIKeySecret,
-		Name:         result.Name,
-	}, nil
-}
-
-func (s *apiKeyService) Update(ctx context.Context, req *iface.UpdateAPIKeyRequest) error {
-	body := map[string]interface{}{
-		"APIKeyId": req.APIKeyId,
-	}
-	if req.Name != "" {
-		body["Name"] = req.Name
-	}
-	if req.Status != "" {
-		body["Status"] = req.Status
-	}
-	if !req.ExpiredAt.IsZero() {
-		body["ExpiredAt"] = req.ExpiredAt.Format(time.RFC3339)
-	}
-
-	return s.console.doConsoleRequest(ctx, "UpdateAPIKey", nil, body, nil)
-}
-
-func (s *apiKeyService) Delete(ctx context.Context, apiKeyID string) error {
-	body := map[string]interface{}{
-		"APIKeyId": apiKeyID,
-	}
-	return s.console.doConsoleRequest(ctx, "DeleteAPIKey", nil, body, nil)
-}
-
-// ================== 服务管理 ==================
-
-type serviceManageService struct {
-	console *consoleService
-}
-
-func (s *serviceManageService) Status(ctx context.Context) (*iface.ServiceStatusResponse, error) {
-	var result struct {
-		Status      string    `json:"Status"`
-		ActivatedAt time.Time `json:"ActivatedAt,omitempty"`
-		Services    []struct {
-			ServiceId   string `json:"ServiceId"`
-			ServiceName string `json:"ServiceName"`
-			Status      string `json:"Status"`
-		} `json:"Services"`
-	}
-
-	if err := s.console.doConsoleRequest(ctx, "GetServiceStatus", nil, nil, &result); err != nil {
-		return nil, err
-	}
-
-	resp := &iface.ServiceStatusResponse{
-		Status:      iface.ServiceState(result.Status),
-		ActivatedAt: result.ActivatedAt,
-		Services:    make([]iface.ServiceInfo, len(result.Services)),
-	}
-	for i, svc := range result.Services {
-		resp.Services[i] = iface.ServiceInfo{
-			ServiceId:   svc.ServiceId,
-			ServiceName: svc.ServiceName,
-			Status:      iface.ServiceState(svc.Status),
-		}
-	}
-
-	return resp, nil
-}
-
-func (s *serviceManageService) Activate(ctx context.Context, serviceID string) error {
-	body := map[string]interface{}{"ServiceId": serviceID}
-	return s.console.doConsoleRequest(ctx, "ActivateService", nil, body, nil)
-}
-
-func (s *serviceManageService) Pause(ctx context.Context, serviceID string) error {
-	body := map[string]interface{}{"ServiceId": serviceID}
-	return s.console.doConsoleRequest(ctx, "PauseService", nil, body, nil)
-}
-
-func (s *serviceManageService) Resume(ctx context.Context, serviceID string) error {
-	body := map[string]interface{}{"ServiceId": serviceID}
-	return s.console.doConsoleRequest(ctx, "ResumeService", nil, body, nil)
-}
-
-func (s *serviceManageService) Terminate(ctx context.Context, serviceID string) error {
-	body := map[string]interface{}{"ServiceId": serviceID}
-	return s.console.doConsoleRequest(ctx, "TerminateService", nil, body, nil)
-}
-
-// ================== 监控服务 ==================
-
-type monitoringService struct {
-	console *consoleService
-}
-
-func (s *monitoringService) GetQuota(ctx context.Context, serviceID string) (*iface.QuotaResponse, error) {
-	params := map[string]string{"ServiceId": serviceID}
-	var result iface.QuotaResponse
-	if err := s.console.doConsoleRequest(ctx, "GetQuota", params, nil, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-func (s *monitoringService) GetUsage(ctx context.Context, req *iface.UsageRequest) (*iface.UsageResponse, error) {
-	params := map[string]string{
-		"StartTime": req.StartTime.Format(time.RFC3339),
-		"EndTime":   req.EndTime.Format(time.RFC3339),
-	}
-	if req.ServiceId != "" {
-		params["ServiceId"] = req.ServiceId
-	}
-	if req.Granularity != "" {
-		params["Granularity"] = string(req.Granularity)
-	}
-
-	var result iface.UsageResponse
-	if err := s.console.doConsoleRequest(ctx, "GetUsage", params, nil, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-func (s *monitoringService) GetQPS(ctx context.Context) (*iface.QPSResponse, error) {
-	var result iface.QPSResponse
-	if err := s.console.doConsoleRequest(ctx, "GetQPS", nil, nil, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-// ================== 声音复刻管理 ==================
-
-type voiceCloneManageService struct {
-	console *consoleService
-}
-
-func (s *voiceCloneManageService) ListTrainStatus(ctx context.Context, speakerID string) (*iface.VoiceCloneTrainStatusResponse, error) {
-	params := map[string]string{"SpeakerId": speakerID}
-	var result iface.VoiceCloneTrainStatusResponse
-	if err := s.console.doConsoleRequest(ctx, "GetVoiceCloneStatus", params, nil, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-func (s *voiceCloneManageService) BatchListTrainStatus(ctx context.Context, req *iface.BatchListTrainStatusRequest) (*iface.BatchListTrainStatusResponse, error) {
-	params := make(map[string]string)
-	if req.PageNumber > 0 {
-		params["PageNumber"] = fmt.Sprintf("%d", req.PageNumber)
-	}
-	if req.PageSize > 0 {
-		params["PageSize"] = fmt.Sprintf("%d", req.PageSize)
-	}
-	if req.Status != "" {
-		params["Status"] = string(req.Status)
-	}
-
-	var result iface.BatchListTrainStatusResponse
-	if err := s.console.doConsoleRequest(ctx, "ListVoiceCloneStatus", params, nil, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
-// 注册实现验证
-var _ iface.ConsoleService = (*consoleService)(nil)
-var _ iface.TimbreService = (*timbreService)(nil)
-var _ iface.APIKeyService = (*apiKeyService)(nil)
-var _ iface.ServiceManageService = (*serviceManageService)(nil)
-var _ iface.MonitoringService = (*monitoringService)(nil)
-var _ iface.VoiceCloneManageService = (*voiceCloneManageService)(nil)

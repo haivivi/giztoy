@@ -4,6 +4,7 @@ go_library(
     name = "doubaospeech",
     srcs = [
         "asr.go",
+        "asr_v2.go",
         "client.go",
         "console.go",
         "doc.go",
@@ -17,12 +18,13 @@ go_library(
         "task.go",
         "translation.go",
         "tts.go",
+        "tts_v2.go",
+        "types.go",
         "voice_clone.go",
     ],
     importpath = "github.com/haivivi/giztoy/pkg/doubaospeech",
     visibility = ["//visibility:public"],
     deps = [
-        "//go/pkg/doubao_speech_interface",
         "@com_github_google_uuid//:uuid",
         "@com_github_gorilla_websocket//:websocket",
     ],

@@ -3,65 +3,100 @@ package doubaospeech
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io"
-	"mime/multipart"
 	"net/http"
-
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
+	"net/url"
 )
 
-// voiceCloneService 声音复刻服务实现
-type voiceCloneService struct {
+// VoiceCloneService represents voice cloning service
+// VoiceCloneService provides voice cloning functionality
+//
+// API Documentation: https://www.volcengine.com/docs/6561/1305191
+//
+// Endpoints:
+//   - Upload audio: POST /api/v1/mega_tts/audio/upload
+//   - Query status: GET /api/v1/mega_tts/status
+//
+// Note: List/Delete operations use Console API (see console.go)
+type VoiceCloneService struct {
 	client *Client
 }
 
-// newVoiceCloneService 创建声音复刻服务
-func newVoiceCloneService(c *Client) iface.VoiceCloneService {
-	return &voiceCloneService{client: c}
+// newVoiceCloneService creates voice clone service
+func newVoiceCloneService(c *Client) *VoiceCloneService {
+	return &VoiceCloneService{client: c}
 }
 
-// Train 训练自定义音色
-func (s *voiceCloneService) Train(ctx context.Context, req *iface.VoiceCloneTrainRequest) (*iface.Task[iface.VoiceCloneResult], error) {
-	// 构建 multipart 请求
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	// 添加基础字段
-	writer.WriteField("appid", s.client.config.appID)
-	writer.WriteField("voice_name", req.SpeakerID)
-	writer.WriteField("language", string(req.Language))
-
-	if req.ModelType != "" {
-		writer.WriteField("clone_type", string(req.ModelType))
+// Train trains custom voice using audio data
+//
+// The speaker_id should follow the format: S_xxxxxxxxx (e.g., S_TR0rbVuI1)
+// Audio requirements:
+//   - Duration: 10-60 seconds recommended
+//   - Formats: wav, mp3, ogg, pcm
+//   - Sample rate: 16kHz or 24kHz
+//
+// After training completes, use the speaker_id in TTS with:
+//   - Cluster: volcano_icl (for ICL 1.0) or volcano_mega (for DiT)
+//   - Voice type: your speaker_id
+func (s *VoiceCloneService) Train(ctx context.Context, req *VoiceCloneTrainRequest) (*Task[VoiceCloneResult], error) {
+	// Audio format - infer from data or use wav as default
+	audioFormat := "wav"
+	if len(req.AudioData) > 0 && len(req.AudioData[0]) > 0 {
+		audioFormat = detectAudioFormat(req.AudioData[0])
 	}
+
+	// Model type (1=ICL1.0, 2=DiT标准, 3=DiT还原, 4=ICL2.0)
+	modelType := 1 // default to ICL 1.0
+	switch req.ModelType {
+	case VoiceCloneModelStandard:
+		modelType = 1
+	case VoiceCloneModelPro:
+		modelType = 3 // DiT 还原版
+	}
+
+	// Build JSON request body
+	requestBody := map[string]any{
+		"appid":        s.client.config.appID,
+		"speaker_id":   req.SpeakerID,
+		"audio_format": audioFormat,
+		"model_type":   modelType,
+	}
+
+	// Optional fields
+	if req.Language != "" {
+		// Language: 0=zh, 1=en, 2=ja (guessing based on common patterns)
+		lang := 0 // default zh
+		if req.Language == LanguageEnUS || req.Language == LanguageEnGB {
+			lang = 1
+		} else if req.Language == LanguageJaJP {
+			lang = 2
+		}
+		requestBody["language"] = lang
+	}
+
 	if req.Text != "" {
-		writer.WriteField("text", req.Text)
+		requestBody["text"] = req.Text
 	}
 
-	// 添加音频文件（如果有）
-	for i, audioData := range req.AudioData {
-		part, err := writer.CreateFormFile("audio_file", fmt.Sprintf("audio_%d.wav", i))
-		if err != nil {
-			return nil, wrapError(err, "create form file")
-		}
-		if _, err := part.Write(audioData); err != nil {
-			return nil, wrapError(err, "write audio data")
-		}
+	// Add audio data as base64
+	if len(req.AudioData) > 0 {
+		requestBody["audio_data"] = base64.StdEncoding.EncodeToString(req.AudioData[0])
 	}
 
-	if err := writer.Close(); err != nil {
-		return nil, wrapError(err, "close writer")
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, wrapError(err, "marshal request")
 	}
 
-	url := s.client.config.baseURL + "/api/v1/voice_clone/submit"
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+	reqURL := s.client.config.baseURL + "/api/v1/mega_tts/audio/upload"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, reqURL, bytes.NewReader(jsonBody))
 	if err != nil {
 		return nil, wrapError(err, "create request")
 	}
 
-	httpReq.Header.Set("Content-Type", writer.FormDataContentType())
+	httpReq.Header.Set("Content-Type", "application/json")
 	s.client.setAuthHeaders(httpReq)
 
 	resp, err := s.client.config.httpClient.Do(httpReq)
@@ -83,196 +118,132 @@ func (s *voiceCloneService) Train(ctx context.Context, req *iface.VoiceCloneTrai
 		}
 	}
 
-	// 解析响应
+	// Parse response - mega_tts uses BaseResp format
 	var apiResp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-		Data    struct {
-			TaskID  string `json:"task_id"`
-			VoiceID string `json:"voice_id"`
-			Status  string `json:"status"`
-		} `json:"data"`
+		BaseResp struct {
+			StatusCode    int    `json:"StatusCode"`
+			StatusMessage string `json:"StatusMessage"`
+		} `json:"BaseResp"`
+		SpeakerID string `json:"speaker_id"`
 	}
 
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
 		return nil, wrapError(err, "unmarshal response")
 	}
 
-	if apiResp.Code != 0 {
+	if apiResp.BaseResp.StatusCode != 0 {
 		return nil, &Error{
-			Code:    apiResp.Code,
-			Message: apiResp.Message,
+			Code:    apiResp.BaseResp.StatusCode,
+			Message: apiResp.BaseResp.StatusMessage,
 			LogID:   logID,
 		}
 	}
 
-	return newTask[iface.VoiceCloneResult](apiResp.Data.TaskID, s.client, taskTypeVoiceClone, apiResp.Data.VoiceID), nil
+	speakerID := apiResp.SpeakerID
+	if speakerID == "" {
+		speakerID = req.SpeakerID
+	}
+
+	return newTask[VoiceCloneResult]("", s.client, taskTypeVoiceClone, speakerID), nil
 }
 
-// GetStatus 查询训练状态
-func (s *voiceCloneService) GetStatus(ctx context.Context, speakerID string) (*iface.VoiceCloneStatus, error) {
-	queryReq := map[string]interface{}{
-		"appid":    s.client.config.appID,
-		"voice_id": speakerID,
+// GetStatus queries training status
+//
+// Returns the current status of a voice clone training task
+func (s *VoiceCloneService) GetStatus(ctx context.Context, speakerID string) (*VoiceCloneStatus, error) {
+	params := url.Values{}
+	params.Set("appid", s.client.config.appID)
+	params.Set("speaker_id", speakerID)
+
+	reqURL := s.client.config.baseURL + "/api/v1/mega_tts/status?" + params.Encode()
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+	if err != nil {
+		return nil, wrapError(err, "create request")
 	}
 
-	var apiResp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-		Data    struct {
-			TaskID    string `json:"task_id"`
-			VoiceID   string `json:"voice_id"`
-			Status    string `json:"status"`
-			VoiceName string `json:"voice_name"`
-			CreatedAt string `json:"created_at"`
-		} `json:"data"`
+	s.client.setAuthHeaders(httpReq)
+
+	resp, err := s.client.config.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, wrapError(err, "send request")
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, wrapError(err, "read response")
 	}
 
-	if err := s.client.doJSONRequest(ctx, http.MethodPost, "/api/v1/voice_clone/query", queryReq, &apiResp); err != nil {
-		return nil, err
-	}
+	logID := resp.Header.Get("X-Tt-Logid")
 
-	if apiResp.Code != 0 {
-		return nil, &Error{
-			Code:    apiResp.Code,
-			Message: apiResp.Message,
+	if resp.StatusCode != http.StatusOK {
+		if apiErr := parseAPIError(resp.StatusCode, respBody, logID); apiErr != nil {
+			return nil, apiErr
 		}
 	}
 
-	// 转换状态
-	var status iface.VoiceCloneStatusType
-	switch apiResp.Data.Status {
-	case "processing":
-		status = iface.VoiceCloneStatusProcessing
-	case "success":
-		status = iface.VoiceCloneStatusSuccess
-	case "failed":
-		status = iface.VoiceCloneStatusFailed
-	default:
-		status = iface.VoiceCloneStatusPending
+	var apiResp struct {
+		BaseResp struct {
+			StatusCode    int    `json:"StatusCode"`
+			StatusMessage string `json:"StatusMessage"`
+		} `json:"BaseResp"`
+		SpeakerID string `json:"speaker_id"`
+		Status    string `json:"status"`
+		DemoAudio string `json:"demo_audio,omitempty"`
 	}
 
-	return &iface.VoiceCloneStatus{
-		SpeakerID: apiResp.Data.VoiceID,
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return nil, wrapError(err, "unmarshal response")
+	}
+
+	if apiResp.BaseResp.StatusCode != 0 {
+		return nil, &Error{
+			Code:    apiResp.BaseResp.StatusCode,
+			Message: apiResp.BaseResp.StatusMessage,
+			LogID:   logID,
+		}
+	}
+
+	// Convert status
+	var status VoiceCloneStatusType
+	switch apiResp.Status {
+	case "Processing":
+		status = VoiceCloneStatusProcessing
+	case "Success":
+		status = VoiceCloneStatusSuccess
+	case "Failed":
+		status = VoiceCloneStatusFailed
+	default:
+		status = VoiceCloneStatusPending
+	}
+
+	return &VoiceCloneStatus{
+		SpeakerID: apiResp.SpeakerID,
 		Status:    status,
+		DemoAudio: apiResp.DemoAudio,
 	}, nil
 }
 
-// List 列出已训练的音色
-func (s *voiceCloneService) List(ctx context.Context) ([]*iface.VoiceCloneInfo, error) {
-	url := s.client.config.baseURL + "/api/v1/voice_clone/list?appid=" + s.client.config.appID
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, wrapError(err, "create request")
+// detectAudioFormat detects audio format from file header
+func detectAudioFormat(data []byte) string {
+	if len(data) < 12 {
+		return "wav"
 	}
 
-	s.client.setAuthHeaders(httpReq)
-
-	resp, err := s.client.config.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, wrapError(err, "send request")
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, wrapError(err, "read response")
+	// Check for WAV (RIFF header)
+	if string(data[0:4]) == "RIFF" && string(data[8:12]) == "WAVE" {
+		return "wav"
 	}
 
-	logID := resp.Header.Get("X-Tt-Logid")
-
-	if resp.StatusCode != http.StatusOK {
-		if apiErr := parseAPIError(resp.StatusCode, respBody, logID); apiErr != nil {
-			return nil, apiErr
-		}
+	// Check for MP3 (ID3 or sync word)
+	if string(data[0:3]) == "ID3" || (data[0] == 0xFF && (data[1]&0xE0) == 0xE0) {
+		return "mp3"
 	}
 
-	var apiResp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-		Data    struct {
-			Voices []struct {
-				VoiceID   string `json:"voice_id"`
-				VoiceName string `json:"voice_name"`
-				Status    string `json:"status"`
-				Language  string `json:"language"`
-				CloneType string `json:"clone_type"`
-				CreatedAt int64  `json:"created_at"`
-			} `json:"voices"`
-		} `json:"data"`
+	// Check for OGG (OggS)
+	if string(data[0:4]) == "OggS" {
+		return "ogg"
 	}
 
-	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return nil, wrapError(err, "unmarshal response")
-	}
-
-	if apiResp.Code != 0 {
-		return nil, &Error{
-			Code:    apiResp.Code,
-			Message: apiResp.Message,
-			LogID:   logID,
-		}
-	}
-
-	var result []*iface.VoiceCloneInfo
-	for _, v := range apiResp.Data.Voices {
-		var status iface.VoiceCloneStatusType
-		switch v.Status {
-		case "processing":
-			status = iface.VoiceCloneStatusProcessing
-		case "success":
-			status = iface.VoiceCloneStatusSuccess
-		case "failed":
-			status = iface.VoiceCloneStatusFailed
-		default:
-			status = iface.VoiceCloneStatusPending
-		}
-
-		var modelType iface.VoiceCloneModelType
-		switch v.CloneType {
-		case "standard":
-			modelType = iface.VoiceCloneModelStandard
-		case "pro", "professional":
-			modelType = iface.VoiceCloneModelPro
-		}
-
-		result = append(result, &iface.VoiceCloneInfo{
-			SpeakerID: v.VoiceID,
-			Status:    status,
-			Language:  iface.Language(v.Language),
-			ModelType: modelType,
-			CreatedAt: v.CreatedAt,
-		})
-	}
-
-	return result, nil
+	return "wav" // default
 }
-
-// Delete 删除已训练的音色
-func (s *voiceCloneService) Delete(ctx context.Context, speakerID string) error {
-	deleteReq := map[string]interface{}{
-		"appid":    s.client.config.appID,
-		"voice_id": speakerID,
-	}
-
-	var apiResp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	}
-
-	if err := s.client.doJSONRequest(ctx, http.MethodPost, "/api/v1/voice_clone/delete", deleteReq, &apiResp); err != nil {
-		return err
-	}
-
-	if apiResp.Code != 0 {
-		return &Error{
-			Code:    apiResp.Code,
-			Message: apiResp.Message,
-		}
-	}
-
-	return nil
-}
-
-// 注册实现验证
-var _ iface.VoiceCloneService = (*voiceCloneService)(nil)

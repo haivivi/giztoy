@@ -24,13 +24,15 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
-	"github.com/haivivi/giztoy/cmd/doubao/cmd"
+	"github.com/haivivi/giztoy/cmd/doubao/commands"
 )
 
 func main() {
-	if err := cmd.Execute(); err != nil {
+	if err := commands.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
 	}
 }

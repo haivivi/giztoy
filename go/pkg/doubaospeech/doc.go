@@ -1,7 +1,8 @@
 // Package doubaospeech 提供豆包语音 API 的 Go 实现
 //
-// 本包实现了 doubao_speech_interface 中定义的接口，支持以下功能：
+// 本包提供两个独立的客户端：
 //
+// 1. Client - 语音 API 客户端（使用 Bearer Token 或 API Key 认证）
 //   - TTS (Text-to-Speech): 语音合成，支持同步、流式、异步多种模式
 //   - ASR (Automatic Speech Recognition): 语音识别，支持一句话识别和流式识别
 //   - Voice Clone: 声音复刻，支持创建自定义音色
@@ -10,20 +11,28 @@
 //   - Podcast: 多人播客音频合成
 //   - Translation: 同声传译
 //   - Media: 音视频字幕提取
-//   - Console: 控制台管理（音色、API Key、服务状态等）
+//
+// 2. Console - 控制台 API 客户端（使用 AK/SK 签名认证）
+//   - ListTimbres: 列出可用音色
+//   - ListSpeakers: 列出可用说话人
+//   - ListVoiceCloneStatus: 查询声音复刻训练状态
 //
 // # 快速开始
 //
-// 创建客户端：
+// 创建语音 API 客户端：
 //
 //	client := doubaospeech.NewClient("your_app_id",
 //	    doubaospeech.WithBearerToken("your_token"),
 //	    doubaospeech.WithCluster("volcano_tts"),
 //	)
 //
+// 创建控制台 API 客户端：
+//
+//	console := doubaospeech.NewConsole("your_access_key", "your_secret_key")
+//
 // 同步语音合成：
 //
-//	resp, err := client.TTS.Synthesize(ctx, &doubao_speech_interface.TTSRequest{
+//	resp, err := client.TTS.Synthesize(ctx, &doubaospeech.TTSRequest{
 //	    Text:      "你好，世界！",
 //	    VoiceType: "zh_female_cancan",
 //	})
@@ -63,15 +72,25 @@
 //
 // # 认证方式
 //
-// 支持两种认证方式：
+// Client (语音 API) 支持三种认证方式：
 //
-// 1. Bearer Token（推荐）:
+// 1. API Key（推荐，最简单）:
+//
+//	client := doubaospeech.NewClient(appID, doubaospeech.WithAPIKey(apiKey))
+//	// 获取地址: https://console.volcengine.com/speech/new/setting/apikeys
+//
+// 2. Bearer Token:
 //
 //	client := doubaospeech.NewClient(appID, doubaospeech.WithBearerToken(token))
 //
-// 2. API Key:
+// 3. Realtime V3 API Key（用于实时对话）:
 //
-//	client := doubaospeech.NewClient(appID, doubaospeech.WithAPIKey(accessKey, appKey))
+//	client := doubaospeech.NewClient(appID, doubaospeech.WithRealtimeAPIKey(accessKey, appKey))
+//
+// Console (控制台 API) 需要 AK/SK 签名:
+//
+//	console := doubaospeech.NewConsole(accessKey, secretKey)
+//	// 获取地址: https://console.volcengine.com/iam/keymanage/
 //
 // # 集群选择
 //

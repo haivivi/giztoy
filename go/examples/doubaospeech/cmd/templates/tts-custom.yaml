@@ -1,0 +1,18 @@
+# TTS 自定义参数请求模板
+# 变量: APP_ID, TTS_CLUSTER, VOICE_TYPE, REQID, TEXT, SPEED_RATIO, VOLUME_RATIO, PITCH_RATIO
+app:
+  appid: "${APP_ID}"
+  cluster: "${TTS_CLUSTER}"
+user:
+  uid: "test_user"
+audio:
+  voice_type: "${VOICE_TYPE}"
+  encoding: "mp3"
+  speed_ratio: ${SPEED_RATIO:-1.0}
+  volume_ratio: ${VOLUME_RATIO:-1.0}
+  pitch_ratio: ${PITCH_RATIO:-1.0}
+request:
+  reqid: "${REQID}"
+  text: "${TEXT}"
+  text_type: "plain"
+  operation: "query"

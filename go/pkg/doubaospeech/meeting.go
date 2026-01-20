@@ -3,25 +3,25 @@ package doubaospeech
 import (
 	"context"
 	"net/http"
-
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
 )
 
-// meetingService 会议场景服务实现
-type meetingService struct {
+// MeetingService represents meeting transcription service
+// meetingService provides meeting operations
+// MeetingService provides meeting transcription functionality
+type MeetingService struct {
 	client *Client
 }
 
-// newMeetingService 创建会议服务
-func newMeetingService(c *Client) iface.MeetingService {
-	return &meetingService{client: c}
+// newMeetingService creates meeting service
+func newMeetingService(c *Client) *MeetingService {
+	return &MeetingService{client: c}
 }
 
-// CreateTask 创建会议转写任务
-func (s *meetingService) CreateTask(ctx context.Context, req *iface.MeetingTaskRequest) (*iface.Task[iface.MeetingResult], error) {
-	submitReq := map[string]interface{}{
-		"appid":    s.client.config.appID,
-		"reqid":    generateReqID(),
+// CreateTask creates meeting transcription task
+func (s *MeetingService) CreateTask(ctx context.Context, req *MeetingTaskRequest) (*Task[MeetingResult], error) {
+	submitReq := map[string]any{
+		"appid":     s.client.config.appID,
+		"reqid":     generateReqID(),
 		"audio_url": req.AudioURL,
 	}
 
@@ -57,12 +57,12 @@ func (s *meetingService) CreateTask(ctx context.Context, req *iface.MeetingTaskR
 		}
 	}
 
-	return newTask[iface.MeetingResult](resp.TaskID, s.client, taskTypeMeeting, submitReq["reqid"].(string)), nil
+	return newTask[MeetingResult](resp.TaskID, s.client, taskTypeMeeting, submitReq["reqid"].(string)), nil
 }
 
-// GetTask 查询任务状态
-func (s *meetingService) GetTask(ctx context.Context, taskID string) (*iface.MeetingTaskStatus, error) {
-	queryReq := map[string]interface{}{
+// GetTask queries task status
+func (s *MeetingService) GetTask(ctx context.Context, taskID string) (*MeetingTaskStatus, error) {
+	queryReq := map[string]any{
 		"appid":   s.client.config.appID,
 		"task_id": taskID,
 	}
@@ -98,33 +98,33 @@ func (s *meetingService) GetTask(ctx context.Context, taskID string) (*iface.Mee
 		}
 	}
 
-	status := &iface.MeetingTaskStatus{
+	status := &MeetingTaskStatus{
 		TaskID:   apiResp.Data.TaskID,
 		Progress: apiResp.Data.Progress,
 	}
 
-	// 转换状态
+	// Convert status
 	switch apiResp.Data.Status {
 	case "submitted", "pending":
-		status.Status = iface.TaskStatusPending
+		status.Status = TaskStatusPending
 	case "running", "processing":
-		status.Status = iface.TaskStatusProcessing
+		status.Status = TaskStatusProcessing
 	case "success":
-		status.Status = iface.TaskStatusSuccess
+		status.Status = TaskStatusSuccess
 	case "failed":
-		status.Status = iface.TaskStatusFailed
+		status.Status = TaskStatusFailed
 	default:
-		status.Status = iface.TaskStatusPending
+		status.Status = TaskStatusPending
 	}
 
-	// 转换结果
+	// Convert result
 	if apiResp.Data.Result != nil {
-		result := &iface.MeetingResult{
+		result := &MeetingResult{
 			Text:     apiResp.Data.Result.Text,
 			Duration: apiResp.Data.Result.Duration,
 		}
 		for _, seg := range apiResp.Data.Result.Segments {
-			result.Segments = append(result.Segments, iface.MeetingSegment{
+			result.Segments = append(result.Segments, MeetingSegment{
 				Text:      seg.Text,
 				StartTime: seg.StartTime,
 				EndTime:   seg.EndTime,
@@ -136,6 +136,3 @@ func (s *meetingService) GetTask(ctx context.Context, taskID string) (*iface.Mee
 
 	return status, nil
 }
-
-// 注册实现验证
-var _ iface.MeetingService = (*meetingService)(nil)

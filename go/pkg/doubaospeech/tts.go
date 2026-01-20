@@ -12,75 +12,38 @@ import (
 	"strconv"
 	"sync"
 
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
-
 	"github.com/gorilla/websocket"
 )
 
-// ttsService TTS 服务实现
-type ttsService struct {
+// ttsService provides TTS operations
+// TTSService provides text-to-speech synthesis functionality
+type TTSService struct {
 	client *Client
 }
 
-// newTTSService 创建 TTS 服务
-func newTTSService(c *Client) iface.TTSService {
-	return &ttsService{client: c}
+// newTTSService creates TTS service
+func newTTSService(c *Client) *TTSService {
+	return &TTSService{client: c}
 }
 
-// Synthesize 同步语音合成
-func (s *ttsService) Synthesize(ctx context.Context, req *iface.TTSRequest) (*iface.TTSResponse, error) {
+// ttsAPIResponse represents TTS API response structure
+type ttsAPIResponse struct {
+	ReqID    string `json:"reqid"`
+	Code     int    `json:"code"`
+	Message  string `json:"message"`
+	Data     string `json:"data"`
+	Addition struct {
+		Duration string `json:"duration"`
+	} `json:"addition"`
+}
+
+// Synthesize performs synchronous TTS
+func (s *TTSService) Synthesize(ctx context.Context, req *TTSRequest) (*TTSResponse, error) {
 	ttsReq := s.buildRequest(req)
 
-	var respBody []byte
-	var logID string
-
-	// 构建请求
-	jsonBytes, err := json.Marshal(ttsReq)
-	if err != nil {
-		return nil, wrapError(err, "marshal request")
-	}
-
-	url := s.client.config.baseURL + "/api/v1/tts"
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(jsonBytes))
-	if err != nil {
-		return nil, wrapError(err, "create request")
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	s.client.setAuthHeaders(httpReq)
-
-	resp, err := s.client.config.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, wrapError(err, "send request")
-	}
-	defer resp.Body.Close()
-
-	respBody, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, wrapError(err, "read response")
-	}
-
-	logID = resp.Header.Get("X-Tt-Logid")
-
-	if resp.StatusCode != http.StatusOK {
-		if apiErr := parseAPIError(resp.StatusCode, respBody, logID); apiErr != nil {
-			return nil, apiErr
-		}
-	}
-
-	// 解析响应
-	var apiResp struct {
-		ReqID    string `json:"reqid"`
-		Code     int    `json:"code"`
-		Message  string `json:"message"`
-		Data     string `json:"data"`
-		Addition struct {
-			Duration string `json:"duration"`
-		} `json:"addition"`
-	}
-
-	if err := json.Unmarshal(respBody, &apiResp); err != nil {
-		return nil, wrapError(err, "unmarshal response")
+	var apiResp ttsAPIResponse
+	if err := s.client.doJSONRequest(ctx, http.MethodPost, "/api/v1/tts", ttsReq, &apiResp); err != nil {
+		return nil, err
 	}
 
 	if apiResp.Code != CodeSuccess {
@@ -88,11 +51,10 @@ func (s *ttsService) Synthesize(ctx context.Context, req *iface.TTSRequest) (*if
 			Code:    apiResp.Code,
 			Message: apiResp.Message,
 			ReqID:   apiResp.ReqID,
-			LogID:   logID,
 		}
 	}
 
-	// 解码音频数据
+	// Decode audio data
 	audioData, err := base64.StdEncoding.DecodeString(apiResp.Data)
 	if err != nil {
 		return nil, wrapError(err, "decode audio data")
@@ -100,16 +62,16 @@ func (s *ttsService) Synthesize(ctx context.Context, req *iface.TTSRequest) (*if
 
 	duration, _ := strconv.Atoi(apiResp.Addition.Duration)
 
-	return &iface.TTSResponse{
+	return &TTSResponse{
 		Audio:    audioData,
 		Duration: duration,
 		ReqID:    apiResp.ReqID,
 	}, nil
 }
 
-// SynthesizeStream 流式语音合成（HTTP）
-func (s *ttsService) SynthesizeStream(ctx context.Context, req *iface.TTSRequest) iter.Seq2[*iface.TTSChunk, error] {
-	return func(yield func(*iface.TTSChunk, error) bool) {
+// SynthesizeStream performs streaming TTS over HTTP
+func (s *TTSService) SynthesizeStream(ctx context.Context, req *TTSRequest) iter.Seq2[*TTSChunk, error] {
+	return func(yield func(*TTSChunk, error) bool) {
 		ttsReq := s.buildRequest(req)
 
 		jsonBytes, err := json.Marshal(ttsReq)
@@ -144,7 +106,7 @@ func (s *ttsService) SynthesizeStream(ctx context.Context, req *iface.TTSRequest
 			}
 		}
 
-		// 读取流式响应
+		// Read streaming response
 		reader := bufio.NewReader(resp.Body)
 		for {
 			line, err := reader.ReadBytes('\n')
@@ -189,7 +151,12 @@ func (s *ttsService) SynthesizeStream(ctx context.Context, req *iface.TTSRequest
 
 			var audioData []byte
 			if chunk.Data != "" {
-				audioData, _ = base64.StdEncoding.DecodeString(chunk.Data)
+				var err error
+				audioData, err = base64.StdEncoding.DecodeString(chunk.Data)
+				if err != nil {
+					yield(nil, wrapError(err, "decode audio data"))
+					return
+				}
 			}
 
 			duration := 0
@@ -197,7 +164,7 @@ func (s *ttsService) SynthesizeStream(ctx context.Context, req *iface.TTSRequest
 				duration, _ = strconv.Atoi(chunk.Addition.Duration)
 			}
 
-			ttsChunk := &iface.TTSChunk{
+			ttsChunk := &TTSChunk{
 				Audio:    audioData,
 				Sequence: chunk.Sequence,
 				IsLast:   isLast,
@@ -215,9 +182,9 @@ func (s *ttsService) SynthesizeStream(ctx context.Context, req *iface.TTSRequest
 	}
 }
 
-// SynthesizeStreamWS 流式语音合成（WebSocket）
-func (s *ttsService) SynthesizeStreamWS(ctx context.Context, req *iface.TTSRequest) iter.Seq2[*iface.TTSChunk, error] {
-	return func(yield func(*iface.TTSChunk, error) bool) {
+// SynthesizeStreamWS performs streaming TTS over WebSocket
+func (s *TTSService) SynthesizeStreamWS(ctx context.Context, req *TTSRequest) iter.Seq2[*TTSChunk, error] {
+	return func(yield func(*TTSChunk, error) bool) {
 		url := s.client.config.wsURL + "/api/v1/tts/ws_binary?" + s.client.getWSAuthParams()
 
 		conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
@@ -227,14 +194,14 @@ func (s *ttsService) SynthesizeStreamWS(ctx context.Context, req *iface.TTSReque
 		}
 		defer conn.Close()
 
-		// 发送请求
+		// Send request
 		ttsReq := s.buildRequest(req)
 		if err := conn.WriteJSON(ttsReq); err != nil {
 			yield(nil, wrapError(err, "send request"))
 			return
 		}
 
-		// 接收响应
+		// Receive response
 		proto := newBinaryProtocol()
 		for {
 			_, data, err := conn.ReadMessage()
@@ -261,7 +228,7 @@ func (s *ttsService) SynthesizeStreamWS(ctx context.Context, req *iface.TTSReque
 			}
 
 			isLast := msg.sequence < 0
-			chunk := &iface.TTSChunk{
+			chunk := &TTSChunk{
 				Audio:    msg.payload,
 				Sequence: msg.sequence,
 				IsLast:   isLast,
@@ -278,8 +245,8 @@ func (s *ttsService) SynthesizeStreamWS(ctx context.Context, req *iface.TTSReque
 	}
 }
 
-// OpenDuplexSession 打开双工流式会话
-func (s *ttsService) OpenDuplexSession(ctx context.Context, config *iface.TTSDuplexConfig) (iface.TTSDuplexSession, error) {
+// OpenDuplexSession opens duplex streaming session
+func (s *TTSService) OpenDuplexSession(ctx context.Context, config *TTSDuplexConfig) (*TTSDuplexSession, error) {
 	url := s.client.config.wsURL + "/api/v1/tts/ws_binary?" + s.client.getWSAuthParams()
 
 	conn, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
@@ -287,25 +254,25 @@ func (s *ttsService) OpenDuplexSession(ctx context.Context, config *iface.TTSDup
 		return nil, wrapError(err, "connect websocket")
 	}
 
-	session := &ttsDuplexSession{
+	session := &TTSDuplexSession{
 		conn:      conn,
 		client:    s.client,
 		config:    config,
 		reqID:     generateReqID(),
 		proto:     newBinaryProtocol(),
-		recvChan:  make(chan *iface.TTSChunk, 100),
+		recvChan:  make(chan *TTSChunk, 100),
 		errChan:   make(chan error, 1),
 		closeChan: make(chan struct{}),
 	}
 
-	// 启动接收协程
+	// Start receive loop
 	go session.receiveLoop()
 
 	return session, nil
 }
 
-// CreateAsyncTask 创建异步合成任务
-func (s *ttsService) CreateAsyncTask(ctx context.Context, req *iface.AsyncTTSRequest) (*iface.Task[iface.TTSAsyncResult], error) {
+// CreateAsyncTask creates async TTS task
+func (s *TTSService) CreateAsyncTask(ctx context.Context, req *AsyncTTSRequest) (*Task[TTSAsyncResult], error) {
 	submitReq := &asyncTTSSubmitRequest{
 		AppID:     s.client.config.appID,
 		ReqID:     generateReqID(),
@@ -345,13 +312,17 @@ func (s *ttsService) CreateAsyncTask(ctx context.Context, req *iface.AsyncTTSReq
 		}
 	}
 
-	return newTask[iface.TTSAsyncResult](resp.TaskID, s.client, taskTypeTTSAsync, submitReq.ReqID), nil
+	return newTask[TTSAsyncResult](resp.TaskID, s.client, taskTypeTTSAsync, submitReq.ReqID), nil
 }
 
-// buildRequest 构建 TTS 请求
-func (s *ttsService) buildRequest(req *iface.TTSRequest) *ttsRequest {
+// buildRequest builds TTS request
+func (s *TTSService) buildRequest(req *TTSRequest) *ttsRequest {
 	ttsReq := s.client.buildTTSRequest(req.Text, req.VoiceType)
 
+	// Override cluster if specified in request
+	if req.Cluster != "" {
+		ttsReq.App.Cluster = req.Cluster
+	}
 	if req.TextType != "" {
 		ttsReq.Request.TextType = string(req.TextType)
 	}
@@ -380,38 +351,39 @@ func (s *ttsService) buildRequest(req *iface.TTSRequest) *ttsRequest {
 	return ttsReq
 }
 
-// ================== 双工会话实现 ==================
+// ================== Duplex Session Implementation ==================
 
-type ttsDuplexSession struct {
-	conn       *websocket.Conn
-	client     *Client
-	config     *iface.TTSDuplexConfig
-	reqID      string
-	proto      *binaryProtocol
-	started    bool
-	recvChan   chan *iface.TTSChunk
-	errChan    chan error
-	closeChan  chan struct{}
-	closeOnce  sync.Once
+// TTSDuplexSession represents an active duplex TTS session
+type TTSDuplexSession struct {
+	conn      *websocket.Conn
+	client    *Client
+	config    *TTSDuplexConfig
+	reqID     string
+	proto     *binaryProtocol
+	started   bool
+	recvChan  chan *TTSChunk
+	errChan   chan error
+	closeChan chan struct{}
+	closeOnce sync.Once
 }
 
-func (s *ttsDuplexSession) SendText(ctx context.Context, text string, isLast bool) error {
-	var req map[string]interface{}
+func (s *TTSDuplexSession) SendText(ctx context.Context, text string, isLast bool) error {
+	var req map[string]any
 
 	if !s.started {
-		// 首次发送，需要完整请求
-		req = map[string]interface{}{
-			"app": map[string]interface{}{
+		// First send, need full request
+		req = map[string]any{
+			"app": map[string]any{
 				"appid":   s.client.config.appID,
 				"cluster": s.client.config.cluster,
 			},
-			"user": map[string]interface{}{
+			"user": map[string]any{
 				"uid": s.client.config.userID,
 			},
-			"audio": map[string]interface{}{
+			"audio": map[string]any{
 				"voice_type": s.config.VoiceType,
 			},
-			"request": map[string]interface{}{
+			"request": map[string]any{
 				"reqid":     s.reqID,
 				"text":      text,
 				"text_type": "plain",
@@ -420,31 +392,31 @@ func (s *ttsDuplexSession) SendText(ctx context.Context, text string, isLast boo
 		}
 
 		if s.config.Encoding != "" {
-			req["audio"].(map[string]interface{})["encoding"] = string(s.config.Encoding)
+			req["audio"].(map[string]any)["encoding"] = string(s.config.Encoding)
 		}
 		if s.config.SpeedRatio != 0 {
-			req["audio"].(map[string]interface{})["speed_ratio"] = s.config.SpeedRatio
+			req["audio"].(map[string]any)["speed_ratio"] = s.config.SpeedRatio
 		}
 		if s.config.VolumeRatio != 0 {
-			req["audio"].(map[string]interface{})["volume_ratio"] = s.config.VolumeRatio
+			req["audio"].(map[string]any)["volume_ratio"] = s.config.VolumeRatio
 		}
 		if s.config.PitchRatio != 0 {
-			req["audio"].(map[string]interface{})["pitch_ratio"] = s.config.PitchRatio
+			req["audio"].(map[string]any)["pitch_ratio"] = s.config.PitchRatio
 		}
 
 		s.started = true
 	} else if isLast {
-		// 结束输入
-		req = map[string]interface{}{
-			"request": map[string]interface{}{
+		// End input
+		req = map[string]any{
+			"request": map[string]any{
 				"reqid":     s.reqID,
 				"operation": "finish",
 			},
 		}
 	} else {
-		// 追加文本
-		req = map[string]interface{}{
-			"request": map[string]interface{}{
+		// Append text
+		req = map[string]any{
+			"request": map[string]any{
 				"reqid":     s.reqID,
 				"text":      text,
 				"operation": "append",
@@ -455,8 +427,8 @@ func (s *ttsDuplexSession) SendText(ctx context.Context, text string, isLast boo
 	return s.conn.WriteJSON(req)
 }
 
-func (s *ttsDuplexSession) Recv() iter.Seq2[*iface.TTSChunk, error] {
-	return func(yield func(*iface.TTSChunk, error) bool) {
+func (s *TTSDuplexSession) Recv() iter.Seq2[*TTSChunk, error] {
+	return func(yield func(*TTSChunk, error) bool) {
 		for {
 			select {
 			case chunk, ok := <-s.recvChan:
@@ -479,7 +451,7 @@ func (s *ttsDuplexSession) Recv() iter.Seq2[*iface.TTSChunk, error] {
 	}
 }
 
-func (s *ttsDuplexSession) Close() error {
+func (s *TTSDuplexSession) Close() error {
 	s.closeOnce.Do(func() {
 		close(s.closeChan)
 		s.conn.Close()
@@ -487,7 +459,7 @@ func (s *ttsDuplexSession) Close() error {
 	return nil
 }
 
-func (s *ttsDuplexSession) receiveLoop() {
+func (s *TTSDuplexSession) receiveLoop() {
 	defer close(s.recvChan)
 
 	for {
@@ -529,7 +501,7 @@ func (s *ttsDuplexSession) receiveLoop() {
 		}
 
 		isLast := msg.sequence < 0
-		chunk := &iface.TTSChunk{
+		chunk := &TTSChunk{
 			Audio:    msg.payload,
 			Sequence: msg.sequence,
 			IsLast:   isLast,
@@ -547,11 +519,7 @@ func (s *ttsDuplexSession) receiveLoop() {
 	}
 }
 
-// TTSResponse 实现 ToReader
+// ttsResponseToReader converts audio data to io.Reader
 func ttsResponseToReader(audio []byte) io.Reader {
 	return bytes.NewReader(audio)
 }
-
-// 注册实现验证
-var _ iface.TTSService = (*ttsService)(nil)
-var _ iface.TTSDuplexSession = (*ttsDuplexSession)(nil)

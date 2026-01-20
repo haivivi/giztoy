@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+    name = "asr_file",
+    srcs = ["main.go"],
+    deps = [
+        "//go/pkg/doubaospeech",
+    ],
+)

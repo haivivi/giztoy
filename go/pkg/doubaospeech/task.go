@@ -5,11 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
-
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
 )
 
-// taskType 任务类型
+// taskType represents task type
 type taskType string
 
 const (
@@ -21,31 +19,15 @@ const (
 	taskTypeSubtitle   taskType = "subtitle"
 )
 
-// task 异步任务实现
-type task[T any] struct {
-	id       string
-	client   *Client
-	taskType taskType
-	reqID    string
-}
-
-// newTask 创建异步任务
-func newTask[T any](id string, client *Client, tt taskType, reqID string) *iface.Task[T] {
-	// 创建一个 iface.Task 包装
-	// 注意：实际的轮询逻辑需要在调用方通过 WaitTask 函数实现
-	_ = &task[T]{
-		id:       id,
-		client:   client,
-		taskType: tt,
-		reqID:    reqID,
-	}
-	
-	return &iface.Task[T]{
+// newTask creates async task
+func newTask[T any](id string, client *Client, tt taskType, reqID string) *Task[T] {
+	// Note: The actual polling logic is implemented via WaitTask function
+	return &Task[T]{
 		ID: id,
 	}
 }
 
-// queryTaskStatus 查询任务状态
+// queryTaskStatus queries task status
 func (c *Client) queryTaskStatus(ctx context.Context, taskType taskType, reqID string) (*taskStatusResult, error) {
 	var path string
 	switch taskType {
@@ -65,7 +47,7 @@ func (c *Client) queryTaskStatus(ctx context.Context, taskType taskType, reqID s
 		return nil, newAPIError(0, "unknown task type")
 	}
 
-	queryReq := map[string]interface{}{
+	queryReq := map[string]any{
 		"appid": c.config.appID,
 		"reqid": reqID,
 	}
@@ -78,39 +60,39 @@ func (c *Client) queryTaskStatus(ctx context.Context, taskType taskType, reqID s
 	return &resp, nil
 }
 
-// taskStatusResult 任务状态结果
+// taskStatusResult represents task status result
 type taskStatusResult struct {
-	ReqID         string `json:"reqid"`
-	TaskID        string `json:"task_id"`
-	Status        string `json:"status"`
-	Progress      int    `json:"progress,omitempty"`
-	Code          int    `json:"code"`
-	Message       string `json:"message"`
-	AudioURL      string `json:"audio_url,omitempty"`
-	AudioDuration int    `json:"audio_duration,omitempty"`
-	AudioSize     int64  `json:"audio_size,omitempty"`
+	ReqID         string          `json:"reqid"`
+	TaskID        string          `json:"task_id"`
+	Status        string          `json:"status"`
+	Progress      int             `json:"progress,omitempty"`
+	Code          int             `json:"code"`
+	Message       string          `json:"message"`
+	AudioURL      string          `json:"audio_url,omitempty"`
+	AudioDuration int             `json:"audio_duration,omitempty"`
+	AudioSize     int64           `json:"audio_size,omitempty"`
 	Result        json.RawMessage `json:"result,omitempty"`
 }
 
-// toTaskStatus 转换为 iface.TaskStatus
-func (r *taskStatusResult) toTaskStatus() iface.TaskStatus {
+// toTaskStatus converts to TaskStatus
+func (r *taskStatusResult) toTaskStatus() TaskStatus {
 	switch r.Status {
 	case "submitted", "pending":
-		return iface.TaskStatusPending
+		return TaskStatusPending
 	case "running", "processing":
-		return iface.TaskStatusProcessing
+		return TaskStatusProcessing
 	case "success":
-		return iface.TaskStatusSuccess
+		return TaskStatusSuccess
 	case "failed":
-		return iface.TaskStatusFailed
+		return TaskStatusFailed
 	case "cancelled":
-		return iface.TaskStatusCancelled
+		return TaskStatusCancelled
 	default:
-		return iface.TaskStatusPending
+		return TaskStatusPending
 	}
 }
 
-// WaitTask 等待任务完成的通用函数
+// WaitTask waits for task completion
 func WaitTask[T any](ctx context.Context, client *Client, taskType taskType, reqID string, interval time.Duration) (*T, error) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -127,37 +109,37 @@ func WaitTask[T any](ctx context.Context, client *Client, taskType taskType, req
 
 			status := result.toTaskStatus()
 			switch status {
-			case iface.TaskStatusSuccess:
+			case TaskStatusSuccess:
 				return parseTaskResult[T](result)
-			case iface.TaskStatusFailed:
+			case TaskStatusFailed:
 				return nil, &Error{
 					Code:    result.Code,
 					Message: result.Message,
 					ReqID:   result.ReqID,
 				}
-			case iface.TaskStatusCancelled:
+			case TaskStatusCancelled:
 				return nil, newAPIError(0, "task cancelled")
 			}
-			// 继续等待
+			// Continue waiting
 		}
 	}
 }
 
-// parseTaskResult 解析任务结果
+// parseTaskResult parses task result
 func parseTaskResult[T any](result *taskStatusResult) (*T, error) {
 	var r T
 
-	// 根据类型处理
+	// Handle based on type
 	switch any(&r).(type) {
-	case *iface.TTSAsyncResult:
-		ttsResult := &iface.TTSAsyncResult{
+	case *TTSAsyncResult:
+		ttsResult := &TTSAsyncResult{
 			AudioURL: result.AudioURL,
 			Duration: result.AudioDuration,
 		}
 		return any(ttsResult).(*T), nil
 
-	case *iface.ASRResult:
-		var asrResult iface.ASRResult
+	case *ASRResult:
+		var asrResult ASRResult
 		if result.Result != nil {
 			if err := json.Unmarshal(result.Result, &asrResult); err != nil {
 				return nil, wrapError(err, "unmarshal asr result")
@@ -165,15 +147,15 @@ func parseTaskResult[T any](result *taskStatusResult) (*T, error) {
 		}
 		return any(&asrResult).(*T), nil
 
-	case *iface.VoiceCloneResult:
-		vcResult := &iface.VoiceCloneResult{
+	case *VoiceCloneResult:
+		vcResult := &VoiceCloneResult{
 			SpeakerID: result.TaskID,
-			Status:    iface.VoiceCloneStatusSuccess,
+			Status:    VoiceCloneStatusSuccess,
 		}
 		return any(vcResult).(*T), nil
 
-	case *iface.MeetingResult:
-		var meetingResult iface.MeetingResult
+	case *MeetingResult:
+		var meetingResult MeetingResult
 		if result.Result != nil {
 			if err := json.Unmarshal(result.Result, &meetingResult); err != nil {
 				return nil, wrapError(err, "unmarshal meeting result")
@@ -181,15 +163,15 @@ func parseTaskResult[T any](result *taskStatusResult) (*T, error) {
 		}
 		return any(&meetingResult).(*T), nil
 
-	case *iface.PodcastResult:
-		podcastResult := &iface.PodcastResult{
+	case *PodcastResult:
+		podcastResult := &PodcastResult{
 			AudioURL: result.AudioURL,
 			Duration: result.AudioDuration,
 		}
 		return any(podcastResult).(*T), nil
 
-	case *iface.SubtitleResult:
-		var subtitleResult iface.SubtitleResult
+	case *SubtitleResult:
+		var subtitleResult SubtitleResult
 		if result.Result != nil {
 			if err := json.Unmarshal(result.Result, &subtitleResult); err != nil {
 				return nil, wrapError(err, "unmarshal subtitle result")
@@ -199,7 +181,7 @@ func parseTaskResult[T any](result *taskStatusResult) (*T, error) {
 		return any(&subtitleResult).(*T), nil
 
 	default:
-		// 通用解析
+		// Generic parsing
 		if result.Result != nil {
 			if err := json.Unmarshal(result.Result, &r); err != nil {
 				return nil, wrapError(err, "unmarshal result")

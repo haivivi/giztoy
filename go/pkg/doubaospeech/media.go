@@ -3,23 +3,23 @@ package doubaospeech
 import (
 	"context"
 	"net/http"
-
-	iface "github.com/haivivi/giztoy/pkg/doubao_speech_interface"
 )
 
-// mediaService 音视频处理服务实现
-type mediaService struct {
+// MediaService represents media processing service
+// mediaService provides media operations
+// MediaService provides media processing functionality (subtitle extraction)
+type MediaService struct {
 	client *Client
 }
 
-// newMediaService 创建音视频处理服务
-func newMediaService(c *Client) iface.MediaService {
-	return &mediaService{client: c}
+// newMediaService creates media service
+func newMediaService(c *Client) *MediaService {
+	return &MediaService{client: c}
 }
 
-// ExtractSubtitle 提取字幕
-func (s *mediaService) ExtractSubtitle(ctx context.Context, req *iface.SubtitleRequest) (*iface.Task[iface.SubtitleResult], error) {
-	submitReq := map[string]interface{}{
+// ExtractSubtitle extracts subtitles from media
+func (s *MediaService) ExtractSubtitle(ctx context.Context, req *SubtitleRequest) (*Task[SubtitleResult], error) {
+	submitReq := map[string]any{
 		"appid":     s.client.config.appID,
 		"reqid":     generateReqID(),
 		"media_url": req.MediaURL,
@@ -54,12 +54,12 @@ func (s *mediaService) ExtractSubtitle(ctx context.Context, req *iface.SubtitleR
 		}
 	}
 
-	return newTask[iface.SubtitleResult](resp.TaskID, s.client, taskTypeSubtitle, submitReq["reqid"].(string)), nil
+	return newTask[SubtitleResult](resp.TaskID, s.client, taskTypeSubtitle, submitReq["reqid"].(string)), nil
 }
 
-// GetSubtitleTask 查询字幕任务状态
-func (s *mediaService) GetSubtitleTask(ctx context.Context, taskID string) (*iface.SubtitleTaskStatus, error) {
-	queryReq := map[string]interface{}{
+// GetSubtitleTask queries subtitle task status
+func (s *MediaService) GetSubtitleTask(ctx context.Context, taskID string) (*SubtitleTaskStatus, error) {
+	queryReq := map[string]any{
 		"appid":   s.client.config.appID,
 		"task_id": taskID,
 	}
@@ -88,31 +88,28 @@ func (s *mediaService) GetSubtitleTask(ctx context.Context, taskID string) (*ifa
 		}
 	}
 
-	status := &iface.SubtitleTaskStatus{
+	status := &SubtitleTaskStatus{
 		TaskID:   apiResp.Data.TaskID,
 		Progress: apiResp.Data.Progress,
 	}
 
-	// 转换状态
+	// Convert status
 	switch apiResp.Data.Status {
 	case "submitted", "pending":
-		status.Status = iface.TaskStatusPending
+		status.Status = TaskStatusPending
 	case "running", "processing":
-		status.Status = iface.TaskStatusProcessing
+		status.Status = TaskStatusProcessing
 	case "success":
-		status.Status = iface.TaskStatusSuccess
-		status.Result = &iface.SubtitleResult{
+		status.Status = TaskStatusSuccess
+		status.Result = &SubtitleResult{
 			SubtitleURL: apiResp.Data.SubtitleURL,
 			Duration:    apiResp.Data.Duration,
 		}
 	case "failed":
-		status.Status = iface.TaskStatusFailed
+		status.Status = TaskStatusFailed
 	default:
-		status.Status = iface.TaskStatusPending
+		status.Status = TaskStatusPending
 	}
 
 	return status, nil
 }
-
-// 注册实现验证
-var _ iface.MediaService = (*mediaService)(nil)
