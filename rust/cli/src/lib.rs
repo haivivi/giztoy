@@ -5,5 +5,5 @@
 pub mod config;
 pub mod output;
 
-pub use config::{Config, Context};
+pub use config::{Config, Context, ClientCredentials, ConsoleCredentials};
 pub use output::{Output, OutputFormat, print_verbose, guess_extension};

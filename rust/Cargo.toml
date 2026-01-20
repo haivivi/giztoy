@@ -3,9 +3,11 @@ resolver = "2"
 members = [
     "dashscope",
     "minimax",
+    "doubaospeech",
     "cli",
     "cmd/dashscope",
     "cmd/minimax",
+    "cmd/doubaospeech",
 ]
 
 [workspace.package]
@@ -18,6 +20,7 @@ authors = ["giztoy"]
 # Internal crates
 giztoy-dashscope = { path = "dashscope" }
 giztoy-minimax = { path = "minimax" }
+giztoy-doubaospeech = { path = "doubaospeech" }
 giztoy-cli = { path = "cli" }
 
 # Async runtime
@@ -40,9 +43,11 @@ clap = { version = "4", features = ["derive"] }
 
 # Utilities
 hex = "0.4"
+base64 = "0.22"
 futures = "0.3"
 async-stream = "0.3"
 tokio-stream = "0.1"
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 bytes = "1"
 dirs = "6"
 uuid = { version = "1", features = ["v4"] }

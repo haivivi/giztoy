@@ -1,0 +1,16 @@
+[package]
+name = "doubao-minimax-examples"
+version = "0.1.0"
+edition = "2021"
+description = "Integration test for Doubao Realtime + MiniMax"
+
+[dependencies]
+giztoy-doubaospeech = { path = "../../../rust/doubaospeech" }
+giztoy-minimax = { path = "../../../rust/minimax" }
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0"
+futures = "0.3"
+
+[[bin]]
+name = "doubao_minimax"
+path = "src/bin/main.rs"
