@@ -57,9 +57,9 @@ impl Client {
     ///
     /// * `api_key` - Your MiniMax API key
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if the API key is empty.
+    /// Returns an error if the API key is empty.
     ///
     /// # Example
     ///

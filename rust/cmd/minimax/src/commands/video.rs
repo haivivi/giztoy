@@ -5,8 +5,8 @@
 use clap::{Args, Subcommand};
 
 use giztoy_minimax::{
-    FrameToVideoRequest, ImageToVideoRequest, SubjectRefVideoRequest, TextToVideoRequest,
-    VideoAgentRequest, MODEL_HAILUO_23,
+    FrameToVideoRequest, HasModel, ImageToVideoRequest, SubjectRefVideoRequest, TextToVideoRequest,
+    VideoAgentRequest,
 };
 
 use super::{
@@ -59,13 +59,11 @@ impl VideoCommand {
 
         let mut req: TextToVideoRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_HAILUO_23.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
 
         print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Model: {}", req.model));
+        print_verbose(cli, &format!("Model: {}", req.model()));
 
         let client = create_client(&ctx)?;
         let task = client.video().create_text_to_video(&req).await?;
@@ -86,13 +84,11 @@ impl VideoCommand {
 
         let mut req: ImageToVideoRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_HAILUO_23.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
 
         print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Model: {}", req.model));
+        print_verbose(cli, &format!("Model: {}", req.model()));
 
         let client = create_client(&ctx)?;
         let task = client.video().create_image_to_video(&req).await?;

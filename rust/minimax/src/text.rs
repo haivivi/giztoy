@@ -302,3 +302,21 @@ struct ChatCompletionStreamRequest {
     inner: ChatCompletionRequest,
     stream: bool,
 }
+
+// ==================== HasModel Implementation ====================
+
+use crate::{HasModel, MODEL_M2_1};
+
+impl HasModel for ChatCompletionRequest {
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    fn set_model(&mut self, model: impl Into<String>) {
+        self.model = model.into();
+    }
+
+    fn default_model() -> &'static str {
+        MODEL_M2_1
+    }
+}

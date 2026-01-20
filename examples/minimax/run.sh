@@ -56,7 +56,7 @@ build_cli() {
             # 优先使用 Bazel 构建，如果失败则回退到 Cargo
             if [ ! -f "$PROJECT_ROOT/bazel-bin/rust/cmd/minimax/minimax" ] && [ ! -f "$PROJECT_ROOT/rust/target/release/minimax" ]; then
                 log_info "构建 Rust CLI (bazel build //rust/cmd/minimax)..."
-                if ! (cd "$PROJECT_ROOT" && bazel build //rust/cmd/minimax 2>/dev/null); then
+                if ! (cd "$PROJECT_ROOT" && bazel build //rust/cmd/minimax); then
                     log_warn "Bazel 构建失败，回退到 Cargo..."
                     (cd "$PROJECT_ROOT/rust" && cargo build --release --bin minimax)
                 fi

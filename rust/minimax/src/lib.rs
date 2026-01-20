@@ -2,6 +2,25 @@
 //!
 //! This crate provides a client for interacting with the MiniMax API.
 
+/// Trait for request types that have a model field.
+///
+/// This allows generic handling of model defaults across different request types.
+pub trait HasModel {
+    /// Returns the current model value.
+    fn model(&self) -> &str;
+    /// Sets the model value.
+    fn set_model(&mut self, model: impl Into<String>);
+    /// Returns the default model for this request type.
+    fn default_model() -> &'static str;
+
+    /// Applies the default model if the current model is empty.
+    fn apply_default_model(&mut self) {
+        if self.model().is_empty() {
+            self.set_model(Self::default_model());
+        }
+    }
+}
+
 mod client;
 mod error;
 mod file;
@@ -17,6 +36,7 @@ mod video;
 mod voice;
 
 pub use client::{Client, ClientBuilder, DEFAULT_BASE_URL, BASE_URL_GLOBAL};
+// HasModel is defined at the top of this file
 pub use error::{Error, Result};
 pub use file::{FileService, FileInfo, FileListResponse, UploadResponse};
 pub use image::{ImageService, ImageGenerateRequest, ImageReferenceRequest, ImageResponse, ImageData};

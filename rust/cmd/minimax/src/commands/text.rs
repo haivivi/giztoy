@@ -8,7 +8,7 @@ use std::pin::pin;
 use clap::{Args, Subcommand};
 use futures::StreamExt;
 
-use giztoy_minimax::{ChatCompletionRequest, MODEL_M2_1};
+use giztoy_minimax::{ChatCompletionRequest, HasModel};
 
 use super::{
     create_client, get_context, load_request, output_result, print_verbose, require_input_file,
@@ -46,13 +46,11 @@ impl TextCommand {
 
         let mut req: ChatCompletionRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_M2_1.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
 
         print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Model: {}", req.model));
+        print_verbose(cli, &format!("Model: {}", req.model()));
         print_verbose(cli, &format!("Messages: {}", req.messages.len()));
 
         let client = create_client(&ctx)?;
@@ -68,13 +66,11 @@ impl TextCommand {
 
         let mut req: ChatCompletionRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_M2_1.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
 
         print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Model: {}", req.model));
+        print_verbose(cli, &format!("Model: {}", req.model()));
 
         let client = create_client(&ctx)?;
         let text_service = client.text();

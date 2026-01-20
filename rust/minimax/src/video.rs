@@ -269,3 +269,35 @@ pub struct VideoResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub download_url: Option<String>,
 }
+
+// ==================== HasModel Implementations ====================
+
+use crate::{HasModel, MODEL_HAILUO_23};
+
+impl HasModel for TextToVideoRequest {
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    fn set_model(&mut self, model: impl Into<String>) {
+        self.model = model.into();
+    }
+
+    fn default_model() -> &'static str {
+        MODEL_HAILUO_23
+    }
+}
+
+impl HasModel for ImageToVideoRequest {
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    fn set_model(&mut self, model: impl Into<String>) {
+        self.model = model.into();
+    }
+
+    fn default_model() -> &'static str {
+        MODEL_HAILUO_23
+    }
+}

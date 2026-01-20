@@ -376,3 +376,35 @@ struct SpeechStreamResponse {
     trace_id: Option<String>,
     base_resp: Option<BaseResp>,
 }
+
+// ==================== HasModel Implementations ====================
+
+use crate::{HasModel, MODEL_SPEECH_26_HD};
+
+impl HasModel for SpeechRequest {
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    fn set_model(&mut self, model: impl Into<String>) {
+        self.model = model.into();
+    }
+
+    fn default_model() -> &'static str {
+        MODEL_SPEECH_26_HD
+    }
+}
+
+impl HasModel for AsyncSpeechRequest {
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    fn set_model(&mut self, model: impl Into<String>) {
+        self.model = model.into();
+    }
+
+    fn default_model() -> &'static str {
+        MODEL_SPEECH_26_HD
+    }
+}

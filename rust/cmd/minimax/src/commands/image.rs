@@ -4,7 +4,7 @@
 
 use clap::{Args, Subcommand};
 
-use giztoy_minimax::{ImageGenerateRequest, ImageReferenceRequest, MODEL_IMAGE_01};
+use giztoy_minimax::{HasModel, ImageGenerateRequest, ImageReferenceRequest};
 
 use super::{
     create_client, get_context, load_request, output_result, print_success, print_verbose,
@@ -43,13 +43,11 @@ impl ImageCommand {
 
         let mut req: ImageGenerateRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_IMAGE_01.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
 
         print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Model: {}", req.model));
+        print_verbose(cli, &format!("Model: {}", req.model()));
         print_verbose(cli, &format!("Prompt: {}", req.prompt));
 
         let client = create_client(&ctx)?;
@@ -66,13 +64,11 @@ impl ImageCommand {
 
         let mut req: ImageReferenceRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_IMAGE_01.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
 
         print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Model: {}", req.model));
+        print_verbose(cli, &format!("Model: {}", req.model()));
 
         let client = create_client(&ctx)?;
         let resp = client.image().generate_with_reference(&req).await?;

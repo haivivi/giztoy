@@ -7,7 +7,7 @@ use std::pin::pin;
 use clap::{Args, Subcommand};
 use futures::StreamExt;
 
-use giztoy_minimax::{AsyncSpeechRequest, SpeechRequest, MODEL_SPEECH_26_HD};
+use giztoy_minimax::{AsyncSpeechRequest, HasModel, SpeechRequest};
 
 use super::{
     create_client, format_bytes, get_context, load_request, output_bytes, output_result,
@@ -49,10 +49,9 @@ impl SpeechCommand {
 
         let mut req: SpeechRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_SPEECH_26_HD.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
+        // Apply default voice from context
         if let Some(ref mut voice) = req.voice_setting {
             if voice.voice_id.is_empty() {
                 if let Some(default_voice) = ctx.get_extra("default_voice") {
@@ -62,7 +61,7 @@ impl SpeechCommand {
         }
 
         print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Model: {}", req.model));
+        print_verbose(cli, &format!("Model: {}", req.model()));
         print_verbose(cli, &format!("Text length: {} characters", req.text.len()));
 
         let client = create_client(&ctx)?;
@@ -100,10 +99,8 @@ impl SpeechCommand {
 
         let mut req: SpeechRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_SPEECH_26_HD.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
 
         print_verbose(cli, &format!("Using context: {}", ctx.name));
         print_verbose(cli, &format!("Streaming to: {}", output_path));
@@ -156,10 +153,8 @@ impl SpeechCommand {
 
         let mut req: AsyncSpeechRequest = load_request(input_file)?;
 
-        // Use defaults if not specified
-        if req.model.is_empty() {
-            req.model = MODEL_SPEECH_26_HD.to_string();
-        }
+        // Apply default model
+        req.apply_default_model();
 
         let text_len = req.text.as_ref().map(|t| t.len()).unwrap_or(0);
         

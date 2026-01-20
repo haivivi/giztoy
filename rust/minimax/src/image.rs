@@ -164,3 +164,35 @@ pub struct ImageData {
     /// Image URL.
     pub url: String,
 }
+
+// ==================== HasModel Implementations ====================
+
+use crate::{HasModel, MODEL_IMAGE_01};
+
+impl HasModel for ImageGenerateRequest {
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    fn set_model(&mut self, model: impl Into<String>) {
+        self.model = model.into();
+    }
+
+    fn default_model() -> &'static str {
+        MODEL_IMAGE_01
+    }
+}
+
+impl HasModel for ImageReferenceRequest {
+    fn model(&self) -> &str {
+        &self.model
+    }
+
+    fn set_model(&mut self, model: impl Into<String>) {
+        self.model = model.into();
+    }
+
+    fn default_model() -> &'static str {
+        MODEL_IMAGE_01
+    }
+}
