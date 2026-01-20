@@ -10,7 +10,7 @@ build --disk_cache=~/.cache/bazel
 # Platform
 build --incompatible_enable_cc_toolchain_resolution
 
-# CC toolchains: Use system clang/gcc (ring crate incompatible with Zig CC)
-# PATH needed for system C compiler on both macOS and Linux
+# CC toolchain: Use system clang/gcc
+# PATH needed for C compiler (Rust ring crate, Go CGO, etc.)
 build --action_env=PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin
 build --host_action_env=PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin
