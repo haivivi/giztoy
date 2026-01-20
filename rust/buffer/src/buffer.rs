@@ -1,5 +1,6 @@
 //! Growable buffer implementation.
 
+use std::collections::VecDeque;
 use std::error::Error;
 use std::sync::{Arc, Condvar, Mutex};
 
@@ -56,7 +57,7 @@ struct BufferInner<T> {
 }
 
 struct BufferState<T> {
-    buf: Vec<T>,
+    buf: VecDeque<T>,
     close_write: bool,
     close_err: Option<Arc<dyn Error + Send + Sync>>,
 }
@@ -89,7 +90,7 @@ impl<T> Buffer<T> {
         Buffer {
             inner: Arc::new(BufferInner {
                 state: Mutex::new(BufferState {
-                    buf: Vec::with_capacity(capacity),
+                    buf: VecDeque::with_capacity(capacity),
                     close_write: false,
                     close_err: None,
                 }),
@@ -158,19 +159,12 @@ impl<T> Buffer<T> {
         Ok(())
     }
 
-    /// Closes the buffer (equivalent to `close_with_error(BufferError::Closed)`).
+    /// Closes the buffer.
+    ///
+    /// This is semantically equivalent to `close_write()`, allowing readers to
+    /// drain any remaining items while preventing further writes.
     pub fn close(&self) -> Result<(), BufferError> {
-        let mut state = self.inner.state.lock().unwrap();
-        if state.close_err.is_some() {
-            return Ok(());
-        }
-        state.close_err = Some(Arc::new(BufferError::Closed));
-        state.buf.clear();
-        if !state.close_write {
-            state.close_write = true;
-        }
-        self.inner.write_notify.notify_all();
-        Ok(())
+        self.close_write()
     }
 }
 
@@ -189,7 +183,7 @@ impl<T: Clone> Buffer<T> {
         if state.close_write {
             return Err(BufferError::Closed);
         }
-        state.buf.extend_from_slice(data);
+        state.buf.extend(data.iter().cloned());
         self.inner.write_notify.notify_one();
         Ok(data.len())
     }
@@ -205,7 +199,7 @@ impl<T: Clone> Buffer<T> {
         if state.close_write {
             return Err(BufferError::Closed);
         }
-        state.buf.push(item);
+        state.buf.push_back(item);
         self.inner.write_notify.notify_one();
         Ok(())
     }
@@ -234,10 +228,10 @@ impl<T: Clone> Buffer<T> {
             }
         }
 
-        // Read from the front of the buffer (FIFO)
+        // Read from the front of the buffer (FIFO) - O(1) per element with VecDeque
         let n = std::cmp::min(buf.len(), state.buf.len());
-        for (i, item) in state.buf.drain(..n).enumerate() {
-            buf[i] = item;
+        for i in 0..n {
+            buf[i] = state.buf.pop_front().unwrap();
         }
         Ok(n)
     }
@@ -267,8 +261,8 @@ impl<T: Clone> Buffer<T> {
             }
         }
 
-        // Read from the front of the buffer (FIFO)
-        Ok(state.buf.remove(0))
+        // Read from the front of the buffer (FIFO) - O(1) with VecDeque
+        Ok(state.buf.pop_front().unwrap())
     }
 
     /// Discards the next n elements from the buffer.
@@ -281,14 +275,17 @@ impl<T: Clone> Buffer<T> {
             return Err(BufferError::ClosedWithError(Arc::clone(err)));
         }
         let discard_count = std::cmp::min(n, state.buf.len());
-        state.buf.drain(..discard_count);
+        // O(1) per element with VecDeque
+        for _ in 0..discard_count {
+            state.buf.pop_front();
+        }
         Ok(())
     }
 
     /// Returns a copy of all elements in the buffer.
     pub fn to_vec(&self) -> Vec<T> {
         let state = self.inner.state.lock().unwrap();
-        state.buf.clone()
+        state.buf.iter().cloned().collect()
     }
 }
 

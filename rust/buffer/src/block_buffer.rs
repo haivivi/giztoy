@@ -100,7 +100,12 @@ impl<T> BlockBuffer<T> {
 
     /// Creates a BlockBuffer from an existing Vec.
     ///
-    /// The Vec's length determines the buffer capacity.
+    /// The Vec's length determines the buffer capacity. The buffer is created
+    /// full, so writes will block until some data is read.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the Vec is empty.
     pub fn from_vec(data: Vec<T>) -> Self {
         let capacity = data.len();
         assert!(capacity > 0, "capacity must be greater than 0");
@@ -108,12 +113,15 @@ impl<T> BlockBuffer<T> {
         let count = data.len();
         let buf: Vec<Option<T>> = data.into_iter().map(Some).collect();
 
+        // Set tail to next write position (count % capacity = 0 for full buffer)
+        let tail = count % capacity;
+
         BlockBuffer {
             inner: Arc::new(BlockBufferInner {
                 state: Mutex::new(BlockBufferState {
                     buf,
                     head: 0,
-                    tail: 0,
+                    tail,
                     count,
                     close_write: false,
                     close_err: None,
@@ -202,18 +210,11 @@ impl<T> BlockBuffer<T> {
     }
 
     /// Closes the buffer.
+    ///
+    /// This is semantically equivalent to `close_write()`, allowing readers to
+    /// drain any remaining items while preventing further writes.
     pub fn close(&self) -> Result<(), BufferError> {
-        let mut state = self.inner.state.lock().unwrap();
-        if state.close_err.is_some() {
-            return Ok(());
-        }
-        state.close_err = Some(Arc::new(BufferError::Closed));
-        if !state.close_write {
-            state.close_write = true;
-        }
-        self.inner.not_empty.notify_all();
-        self.inner.not_full.notify_all();
-        Ok(())
+        self.close_write()
     }
 }
 
@@ -574,6 +575,22 @@ mod tests {
         assert_eq!(buf.next().unwrap(), 1);
         assert_eq!(buf.next().unwrap(), 2);
         assert_eq!(buf.next().unwrap(), 3);
+    }
+
+    #[test]
+    fn test_from_vec_write_after_read() {
+        let buf = BlockBuffer::from_vec(vec![1, 2, 3]);
+
+        // Read one element to make space
+        assert_eq!(buf.next().unwrap(), 1);
+
+        // Write a new element
+        buf.add(4).unwrap();
+
+        // Read remaining in FIFO order: 2, 3, 4
+        assert_eq!(buf.next().unwrap(), 2);
+        assert_eq!(buf.next().unwrap(), 3);
+        assert_eq!(buf.next().unwrap(), 4);
     }
 
     #[test]

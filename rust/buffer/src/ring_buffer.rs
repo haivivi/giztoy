@@ -45,8 +45,12 @@ struct RingBufferInner<T> {
 
 struct RingBufferState<T> {
     buf: Vec<Option<T>>,
-    head: usize,     // read position (virtual, can overflow)
-    tail: usize,     // write position (virtual, can overflow)
+    // Virtual counters that track total read/write positions. These grow
+    // monotonically and may eventually wrap around usize after approximately
+    // 2^64 operations on 64-bit systems. The implementation uses wrapping
+    // arithmetic to handle this correctly.
+    head: usize, // read position (virtual counter)
+    tail: usize, // write position (virtual counter)
     close_write: bool,
     close_err: Option<Arc<dyn Error + Send + Sync>>,
 }
@@ -85,12 +89,8 @@ impl<T> RingBuffer<T> {
     /// Returns the number of elements currently in the buffer.
     pub fn len(&self) -> usize {
         let state = self.inner.state.lock().unwrap();
-        if state.tail >= state.head {
-            state.tail - state.head
-        } else {
-            // Handle wrap-around (shouldn't happen with our implementation)
-            state.buf.len()
-        }
+        // Use wrapping_sub to handle potential overflow correctly
+        state.tail.wrapping_sub(state.head).min(state.buf.len())
     }
 
     /// Returns the buffer capacity.
@@ -156,17 +156,11 @@ impl<T> RingBuffer<T> {
     }
 
     /// Closes the buffer.
+    ///
+    /// This is semantically equivalent to `close_write()`, allowing readers to
+    /// drain any remaining items while preventing further writes.
     pub fn close(&self) -> Result<(), BufferError> {
-        let mut state = self.inner.state.lock().unwrap();
-        if state.close_err.is_some() {
-            return Ok(());
-        }
-        state.close_err = Some(Arc::new(BufferError::Closed));
-        if !state.close_write {
-            state.close_write = true;
-        }
-        self.inner.write_notify.notify_all();
-        Ok(())
+        self.close_write()
     }
 }
 
@@ -192,11 +186,11 @@ impl<T: Clone> RingBuffer<T> {
         for item in data {
             let tail_idx = state.tail % capacity;
             state.buf[tail_idx] = Some(item.clone());
-            state.tail += 1;
+            state.tail = state.tail.wrapping_add(1);
 
             // If we've exceeded capacity, advance head (overwrite oldest)
-            if state.tail - state.head > capacity {
-                state.head += 1;
+            if state.tail.wrapping_sub(state.head) > capacity {
+                state.head = state.head.wrapping_add(1);
             }
         }
 
@@ -221,11 +215,11 @@ impl<T: Clone> RingBuffer<T> {
         let capacity = state.buf.len();
         let tail_idx = state.tail % capacity;
         state.buf[tail_idx] = Some(item);
-        state.tail += 1;
+        state.tail = state.tail.wrapping_add(1);
 
         // If we've exceeded capacity, advance head (overwrite oldest)
-        if state.tail - state.head > capacity {
-            state.head += 1;
+        if state.tail.wrapping_sub(state.head) > capacity {
+            state.head = state.head.wrapping_add(1);
         }
 
         self.inner.write_notify.notify_one();
@@ -256,13 +250,13 @@ impl<T: Clone> RingBuffer<T> {
         }
 
         let capacity = state.buf.len();
-        let available = state.tail - state.head;
+        let available = state.tail.wrapping_sub(state.head);
         let n = std::cmp::min(buf.len(), available);
 
         for i in 0..n {
             let head_idx = state.head % capacity;
             buf[i] = state.buf[head_idx].take().unwrap();
-            state.head += 1;
+            state.head = state.head.wrapping_add(1);
         }
 
         Ok(n)
@@ -295,7 +289,7 @@ impl<T: Clone> RingBuffer<T> {
         let capacity = state.buf.len();
         let head_idx = state.head % capacity;
         let item = state.buf[head_idx].take().unwrap();
-        state.head += 1;
+        state.head = state.head.wrapping_add(1);
 
         Ok(item)
     }
@@ -310,14 +304,14 @@ impl<T: Clone> RingBuffer<T> {
             return Err(BufferError::ClosedWithError(Arc::clone(err)));
         }
 
-        let available = state.tail - state.head;
+        let available = state.tail.wrapping_sub(state.head);
         let discard_count = std::cmp::min(n, available);
         let capacity = state.buf.len();
 
         for _ in 0..discard_count {
             let head_idx = state.head % capacity;
             state.buf[head_idx] = None;
-            state.head += 1;
+            state.head = state.head.wrapping_add(1);
         }
 
         Ok(())
@@ -327,11 +321,11 @@ impl<T: Clone> RingBuffer<T> {
     pub fn to_vec(&self) -> Vec<T> {
         let state = self.inner.state.lock().unwrap();
         let capacity = state.buf.len();
-        let count = state.tail - state.head;
+        let count = state.tail.wrapping_sub(state.head);
         let mut result = Vec::with_capacity(count);
 
         for i in 0..count {
-            let idx = (state.head + i) % capacity;
+            let idx = state.head.wrapping_add(i) % capacity;
             if let Some(ref item) = state.buf[idx] {
                 result.push(item.clone());
             }
