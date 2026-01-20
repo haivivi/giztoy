@@ -1,0 +1,18 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+sh_binary(
+    name = "run",
+    srcs = ["run.sh"],
+    data = [
+        ":commands",
+        "//go/cmd/dashscope",
+        "//rust/cmd/dashscope",
+    ],
+)
+
+filegroup(
+    name = "commands",
+    srcs = glob(["commands/**"]),
+)

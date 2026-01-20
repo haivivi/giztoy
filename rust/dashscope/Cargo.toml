@@ -1,0 +1,31 @@
+[package]
+name = "giztoy-dashscope"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "DashScope (Aliyun Model Studio) API SDK for Rust"
+
+[dependencies]
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+futures = { workspace = true }
+bytes = { workspace = true }
+uuid = { workspace = true }
+base64 = "0.22"
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+http = "1"
+tracing = { workspace = true }
+rand = "0.8"
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+tokio = { workspace = true }
+
+[[example]]
+name = "realtime"
+path = "examples/realtime.rs"

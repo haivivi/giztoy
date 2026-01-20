@@ -62,8 +62,10 @@ crate.from_cargo(
     cargo_lockfile = "//rust:Cargo.lock",
     manifests = [
         "//rust:Cargo.toml",
+        "//rust/dashscope:Cargo.toml",
         "//rust/minimax:Cargo.toml",
         "//rust/cli:Cargo.toml",
+        "//rust/cmd/dashscope:Cargo.toml",
         "//rust/cmd/minimax:Cargo.toml",
         "//examples/rust/minimax:Cargo.toml",
     ],

@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+go_binary(
+    name = "minimax_qwen",
+    srcs = ["main.go"],
+    deps = [
+        "//go/pkg/dashscope",
+        "//go/pkg/minimax",
+    ],
+)

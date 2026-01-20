@@ -1,0 +1,24 @@
+[package]
+name = "dashscope-examples"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+giztoy-dashscope = { path = "../../../rust/dashscope" }
+giztoy-minimax = { path = "../../../rust/minimax" }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[[bin]]
+name = "realtime"
+path = "src/bin/realtime.rs"
+
+[[bin]]
+name = "realtime_audio"
+path = "src/bin/realtime_audio.rs"
+
+[[bin]]
+name = "minimax_qwen"
+path = "src/bin/minimax_qwen.rs"

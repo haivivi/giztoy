@@ -1,0 +1,46 @@
+# DashScope Omni Chat 配置
+# 
+# 这是一个示例配置文件，用于 Qwen-Omni-Realtime 实时语音对话
+#
+# 使用方法:
+#   dashscope -c dashscope_cn omni chat -f omni-chat.yaml -o output.pcm
+#
+# 音频要求:
+#   - 输入: 16-bit PCM, 16kHz, mono
+#   - 输出: 16-bit PCM, 24kHz, mono (Turbo模型) 或 pcm24 (Flash模型)
+
+# 模型选择
+# - qwen-omni-turbo-realtime-latest: 高质量模型
+# - qwen3-omni-flash-realtime: 快速响应模型
+model: qwen-omni-turbo-realtime-latest
+
+# 语音音色
+# 可选: Chelsie, Cherry, Serena, Ethan
+voice: Chelsie
+
+# 系统指令 (可选)
+instructions: "你是一个友好的AI助手，请用简短的语言回答问题。"
+
+# 音频格式
+input_audio_format: pcm16
+output_audio_format: pcm16
+
+# 输出模态
+modalities:
+  - text
+  - audio
+
+# 启用输入音频转写
+enable_input_audio_transcription: true
+input_audio_transcription_model: gummy-realtime-v1
+
+# VAD (语音活动检测) 配置
+turn_detection:
+  type: server_vad     # server_vad 或 disabled
+  threshold: 0.5       # VAD 灵敏度 (0.0-1.0)
+  prefix_padding_ms: 300      # 语音开始前的填充 (ms)
+  silence_duration_ms: 800    # 检测语音结束的静音时长 (ms)
+
+# 输入音频文件 (可选)
+# 如果指定，会自动发送此文件并等待响应
+# audio_file: input.pcm

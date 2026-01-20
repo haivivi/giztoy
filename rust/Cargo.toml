@@ -1,8 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
+    "dashscope",
     "minimax",
     "cli",
+    "cmd/dashscope",
     "cmd/minimax",
 ]
 
@@ -14,6 +16,7 @@ authors = ["giztoy"]
 
 [workspace.dependencies]
 # Internal crates
+giztoy-dashscope = { path = "dashscope" }
 giztoy-minimax = { path = "minimax" }
 giztoy-cli = { path = "cli" }
 
@@ -47,6 +50,10 @@ uuid = { version = "1", features = ["v4"] }
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# WebSocket
+base64 = "0.22"
+http = "1"
 
 # Dev
 tokio-test = "0.4"

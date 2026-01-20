@@ -1,0 +1,37 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_binary(
+    name = "realtime",
+    srcs = ["src/bin/realtime.rs"],
+    deps = [
+        "//rust/dashscope:giztoy_dashscope",
+        "@crate_index//:tokio",
+        "@crate_index//:tracing",
+        "@crate_index//:tracing-subscriber",
+    ],
+)
+
+rust_binary(
+    name = "realtime_audio",
+    srcs = ["src/bin/realtime_audio.rs"],
+    deps = [
+        "//rust/dashscope:giztoy_dashscope",
+        "@crate_index//:tokio",
+        "@crate_index//:tracing",
+        "@crate_index//:tracing-subscriber",
+    ],
+)
+
+rust_binary(
+    name = "minimax_qwen",
+    srcs = ["src/bin/minimax_qwen.rs"],
+    deps = [
+        "//rust/dashscope:giztoy_dashscope",
+        "//rust/minimax:giztoy_minimax",
+        "@crate_index//:tokio",
+        "@crate_index//:tracing",
+        "@crate_index//:tracing-subscriber",
+    ],
+)
