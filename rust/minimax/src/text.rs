@@ -79,7 +79,7 @@ impl TextService {
 
         let byte_stream = self
             .http
-            .request_stream("POST", "/v1/chat/completions", Some(&stream_request))
+            .request_stream("POST", "/v1/chat/completions", Some(stream_request))
             .await?;
 
         let mut reader = SseReader::new(Box::pin(byte_stream));

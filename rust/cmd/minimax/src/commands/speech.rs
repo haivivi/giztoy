@@ -109,12 +109,13 @@ impl SpeechCommand {
         print_verbose(cli, &format!("Streaming to: {}", output_path));
 
         let client = create_client(&ctx)?;
+        let speech = client.speech();
 
         let mut audio_buf = Vec::new();
         let mut last_trace_id = None;
         let mut last_extra_info = None;
 
-        let stream = client.speech().synthesize_stream(&req).await?;
+        let stream = speech.synthesize_stream(&req).await?;
         let mut stream = pin!(stream);
 
         while let Some(chunk) = stream.next().await {

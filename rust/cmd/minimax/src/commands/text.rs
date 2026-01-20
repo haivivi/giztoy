@@ -77,11 +77,12 @@ impl TextCommand {
         print_verbose(cli, &format!("Model: {}", req.model));
 
         let client = create_client(&ctx)?;
+        let text_service = client.text();
 
         // Streaming output
         if cli.json {
             // JSON mode: output each chunk as JSON
-            let stream = client.text().create_chat_completion_stream(&req).await?;
+            let stream = text_service.create_chat_completion_stream(&req).await?;
             let mut stream = pin!(stream);
 
             while let Some(chunk) = stream.next().await {
@@ -91,7 +92,7 @@ impl TextCommand {
             }
         } else {
             // Text mode: output content directly
-            let stream = client.text().create_chat_completion_stream(&req).await?;
+            let stream = text_service.create_chat_completion_stream(&req).await?;
             let mut stream = pin!(stream);
 
             while let Some(chunk) = stream.next().await {

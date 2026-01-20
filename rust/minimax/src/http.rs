@@ -99,10 +99,10 @@ impl HttpClient {
         &self,
         method: &str,
         path: &str,
-        body: Option<&T>,
+        body: Option<T>,
     ) -> Result<impl Stream<Item = Result<Bytes>>>
     where
-        T: Serialize + ?Sized,
+        T: Serialize,
     {
         let url = format!("{}{}", self.base_url, path);
 
@@ -116,7 +116,7 @@ impl HttpClient {
         headers.insert("Accept", HeaderValue::from_static("text/event-stream"));
         request = request.headers(headers);
 
-        if let Some(body) = body {
+        if let Some(ref body) = body {
             request = request.json(body);
         }
 
