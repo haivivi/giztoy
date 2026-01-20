@@ -9,3 +9,8 @@ build --disk_cache=~/.cache/bazel
 
 # Platform
 build --incompatible_enable_cc_toolchain_resolution
+
+# CC toolchain: Use system clang/gcc
+# PATH needed for C compiler (Rust ring crate, Go CGO, etc.)
+build --action_env=PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin
+build --host_action_env=PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin

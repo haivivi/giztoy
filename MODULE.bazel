@@ -15,8 +15,11 @@ bazel_dep(name = "gazelle", version = "0.47.0")
 # Platform rules for platform detection
 bazel_dep(name = "platforms", version = "1.0.0")
 
+# Rust rules
+bazel_dep(name = "rules_rust", version = "0.68.1")
+
 # Shell rules (required for sh_binary/sh_test in Bazel 8+)
-bazel_dep(name = "rules_shell", version = "0.4.1")
+bazel_dep(name = "rules_shell", version = "0.6.1")
 
 # Go SDK
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
@@ -36,3 +39,24 @@ use_repo(
 # yq tool for YAML processing
 yq = use_extension("//:extensions.bzl", "yq")
 use_repo(yq, "yq")
+
+# Rust toolchain
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(edition = "2024")
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+# Rust crate dependencies from Cargo.toml (crate_universe)
+crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate")
+crate.from_cargo(
+    name = "crate_index",
+    cargo_lockfile = "//rust:Cargo.lock",
+    manifests = [
+        "//rust:Cargo.toml",
+        "//rust/minimax:Cargo.toml",
+        "//rust/cli:Cargo.toml",
+        "//rust/cmd/minimax:Cargo.toml",
+    ],
+)
+use_repo(crate, "crate_index")

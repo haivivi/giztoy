@@ -1,0 +1,26 @@
+[package]
+name = "minimax-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "MiniMax CLI application"
+
+[[bin]]
+name = "minimax"
+path = "src/main.rs"
+
+[dependencies]
+giztoy-minimax = { workspace = true }
+giztoy-cli = { workspace = true }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+clap = { workspace = true }
+anyhow = { workspace = true }
+futures = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
