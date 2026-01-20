@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "buffer",
     "dashscope",
     "minimax",
     "cli",
@@ -16,6 +17,7 @@ authors = ["giztoy"]
 
 [workspace.dependencies]
 # Internal crates
+giztoy-buffer = { path = "buffer" }
 giztoy-dashscope = { path = "dashscope" }
 giztoy-minimax = { path = "minimax" }
 giztoy-cli = { path = "cli" }

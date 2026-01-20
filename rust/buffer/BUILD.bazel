@@ -1,0 +1,13 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "giztoy_buffer",
+    srcs = glob(["src/**/*.rs"]),
+    edition = "2024",
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "giztoy_buffer_test",
+    crate = ":giztoy_buffer",
+)
