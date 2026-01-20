@@ -10,7 +10,7 @@ giztoy is a Bazel-based multi-language project supporting the following language
 ## Core Design Principles
 
 1. **Language Isolation**: All Go code resides in `go/`, all Rust code resides in `rust/`
-2. **Independent Examples**: Each example in `examples/` is an independent package demonstrating how to reference project libraries
+2. **Independent Examples**: Examples are organized by language under `examples/`, each with its own module definition
 3. **Dual Build Support**: Supports both native toolchains (go build, cargo) and Bazel builds
 
 ## Directory Structure
@@ -55,26 +55,25 @@ giztoy/
 │   └── cmd/
 │       └── minimax/          # MiniMax CLI
 │
-├── examples/                 # Example code (independent packages)
-│   ├── audio/                # Audio processing examples
-│   │   ├── pcm/
-│   │   │   ├── mixer/        # PCM mixer example (Go, independent go.mod)
-│   │   │   └── resampler/    # Resampler example (Go, independent go.mod)
-│   │   └── songs/            # Music playback example (Go, independent go.mod)
-│   ├── dashscope/
-│   │   └── realtime/         # DashScope realtime conversation example (Go, independent go.mod)
-│   ├── doubaospeech/
-│   │   ├── cmd/              # CLI test scripts (shell)
-│   │   ├── asr_file/         # ASR file recognition example (Go, independent go.mod)
-│   │   ├── tts_v3/           # TTS V3 example (Go, independent go.mod)
-│   │   └── ...               # Other examples
-│   ├── genx/
-│   │   └── chat/             # GenX chat example (Go, independent go.mod)
-│   └── minimax/
-│       ├── cmd/              # CLI test scripts (shell)
-│       ├── image_gen/        # Image generation example (Go, independent go.mod)
-│       ├── speech_tts/       # TTS example (Go, independent go.mod)
-│       └── ...               # Other examples
+├── examples/                 # Example code
+│   ├── cmd/                  # CLI test scripts (shell)
+│   │   ├── minimax/          # MiniMax CLI test scripts
+│   │   │   ├── run.sh
+│   │   │   └── commands/     # YAML command configs
+│   │   └── doubaospeech/     # Doubao Speech CLI test scripts
+│   │       ├── run.sh
+│   │       └── commands/     # YAML command configs
+│   ├── go/                   # Go examples (single go.mod)
+│   │   ├── go.mod            # Module: github.com/haivivi/giztoy/examples
+│   │   ├── audio/            # Audio processing examples
+│   │   ├── dashscope/        # DashScope examples
+│   │   ├── doubaospeech/     # Doubao Speech examples
+│   │   ├── genx/             # GenX examples
+│   │   └── minimax/          # MiniMax examples
+│   └── rust/                 # Rust examples
+│       └── minimax/          # MiniMax Rust examples
+│           ├── Cargo.toml
+│           └── src/bin/      # Binary examples
 │
 └── third_party/              # Third-party C library configurations
     ├── portaudio/
@@ -86,7 +85,7 @@ giztoy/
 | Directory | Purpose |
 |-----------|---------|
 | `go/cmd/` | CLI executables, each subdirectory is an independent command-line tool |
-| `go/pkg/` | Public libraries, can be referenced internally and externally, import path: `github.com/haivivi/giztoy/pkg/...` |
+| `go/pkg/` | Public libraries, import path: `github.com/haivivi/giztoy/pkg/...` |
 
 ## Rust Directory Description
 
@@ -98,38 +97,73 @@ giztoy/
 
 ## Examples Design
 
-Each example is an **independent Go module** with its own `go.mod` file, referencing the local `go/` module via the `replace` directive:
+### Go Examples
+
+All Go examples share a single `go.mod` at `examples/go/go.mod`:
 
 ```go
-// examples/minimax/speech_tts/go.mod
-module github.com/haivivi/giztoy/examples/minimax/speech_tts
+// examples/go/go.mod
+module github.com/haivivi/giztoy/examples
 
 go 1.25
 
 require github.com/haivivi/giztoy v0.0.0
 
-replace github.com/haivivi/giztoy => ../../../go
+replace github.com/haivivi/giztoy => ../../go
 ```
 
-Benefits of this design:
-1. **Demonstrates Real Usage**: Shows how external users would reference packages from this project
-2. **Independent Compilation**: Each example can be built separately with `go build`
-3. **Dependency Isolation**: Examples can have their own additional dependencies without polluting the main module
+Benefits:
+1. **Single Module**: All Go examples share one module, simplifying dependency management
+2. **Local Reference**: Uses `replace` directive to reference the local `go/` module
+3. **Native Build**: Can build all examples with `cd examples/go && go build ./...`
 
-### CLI Test Directory (cmd/)
+### Rust Examples
 
-`examples/*/cmd/` directories contain CLI tool integration test scripts:
-- `run.sh` - Test script
-- `*.yaml` - Test configuration files
-- `BUILD.bazel` - Bazel build rules
+Rust examples are independent crates at `examples/rust/minimax/`:
+
+```toml
+# examples/rust/minimax/Cargo.toml
+[package]
+name = "minimax-examples"
+
+[dependencies]
+giztoy-minimax = { path = "../../../rust/minimax" }
+
+[[bin]]
+name = "speech"
+path = "src/bin/speech.rs"
+```
+
+### CLI Test Scripts
+
+CLI test scripts are located in `examples/cmd/`:
+
+```
+examples/cmd/
+├── minimax/
+│   ├── run.sh              # Test runner
+│   ├── BUILD.bazel
+│   └── commands/           # YAML command configs
+│       ├── chat.yaml
+│       ├── speech.yaml
+│       └── ...
+└── doubaospeech/
+    ├── run.sh
+    ├── BUILD.bazel
+    └── commands/
+        ├── tts.yaml
+        └── ...
+```
 
 Running methods:
 ```bash
 # Direct execution
-./examples/minimax/cmd/run.sh go 1
+./examples/cmd/minimax/run.sh go 1
+./examples/cmd/doubaospeech/run.sh tts
 
 # Bazel execution
-bazel run //examples/minimax/cmd:run -- go 1
+bazel run //examples/cmd/minimax:run -- go 1
+bazel run //examples/cmd/doubaospeech:run -- tts
 ```
 
 ## Bazel Rules
@@ -151,6 +185,9 @@ bazel test //...
 ```bash
 # Go native build
 cd go && go build ./cmd/...
+
+# Go examples native build
+cd examples/go && go build ./...
 
 # Rust native build
 cd rust && cargo build --release

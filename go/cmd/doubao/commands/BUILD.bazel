@@ -21,7 +21,7 @@ go_library(
     deps = [
         "//go/pkg/cli",
         "//go/pkg/doubaospeech",
-        "@com_github_spf13_cobra//:cobra",
         "@com_github_goccy_go_yaml//:go-yaml",
+        "@com_github_spf13_cobra//:cobra",
     ],
 )

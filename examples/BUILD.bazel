@@ -1,1 +1,16 @@
-# Examples
+# Examples directory structure:
+#
+# examples/
+# ├── cmd/          - CLI test scripts (shell)
+# │   ├── minimax/
+# │   └── doubaospeech/
+# ├── go/           - Go examples (single go.mod)
+# │   ├── audio/
+# │   ├── dashscope/
+# │   ├── doubaospeech/
+# │   ├── genx/
+# │   └── minimax/
+# └── rust/         - Rust examples
+#     └── minimax/
+
+package(default_visibility = ["//visibility:public"])

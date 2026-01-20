@@ -1,0 +1,27 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Common dependencies for minimax examples
+DEPS = [
+    "//rust/minimax:giztoy_minimax",
+    "@crate_index//:tokio",
+]
+
+rust_binary(
+    name = "speech",
+    srcs = ["src/bin/speech.rs"],
+    deps = DEPS + ["@crate_index//:futures"],
+)
+
+rust_binary(
+    name = "text",
+    srcs = ["src/bin/text.rs"],
+    deps = DEPS + ["@crate_index//:futures"],
+)
+
+rust_binary(
+    name = "image",
+    srcs = ["src/bin/image.rs"],
+    deps = DEPS,
+)

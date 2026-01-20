@@ -21,7 +21,7 @@ go_library(
         "//conditions:default": [],
     }),
     copts = [
-        "-Igo/pkg/audio/codec/mp3/go/third_party/minimp3",
+        "-Igo/pkg/audio/codec/mp3/third_party/minimp3",
     ] + select({
         "@rules_go//go/platform:darwin": [
             "-I/opt/homebrew/include",

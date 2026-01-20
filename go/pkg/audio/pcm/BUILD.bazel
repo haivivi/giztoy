@@ -13,9 +13,7 @@ go_library(
     ],
     importpath = "github.com/haivivi/giztoy/pkg/audio/pcm",
     visibility = ["//visibility:public"],
-    deps = [
-        "//go/pkg/audio/resampler",
-    ],
+    deps = ["//go/pkg/audio/resampler"],
 )
 
 go_test(

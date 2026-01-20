@@ -12,7 +12,5 @@ go_library(
     cgo = True,
     importpath = "github.com/haivivi/giztoy/pkg/audio/portaudio",
     visibility = ["//visibility:public"],
-    deps = [
-        "//go/pkg/audio/pcm",
-    ],
+    deps = ["//go/pkg/audio/pcm"],
 )

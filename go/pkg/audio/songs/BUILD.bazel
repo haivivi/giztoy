@@ -8,9 +8,7 @@ go_library(
     ],
     importpath = "github.com/haivivi/giztoy/pkg/audio/songs",
     visibility = ["//visibility:public"],
-    deps = [
-        "//go/pkg/audio/pcm",
-    ],
+    deps = ["//go/pkg/audio/pcm"],
 )
 
 go_test(

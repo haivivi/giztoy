@@ -1,0 +1,55 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# Template files for API requests
+filegroup(
+    name = "templates",
+    srcs = glob(["commands/templates/*.yaml"]),
+)
+
+# CLI config files
+filegroup(
+    name = "configs",
+    srcs = glob(["commands/*.yaml"]),
+)
+
+# All data files needed for run.sh
+filegroup(
+    name = "run_data",
+    srcs = [
+        ":configs",
+        ":templates",
+    ],
+)
+
+# Shell script for running API tests
+# Usage:
+#   bazel run //examples/cmd/doubaospeech:run -- tts
+#   bazel run //examples/cmd/doubaospeech:run -- all
+sh_binary(
+    name = "run",
+    srcs = ["run.sh"],
+    data = [
+        ":run_data",
+        "//go/cmd/doubao",
+        "@yq",
+    ],
+)
+
+# Test target for CI
+sh_test(
+    name = "run_test",
+    size = "large",
+    srcs = ["run.sh"],
+    args = ["help"],  # Only show help by default
+    data = [
+        ":run_data",
+        "@yq",
+    ],
+    tags = [
+        "external",  # Network access required
+        "manual",  # Don't run in CI without credentials
+    ],
+)

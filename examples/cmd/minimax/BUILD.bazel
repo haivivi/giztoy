@@ -1,0 +1,24 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+# MiniMax CLI 测试脚本
+# 用法:
+#   bazel run //examples/cmd/minimax:run -- go all
+#   bazel run //examples/cmd/minimax:run -- rust 1
+#   bazel run //examples/cmd/minimax:run -- both quick
+sh_binary(
+    name = "run",
+    srcs = ["run.sh"],
+    data = [
+        ":commands",
+        "//go/cmd/minimax",
+        "//rust/cmd/minimax",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# 导出请求文件供其他目标使用
+filegroup(
+    name = "commands",
+    srcs = glob(["commands/*.yaml"]),
+    visibility = ["//visibility:public"],
+)

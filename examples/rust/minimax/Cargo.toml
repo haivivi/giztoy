@@ -1,0 +1,23 @@
+[package]
+name = "minimax-examples"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Examples demonstrating how to use the giztoy-minimax SDK"
+
+[dependencies]
+giztoy-minimax = { path = "../../../rust/minimax" }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+
+[[bin]]
+name = "speech"
+path = "src/bin/speech.rs"
+
+[[bin]]
+name = "text"
+path = "src/bin/text.rs"
+
+[[bin]]
+name = "image"
+path = "src/bin/image.rs"

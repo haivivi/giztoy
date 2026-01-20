@@ -65,6 +65,7 @@ crate.from_cargo(
         "//rust/minimax:Cargo.toml",
         "//rust/cli:Cargo.toml",
         "//rust/cmd/minimax:Cargo.toml",
+        "//examples/rust/minimax:Cargo.toml",
     ],
 )
 use_repo(crate, "crate_index")

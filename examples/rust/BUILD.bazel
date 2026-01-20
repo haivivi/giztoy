@@ -1,0 +1,4 @@
+# Rust examples directory
+# Each subdirectory contains Rust examples for different services
+
+package(default_visibility = ["//visibility:public"])
