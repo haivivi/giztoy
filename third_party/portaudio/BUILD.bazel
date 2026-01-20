@@ -40,6 +40,7 @@ genrule(
         
         rm -rf $$OUTDIR $$CONFIG_DIR
     """,
+    target_compatible_with = ["@platforms//os:macos"],
     visibility = ["//visibility:private"],
 )
 
@@ -98,6 +99,7 @@ genrule(
 cc_import(
     name = "portaudio_import_macos",
     static_library = ":portaudio_static_macos",
+    target_compatible_with = ["@platforms//os:macos"],
     visibility = ["//visibility:private"],
 )
 
