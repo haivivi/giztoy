@@ -1,0 +1,32 @@
+# Subtitle Extraction request example
+# Usage: doubao -c myctx media subtitle -f subtitle.yaml
+
+# Media URL (audio or video file)
+media_url: https://example.com/video.mp4
+
+# Source language
+language: zh-CN
+
+# Output format
+# - srt: SubRip format
+# - vtt: WebVTT format
+# - txt: Plain text
+format: srt
+
+# Enable translation to another language (optional)
+enable_translation: true
+target_language: en-US
+
+# Maximum characters per subtitle line (optional)
+max_chars_per_line: 40
+
+# Enable speaker diarization (optional)
+enable_speaker_diarization: false
+
+# Callback URL for task completion (optional)
+# callback_url: https://your-server.com/webhook/subtitle-complete
+
+# Hotwords for improved recognition (optional)
+# hotwords:
+#   - 豆包
+#   - 火山引擎

@@ -1,33 +1,140 @@
-# 大模型语音识别
+# 大模型语音识别 2.0
 
-## 原始文档
+## 原始文档链接
 
 | 文档 | 链接 |
 |------|------|
-| 产品简介 | https://www.volcengine.com/docs/6561/1354868 |
-| 大模型流式语音识别API | https://www.volcengine.com/docs/6561/1354870 |
-| 大模型录音文件识别标准版API | https://www.volcengine.com/docs/6561/1354872 |
-| 大模型录音文件极速版API | https://www.volcengine.com/docs/6561/1354874 |
-
-> 如果本文档信息不完整，请访问上述链接获取最新内容。
+| 大模型流式语音识别 | https://www.volcengine.com/docs/6561/1354869 |
+| 大模型录音文件识别标准版 | https://www.volcengine.com/docs/6561/1354868 |
+| 大模型录音文件极速版 | https://www.volcengine.com/docs/6561/1631584 |
+| 大模型录音文件闲时版 | https://www.volcengine.com/docs/6561/1840838 |
 
 ## 概述
 
-大模型语音识别（ASR 2.0）提供高精度的语音转文字服务。
+大模型语音识别 2.0 基于大模型技术，提供更准确的语音识别能力。
 
 ## 接口列表
 
-| 接口 | 说明 | 文档 |
-|------|------|------|
-| 流式语音识别 | 实时语音识别 | [streaming.md](./streaming.md) |
-| 录音文件识别（标准版） | 异步文件转写 | [file-standard.md](./file-standard.md) |
-| 录音文件识别（极速版） | 快速文件转写 | [file-fast.md](./file-fast.md) |
+| 接口 | 端点 | Resource ID | 特点 |
+|------|------|-------------|------|
+| 流式识别 | `WSS /api/v3/sauc/bigmodel` | `volc.bigasr.sauc.duration` | 实时识别 |
+| 录音文件标准版 | `POST /api/v3/asr/bigmodel/submit` | `volc.bigasr.auc.duration` | 准确度优先 |
+| 录音文件极速版 | `POST /api/v3/asr/bigmodel_async/submit` | `volc.bigasr.auc.duration` | 速度优先 |
+| 录音文件闲时版 | `POST /api/v3/asr/bigmodel_idle/submit` | `volc.bigasr.auc.duration` | 成本优先 |
 
-## 功能特性
+## 认证方式
 
-- ✅ 支持多语种识别
-- ✅ 支持方言识别
-- ✅ 支持标点恢复
-- ✅ 支持说话人分离
-- ✅ 支持热词定制
-- ✅ 支持时间戳输出
+### V3 Headers 认证
+
+| Header | 说明 | 必填 |
+|--------|------|------|
+| `X-Api-App-Id` | APP ID | ✅ |
+| `X-Api-Access-Key` | Access Token | ✅ |
+| `X-Api-Resource-Id` | 资源 ID | ✅ |
+
+### Resource ID
+
+| Resource ID | 说明 |
+|-------------|------|
+| `volc.bigasr.sauc.duration` | 大模型流式识别 |
+| `volc.bigasr.auc.duration` | 大模型录音文件识别 |
+
+## 流式识别 API
+
+### 端点
+
+```
+WSS wss://openspeech.bytedance.com/api/v3/sauc/bigmodel
+```
+
+### 请求格式
+
+使用二进制协议发送配置和音频数据。
+
+### 配置请求
+
+```json
+{
+    "user": {"uid": "user-id"},
+    "audio": {
+        "format": "pcm",
+        "sample_rate": 16000,
+        "channel": 1,
+        "bits": 16
+    },
+    "request": {
+        "reqid": "unique-request-id",
+        "sequence": 1,
+        "language": "zh-CN",
+        "show_utterances": true,
+        "result_type": "single"
+    }
+}
+```
+
+### 响应格式
+
+```json
+{
+    "reqid": "request-id",
+    "code": 1000,
+    "sequence": 1,
+    "result": {
+        "text": "识别结果",
+        "utterances": [
+            {
+                "text": "识别结果",
+                "start_time": 0,
+                "end_time": 1500,
+                "words": [...]
+            }
+        ]
+    }
+}
+```
+
+## 录音文件识别 API
+
+### 端点
+
+```
+POST https://openspeech.bytedance.com/api/v3/asr/bigmodel/submit
+```
+
+### 请求
+
+```json
+{
+    "user": {"uid": "user-id"},
+    "audio": {
+        "format": "mp3",
+        "url": "https://example.com/audio.mp3"
+    },
+    "request": {
+        "reqid": "unique-request-id",
+        "language": "zh-CN",
+        "enable_itn": true,
+        "enable_punc": true
+    }
+}
+```
+
+### 响应
+
+```json
+{
+    "reqid": "request-id",
+    "code": 1000,
+    "message": "success",
+    "result": {
+        "text": "完整识别文本",
+        "utterances": [...]
+    }
+}
+```
+
+## 详细文档
+
+- [流式识别](./streaming.md)
+- [录音文件识别标准版](./file-standard.md)
+- [录音文件识别极速版](./file-fast.md)

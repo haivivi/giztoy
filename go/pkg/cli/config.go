@@ -36,8 +36,14 @@ type Context struct {
 	// Name is the context name
 	Name string `yaml:"name"`
 
-	// APIKey is the API key for authentication
-	APIKey string `yaml:"api_key"`
+	// Client contains speech API credentials (TTS, ASR, etc.) - used by doubao
+	Client *ClientCredentials `yaml:"client,omitempty"`
+
+	// Console contains console API credentials (ListTimbres, etc.) - used by doubao
+	Console *ConsoleCredentials `yaml:"console,omitempty"`
+
+	// APIKey is the API key for authentication - used by minimax
+	APIKey string `yaml:"api_key,omitempty"`
 
 	// BaseURL is the API base URL (optional, uses default if empty)
 	BaseURL string `yaml:"base_url,omitempty"`
@@ -48,8 +54,29 @@ type Context struct {
 	// MaxRetries is the maximum number of retries (optional)
 	MaxRetries int `yaml:"max_retries,omitempty"`
 
-	// Extra stores application-specific settings
+	// DefaultVoice is the default voice type for TTS (optional)
+	DefaultVoice string `yaml:"default_voice,omitempty"`
+
+	// Extra stores application-specific settings - used by minimax
 	Extra map[string]string `yaml:"extra,omitempty"`
+}
+
+// ClientCredentials contains credentials for speech APIs (TTS, ASR, Realtime, etc.)
+type ClientCredentials struct {
+	// AppID is the application ID
+	AppID string `yaml:"app_id"`
+
+	// APIKey is the API key (Bearer token or x-api-key)
+	APIKey string `yaml:"api_key"`
+}
+
+// ConsoleCredentials contains credentials for console APIs (ListTimbres, etc.)
+type ConsoleCredentials struct {
+	// AccessKey is the Volcengine AK for OpenAPI signature
+	AccessKey string `yaml:"access_key"`
+
+	// SecretKey is the Volcengine SK for OpenAPI signature
+	SecretKey string `yaml:"secret_key"`
 }
 
 // LoadConfig loads or creates configuration for the specified app

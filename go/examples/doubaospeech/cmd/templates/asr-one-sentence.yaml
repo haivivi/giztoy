@@ -1,0 +1,17 @@
+# ASR 一句话识别请求模板
+# 变量: APP_ID, TOKEN, ASR_CLUSTER, REQID, AUDIO_URL
+app:
+  appid: "${APP_ID}"
+  token: "${TOKEN}"
+  cluster: "${ASR_CLUSTER}"
+user:
+  uid: "test_user"
+audio:
+  format: "mp3"
+  url: "${AUDIO_URL}"
+request:
+  reqid: "${REQID}"
+  sequence: 1
+  language: "zh-CN"
+  enable_itn: true
+  enable_punc: true

@@ -1,0 +1,51 @@
+# Realtime Conversation config example
+# Usage: doubao -c myctx realtime interactive -f realtime.yaml
+
+# ASR (Speech Recognition) configuration
+asr:
+  # Extra settings
+  extra:
+    # End of speech detection smoothing window (ms)
+    end_smooth_window_ms: 200
+  
+  # Language
+  language: zh-CN
+  
+  # Enable punctuation
+  enable_punc: true
+
+# TTS (Speech Synthesis) configuration
+tts:
+  # Speaker voice
+  speaker: zh_female_cancan
+  
+  # Audio output configuration
+  audio_config:
+    channel: 1
+    format: pcm
+    sample_rate: 24000
+  
+  # Speed ratio
+  speed_ratio: 1.0
+  
+  # Volume ratio
+  volume_ratio: 1.0
+
+# Dialog configuration
+dialog:
+  # Bot name
+  bot_name: 小助手
+  
+  # System role description
+  system_role: |
+    你是一个友好、有帮助的语音助手。
+    你擅长回答各种问题，并且总是礼貌和专业的。
+  
+  # Speaking style
+  speaking_style: 温柔亲切
+
+  # LLM model (optional)
+  # llm_model: doubao-pro-32k
+  
+  # Max response tokens
+  # max_tokens: 1024

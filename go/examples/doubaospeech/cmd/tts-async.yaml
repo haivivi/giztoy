@@ -1,0 +1,31 @@
+# Async TTS (Long Text) request example
+# Usage: doubao -c myctx tts async -f tts-async.yaml
+
+# Long text to synthesize (up to 10,000 characters)
+text: |
+  这是一段很长的文本，用于Test异步Text-to-Speech功能。
+  异步合成支持最多 10000 个字符的文本。
+  
+  第一段内容...
+  
+  第二段内容...
+  
+  第三段内容...
+
+# Voice type
+voice_type: zh_female_cancan
+
+# Audio encoding format
+encoding: mp3
+
+# Sample rate in Hz
+sample_rate: 24000
+
+# Callback URL (optional, for receiving completion notification)
+# callback_url: https://your-server.com/webhook/tts-complete
+
+# Speed ratio
+speed_ratio: 1.0
+
+# Volume ratio
+volume_ratio: 1.0

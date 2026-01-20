@@ -1,0 +1,26 @@
+# ASR One-Sentence Recognition request example
+# Usage: doubao -c myctx asr one-sentence -f asr-one-sentence.yaml
+
+# Audio URL (provide either audio_url or audio_data)
+audio_url: https://example.com/audio.mp3
+
+# Or provide base64 encoded audio data
+# audio_data: SGVsbG8gV29ybGQ=...
+
+# Audio format
+format: mp3
+
+# Sample rate (optional, auto-detected if not specified)
+# sample_rate: 16000
+
+# Language code
+language: zh-CN
+
+# Enable Inverse Text Normalization (numbers to digits, etc.)
+enable_itn: true
+
+# Enable punctuation
+enable_punc: true
+
+# Enable Digit Deconstructed and Constructed (phone numbers, etc.)
+enable_ddc: false

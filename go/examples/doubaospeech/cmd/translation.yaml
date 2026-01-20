@@ -1,0 +1,38 @@
+# Simultaneous Translation config example
+# Usage: doubao -c myctx translation stream -f translation.yaml --audio input.pcm -o output.pcm
+
+# Source language
+source_language: zh-CN
+
+# Target language
+target_language: en-US
+
+# Audio input configuration
+audio_config:
+  format: pcm
+  sample_rate: 16000
+  channel: 1
+  bits: 16
+
+# Enable TTS output (speak the translation)
+enable_tts: true
+
+# TTS voice for the translation
+tts_voice: en_female_sweet
+
+# TTS audio output configuration
+tts_audio_config:
+  format: pcm
+  sample_rate: 24000
+  channel: 1
+
+# Translation mode
+# - sentence: Translate complete sentences
+# - realtime: Translate in real-time with lower latency
+mode: sentence
+
+# Enable source language ASR output
+enable_asr_output: true
+
+# Enable translation text output
+enable_translation_output: true

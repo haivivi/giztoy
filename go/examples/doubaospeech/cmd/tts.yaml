@@ -1,0 +1,28 @@
+# TTS V2 (BigModel) request example
+# Usage: doubao -c test tts synthesize -f tts.yaml -o output.mp3
+#
+# For V1 (classic) API, use --v1 flag:
+#   doubao -c test tts synthesize -f tts-v1.yaml -o output.mp3 --v1
+
+# Text to synthesize (required)
+text: 你好，这是一段Test语音。欢迎使用豆包大模型Text-to-Speech服务。
+
+# Speaker voice (required for V2)
+# TTS 2.0 BigModel voices have _uranus_bigtts suffix (seed-tts-2.0 resource)
+# Use Console API ListSpeakers to get available voices
+# Examples: zh_female_vv_uranus_bigtts, zh_female_xiaohe_uranus_bigtts, zh_male_taocheng_uranus_bigtts
+speaker: zh_female_vv_uranus_bigtts
+
+# Audio format: pcm, mp3, ogg_opus
+format: mp3
+
+# Sample rate in Hz: 8000, 16000, 24000, 32000
+sample_rate: 24000
+
+# Speech control (optional)
+speed_ratio: 1.0    # 0.2-3.0
+volume_ratio: 1.0   # 0.1-3.0
+pitch_ratio: 1.0    # 0.1-3.0
+
+# Resource ID (optional, default: seed-tts-2.0)
+# resource_id: seed-tts-2.0
