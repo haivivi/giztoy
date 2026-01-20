@@ -13,6 +13,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -32,6 +33,15 @@ var (
 func main() {
 	flag.Parse()
 
+	// Configure slog based on verbose flag
+	logLevel := slog.LevelInfo
+	if *verbose {
+		logLevel = slog.LevelDebug
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: logLevel,
+	})))
+
 	if *minimaxKey == "" {
 		log.Fatal("MiniMax API key is required. Use -minimax-key or set MINIMAX_API_KEY")
 	}
@@ -46,7 +56,7 @@ func main() {
 
 	// Create clients
 	mmClient := minimax.NewClient(*minimaxKey, minimax.WithBaseURL("https://api.minimaxi.chat"))
-	dsClient := dashscope.NewClient(*dashscopeKey, dashscope.WithDebug(*verbose))
+	dsClient := dashscope.NewClient(*dashscopeKey)
 
 	ctx := context.Background()
 

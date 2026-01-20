@@ -140,10 +140,5 @@ func createDashScopeClient(ctx *cli.Context) *dashscope.Client {
 		opts = append(opts, dashscope.WithBaseURL(ctx.BaseURL))
 	}
 
-	// Enable debug mode in verbose mode
-	if isVerbose() {
-		opts = append(opts, dashscope.WithDebug(true))
-	}
-
 	return dashscope.NewClient(ctx.APIKey, opts...)
 }

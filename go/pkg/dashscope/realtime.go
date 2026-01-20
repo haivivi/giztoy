@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"iter"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -56,9 +57,9 @@ func (s *RealtimeService) Connect(ctx context.Context, config *RealtimeConfig) (
 	}
 
 	session := &RealtimeSession{
-		conn:   conn,
-		config: config,
-		client: s.client,
+		conn:    conn,
+		config:  config,
+		client:  s.client,
 		closeCh: make(chan struct{}),
 		// eventsCh uses a buffer of 100 events. If events arrive faster than
 		// they are consumed, the readLoop will block, applying backpressure
@@ -301,14 +302,14 @@ func (s *RealtimeSession) sendEvent(event map[string]interface{}) error {
 	defer s.mu.Unlock()
 
 	// Debug: log the event being sent
-	if s.client.config.debug {
+	if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 		if jsonBytes, err := json.MarshalIndent(event, "", "  "); err == nil {
 			// Truncate for readability
 			str := string(jsonBytes)
 			if len(str) > 500 {
 				str = str[:500] + "..."
 			}
-			fmt.Printf("[DEBUG] Sending: %s\n", str)
+			slog.Debug("sending event", "content", str)
 		}
 	}
 
@@ -337,12 +338,12 @@ func (s *RealtimeSession) readLoop() {
 		}
 
 		// Debug: log received message
-		if s.client.config.debug {
+		if slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 			msgStr := string(message)
 			if len(msgStr) > 1000 {
 				msgStr = msgStr[:1000] + "..."
 			}
-			fmt.Printf("[DEBUG] Received (len=%d): %s\n", len(message), msgStr)
+			slog.Debug("received message", "len", len(message), "content", msgStr)
 		}
 
 		// Parse JSON event
@@ -359,8 +360,8 @@ func (s *RealtimeSession) readLoop() {
 		// Extract event type
 		var eventType string
 		if typeRaw, ok := rawEvent["type"]; ok {
-			if err := json.Unmarshal(typeRaw, &eventType); err != nil && s.client.config.debug {
-				fmt.Printf("[DEBUG] Failed to unmarshal event type: %v\n", err)
+			if err := json.Unmarshal(typeRaw, &eventType); err != nil {
+				slog.Debug("failed to unmarshal event type", "error", err)
 			}
 		}
 

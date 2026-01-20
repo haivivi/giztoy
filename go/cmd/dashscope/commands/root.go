@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -72,6 +73,15 @@ func init() {
 }
 
 func initConfig() {
+	// Configure slog based on verbose flag
+	logLevel := slog.LevelInfo
+	if verbose {
+		logLevel = slog.LevelDebug
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: logLevel,
+	})))
+
 	var err error
 	globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
 	if err != nil {

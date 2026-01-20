@@ -26,7 +26,6 @@ type clientConfig struct {
 	baseURL     string
 	httpBaseURL string
 	httpClient  *http.Client
-	debug       bool
 }
 
 // Option configures the Client.
@@ -82,12 +81,5 @@ func WithHTTPBaseURL(url string) Option {
 func WithHTTPClient(client *http.Client) Option {
 	return func(c *clientConfig) {
 		c.httpClient = client
-	}
-}
-
-// WithDebug enables debug logging.
-func WithDebug(enable bool) Option {
-	return func(c *clientConfig) {
-		c.debug = enable
 	}
 }
