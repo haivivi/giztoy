@@ -308,7 +308,7 @@
           "@@//rust/Cargo.toml": "119dd9edae9f7d72671f8205ff234db0c6e18edcf863664354972fe9ec9a88c5",
           "@@//rust/cli/Cargo.toml": "02d1ba5055a0de421d96d015f97cfd8db3e6888d0cd85ba34ef6652cf0012826",
           "@@//rust/cmd/minimax/Cargo.toml": "776c6ce31d1952e3ace3dd7ed43870fda60947567dcff0b08a4abc88724fee48",
-          "@@//rust/minimax/Cargo.toml": "7543e39e43d8ea789d30188b0870307c2383221faa26b893aaed39efcc1784f2"
+          "@@//rust/minimax/Cargo.toml": "0302bdf20cf1222331175699baa734add5d3a9f5df55ef86ef2a399e5806ec7c"
         },
         "recordedDirentsInputs": {},
         "envVariables": {
