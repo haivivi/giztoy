@@ -22,6 +22,6 @@ go_library(
         "//go/pkg/cli",
         "//go/pkg/doubaospeech",
         "@com_github_spf13_cobra//:cobra",
-        "@in_gopkg_yaml_v3//:yaml_v3",
+        "@com_github_goccy_go_yaml//:go-yaml",
     ],
 )

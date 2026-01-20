@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "songs",
+    srcs = [
+        "pcm.go",
+        "songs.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/audio/songs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/pcm",
+    ],
+)
+
+go_test(
+    name = "songs_test",
+    srcs = ["songs_test.go"],
+    embed = [":songs"],
+)

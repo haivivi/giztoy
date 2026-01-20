@@ -13,6 +13,6 @@ go_library(
     importpath = "github.com/haivivi/giztoy/pkg/cli",
     visibility = ["//visibility:public"],
     deps = [
-        "@in_gopkg_yaml_v3//:yaml_v3",
+        "@com_github_goccy_go_yaml//:go-yaml",
     ],
 )

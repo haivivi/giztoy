@@ -1,0 +1,29 @@
+## Params
+{{if .Params -}}
+MaxTokens: {{.Params.MaxTokens}}
+FrequencyPenalty: {{printf "%.2f" .Params.FrequencyPenalty}}
+N: {{.Params.N}}
+Temperature: {{printf "%.2f" .Params.Temperature}}
+TopP: {{printf "%.2f" .Params.TopP}}
+PresencePenalty: {{printf "%.2f" .Params.PresencePenalty}}
+TopK: {{printf "%.2f" .Params.TopK}}
+{{- end}}
+
+## Prompts
+{{range .Prompts}}
+### {{ trim (printf "%q" .Name) `"` }}
+{{.Text}}
+{{end -}}
+
+## Tools
+{{range .Tools}}
+{{ inspectTool . }}
+{{end}}
+## Messages
+{{range .Messages}}
+{{ inspectMessage .}}
+{{- end}}
+## CoTs
+{{range .CoTs -}}
+{{ . }}
+{{end}}

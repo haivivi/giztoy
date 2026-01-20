@@ -1,0 +1,142 @@
+load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+
+# macOS build using zig cc
+genrule(
+    name = "portaudio_static_macos",
+    srcs = [
+        "@portaudio//:portaudio_macos_srcs",
+        "@portaudio//:portaudio_headers",
+        "@portaudio//:portaudio_macos_internal_headers",
+        "pa_config.h",
+    ],
+    outs = ["libportaudio_macos.a"],
+    cmd = """
+        set -e
+        export HOME=/tmp
+        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
+        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
+        mkdir -p /tmp/zig-cache
+        
+        OUTDIR=$$(mktemp -d)
+        
+        CONFIG_DIR=$$(mktemp -d)
+        cp $(location pa_config.h) $$CONFIG_DIR/pa_config.h
+        
+        for src in $(locations @portaudio//:portaudio_macos_srcs); do
+            base=$$(basename $$src .c)
+            zig cc -c $$src -o $$OUTDIR/$$base.o \
+                -I$$CONFIG_DIR \
+                -Iexternal/+audio_libs+portaudio/include \
+                -Iexternal/+audio_libs+portaudio/src/common \
+                -Iexternal/+audio_libs+portaudio/src/os/unix \
+                -Iexternal/+audio_libs+portaudio/src/hostapi/coreaudio \
+                -DPA_USE_COREAUDIO=1 \
+                -fno-sanitize=undefined \
+                -O2 \
+                -w
+        done
+        
+        ar rcs $@ $$OUTDIR/*.o
+        
+        rm -rf $$OUTDIR $$CONFIG_DIR
+    """,
+    visibility = ["//visibility:private"],
+)
+
+# Linux build using zig cc
+genrule(
+    name = "portaudio_static_linux",
+    srcs = [
+        "@portaudio//:portaudio_linux_srcs",
+        "@portaudio//:portaudio_headers",
+        "@portaudio//:portaudio_linux_internal_headers",
+        "pa_config.h",
+    ],
+    outs = ["libportaudio_linux.a"],
+    cmd = """
+        set -e
+        export HOME=/tmp
+        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
+        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
+        mkdir -p /tmp/zig-cache
+        
+        OUTDIR=$$(mktemp -d)
+        
+        CONFIG_DIR=$$(mktemp -d)
+        cp $(location pa_config.h) $$CONFIG_DIR/pa_config.h
+        
+        for src in $(locations @portaudio//:portaudio_linux_srcs); do
+            base=$$(basename $$src .c)
+            zig cc -c $$src -o $$OUTDIR/$$base.o \
+                -I$$CONFIG_DIR \
+                -Iexternal/+audio_libs+portaudio/include \
+                -Iexternal/+audio_libs+portaudio/src/common \
+                -Iexternal/+audio_libs+portaudio/src/os/unix \
+                -Iexternal/+audio_libs+portaudio/src/hostapi/alsa \
+                -DPA_USE_ALSA=1 \
+                -fno-sanitize=undefined \
+                -O2 \
+                -w
+        done
+        
+        ar rcs $@ $$OUTDIR/*.o
+        
+        rm -rf $$OUTDIR $$CONFIG_DIR
+    """,
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
+)
+
+genrule(
+    name = "portaudio_header",
+    srcs = ["@portaudio//:portaudio_headers"],
+    outs = ["include/portaudio.h"],
+    cmd = "mkdir -p $$(dirname $@) && cp external/+audio_libs+portaudio/include/portaudio.h $@",
+    visibility = ["//visibility:private"],
+)
+
+cc_import(
+    name = "portaudio_import_macos",
+    static_library = ":portaudio_static_macos",
+    visibility = ["//visibility:private"],
+)
+
+cc_import(
+    name = "portaudio_import_linux",
+    static_library = ":portaudio_static_linux",
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "portaudio",
+    hdrs = [":portaudio_header"],
+    includes = ["include"],
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-F/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks",
+            "-L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/lib",
+            "-framework",
+            "CoreAudio",
+            "-framework",
+            "AudioToolbox",
+            "-framework",
+            "AudioUnit",
+            "-framework",
+            "CoreFoundation",
+            "-framework",
+            "CoreServices",
+        ],
+        "@platforms//os:linux": [
+            "-lasound",  # ALSA
+            "-lpthread",
+        ],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = select({
+        "@platforms//os:macos": [":portaudio_import_macos"],
+        "@platforms//os:linux": [":portaudio_import_linux"],
+        "//conditions:default": [":portaudio_import_macos"],
+    }),
+)

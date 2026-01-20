@@ -1,0 +1,13 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+# Audio package - umbrella package for audio processing utilities
+# Sub-packages:
+#   - pcm: PCM audio format handling
+#   - portaudio: PortAudio bindings for audio I/O
+
+go_library(
+    name = "audio",
+    srcs = ["doc.go"],
+    importpath = "github.com/haivivi/giztoy/pkg/audio",
+    visibility = ["//visibility:public"],
+)

@@ -18,6 +18,9 @@ bazel_dep(name = "platforms", version = "1.0.0")
 # Rust rules
 bazel_dep(name = "rules_rust", version = "0.68.1")
 
+# C/C++ rules
+bazel_dep(name = "rules_cc", version = "0.1.1")
+
 # Shell rules (required for sh_binary/sh_test in Bazel 8+)
 bazel_dep(name = "rules_shell", version = "0.6.1")
 
@@ -30,10 +33,15 @@ go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//go:go.mod")
 use_repo(
     go_deps,
+    "com_github_goccy_go_yaml",
+    "com_github_google_jsonschema_go",
     "com_github_google_uuid",
+    "com_github_googleapis_gax_go_v2",
     "com_github_gorilla_websocket",
+    "com_github_kaptinlin_jsonrepair",
+    "com_github_openai_openai_go",
     "com_github_spf13_cobra",
-    "in_gopkg_yaml_v3",
+    "org_golang_google_genai",
 )
 
 # yq tool for YAML processing
@@ -60,3 +68,7 @@ crate.from_cargo(
     ],
 )
 use_repo(crate, "crate_index")
+
+# Audio libraries (soxr, portaudio, opus, lame)
+audio_libs = use_extension("//:extensions.bzl", "audio_libs")
+use_repo(audio_libs, "soxr", "portaudio", "opus", "lame")

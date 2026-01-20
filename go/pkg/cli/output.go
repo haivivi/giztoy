@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"gopkg.in/yaml.v3"
+	"github.com/goccy/go-yaml"
 )
 
 // OutputFormat represents the output format type

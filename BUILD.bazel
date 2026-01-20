@@ -1,12 +1,18 @@
 load("@gazelle//:def.bzl", "gazelle")
 
+# Export go.mod and go.sum for Bazel
+exports_files([
+    "go.mod",
+    "go.sum",
+])
+
 # gazelle:prefix github.com/haivivi/giztoy
 gazelle(name = "gazelle")
 
 gazelle(
     name = "gazelle-update-repos",
     args = [
-        "-from_file=go/go.mod",
+        "-from_file=go.mod",
         "-to_macro=deps.bzl%go_dependencies",
         "-prune",
     ],
