@@ -21,15 +21,3 @@ bytes = { workspace = true }
 [dev-dependencies]
 tokio-test = { workspace = true }
 tokio = { workspace = true }
-
-[[example]]
-name = "speech"
-path = "examples/speech.rs"
-
-[[example]]
-name = "text"
-path = "examples/text.rs"
-
-[[example]]
-name = "image"
-path = "examples/image.rs"
