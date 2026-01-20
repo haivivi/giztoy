@@ -518,11 +518,11 @@ fn generate_websocket_key() -> String {
 }
 
 fn rand_byte() -> u8 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let duration = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default();
-    ((duration.as_nanos() % 256) as u8).wrapping_add(duration.subsec_nanos() as u8)
+    use rand::RngCore;
+    let mut rng = rand::thread_rng();
+    let mut byte = [0u8; 1];
+    rng.fill_bytes(&mut byte);
+    byte[0]
 }
 
 fn extract_host(url: &str) -> Option<&str> {

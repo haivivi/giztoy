@@ -20,6 +20,7 @@ base64 = "0.22"
 tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 http = "1"
 tracing = { workspace = true }
+rand = "0.8"
 
 [dev-dependencies]
 tokio-test = { workspace = true }

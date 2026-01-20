@@ -390,9 +390,8 @@ fn merge_config(dst: &mut OmniChatConfig, src: &OmniChatConfig) {
     if !src.modalities.is_empty() {
         dst.modalities = src.modalities.clone();
     }
-    if src.enable_input_audio_transcription {
-        dst.enable_input_audio_transcription = src.enable_input_audio_transcription;
-    }
+    // Always merge the boolean field to allow explicitly disabling transcription
+    dst.enable_input_audio_transcription = src.enable_input_audio_transcription;
     if !src.input_audio_transcription_model.is_empty() {
         dst.input_audio_transcription_model = src.input_audio_transcription_model.clone();
     }
