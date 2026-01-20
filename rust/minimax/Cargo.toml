@@ -1,0 +1,35 @@
+[package]
+name = "giztoy-minimax"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "MiniMax API SDK for Rust"
+
+[dependencies]
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+hex = { workspace = true }
+futures = { workspace = true }
+async-stream = { workspace = true }
+bytes = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+tokio = { workspace = true }
+
+[[example]]
+name = "speech"
+path = "examples/speech.rs"
+
+[[example]]
+name = "text"
+path = "examples/text.rs"
+
+[[example]]
+name = "image"
+path = "examples/image.rs"

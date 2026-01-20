@@ -1,0 +1,14 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_binary(
+    name = "minimax",
+    srcs = glob(["src/**/*.rs"]),
+    aliases = aliases(),
+    deps = [
+        "//rust/minimax:giztoy_minimax",
+        "//rust/cli:giztoy_cli",
+    ] + all_crate_deps(normal = True),
+)

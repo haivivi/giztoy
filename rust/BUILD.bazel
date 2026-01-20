@@ -1,0 +1,26 @@
+# Rust workspace root BUILD file
+#
+# This workspace contains three crates:
+#   - //rust/minimax:giztoy_minimax - MiniMax SDK library
+#   - //rust/cli:giztoy_cli - CLI utilities library
+#   - //rust/cmd/minimax:minimax - MiniMax CLI binary
+
+package(default_visibility = ["//visibility:public"])
+
+# Convenience alias for the CLI binary
+alias(
+    name = "minimax",
+    actual = "//rust/cmd/minimax",
+)
+
+# Convenience alias for the SDK library
+alias(
+    name = "giztoy_minimax",
+    actual = "//rust/minimax:giztoy_minimax",
+)
+
+# Convenience alias for the CLI library
+alias(
+    name = "giztoy_cli",
+    actual = "//rust/cli:giztoy_cli",
+)
