@@ -1,0 +1,33 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "opusrt",
+    srcs = [
+        "buffer.go",
+        "doc.go",
+        "encoder.go",
+        "frame.go",
+        "ogg_reader.go",
+        "ogg_writer.go",
+        "realtime.go",
+        "timestamp.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/audio/opusrt",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/codec/ogg",
+        "//go/pkg/audio/codec/opus",
+        "//go/pkg/buffer",
+    ],
+)
+
+go_test(
+    name = "opusrt_test",
+    srcs = [
+        "buffer_test.go",
+        "frame_test.go",
+        "ogg_rw_test.go",
+        "realtime_test.go",
+    ],
+    embed = [":opusrt"],
+)

@@ -70,6 +70,6 @@ crate.from_cargo(
 )
 use_repo(crate, "crate_index")
 
-# Audio libraries (soxr, portaudio, opus, lame)
+# Audio libraries (soxr, portaudio, opus, lame, ogg)
 audio_libs = use_extension("//:extensions.bzl", "audio_libs")
-use_repo(audio_libs, "soxr", "portaudio", "opus", "lame")
+use_repo(audio_libs, "soxr", "portaudio", "opus", "lame", "ogg")

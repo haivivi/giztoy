@@ -176,7 +176,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%audio_libs": {
       "general": {
-        "bzlTransitiveDigest": "Jmv16bCWLFkSX+qo/dhypLCF8YIe8+ELXg88WaehD3Y=",
+        "bzlTransitiveDigest": "FqwueAB5/2REOXsDf1qjmfnlb5i9LExTaehERRQcenE=",
         "usagesDigest": "Xd+WAzFJEryUCjH03YpiXD7zp5I44G4mzlGyoeX1wGo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -197,6 +197,10 @@
           "lame": {
             "repoRuleId": "@@//:extensions.bzl%_lame_repo",
             "attributes": {}
+          },
+          "ogg": {
+            "repoRuleId": "@@//:extensions.bzl%_ogg_repo",
+            "attributes": {}
           }
         },
         "recordedRepoMappingEntries": [
@@ -210,7 +214,7 @@
     },
     "//:extensions.bzl%yq": {
       "general": {
-        "bzlTransitiveDigest": "Jmv16bCWLFkSX+qo/dhypLCF8YIe8+ELXg88WaehD3Y=",
+        "bzlTransitiveDigest": "FqwueAB5/2REOXsDf1qjmfnlb5i9LExTaehERRQcenE=",
         "usagesDigest": "Fth34LdLVC+iB2NfiJFRWkbRVhRG/rESzqXg9ZHMGME=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -297,8 +301,9 @@
     "@@rules_rust+//crate_universe:extension.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "pHcx40HgO+BkuPVP57tD1PM41Cq9bflpHVx2w/JiKmk=",
-        "usagesDigest": "4og3B4dwH8TYVc2oTJXvws4CgVqYvBwTcAGNqHPlluk=",
+        "usagesDigest": "wWNv1jdtoQpcLf2y3g+J/W+35hFChYgsfdiVp5y0+P0=",
         "recordedFileInputs": {
+          "@@//examples/rust/minimax/Cargo.toml": "4ccecf89636d39760b456688d5b3a96df6e9e069aeb1c66e98c06f6129900d3e",
           "@@//rust/Cargo.lock": "04b3cea0a6d5e7353f4977152fa836c6686e910914182fb703f90bc5d1f56745",
           "@@//rust/Cargo.toml": "119dd9edae9f7d72671f8205ff234db0c6e18edcf863664354972fe9ec9a88c5",
           "@@//rust/cli/Cargo.toml": "02d1ba5055a0de421d96d015f97cfd8db3e6888d0cd85ba34ef6652cf0012826",

@@ -16,7 +16,9 @@ import "C"
 import (
 	"errors"
 	"io"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -32,6 +34,7 @@ const (
 )
 
 // Encoder encodes PCM audio to MP3.
+// Must call Close() when done to release resources.
 type Encoder struct {
 	w io.Writer
 
@@ -42,10 +45,16 @@ type Encoder struct {
 	quality    Quality
 	bitrate    int // 0 = use VBR quality
 	inited     bool
-	closed     bool
+	closed     atomic.Bool
+	cleanup    runtime.Cleanup
 
 	// Output buffer for encoded MP3 data
 	mp3buf []byte
+}
+
+// freeLAME releases C resources.
+func freeLAME(ptr uintptr) {
+	C.lame_close((*C.lame_global_flags)(unsafe.Pointer(ptr)))
 }
 
 // EncoderOption configures the encoder.
@@ -130,6 +139,8 @@ func (e *Encoder) init() error {
 
 	e.lame = lame
 	e.inited = true
+	// Register cleanup after successful initialization
+	e.cleanup = runtime.AddCleanup(e, freeLAME, uintptr(unsafe.Pointer(lame)))
 	return nil
 }
 
@@ -139,7 +150,7 @@ func (e *Encoder) Write(pcm []byte) (n int, err error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if e.closed {
+	if e.closed.Load() {
 		return 0, errors.New("mp3: encoder is closed")
 	}
 
@@ -202,7 +213,7 @@ func (e *Encoder) Flush() error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if !e.inited || e.closed {
+	if !e.inited || e.closed.Load() {
 		return nil
 	}
 
@@ -223,22 +234,19 @@ func (e *Encoder) Flush() error {
 	return nil
 }
 
-// Close releases encoder resources.
+// Close releases encoder resources. Safe to call multiple times.
 // Call Flush() before Close() to ensure all data is written.
 func (e *Encoder) Close() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	if e.closed.CompareAndSwap(false, true) {
+		e.mu.Lock()
+		defer e.mu.Unlock()
 
-	if e.closed {
-		return nil
+		if e.inited && e.lame != nil {
+			e.cleanup.Stop()
+			C.lame_close(e.lame)
+			e.lame = nil
+		}
 	}
-	e.closed = true
-
-	if e.inited && e.lame != nil {
-		C.lame_close(e.lame)
-		e.lame = nil
-	}
-
 	return nil
 }
 
