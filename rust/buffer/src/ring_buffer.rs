@@ -46,9 +46,9 @@ struct RingBufferInner<T> {
 struct RingBufferState<T> {
     buf: Vec<Option<T>>,
     // Virtual counters that track total read/write positions. These grow
-    // monotonically and may eventually wrap around usize after approximately
-    // 2^64 operations on 64-bit systems. The implementation uses wrapping
-    // arithmetic to handle this correctly.
+    // monotonically and will wrap around after 2^64 operations on 64-bit
+    // systems (2^32 on 32-bit). The implementation uses wrapping arithmetic
+    // to handle this correctly.
     head: usize, // read position (virtual counter)
     tail: usize, // write position (virtual counter)
     close_write: bool,
@@ -183,12 +183,15 @@ impl<T: Clone> RingBuffer<T> {
 
         let capacity = state.buf.len();
 
+        // Write each item to the buffer. When the buffer is full, we overwrite
+        // the oldest item by advancing head. This maintains the invariant that
+        // tail.wrapping_sub(head) <= capacity at all times.
         for item in data {
             let tail_idx = state.tail % capacity;
             state.buf[tail_idx] = Some(item.clone());
             state.tail = state.tail.wrapping_add(1);
 
-            // If we've exceeded capacity, advance head (overwrite oldest)
+            // If buffer is overfull, advance head to drop the oldest item
             if state.tail.wrapping_sub(state.head) > capacity {
                 state.head = state.head.wrapping_add(1);
             }
@@ -250,7 +253,7 @@ impl<T: Clone> RingBuffer<T> {
         }
 
         let capacity = state.buf.len();
-        let available = state.tail.wrapping_sub(state.head);
+        let available = state.tail.wrapping_sub(state.head).min(capacity);
         let n = std::cmp::min(buf.len(), available);
 
         for i in 0..n {
@@ -304,9 +307,9 @@ impl<T: Clone> RingBuffer<T> {
             return Err(BufferError::ClosedWithError(Arc::clone(err)));
         }
 
-        let available = state.tail.wrapping_sub(state.head);
-        let discard_count = std::cmp::min(n, available);
         let capacity = state.buf.len();
+        let available = state.tail.wrapping_sub(state.head).min(capacity);
+        let discard_count = std::cmp::min(n, available);
 
         for _ in 0..discard_count {
             let head_idx = state.head % capacity;
@@ -321,7 +324,7 @@ impl<T: Clone> RingBuffer<T> {
     pub fn to_vec(&self) -> Vec<T> {
         let state = self.inner.state.lock().unwrap();
         let capacity = state.buf.len();
-        let count = state.tail.wrapping_sub(state.head);
+        let count = state.tail.wrapping_sub(state.head).min(capacity);
         let mut result = Vec::with_capacity(count);
 
         for i in 0..count {
@@ -513,5 +516,31 @@ mod tests {
 
         let result = reader.join().unwrap();
         assert_eq!(result, 42);
+    }
+
+    #[test]
+    fn test_close_with_error() {
+        let buf = RingBuffer::<i32>::new(4);
+        buf.add(1).unwrap();
+
+        let err = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        buf.close_with_error(err).unwrap();
+
+        // All operations return error
+        assert!(buf.add(2).is_err());
+        assert!(buf.read(&mut [0]).is_err());
+    }
+
+    #[test]
+    fn test_error_method() {
+        let buf = RingBuffer::<i32>::new(4);
+
+        // No error initially
+        assert!(buf.error().is_none());
+
+        // After close_with_error, error() returns the error
+        let err = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        buf.close_with_error(err).unwrap();
+        assert!(buf.error().is_some());
     }
 }

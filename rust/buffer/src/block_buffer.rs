@@ -224,54 +224,55 @@ impl<T: Clone> BlockBuffer<T> {
     /// Blocks when the buffer is full until space becomes available.
     /// Returns the number of elements actually written.
     pub fn write(&self, data: &[T]) -> Result<usize, BufferError> {
-        let mut written = 0;
-
-        for item in data {
-            let mut state = self.inner.state.lock().unwrap();
-
-            // Check for errors
-            if let Some(ref err) = state.close_err {
-                if written > 0 {
-                    return Ok(written);
-                }
-                return Err(BufferError::ClosedWithError(Arc::clone(err)));
-            }
-            if state.close_write {
-                if written > 0 {
-                    return Ok(written);
-                }
-                return Err(BufferError::Closed);
-            }
-
-            // Wait for space
-            while state.count == state.buf.len() {
-                state = self.inner.not_full.wait(state).unwrap();
-                if let Some(ref err) = state.close_err {
-                    if written > 0 {
-                        return Ok(written);
-                    }
-                    return Err(BufferError::ClosedWithError(Arc::clone(err)));
-                }
-                if state.close_write {
-                    if written > 0 {
-                        return Ok(written);
-                    }
-                    return Err(BufferError::Closed);
-                }
-            }
-
-            // Write the item
-            let tail = state.tail;
-            let capacity = state.buf.len();
-            state.buf[tail] = Some(item.clone());
-            state.tail = (tail + 1) % capacity;
-            state.count += 1;
-            written += 1;
-
-            self.inner.not_empty.notify_one();
+        if data.is_empty() {
+            return Ok(0);
         }
 
-        Ok(written)
+        let mut state = self.inner.state.lock().unwrap();
+        let mut written = 0;
+
+        loop {
+            // Check for close/error conditions
+            if let Some(ref err) = state.close_err {
+                return if written > 0 {
+                    Ok(written)
+                } else {
+                    Err(BufferError::ClosedWithError(Arc::clone(err)))
+                };
+            }
+            if state.close_write {
+                return if written > 0 {
+                    Ok(written)
+                } else {
+                    Err(BufferError::Closed)
+                };
+            }
+
+            let capacity = state.buf.len();
+            let available_space = capacity - state.count;
+
+            if available_space > 0 {
+                // Write as many items as possible in this batch
+                let to_write = std::cmp::min(available_space, data.len() - written);
+
+                for i in 0..to_write {
+                    let tail = state.tail;
+                    state.buf[tail] = Some(data[written + i].clone());
+                    state.tail = (tail + 1) % capacity;
+                }
+                state.count += to_write;
+                written += to_write;
+
+                self.inner.not_empty.notify_one();
+
+                if written == data.len() {
+                    return Ok(written);
+                }
+            }
+
+            // Buffer is full, wait for space
+            state = self.inner.not_full.wait(state).unwrap();
+        }
     }
 
     /// Adds a single element to the buffer.
@@ -611,5 +612,31 @@ mod tests {
         assert_eq!(buf.next().unwrap(), 3);
         assert_eq!(buf.next().unwrap(), 4);
         assert_eq!(buf.next().unwrap(), 5);
+    }
+
+    #[test]
+    fn test_close_with_error() {
+        let buf = BlockBuffer::<i32>::new(4);
+        buf.add(1).unwrap();
+
+        let err = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        buf.close_with_error(err).unwrap();
+
+        // All operations return error
+        assert!(buf.add(2).is_err());
+        assert!(buf.read(&mut [0]).is_err());
+    }
+
+    #[test]
+    fn test_error_method() {
+        let buf = BlockBuffer::<i32>::new(4);
+
+        // No error initially
+        assert!(buf.error().is_none());
+
+        // After close_with_error, error() returns the error
+        let err = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        buf.close_with_error(err).unwrap();
+        assert!(buf.error().is_some());
     }
 }

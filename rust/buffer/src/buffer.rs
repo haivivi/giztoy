@@ -348,6 +348,19 @@ mod tests {
     }
 
     #[test]
+    fn test_error_method() {
+        let buf = Buffer::<i32>::new();
+
+        // No error initially
+        assert!(buf.error().is_none());
+
+        // After close_with_error, error() returns the error
+        let err = std::io::Error::new(std::io::ErrorKind::Other, "test error");
+        buf.close_with_error(err).unwrap();
+        assert!(buf.error().is_some());
+    }
+
+    #[test]
     fn test_concurrent_producer_consumer() {
         let buf = Buffer::<i32>::new();
         let producer_buf = buf.clone();
