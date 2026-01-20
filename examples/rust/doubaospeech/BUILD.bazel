@@ -1,0 +1,27 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Common dependencies for doubaospeech examples
+DEPS = [
+    "//rust/doubaospeech:giztoy_doubaospeech",
+    "@crate_index//:tokio",
+]
+
+rust_binary(
+    name = "tts",
+    srcs = ["src/bin/tts.rs"],
+    deps = DEPS + ["@crate_index//:futures"],
+)
+
+rust_binary(
+    name = "asr",
+    srcs = ["src/bin/asr.rs"],
+    deps = DEPS,
+)
+
+rust_binary(
+    name = "voice_clone",
+    srcs = ["src/bin/voice_clone.rs"],
+    deps = DEPS,
+)

@@ -1,0 +1,14 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+rust_binary(
+    name = "doubao_minimax",
+    srcs = ["src/bin/main.rs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//rust/doubaospeech:giztoy_doubaospeech",
+        "//rust/minimax:giztoy_minimax",
+        "@crate_index//:anyhow",
+        "@crate_index//:futures",
+        "@crate_index//:tokio",
+    ],
+)

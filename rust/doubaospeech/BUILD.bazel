@@ -1,0 +1,18 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "giztoy_doubaospeech",
+    srcs = glob(["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "giztoy_doubaospeech",
+    deps = all_crate_deps(normal = True),
+)
+
+rust_test(
+    name = "giztoy_doubaospeech_test",
+    crate = ":giztoy_doubaospeech",
+    deps = all_crate_deps(normal_dev = True),
+)
