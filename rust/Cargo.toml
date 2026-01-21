@@ -7,7 +7,7 @@ members = [
     "dashscope",
     "minimax",
     "doubaospeech",
-    "mqtt",
+    "mqtt0",
     "cli",
     "cmd/dashscope",
     "cmd/minimax",
@@ -28,7 +28,7 @@ giztoy-genx = { path = "genx" }
 giztoy-dashscope = { path = "dashscope" }
 giztoy-minimax = { path = "minimax" }
 giztoy-doubaospeech = { path = "doubaospeech" }
-giztoy-mqtt = { path = "mqtt" }
+giztoy-mqtt0 = { path = "mqtt0" }
 giztoy-cli = { path = "cli" }
 
 # Async runtime
@@ -72,10 +72,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 http = "1"
 
 # MQTT
-rumqttc = "0.24"
-rumqttd = "0.19"
+rumqttc = "0.25"
+rumqttd = "0.20"
 parking_lot = "0.12"
 url = "2"
 
 # Dev
 tokio-test = "0.4"
+criterion = { version = "0.5", features = ["async_tokio"] }
