@@ -65,6 +65,8 @@ pub enum EncoderError {
     Closed,
     /// I/O error.
     Io(io::Error),
+    /// Input data is not properly aligned.
+    AlignmentError,
 }
 
 impl std::fmt::Display for EncoderError {
@@ -75,6 +77,7 @@ impl std::fmt::Display for EncoderError {
             Self::EncodeFailed => write!(f, "mp3: encode failed"),
             Self::Closed => write!(f, "mp3: encoder is closed"),
             Self::Io(e) => write!(f, "mp3: io error: {}", e),
+            Self::AlignmentError => write!(f, "mp3: input data is not 2-byte aligned for i16 samples"),
         }
     }
 }
@@ -196,8 +199,14 @@ impl<W: Write> Mp3Encoder<W> {
 
         Self::init(&mut inner)?;
 
+        // Safely reinterpret bytes as i16 samples with alignment check
+        let (prefix, samples, suffix) = unsafe { pcm.align_to::<i16>() };
+        if !prefix.is_empty() || !suffix.is_empty() {
+            return Err(EncoderError::AlignmentError);
+        }
+
         // Calculate samples per channel
-        let num_samples = pcm.len() / (2 * inner.channels as usize);
+        let num_samples = samples.len() / inner.channels as usize;
         if num_samples == 0 {
             return Ok(());
         }
@@ -215,7 +224,7 @@ impl<W: Write> Mp3Encoder<W> {
             if channels == 2 {
                 ffi::lame_encode_buffer_interleaved(
                     lame,
-                    pcm.as_ptr() as *const i16,
+                    samples.as_ptr(),
                     num_samples as i32,
                     inner.mp3buf.as_mut_ptr(),
                     inner.mp3buf.len() as i32,
@@ -223,7 +232,7 @@ impl<W: Write> Mp3Encoder<W> {
             } else {
                 ffi::lame_encode_buffer(
                     lame,
-                    pcm.as_ptr() as *const i16,
+                    samples.as_ptr(),
                     ptr::null(),
                     num_samples as i32,
                     inner.mp3buf.as_mut_ptr(),

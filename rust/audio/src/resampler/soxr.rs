@@ -255,6 +255,22 @@ impl<R: Read> SoxrInner<R> {
             }));
         }
 
+        // Verify alignment for i16 samples (soxr expects 2-byte aligned data)
+        if let Some(data) = src {
+            if data.as_ptr() as usize % 2 != 0 {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "input data is not 2-byte aligned",
+                ));
+            }
+        }
+        if dst.as_ptr() as usize % 2 != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "output buffer is not 2-byte aligned",
+            ));
+        }
+
         let sample_bytes = self.dst_fmt.sample_bytes();
         let (iptr, isize) = match src {
             Some(data) => (data.as_ptr() as *const _, data.len() / sample_bytes),

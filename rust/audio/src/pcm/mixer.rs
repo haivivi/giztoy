@@ -391,6 +391,7 @@ struct TrackCtrlInner {
     fade_out_ms: AtomicI64,
 
     buffer: Mutex<TrackBuffer>,
+    buffer_notify: Condvar, // Notifies when buffer space becomes available
     closed: AtomicBool,
     write_closed: AtomicBool,
     error: Mutex<Option<String>>,
@@ -406,6 +407,7 @@ impl TrackCtrlInner {
             read_bytes: AtomicI64::new(0),
             fade_out_ms: AtomicI64::new(0),
             buffer: Mutex::new(TrackBuffer::new(buffer_size)),
+            buffer_notify: Condvar::new(),
             closed: AtomicBool::new(false),
             write_closed: AtomicBool::new(false),
             error: Mutex::new(None),
@@ -431,19 +433,15 @@ impl TrackCtrlInner {
         let mut written = 0;
         let mut remaining = data;
 
+        let mut buffer = self.buffer.lock().unwrap();
+
         while !remaining.is_empty() {
             // Try to write to buffer
-            {
-                let mut buffer = self.buffer.lock().unwrap();
-                let n = buffer.write(remaining);
-                if n > 0 {
-                    written += n;
-                    remaining = &remaining[n..];
-                }
-            }
-
-            // Notify mixer that data is available
-            if written > 0 {
+            let n = buffer.write(remaining);
+            if n > 0 {
+                written += n;
+                remaining = &remaining[n..];
+                // Notify mixer that data is available
                 self.mixer.notify_data_available();
             }
 
@@ -451,9 +449,13 @@ impl TrackCtrlInner {
                 break;
             }
 
-            // Buffer full, sleep a bit to let reader catch up
-            // This avoids busy waiting
-            std::thread::sleep(Duration::from_millis(1));
+            // Buffer full, wait for space to become available
+            // Use wait_timeout to periodically check for close signals
+            let (new_buffer, _timeout) = self
+                .buffer_notify
+                .wait_timeout(buffer, Duration::from_millis(100))
+                .unwrap();
+            buffer = new_buffer;
 
             // Check if we should stop
             if self.closed.load(Ordering::SeqCst) {
@@ -477,6 +479,8 @@ impl TrackCtrlInner {
         let n = buffer.read(buf);
         if n > 0 {
             self.read_bytes.fetch_add(n as i64, Ordering::Relaxed);
+            // Notify writers that buffer space is available
+            self.buffer_notify.notify_one();
         }
         n
     }
@@ -501,6 +505,7 @@ impl TrackCtrlInner {
 
     fn close_write(&self) {
         self.write_closed.store(true, Ordering::SeqCst);
+        self.buffer_notify.notify_all(); // Wake up any waiting writers
         self.mixer.notify_data_available();
     }
 
@@ -508,6 +513,7 @@ impl TrackCtrlInner {
         *self.error.lock().unwrap() = Some(err);
         self.closed.store(true, Ordering::SeqCst);
         self.write_closed.store(true, Ordering::SeqCst);
+        self.buffer_notify.notify_all(); // Wake up any waiting writers
         self.mixer.notify_data_available();
     }
 }

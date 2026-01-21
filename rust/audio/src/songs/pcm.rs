@@ -79,6 +79,11 @@ pub fn generate_sine_wave(freq: f64, samples: usize, sample_rate: u32) -> Vec<u8
     data
 }
 
+// Normalization factor: approximate sum of harmonic amplitudes.
+// 1.0 + 0.7 + 0.45 + 0.3 + 0.2 + 0.12 + 0.08 + 0.05 + 0.03 + 0.02 ≈ 2.95
+// Using 2.5 to allow some headroom without clipping.
+const HARMONIC_NORMALIZATION: f64 = 2.5;
+
 /// Generates a piano-like note with realistic harmonics and envelope.
 pub fn generate_rich_note(freq: f64, samples: usize, sample_rate: u32, volume: f64) -> Vec<i16> {
     let mut data = vec![0i16; samples];
@@ -86,7 +91,7 @@ pub fn generate_rich_note(freq: f64, samples: usize, sample_rate: u32, volume: f
         return data;
     }
 
-    // Piano harmonic structure (relative amplitudes)
+    // Piano harmonic structure: (harmonic_ratio, amplitude, decay_rate)
     let harmonics: [(f64, f64, f64); 10] = [
         (1.0, 1.0, 1.0),    // fundamental
         (2.0, 0.7, 1.2),    // 2nd harmonic
@@ -124,8 +129,8 @@ pub fn generate_rich_note(freq: f64, samples: usize, sample_rate: u32, volume: f
             sample += amp * phase.sin();
         }
 
-        // Normalize
-        sample /= 2.5;
+        // Normalize by sum of harmonic amplitudes
+        sample /= HARMONIC_NORMALIZATION;
 
         // Piano envelope
         let envelope = compute_piano_envelope(i, samples, sample_rate, note_duration);

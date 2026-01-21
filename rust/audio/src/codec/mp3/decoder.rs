@@ -140,16 +140,23 @@ impl<R: Read> Mp3Decoder<R> {
         }
 
         let channels = if self.info.channels > 0 { self.info.channels } else { 1 };
+        let sample_size = (channels as usize) * 2; // bytes per sample
         let available_samples = self.pcm_len - self.pcm_pos;
-        let available_bytes = available_samples * (channels as usize) * 2;
-        let to_copy = (buf.len() - offset).min(available_bytes);
-
-        if to_copy == 0 {
+        let available_bytes = available_samples * sample_size;
+        
+        // Only copy complete samples to avoid alignment issues and infinite loops
+        let max_bytes = buf.len() - offset;
+        let to_copy = max_bytes.min(available_bytes);
+        let samples_to_copy = to_copy / sample_size;
+        
+        if samples_to_copy == 0 {
             return 0;
         }
+        
+        let bytes_to_copy = samples_to_copy * sample_size;
 
         // Copy PCM data as bytes
-        let pcm_byte_offset = self.pcm_pos * (channels as usize) * 2;
+        let pcm_byte_offset = self.pcm_pos * sample_size;
         let pcm_bytes: &[u8] = unsafe {
             std::slice::from_raw_parts(
                 self.pcm.as_ptr() as *const u8,
@@ -157,11 +164,11 @@ impl<R: Read> Mp3Decoder<R> {
             )
         };
 
-        buf[offset..offset + to_copy]
-            .copy_from_slice(&pcm_bytes[pcm_byte_offset..pcm_byte_offset + to_copy]);
+        buf[offset..offset + bytes_to_copy]
+            .copy_from_slice(&pcm_bytes[pcm_byte_offset..pcm_byte_offset + bytes_to_copy]);
 
-        self.pcm_pos += to_copy / ((channels as usize) * 2);
-        to_copy
+        self.pcm_pos += samples_to_copy;
+        bytes_to_copy
     }
 }
 

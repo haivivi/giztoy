@@ -130,6 +130,18 @@ impl Encoder {
             return Err(EncoderError::Closed);
         }
 
+        // Verify input buffer has enough samples
+        let required_samples = (frame_size as usize) * (self.channels as usize);
+        if pcm.len() < required_samples {
+            return Err(EncoderError::EncodeFailed(format!(
+                "input buffer too small: got {} samples, need {} (frame_size={} * channels={})",
+                pcm.len(),
+                required_samples,
+                frame_size,
+                self.channels
+            )));
+        }
+
         let mut buf = vec![0u8; 4000]; // Max Opus frame size
         let n = unsafe {
             ffi::opus_encode(
