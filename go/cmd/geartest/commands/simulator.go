@@ -244,11 +244,13 @@ func (s *Simulator) Stop() {
 	// their own cancellation) and terminate when the simulator context ends.
 	//
 	// Only close statsTrigger (internal channel), which is used purely inside
-	// the simulator implementation.
+	// the simulator implementation. Use mutex to prevent race with triggerStatsSend.
+	s.mu.Lock()
 	if s.statsTrigger != nil {
 		close(s.statsTrigger)
 		s.statsTrigger = nil
 	}
+	s.mu.Unlock()
 	slog.Info("simulator stopped")
 }
 
@@ -343,8 +345,9 @@ func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
 
 	case *chatgear.Reset:
 		slog.Info("cmd: reset", "unpair", t.Unpair)
-		s.volume = 70
-		s.brightness = 80
+		// Reset to factory defaults (consistent with Reset() method)
+		s.volume = 100
+		s.brightness = 100
 		s.lightMode = "auto"
 		if t.Unpair {
 			s.wifiSSID = ""

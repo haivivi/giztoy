@@ -32,10 +32,11 @@ type WebServer struct {
 }
 
 // NewWebServer creates a new web server.
+// Binds to localhost only for security (prevents network exposure).
 func NewWebServer(sim *Simulator, port int) *WebServer {
 	return &WebServer{
 		sim:  sim,
-		addr: fmt.Sprintf(":%d", port),
+		addr: fmt.Sprintf("127.0.0.1:%d", port),
 	}
 }
 
@@ -254,7 +255,9 @@ func (ws *WebServer) handleUpdateStats(w http.ResponseWriter, r *http.Request) {
 	ws.sim.SendStats()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": msg})
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": msg}); err != nil {
+		slog.Error("failed to encode response", "error", err)
+	}
 }
 
 // handleControl handles power and state control commands.
@@ -324,7 +327,9 @@ func (ws *WebServer) handleControl(w http.ResponseWriter, r *http.Request) {
 	slog.Info("control action", "action", req.Action, "result", msg)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": msg})
+	if err := json.NewEncoder(w).Encode(map[string]string{"message": msg}); err != nil {
+		slog.Error("failed to encode response", "error", err)
+	}
 }
 
 // handleWebRTCOffer handles WebRTC signaling (SDP offer/answer exchange).

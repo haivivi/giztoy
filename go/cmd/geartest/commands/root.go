@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/haivivi/giztoy/pkg/cli"
 	"github.com/spf13/cobra"
@@ -102,7 +103,9 @@ func LoadGearConfig(ctx *cli.Context) *GearConfig {
 		cfg.Namespace = v
 	}
 	if v := ctx.GetExtra("web_port"); v != "" {
-		fmt.Sscanf(v, "%d", &cfg.WebPort)
+		if port, err := strconv.Atoi(v); err == nil {
+			cfg.WebPort = port
+		}
 	}
 	if v := ctx.GetExtra("sys_version"); v != "" {
 		cfg.SysVersion = v
