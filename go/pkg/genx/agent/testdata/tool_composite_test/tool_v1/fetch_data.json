@@ -1,0 +1,8 @@
+{
+    "type": "http",
+    "name": "fetch_data",
+    "description": "Fetch data from API",
+    "method": "GET",
+    "endpoint": "https://api.example.com/data",
+    "resp_body_jq": ".result"
+}

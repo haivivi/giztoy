@@ -1,0 +1,8 @@
+{
+  "type": "http",
+  "name": "search_http",
+  "description": "Search HTTP tool for testing",
+  "method": "GET",
+  "endpoint": "PLACEHOLDER_URL/search?q=test",
+  "resp_body_jq": ".results"
+}

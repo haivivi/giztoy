@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "cli",
@@ -15,4 +15,16 @@ go_library(
     deps = [
         "@com_github_goccy_go_yaml//:go-yaml",
     ],
+)
+
+go_test(
+    name = "cli_test",
+    srcs = [
+        "config_test.go",
+        "format_test.go",
+        "output_test.go",
+        "paths_test.go",
+    ],
+    embed = [":cli"],
+    env = {"HOME": "/tmp"},
 )

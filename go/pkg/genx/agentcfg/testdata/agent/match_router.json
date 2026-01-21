@@ -1,0 +1,37 @@
+{
+    "type": "match",
+    "name": "router",
+    "rules": [
+        {
+            "$ref": "play_music_rule"
+        },
+        {
+            "name": "weather",
+            "patterns": [
+                "weather",
+                "temperature"
+            ]
+        }
+    ],
+    "route": [
+        {
+            "rules": [
+                "play_music_rule"
+            ],
+            "agent": {
+                "$ref": "music_player"
+            }
+        },
+        {
+            "rules": [
+                "weather"
+            ],
+            "agent": {
+                "$ref": "weather_agent"
+            }
+        }
+    ],
+    "default": {
+        "$ref": "fallback"
+    }
+}

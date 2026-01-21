@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/haivivi/giztoy/go/pkg/mqtt"
+	"github.com/haivivi/giztoy/pkg/mqtt"
 	"github.com/mochi-mqtt/server/v2/listeners"
 )
 

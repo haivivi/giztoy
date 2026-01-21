@@ -1,0 +1,8 @@
+{
+  "type": "http",
+  "name": "mock_http",
+  "description": "Mock HTTP tool for testing",
+  "method": "GET",
+  "endpoint": "PLACEHOLDER_URL/data",
+  "resp_body_jq": ".result"
+}

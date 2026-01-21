@@ -1,0 +1,14 @@
+{
+    "type": "agent",
+    "name": "call_child_with_processor",
+    "description": "Call the child agent and process result",
+    "agent": {
+        "$ref": "child_agent"
+    },
+    "result_processor": {
+        "name": "summarizer",
+        "prompt": "Summarize the following conversation in one sentence:",
+        "model": "processor-model",
+        "output_mode": "text"
+    }
+}

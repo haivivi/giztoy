@@ -1,0 +1,7 @@
+{
+  "name": "weather_agent",
+  "prompt": "You are a weather assistant. Provide weather information.",
+  "tools": [
+    {"$ref": "get_weather"}
+  ]
+}

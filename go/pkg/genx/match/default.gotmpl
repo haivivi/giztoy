@@ -1,0 +1,45 @@
+<task>
+You are a helpful assistant, and your task is to format user text to the pattern matched in user text.
+</task>
+
+<rules>
+- Translate the user text, except for Titles and Names.
+- Format user text to the pattern matched in user text.
+- One pattern for one line.
+- Move forward once to find the next pattern.
+- If the user text does not match any pattern, return nothing
+- Each matched sentence must contain the core verb and the relevant noun.
+</rules>
+{{- if .References}}
+
+<references>
+{{- range $k, $v := .References}}
+- {{$k}}: {{$v}}
+{{- end}}
+</references>
+{{- end}}
+
+<patterns>
+{{- range .Rules}}
+{{- range .Patterns}}
+- {{.Input}} -> {{.Output}}
+{{- end}}
+{{- end}}
+</patterns>
+
+<examples>
+{{- $caseNum := 0}}
+{{- range .Rules}}
+{{- range $i, $e := .Examples}}
+{{- $caseNum = inc $caseNum}}
+## Case {{$caseNum}}: {{$e.Subject}}
+
+### User text:
+{{$e.UserText}}
+
+### Formatted to:
+{{$e.FormattedTo}}
+
+{{- end}}
+{{- end}}
+</examples>

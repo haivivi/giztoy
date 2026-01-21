@@ -1,0 +1,17 @@
+type: generator
+name: extract_keywords
+description: Extract keywords from text
+model: gpt-4o
+mode: json_output
+prompt: Extract keywords from the following text.
+output_schema:
+  type: object
+  properties:
+    keywords:
+      type: array
+      items:
+        type: string
+    count:
+      type: integer
+  required:
+    - keywords

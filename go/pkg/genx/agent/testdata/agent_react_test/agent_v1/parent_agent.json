@@ -1,0 +1,17 @@
+{
+    "type": "react",
+    "name": "parent_agent",
+    "prompt": "You are a parent agent. Use call_child to delegate tasks to the child agent.",
+    "generator": {
+        "model": "parent-model"
+    },
+    "tools": [
+        {
+            "$ref": "call_child"
+        },
+        {
+            "$ref": "finish",
+            "quit": true
+        }
+    ]
+}

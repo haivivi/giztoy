@@ -1,0 +1,7 @@
+{
+  "name": "music_agent",
+  "prompt": "You are a music assistant. Help the user play music.",
+  "tools": [
+    {"$ref": "play_song"}
+  ]
+}

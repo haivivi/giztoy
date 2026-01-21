@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "genx",
@@ -29,4 +29,18 @@ go_library(
         "@com_github_openai_openai_go//packages/ssestream",
         "@org_golang_google_genai//:genai",
     ],
+)
+
+go_test(
+    name = "genx_test",
+    srcs = [
+        "error_test.go",
+        "func_tool_test.go",
+        "genx_test.go",
+        "json_test.go",
+        "message_test.go",
+        "model_context_builder_test.go",
+        "stream_builder_test.go",
+    ],
+    embed = [":genx"],
 )

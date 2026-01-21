@@ -1,0 +1,11 @@
+name: character_agent
+prompt: You are a helpful assistant.
+context_layers:
+  - $this: .prompt
+  - $ref: character:elsa
+  - $env: CUSTOM_CONTEXT
+  - $mem:
+      summary: true
+      recent: 10
+tools:
+  - $ref: search

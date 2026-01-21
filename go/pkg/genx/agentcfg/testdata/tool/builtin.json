@@ -1,0 +1,16 @@
+{
+    "name": "echo",
+    "description": "Echo the input back",
+    "params": {
+        "type": "object",
+        "properties": {
+            "text": {
+                "type": "string",
+                "description": "Text to echo"
+            }
+        },
+        "required": [
+            "text"
+        ]
+    }
+}

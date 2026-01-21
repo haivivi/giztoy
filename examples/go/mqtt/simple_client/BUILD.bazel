@@ -5,16 +5,11 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/haivivi/giztoy/examples/mqtt/simple_client",
     visibility = ["//visibility:private"],
-    deps = [
-        "//go/pkg/mqtt",
-    ],
+    deps = ["//go/pkg/mqtt"],
 )
 
 go_binary(
     name = "simple_client",
     embed = [":simple_client_lib"],
     visibility = ["//visibility:public"],
-    deps = [
-        "//go/pkg/mqtt",
-    ],
 )

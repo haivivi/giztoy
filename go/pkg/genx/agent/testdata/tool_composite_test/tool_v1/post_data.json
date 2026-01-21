@@ -1,0 +1,9 @@
+{
+    "type": "http",
+    "name": "post_data",
+    "description": "Post data to API",
+    "method": "POST",
+    "endpoint": "https://api.example.com/submit",
+    "req_body_jq": "{data: .input}",
+    "resp_body_jq": ".response"
+}

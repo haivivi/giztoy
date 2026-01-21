@@ -1,0 +1,19 @@
+{
+    "type": "text_processor",
+    "name": "json_formatter",
+    "description": "Format text into structured JSON",
+    "model": "test-model",
+    "prompt": "Parse and structure the input.",
+    "output_mode": "json",
+    "output_schema": {
+        "type": "object",
+        "properties": {
+            "formatted": {
+                "type": "string"
+            },
+            "word_count": {
+                "type": "integer"
+            }
+        }
+    }
+}

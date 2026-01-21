@@ -1,0 +1,8 @@
+{
+    "type": "text_processor",
+    "name": "summarizer",
+    "description": "Summarize text content",
+    "model": "test-model",
+    "prompt": "Summarize the following text concisely:",
+    "output_mode": "text"
+}

@@ -1,0 +1,33 @@
+{
+    "state_type": "match",
+    "id": "match_calling",
+    "agent_def": "router_agent",
+    "messages": [
+        {
+            "role": "user",
+            "content": "What's the weather?"
+        }
+    ],
+    "phase": "executing",
+    "input": "What's the weather?",
+    "matches": [
+        {
+            "rule_name": "weather_intent",
+            "agent_name": "weather_agent"
+        }
+    ],
+    "current_index": 0,
+    "matched": true,
+    "calling_state": {
+        "state_type": "react",
+        "id": "sub_weather",
+        "agent_def": "weather_agent",
+        "messages": [
+            {
+                "role": "user",
+                "content": "What's the weather?"
+            }
+        ],
+        "phase": "thinking"
+    }
+}

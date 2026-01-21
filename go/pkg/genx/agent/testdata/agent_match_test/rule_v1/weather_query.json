@@ -1,0 +1,15 @@
+{
+  "name": "weather_query",
+  "examples": [
+    ["what's the weather"],
+    ["how's the weather today"],
+    ["will it rain tomorrow"],
+    ["is it going to be sunny"]
+  ],
+  "vars": {
+    "location": {
+      "type": "string",
+      "description": "Location for weather query"
+    }
+  }
+}

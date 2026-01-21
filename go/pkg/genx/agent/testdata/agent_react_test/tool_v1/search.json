@@ -1,0 +1,15 @@
+{
+  "type": "builtin",
+  "name": "search",
+  "description": "Search for information",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Search query"
+      }
+    },
+    "required": ["query"]
+  }
+}

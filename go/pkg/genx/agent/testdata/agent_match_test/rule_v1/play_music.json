@@ -1,0 +1,15 @@
+{
+  "name": "play_music",
+  "examples": [
+    ["play some music"],
+    ["play a song"],
+    ["I want to listen to music"],
+    ["put on some tunes"]
+  ],
+  "vars": {
+    "song_name": {
+      "type": "string",
+      "description": "Name of the song to play"
+    }
+  }
+}

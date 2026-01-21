@@ -1,0 +1,50 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "agentcfg",
+    srcs = [
+        "agent.go",
+        "context.go",
+        "enum.go",
+        "rule.go",
+        "state.go",
+        "tool.go",
+        "tool_composite.go",
+        "tool_generator.go",
+        "tool_http.go",
+        "tool_text.go",
+        "types.go",
+        "unmarshal.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/genx/agentcfg",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx/match",
+        "@com_github_google_jsonschema_go//jsonschema",
+        "@com_github_itchyny_gojq//:gojq",
+        "@com_github_vmihailenco_msgpack_v5//:msgpack",
+        "@in_gopkg_yaml_v3//:yaml_v3",
+    ],
+)
+
+go_test(
+    name = "agentcfg_test",
+    srcs = [
+        "agent_marshal_test.go",
+        "agent_unmarshal_test.go",
+        "context_test.go",
+        "enum_test.go",
+        "refs_test.go",
+        "state_marshal_test.go",
+        "state_unmarshal_test.go",
+        "tool_marshal_test.go",
+        "tool_unmarshal_test.go",
+        "types_test.go",
+    ],
+    data = glob(["testdata/**"]),
+    embed = [":agentcfg"],
+    deps = [
+        "@com_github_vmihailenco_msgpack_v5//:msgpack",
+        "@in_gopkg_yaml_v3//:yaml_v3",
+    ],
+)

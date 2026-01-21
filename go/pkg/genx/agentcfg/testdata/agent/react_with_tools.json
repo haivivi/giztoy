@@ -1,0 +1,13 @@
+{
+    "name": "music_player",
+    "prompt": "You are a music player assistant.",
+    "tools": [
+        {
+            "$ref": "play_music"
+        },
+        {
+            "$ref": "stop_music",
+            "quit": true
+        }
+    ]
+}

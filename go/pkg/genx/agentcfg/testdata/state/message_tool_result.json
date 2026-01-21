@@ -1,0 +1,5 @@
+{
+    "role": "tool",
+    "content": "Sunny, 72°F",
+    "tool_result_id": "call_abc123"
+}

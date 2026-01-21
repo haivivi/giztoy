@@ -1,0 +1,15 @@
+{
+    "state_type": "react",
+    "id": "react_minimal",
+    "agent_def": "assistant",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Hello"
+        },
+        {
+            "role": "model",
+            "content": "Hi there!"
+        }
+    ]
+}

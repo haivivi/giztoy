@@ -1,0 +1,9 @@
+{
+    "type": "http",
+    "name": "search",
+    "description": "Search for items",
+    "method": "POST",
+    "endpoint": "https://api.search.com/v1/search",
+    "req_body_jq": "{query: .query, limit: 10}",
+    "resp_body_jq": ".results"
+}

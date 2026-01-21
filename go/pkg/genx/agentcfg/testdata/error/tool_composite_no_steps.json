@@ -1,0 +1,5 @@
+{
+    "type": "composite",
+    "name": "no_steps",
+    "description": "Composite without steps"
+}

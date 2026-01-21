@@ -1,0 +1,14 @@
+{
+  "name": "get_weather",
+  "description": "Get weather information for a location",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "location": {
+        "type": "string",
+        "description": "Location to get weather for"
+      }
+    },
+    "required": ["location"]
+  }
+}

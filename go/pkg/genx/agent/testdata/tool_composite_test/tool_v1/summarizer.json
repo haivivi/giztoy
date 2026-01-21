@@ -1,0 +1,8 @@
+{
+    "type": "generator",
+    "name": "summarizer",
+    "description": "Summarize text using LLM",
+    "model": "test-model",
+    "mode": "generate",
+    "prompt": "Summarize the following text concisely."
+}

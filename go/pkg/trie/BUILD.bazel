@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "trie",
+    srcs = ["trie.go"],
+    importpath = "github.com/haivivi/giztoy/pkg/trie",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "trie_test",
+    srcs = ["trie_test.go"],
+    embed = [":trie"],
+)

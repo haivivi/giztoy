@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/haivivi/giztoy/go/pkg/mqtt"
+	"github.com/haivivi/giztoy/pkg/mqtt"
 )
 
 func main() {

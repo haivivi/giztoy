@@ -1,0 +1,17 @@
+state_type: react
+id: react_pending
+agent_def: assistant
+messages:
+  - role: user
+    content: Search for cats
+  - role: model
+    tool_call_id: call_search
+    tool_call_name: web_search
+    tool_call_args: '{"query":"cats"}'
+phase: tool_pending
+tool_results:
+  - id: call_search
+    name: web_search
+    content: Found 100 results about cats
+    is_error: false
+finished: false

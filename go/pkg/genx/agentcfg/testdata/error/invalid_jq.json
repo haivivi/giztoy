@@ -1,0 +1,7 @@
+{
+    "type": "http",
+    "name": "bad_jq",
+    "method": "GET",
+    "endpoint": "https://example.com",
+    "resp_body_jq": "invalid { jq"
+}

@@ -1,0 +1,16 @@
+{
+    "type": "http",
+    "name": "secure_api",
+    "description": "Call secure API",
+    "method": "POST",
+    "endpoint": "https://api.example.com/v1/data",
+    "headers": {
+        "Content-Type": "application/json"
+    },
+    "auth": {
+        "type": "bearer",
+        "token": "${API_TOKEN}"
+    },
+    "req_body_jq": "{data: .input}",
+    "resp_body_jq": ".result"
+}

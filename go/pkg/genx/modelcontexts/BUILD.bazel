@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "modelcontexts",
+    srcs = ["modelcontexts.go"],
+    importpath = "github.com/haivivi/giztoy/pkg/genx/modelcontexts",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/trie",
+    ],
+)
+
+go_test(
+    name = "modelcontexts_test",
+    srcs = ["modelcontexts_test.go"],
+    embed = [":modelcontexts"],
+    deps = ["//go/pkg/genx"],
+)

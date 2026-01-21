@@ -1,0 +1,8 @@
+{
+    "type": "agent",
+    "name": "call_child",
+    "description": "Call the child agent to handle a sub-task",
+    "agent": {
+        "$ref": "child_agent"
+    }
+}

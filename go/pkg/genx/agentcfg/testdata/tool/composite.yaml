@@ -1,0 +1,12 @@
+type: composite
+name: search_and_summarize
+description: Search and summarize results
+steps:
+  - id: search
+    tool:
+      $ref: web_search
+
+  - id: summarize
+    tool:
+      $ref: summarizer
+    input_jq: '{input: .steps.search.results | join("\n")}'

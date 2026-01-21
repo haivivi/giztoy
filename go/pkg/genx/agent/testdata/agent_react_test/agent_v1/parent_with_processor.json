@@ -1,0 +1,17 @@
+{
+    "type": "react",
+    "name": "parent_with_processor",
+    "prompt": "You are a parent agent with result processor.",
+    "generator": {
+        "model": "parent-model"
+    },
+    "tools": [
+        {
+            "$ref": "call_child_with_processor"
+        },
+        {
+            "$ref": "finish",
+            "quit": true
+        }
+    ]
+}

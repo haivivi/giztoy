@@ -1,0 +1,9 @@
+type: generator
+name: story_writer
+description: Write a story
+model: gpt-4o
+mode: generate
+prompt: Write a creative story.
+context_layers:
+  - You are a creative writer.
+  - $ref: style:fantasy

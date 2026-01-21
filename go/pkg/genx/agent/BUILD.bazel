@@ -1,0 +1,46 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "agent",
+    srcs = [
+        "agent.go",
+        "agent_match.go",
+        "agent_re_act.go",
+        "doc.go",
+        "error.go",
+        "state.go",
+        "tool_composite.go",
+        "tool_generator.go",
+        "tool_http.go",
+        "tool_text_processor.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/genx/agent",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/agentcfg",
+        "//go/pkg/genx/match",
+        "@com_github_google_jsonschema_go//jsonschema",
+    ],
+)
+
+go_test(
+    name = "agent_test",
+    srcs = [
+        "agent_match_test.go",
+        "agent_re_act_test.go",
+        "example_test.go",
+        "export_test.go",
+        "tool_composite_test.go",
+        "tool_generator_test.go",
+        "tool_http_test.go",
+        "tool_text_processor_test.go",
+    ],
+    data = glob(["testdata/**"]),
+    embed = [":agent"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/agentcfg",
+        "//go/pkg/genx/playground",
+    ],
+)
