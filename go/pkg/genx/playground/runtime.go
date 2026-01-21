@@ -32,12 +32,13 @@ func (noopLogger) Info(msg string, keysAndValues ...any)  {}
 func (noopLogger) Error(msg string, keysAndValues ...any) {}
 
 // Resource type constants for Store lookup.
+// Note: Using underscore instead of colon for Bazel compatibility (colon is reserved in Bazel labels).
 const (
-	TypeToolV1    = "tool:v1"
-	TypeAgentV1   = "agent:v1"
-	TypeContextV1 = "context:v1"
-	TypeRuleV1    = "rule:v1"
-	TypeStateV1   = "state:v1"
+	TypeToolV1    = "tool_v1"
+	TypeAgentV1   = "agent_v1"
+	TypeContextV1 = "context_v1"
+	TypeRuleV1    = "rule_v1"
+	TypeStateV1   = "state_v1"
 )
 
 // resourcePrefixes contains all valid resource type prefixes for parseRef.
@@ -159,7 +160,7 @@ func (r *Runtime) Invoke(ctx context.Context, model string, mctx genx.ModelConte
 // --- Store Helpers ---
 
 // getFromStore retrieves a value from store by prefixed key.
-// The key format is "{type}/{name}", e.g. "tool:v1/my_tool".
+// The key format is "{type}/{name}", e.g. "tool_v1/my_tool".
 // The type is determined by the key prefix, not by file content.
 func (r *Runtime) getFromStore(name, resourceType string) (map[string]any, error) {
 	if r.store == nil {
@@ -384,7 +385,7 @@ func (r *Runtime) DestroyState(ctx context.Context, id string, archive bool) err
 // --- State Serialization (playground extension) ---
 
 // SaveState serializes a state to the writable layer of the store.
-// The key format is "state:v1/{id}".
+// The key format is "state_v1/{id}".
 func (r *Runtime) SaveState(ctx context.Context, state agent.AgentState) error {
 	if r.store == nil {
 		return fmt.Errorf("no store configured")
@@ -417,7 +418,7 @@ func (r *Runtime) SaveState(ctx context.Context, state agent.AgentState) error {
 }
 
 // LoadState deserializes a state from the store.
-// The key format is "state:v1/{id}".
+// The key format is "state_v1/{id}".
 func (r *Runtime) LoadState(ctx context.Context, id string) (agent.AgentState, error) {
 	// Handle ref format (e.g., "state:music_playing" -> "music_playing")
 	id = parseRef(id)

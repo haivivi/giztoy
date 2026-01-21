@@ -586,9 +586,9 @@ func setupHTTPTestRuntime(t *testing.T, serverURL string, opts ...playground.Run
 
 	// Add overlay layer - only override endpoint field, other fields merge from base layer
 	store.AddReadonlyLayer("mock_server", map[string]map[string]any{
-		"tool:v1/mock_http":   {"endpoint": serverURL + "/data"},
-		"tool:v1/mock_post":   {"endpoint": serverURL + "/submit"},
-		"tool:v1/search_http": {"endpoint": serverURL + "/search?q=test"},
+		"tool_v1/mock_http":   {"endpoint": serverURL + "/data"},
+		"tool_v1/mock_post":   {"endpoint": serverURL + "/submit"},
+		"tool_v1/search_http": {"endpoint": serverURL + "/search?q=test"},
 	})
 
 	allOpts := []playground.RuntimeOption{

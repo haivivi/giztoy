@@ -53,10 +53,12 @@ func TestClientServerPort_OpusFrames_ClientToServer(t *testing.T) {
 		t.Errorf("frame length mismatch: got %d, want %d", len(readFrame), len(frame))
 	}
 
-	// Cleanup
+	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
+	clientConn.Close()
+	serverConn.Close()
+	wg.Wait()
 	clientPort.Close()
 	serverPort.Close()
-	wg.Wait()
 }
 
 func TestClientServerPort_StateEvents(t *testing.T) {
@@ -104,9 +106,12 @@ func TestClientServerPort_StateEvents(t *testing.T) {
 		t.Errorf("expected GearRecording, got %v", gearState.State)
 	}
 
+	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
+	clientConn.Close()
+	serverConn.Close()
+	wg.Wait()
 	clientPort.Close()
 	serverPort.Close()
-	wg.Wait()
 }
 
 func TestClientServerPort_StatsEvents(t *testing.T) {
@@ -172,9 +177,12 @@ func TestClientServerPort_StatsEvents(t *testing.T) {
 		t.Fatal("timeout waiting for stats change")
 	}
 
+	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
+	clientConn.Close()
+	serverConn.Close()
+	wg.Wait()
 	clientPort.Close()
 	serverPort.Close()
-	wg.Wait()
 }
 
 func TestClientServerPort_Commands(t *testing.T) {
@@ -215,9 +223,12 @@ func TestClientServerPort_Commands(t *testing.T) {
 		t.Fatal("timeout waiting for command")
 	}
 
+	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
+	clientConn.Close()
+	serverConn.Close()
+	wg.Wait()
 	clientPort.Close()
 	serverPort.Close()
-	wg.Wait()
 }
 
 func TestClientServerPort_Tracks(t *testing.T) {
@@ -272,9 +283,12 @@ func TestClientServerPort_Tracks(t *testing.T) {
 	fgCtrl.CloseWithError(nil)
 	ovCtrl.CloseWithError(nil)
 
+	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
+	clientConn.Close()
+	serverConn.Close()
+	wg.Wait()
 	clientPort.Close()
 	serverPort.Close()
-	wg.Wait()
 }
 
 func TestClientServerPort_Interrupt(t *testing.T) {
@@ -327,9 +341,12 @@ func TestClientServerPort_Interrupt(t *testing.T) {
 		t.Error("OverlayTrackCtrl should be nil after interrupt")
 	}
 
+	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
+	clientConn.Close()
+	serverConn.Close()
+	wg.Wait()
 	clientPort.Close()
 	serverPort.Close()
-	wg.Wait()
 }
 
 func TestClientServerPort_MultipleStatsUpdates(t *testing.T) {
@@ -405,7 +422,10 @@ func TestClientServerPort_MultipleStatsUpdates(t *testing.T) {
 		t.Fatal("timeout waiting for third stats change")
 	}
 
+	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
+	clientConn.Close()
+	serverConn.Close()
+	wg.Wait()
 	clientPort.Close()
 	serverPort.Close()
-	wg.Wait()
 }
