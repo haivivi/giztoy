@@ -237,8 +237,9 @@ impl<W: Write> Mp3Encoder<W> {
         }
 
         if encoded > 0 {
-            let data = inner.mp3buf[..encoded as usize].to_vec();
-            inner.writer.write_all(&data)?;
+            // Split borrow: get slice reference before borrowing writer
+            let EncoderInner { ref mp3buf, ref mut writer, .. } = *inner;
+            writer.write_all(&mp3buf[..encoded as usize])?;
         }
 
         Ok(())
@@ -263,8 +264,9 @@ impl<W: Write> Mp3Encoder<W> {
         };
 
         if encoded > 0 {
-            let data = inner.mp3buf[..encoded as usize].to_vec();
-            inner.writer.write_all(&data)?;
+            // Split borrow: get slice reference before borrowing writer
+            let EncoderInner { ref mp3buf, ref mut writer, .. } = *inner;
+            writer.write_all(&mp3buf[..encoded as usize])?;
         }
 
         Ok(())

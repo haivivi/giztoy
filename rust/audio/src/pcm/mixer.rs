@@ -3,7 +3,7 @@
 //! The mixer allows mixing multiple audio tracks into a single output stream.
 //! Each track can have independent gain (volume) control.
 
-use super::{AtomicF32, Chunk, Format};
+use super::{AtomicF32, Chunk, Format, FormatExt};
 use std::collections::VecDeque;
 use std::io::{self, Read};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};

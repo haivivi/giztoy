@@ -29,7 +29,7 @@ mod chunk;
 mod mixer;
 mod atomic;
 
-pub use format::Format;
+pub use format::{Format, FormatExt};
 pub use chunk::{Chunk, DataChunk, SilenceChunk};
 pub use mixer::{Mixer, MixerOptions, Track, TrackCtrl, TrackOptions};
 pub use atomic::AtomicF32;

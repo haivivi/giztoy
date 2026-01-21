@@ -111,7 +111,8 @@ fn main() {
             
             // Determine output file
             let wav_path = output_file.clone().unwrap_or_else(|| {
-                format!("/tmp/rust_song_{}.wav", song.id)
+                let tmp_dir = std::env::temp_dir();
+                tmp_dir.join(format!("rust_song_{}.wav", song.id)).to_string_lossy().to_string()
             });
             
             // Write WAV file

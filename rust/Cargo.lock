@@ -499,6 +499,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "giztoy-audio"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+ "tokio-test",
+]
+
+[[package]]
 name = "giztoy-buffer"
 version = "0.1.0"
 

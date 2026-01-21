@@ -410,24 +410,24 @@ mod tests {
     fn test_soxr_create_mono_to_mono() {
         let data = vec![0u8; 320]; // 160 samples mono
         let cursor = Cursor::new(data);
-        let result = Soxr::new(cursor, Format::MONO_16K, Format::MONO_24K);
+        let result = Soxr::new(cursor, Format::L16Mono16K, Format::L16Mono24K);
         assert!(result.is_ok());
         
         let soxr = result.unwrap();
-        assert_eq!(soxr.src_format(), Format::MONO_16K);
-        assert_eq!(soxr.dst_format(), Format::MONO_24K);
+        assert_eq!(soxr.src_format(), Format::L16Mono16K);
+        assert_eq!(soxr.dst_format(), Format::L16Mono24K);
     }
 
     #[test]
     fn test_soxr_create_stereo_to_mono() {
         let data = vec![0u8; 640]; // 160 stereo samples
         let cursor = Cursor::new(data);
-        let result = Soxr::new(cursor, Format::STEREO_48K, Format::MONO_24K);
+        let result = Soxr::new(cursor, Format::L16Stereo48K, Format::L16Mono24K);
         // This may or may not succeed depending on soxr library
         if result.is_ok() {
             let soxr = result.unwrap();
-            assert_eq!(soxr.src_format(), Format::STEREO_48K);
-            assert_eq!(soxr.dst_format(), Format::MONO_24K);
+            assert_eq!(soxr.src_format(), Format::L16Stereo48K);
+            assert_eq!(soxr.dst_format(), Format::L16Mono24K);
         }
     }
 
@@ -435,12 +435,12 @@ mod tests {
     fn test_soxr_create_mono_to_stereo() {
         let data = vec![0u8; 320]; // 160 mono samples
         let cursor = Cursor::new(data);
-        let result = Soxr::new(cursor, Format::MONO_16K, Format::STEREO_48K);
+        let result = Soxr::new(cursor, Format::L16Mono16K, Format::L16Stereo48K);
         // This may or may not succeed depending on soxr library
         if result.is_ok() {
             let soxr = result.unwrap();
-            assert_eq!(soxr.src_format(), Format::MONO_16K);
-            assert_eq!(soxr.dst_format(), Format::STEREO_48K);
+            assert_eq!(soxr.src_format(), Format::L16Mono16K);
+            assert_eq!(soxr.dst_format(), Format::L16Stereo48K);
         }
     }
 
@@ -516,7 +516,7 @@ mod tests {
         let data = vec![0u8; 320];
         let cursor = Cursor::new(data);
         
-        let result = Soxr::new(cursor, Format::MONO_16K, Format::MONO_24K);
+        let result = Soxr::new(cursor, Format::L16Mono16K, Format::L16Mono24K);
         if result.is_err() {
             return;
         }
@@ -536,7 +536,7 @@ mod tests {
         let data = vec![0u8; 320];
         let cursor = Cursor::new(data);
         
-        let result = Soxr::new(cursor, Format::MONO_16K, Format::MONO_24K);
+        let result = Soxr::new(cursor, Format::L16Mono16K, Format::L16Mono24K);
         if result.is_err() {
             return;
         }
@@ -552,7 +552,7 @@ mod tests {
         let data = vec![0u8; 320];
         let cursor = Cursor::new(data);
         
-        let result = Soxr::new(cursor, Format::MONO_16K, Format::MONO_24K);
+        let result = Soxr::new(cursor, Format::L16Mono16K, Format::L16Mono24K);
         if result.is_err() {
             return;
         }
@@ -570,7 +570,7 @@ mod tests {
         let data = vec![0u8; 320];
         let cursor = Cursor::new(data);
         
-        let result = Soxr::new(cursor, Format::MONO_16K, Format::MONO_24K);
+        let result = Soxr::new(cursor, Format::L16Mono16K, Format::L16Mono24K);
         if result.is_err() {
             return;
         }

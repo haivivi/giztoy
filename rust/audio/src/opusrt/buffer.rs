@@ -197,8 +197,8 @@ impl Buffer {
 mod tests {
     use super::*;
 
-    fn make_frame(_dur_ms: u64) -> Frame {
-        // Create a fake opus frame with specific duration
+    fn make_frame() -> Frame {
+        // Create a fake opus frame with 20ms duration
         // Config 1 = SILK NB 20ms, mono
         Frame::new(vec![0x08, 0x00])
     }
@@ -207,8 +207,8 @@ mod tests {
     fn test_buffer_in_order() {
         let buf = Buffer::new(Duration::from_secs(10));
         
-        let f1 = make_frame(20);
-        let f2 = make_frame(20);
+        let f1 = make_frame();
+        let f2 = make_frame();
         
         buf.append(f1.clone(), EpochMillis::from_millis(0)).unwrap();
         buf.append(f2.clone(), EpochMillis::from_millis(20)).unwrap();
@@ -228,8 +228,8 @@ mod tests {
     fn test_buffer_out_of_order() {
         let buf = Buffer::new(Duration::from_secs(10));
         
-        let f1 = make_frame(20);
-        let f2 = make_frame(20);
+        let f1 = make_frame();
+        let f2 = make_frame();
         
         // Add frames out of order
         buf.append(f2.clone(), EpochMillis::from_millis(20)).unwrap();
@@ -244,8 +244,8 @@ mod tests {
     fn test_buffer_disordered_rejection() {
         let buf = Buffer::new(Duration::from_secs(10));
         
-        let f1 = make_frame(20);
-        let f2 = make_frame(20);
+        let f1 = make_frame();
+        let f2 = make_frame();
         
         buf.append(f1, EpochMillis::from_millis(0)).unwrap();
         let _ = buf.frame().unwrap(); // Consume f1, tail is now 20

@@ -132,6 +132,7 @@ impl Chunk for SilenceChunk {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pcm::FormatExt;
 
     #[test]
     fn test_data_chunk() {

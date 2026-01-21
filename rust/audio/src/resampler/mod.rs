@@ -20,7 +20,7 @@
 //! ```
 
 mod ffi;
-mod format;
+pub mod format;
 mod soxr;
 mod sample_reader;
 

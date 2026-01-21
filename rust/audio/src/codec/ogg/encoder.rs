@@ -25,13 +25,19 @@ static CRC_TABLE: [u32; 256] = {
     table
 };
 
-/// Calculates CRC for Ogg page.
-fn crc32(data: &[u8]) -> u32 {
-    let mut crc = 0u32;
+/// Updates CRC with additional data.
+fn crc32_update(crc: u32, data: &[u8]) -> u32 {
+    let mut crc = crc;
     for &byte in data {
         crc = (crc << 8) ^ CRC_TABLE[((crc >> 24) as u8 ^ byte) as usize];
     }
     crc
+}
+
+/// Calculates CRC for Ogg page.
+#[allow(dead_code)]
+fn crc32(data: &[u8]) -> u32 {
+    crc32_update(0, data)
 }
 
 /// Ogg encoder for writing Ogg streams.
@@ -73,10 +79,13 @@ impl<W: Write> OggEncoder<W> {
         // Segment table
         header.extend_from_slice(&page.segment_table);
 
-        // Calculate CRC
-        let mut crc_data = header.clone();
-        crc_data.extend_from_slice(&page.body);
-        let crc = crc32(&crc_data);
+        // Calculate CRC over header (with zero CRC) and body
+        let crc = {
+            let mut crc = 0u32;
+            crc = crc32_update(crc, &header);
+            crc = crc32_update(crc, &page.body);
+            crc
+        };
         
         // Update CRC in header
         header[22..26].copy_from_slice(&crc.to_le_bytes());

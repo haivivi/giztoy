@@ -8,7 +8,7 @@
 //! Run with: cargo run --bin pcm_basic
 //! Or with bazel: bazel run //examples/rust/audio:pcm_basic
 
-use giztoy_audio::pcm::{Chunk, Format};
+use giztoy_audio::pcm::{Chunk, Format, FormatExt};
 use std::time::Duration;
 
 fn main() {
