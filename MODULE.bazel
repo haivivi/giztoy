@@ -39,10 +39,14 @@ use_repo(
     "com_github_google_uuid",
     "com_github_googleapis_gax_go_v2",
     "com_github_gorilla_websocket",
+    "com_github_itchyny_gojq",
     "com_github_kaptinlin_jsonrepair",
     "com_github_mochi_mqtt_server_v2",
     "com_github_openai_openai_go",
     "com_github_spf13_cobra",
+    "com_github_vmihailenco_msgpack_v5",
+    "in_gopkg_yaml_v3",
+    "org_golang_google_api",
     "org_golang_google_genai",
 )
 

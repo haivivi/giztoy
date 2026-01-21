@@ -14,7 +14,6 @@ go_library(
         "//go/pkg/genx",
         "//go/pkg/genx/generators",
         "@com_github_goccy_go_yaml//:go-yaml",
-        "@org_golang_google_api//iterator",
     ],
 )
 

@@ -1,5 +1,5 @@
-load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -8,7 +8,7 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     aliases = aliases(),
     deps = [
-        "//rust/dashscope:giztoy_dashscope",
         "//rust/cli:giztoy_cli",
+        "//rust/dashscope:giztoy_dashscope",
     ] + all_crate_deps(normal = True),
 )

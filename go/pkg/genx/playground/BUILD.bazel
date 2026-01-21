@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "playground",
@@ -18,16 +18,5 @@ go_library(
         "//go/pkg/genx/match",
         "@com_github_goccy_go_yaml//:go-yaml",
         "@com_github_google_uuid//:uuid",
-    ],
-)
-
-go_test(
-    name = "playground_test",
-    srcs = ["playground_test.go"],
-    embed = [":playground"],
-    deps = [
-        "//go/pkg/genx",
-        "//go/pkg/genx/agent",
-        "//go/pkg/genx/agentcfg",
     ],
 )

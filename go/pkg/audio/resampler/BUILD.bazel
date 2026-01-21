@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "resampler",
@@ -14,4 +14,13 @@ go_library(
     cgo = True,
     importpath = "github.com/haivivi/giztoy/pkg/audio/resampler",
     visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "resampler_test",
+    srcs = [
+        "format_test.go",
+        "sample_reader_test.go",
+    ],
+    embed = [":resampler"],
 )
