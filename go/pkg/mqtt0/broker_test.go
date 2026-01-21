@@ -339,13 +339,11 @@ func TestBrokerHandler(t *testing.T) {
 	}
 	defer ln.Close()
 
-	var receivedMessages []Message
-	var msgMu atomic.Int32
+	var msgCount atomic.Int32
 
 	broker := &Broker{
 		Handler: HandlerFunc(func(clientID string, msg *Message) {
-			receivedMessages = append(receivedMessages, *msg)
-			msgMu.Add(1)
+			msgCount.Add(1)
 		}),
 	}
 	go broker.Serve(ln)
@@ -370,8 +368,8 @@ func TestBrokerHandler(t *testing.T) {
 	// Wait for handler to process
 	time.Sleep(200 * time.Millisecond)
 
-	if msgMu.Load() != 5 {
-		t.Errorf("handler received %d messages, want 5", msgMu.Load())
+	if msgCount.Load() != 5 {
+		t.Errorf("handler received %d messages, want 5", msgCount.Load())
 	}
 
 	broker.Close()
@@ -471,10 +469,11 @@ func BenchmarkBrokerPubSub(b *testing.B) {
 	go broker.Serve(ln)
 
 	ctx := context.Background()
+	autoKeepalive := false
 	client, err := Connect(ctx, ClientConfig{
 		Addr:          "tcp://" + ln.Addr().String(),
 		ClientID:      "bench-client",
-		AutoKeepalive: false,
+		AutoKeepalive: &autoKeepalive,
 	})
 	if err != nil {
 		b.Fatalf("connect failed: %v", err)
@@ -510,10 +509,11 @@ func BenchmarkBrokerMessageRouting(b *testing.B) {
 	ctx := context.Background()
 
 	// Create subscriber
+	autoKeepaliveSub := false
 	sub, err := Connect(ctx, ClientConfig{
 		Addr:          "tcp://" + ln.Addr().String(),
 		ClientID:      "bench-subscriber",
-		AutoKeepalive: false,
+		AutoKeepalive: &autoKeepaliveSub,
 	})
 	if err != nil {
 		b.Fatalf("connect subscriber failed: %v", err)
@@ -525,10 +525,11 @@ func BenchmarkBrokerMessageRouting(b *testing.B) {
 	}
 
 	// Create publisher
+	autoKeepalivePub := false
 	pub, err := Connect(ctx, ClientConfig{
 		Addr:          "tcp://" + ln.Addr().String(),
 		ClientID:      "bench-publisher",
-		AutoKeepalive: false,
+		AutoKeepalive: &autoKeepalivePub,
 	})
 	if err != nil {
 		b.Fatalf("connect publisher failed: %v", err)

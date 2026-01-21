@@ -62,14 +62,15 @@ func Listen(network, addr string, tlsConfig *tls.Config) (net.Listener, error) {
 
 // wsListener implements net.Listener for WebSocket connections.
 type wsListener struct {
-	addr      string
-	tlsConfig *tls.Config
-	connCh    chan net.Conn
-	errCh     chan error
-	closeOnce sync.Once
-	closeCh   chan struct{}
-	server    *http.Server
-	upgrader  websocket.Upgrader
+	addr       string
+	tlsConfig  *tls.Config
+	connCh     chan net.Conn
+	errCh      chan error
+	closeOnce  sync.Once
+	closeCh    chan struct{}
+	server     *http.Server
+	upgrader   websocket.Upgrader
+	actualAddr net.Addr // actual bound address
 }
 
 func newWSListener(addr string, tlsConfig *tls.Config) (*wsListener, error) {
@@ -100,6 +101,8 @@ func newWSListener(addr string, tlsConfig *tls.Config) (*wsListener, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	l.actualAddr = ln.Addr() // Store actual bound address
 
 	if tlsConfig != nil {
 		ln = tls.NewListener(ln, tlsConfig)
@@ -153,7 +156,7 @@ func (l *wsListener) Close() error {
 }
 
 func (l *wsListener) Addr() net.Addr {
-	return &net.TCPAddr{Port: 0} // Placeholder
+	return l.actualAddr
 }
 
 // MultiListener combines multiple listeners into one.

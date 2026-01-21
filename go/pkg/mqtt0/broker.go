@@ -180,7 +180,9 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 
 	if !auth.Authenticate(connect.ClientID, connect.Username, connect.Password) {
 		slog.Debug("mqtt0: authentication failed", "clientID", connect.ClientID)
-		WriteV4Packet(conn, &V4ConnAck{ReturnCode: ConnectNotAuthorized})
+		if err := WriteV4Packet(conn, &V4ConnAck{ReturnCode: ConnectNotAuthorized}); err != nil {
+			slog.Debug("mqtt0: write connack failed", "error", err)
+		}
 		return
 	}
 
@@ -197,6 +199,20 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 	}
 
 	b.mu.Lock()
+	// Per MQTT spec: if a client connects with a clientID already in use,
+	// disconnect the old client first
+	if old, exists := b.clients[connect.ClientID]; exists {
+		close(old.msgCh) // Signal old client to disconnect
+		// Clean up old subscriptions
+		if topics, ok := b.clientSubscriptions[connect.ClientID]; ok {
+			for _, topic := range topics {
+				b.subscriptions.Remove(topic, func(h *clientHandle) bool {
+					return h == old
+				})
+			}
+			delete(b.clientSubscriptions, connect.ClientID)
+		}
+	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
 
@@ -241,7 +257,9 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 
 	if !auth.Authenticate(connect.ClientID, connect.Username, connect.Password) {
 		slog.Debug("mqtt0: authentication failed", "clientID", connect.ClientID)
-		WriteV5Packet(conn, &V5ConnAck{ReasonCode: ReasonNotAuthorized})
+		if err := WriteV5Packet(conn, &V5ConnAck{ReasonCode: ReasonNotAuthorized}); err != nil {
+			slog.Debug("mqtt0: write connack failed", "error", err)
+		}
 		return
 	}
 
@@ -258,6 +276,20 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 	}
 
 	b.mu.Lock()
+	// Per MQTT spec: if a client connects with a clientID already in use,
+	// disconnect the old client first
+	if old, exists := b.clients[connect.ClientID]; exists {
+		close(old.msgCh) // Signal old client to disconnect
+		// Clean up old subscriptions
+		if topics, ok := b.clientSubscriptions[connect.ClientID]; ok {
+			for _, topic := range topics {
+				b.subscriptions.Remove(topic, func(h *clientHandle) bool {
+					return h == old
+				})
+			}
+			delete(b.clientSubscriptions, connect.ClientID)
+		}
+	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
 
@@ -289,18 +321,29 @@ func (b *Broker) clientLoopV4(conn net.Conn, reader *bufio.Reader, clientID stri
 
 	readCh := make(chan V4Packet, 1)
 	errCh := make(chan error, 1)
+	doneCh := make(chan struct{})
 
 	// Start read goroutine
 	go func() {
+		defer close(errCh)
 		for {
 			packet, err := ReadV4Packet(reader, b.MaxPacketSize)
 			if err != nil {
-				errCh <- err
+				select {
+				case errCh <- err:
+				case <-doneCh:
+				}
 				return
 			}
-			readCh <- packet
+			select {
+			case readCh <- packet:
+			case <-doneCh:
+				return
+			}
 		}
 	}()
+
+	defer close(doneCh) // Signal read goroutine to exit
 
 	for {
 		var timeoutCh <-chan time.Time
@@ -359,18 +402,29 @@ func (b *Broker) clientLoopV5(conn net.Conn, reader *bufio.Reader, clientID stri
 
 	readCh := make(chan V5Packet, 1)
 	errCh := make(chan error, 1)
+	doneCh := make(chan struct{})
 
 	// Start read goroutine
 	go func() {
+		defer close(errCh)
 		for {
 			packet, err := ReadV5Packet(reader, b.MaxPacketSize)
 			if err != nil {
-				errCh <- err
+				select {
+				case errCh <- err:
+				case <-doneCh:
+				}
 				return
 			}
-			readCh <- packet
+			select {
+			case readCh <- packet:
+			case <-doneCh:
+				return
+			}
 		}
 	}()
+
+	defer close(doneCh) // Signal read goroutine to exit
 
 	for {
 		var timeoutCh <-chan time.Time
@@ -522,19 +576,16 @@ func (b *Broker) handleUnsubscribe(clientID string, topics []string) {
 		slog.Debug("mqtt0: unsubscribed", "clientID", clientID, "topic", topic)
 	}
 
-	// Remove from tracking
+	// Remove from tracking - optimized O(N+M) instead of O(N*M)
 	b.mu.Lock()
 	if subs, ok := b.clientSubscriptions[clientID]; ok {
+		topicsToUnsub := make(map[string]struct{}, len(topics))
+		for _, t := range topics {
+			topicsToUnsub[t] = struct{}{}
+		}
 		newSubs := make([]string, 0, len(subs))
 		for _, s := range subs {
-			found := false
-			for _, t := range topics {
-				if s == t {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if _, found := topicsToUnsub[s]; !found {
 				newSubs = append(newSubs, s)
 			}
 		}

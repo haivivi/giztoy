@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -115,8 +116,9 @@ func dialWebSocket(ctx context.Context, urlStr string, tlsConfig *tls.Config) (n
 
 // wsConn wraps a websocket connection to implement net.Conn.
 type wsConn struct {
-	ws     *websocket.Conn
-	reader *wsReader
+	ws      *websocket.Conn
+	reader  *wsReader
+	writeMu sync.Mutex // protects Write operations
 }
 
 type wsReader struct {
@@ -147,6 +149,8 @@ func (c *wsConn) Read(b []byte) (int, error) {
 }
 
 func (c *wsConn) Write(b []byte) (int, error) {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 	err := c.ws.WriteMessage(websocket.BinaryMessage, b)
 	if err != nil {
 		return 0, err

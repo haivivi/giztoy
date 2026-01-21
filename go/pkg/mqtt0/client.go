@@ -35,8 +35,8 @@ type ClientConfig struct {
 	KeepAlive uint16
 
 	// CleanSession (v4) or CleanStart (v5) flag.
-	// Default is true.
-	CleanSession bool
+	// Uses pointer to distinguish between unset (nil, defaults to true) and explicitly false.
+	CleanSession *bool
 
 	// ProtocolVersion is the MQTT protocol version.
 	// Default is ProtocolV4 (MQTT 3.1.1).
@@ -47,8 +47,8 @@ type ClientConfig struct {
 	SessionExpiry *uint32
 
 	// AutoKeepalive enables automatic keep-alive ping.
-	// When enabled (default), the client sends PINGREQ at KeepAlive/2 intervals.
-	AutoKeepalive bool
+	// Uses pointer to distinguish between unset (nil, defaults to true) and explicitly false.
+	AutoKeepalive *bool
 
 	// TLSConfig is the TLS configuration for secure connections.
 	// If nil, a default configuration is used for tls:// and wss:// connections.
@@ -67,6 +67,22 @@ type ClientConfig struct {
 	Dialer func(ctx context.Context, addr string, tlsConfig *tls.Config) (net.Conn, error)
 }
 
+// getCleanSession returns the CleanSession value, defaulting to true if not set.
+func (c *ClientConfig) getCleanSession() bool {
+	if c.CleanSession == nil {
+		return true // default
+	}
+	return *c.CleanSession
+}
+
+// getAutoKeepalive returns the AutoKeepalive value, defaulting to true if not set.
+func (c *ClientConfig) getAutoKeepalive() bool {
+	if c.AutoKeepalive == nil {
+		return true // default
+	}
+	return *c.AutoKeepalive
+}
+
 // setDefaults sets default values for the config.
 func (c *ClientConfig) setDefaults() {
 	if c.KeepAlive == 0 {
@@ -81,8 +97,6 @@ func (c *ClientConfig) setDefaults() {
 	if c.ConnectTimeout == 0 {
 		c.ConnectTimeout = 30 * time.Second
 	}
-	// CleanSession defaults to true (zero value is false, so we need special handling)
-	// We'll use a different approach - check in Connect
 }
 
 // Client is a QoS 0 MQTT client.
@@ -139,8 +153,8 @@ func Connect(ctx context.Context, config ClientConfig) (*Client, error) {
 		return nil, err
 	}
 
-	// Start keepalive goroutine if enabled
-	if config.AutoKeepalive && config.KeepAlive > 0 {
+	// Start keepalive goroutine if enabled (defaults to true)
+	if config.getAutoKeepalive() && config.KeepAlive > 0 {
 		go client.keepaliveLoop()
 	}
 
@@ -164,7 +178,7 @@ func (c *Client) connectV4(ctx context.Context) error {
 		ClientID:     c.config.ClientID,
 		Username:     c.config.Username,
 		Password:     c.config.Password,
-		CleanSession: c.config.CleanSession,
+		CleanSession: c.config.getCleanSession(),
 		KeepAlive:    c.config.KeepAlive,
 	}
 
@@ -202,7 +216,7 @@ func (c *Client) connectV5(ctx context.Context) error {
 		ClientID:   c.config.ClientID,
 		Username:   c.config.Username,
 		Password:   c.config.Password,
-		CleanStart: c.config.CleanSession,
+		CleanStart: c.config.getCleanSession(),
 		KeepAlive:  c.config.KeepAlive,
 	}
 

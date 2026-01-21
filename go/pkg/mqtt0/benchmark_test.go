@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// boolPtr is a helper to create *bool for test configs
+func boolPtr(b bool) *bool { return &b }
+
 // Benchmark port counter to avoid conflicts
 var benchPort atomic.Uint32
 
@@ -62,7 +65,7 @@ func BenchmarkPublishThroughput(b *testing.B) {
 			client, err := Connect(ctx, ClientConfig{
 				Addr:          "tcp://" + addr,
 				ClientID:      "bench-client",
-				AutoKeepalive: false,
+				AutoKeepalive: boolPtr(false),
 			})
 			if err != nil {
 				b.Fatalf("connect failed: %v", err)
@@ -95,7 +98,7 @@ func BenchmarkPublishThroughputParallel(b *testing.B) {
 			client, err := Connect(ctx, ClientConfig{
 				Addr:          "tcp://" + addr,
 				ClientID:      "bench-client",
-				AutoKeepalive: false,
+				AutoKeepalive: boolPtr(false),
 			})
 			if err != nil {
 				b.Fatalf("connect failed: %v", err)
@@ -137,7 +140,7 @@ func BenchmarkE2ELatency(b *testing.B) {
 			subscriber, err := Connect(ctx, ClientConfig{
 				Addr:          "tcp://" + addr,
 				ClientID:      "bench-sub",
-				AutoKeepalive: false,
+				AutoKeepalive: boolPtr(false),
 			})
 			if err != nil {
 				b.Fatalf("connect subscriber failed: %v", err)
@@ -152,7 +155,7 @@ func BenchmarkE2ELatency(b *testing.B) {
 			publisher, err := Connect(ctx, ClientConfig{
 				Addr:          "tcp://" + addr,
 				ClientID:      "bench-pub",
-				AutoKeepalive: false,
+				AutoKeepalive: boolPtr(false),
 			})
 			if err != nil {
 				b.Fatalf("connect publisher failed: %v", err)
@@ -201,7 +204,7 @@ func BenchmarkMessageRoutingThroughput(b *testing.B) {
 				sub, err := Connect(ctx, ClientConfig{
 					Addr:          "tcp://" + addr,
 					ClientID:      fmt.Sprintf("bench-sub-%d", i),
-					AutoKeepalive: false,
+					AutoKeepalive: boolPtr(false),
 				})
 				if err != nil {
 					b.Fatalf("connect subscriber %d failed: %v", i, err)
@@ -218,7 +221,7 @@ func BenchmarkMessageRoutingThroughput(b *testing.B) {
 			publisher, err := Connect(ctx, ClientConfig{
 				Addr:          "tcp://" + addr,
 				ClientID:      "bench-pub",
-				AutoKeepalive: false,
+				AutoKeepalive: boolPtr(false),
 			})
 			if err != nil {
 				b.Fatalf("connect publisher failed: %v", err)
@@ -295,7 +298,7 @@ func BenchmarkWildcardRoutingThroughput(b *testing.B) {
 			subscriber, err := Connect(ctx, ClientConfig{
 				Addr:          "tcp://" + addr,
 				ClientID:      "bench-sub",
-				AutoKeepalive: false,
+				AutoKeepalive: boolPtr(false),
 			})
 			if err != nil {
 				b.Fatalf("connect failed: %v", err)
@@ -310,7 +313,7 @@ func BenchmarkWildcardRoutingThroughput(b *testing.B) {
 			publisher, err := Connect(ctx, ClientConfig{
 				Addr:          "tcp://" + addr,
 				ClientID:      "bench-pub",
-				AutoKeepalive: false,
+				AutoKeepalive: boolPtr(false),
 			})
 			if err != nil {
 				b.Fatalf("connect failed: %v", err)
@@ -364,7 +367,7 @@ func BenchmarkConnectionThroughput(b *testing.B) {
 					Addr:            "tcp://" + addr,
 					ClientID:        fmt.Sprintf("bench-client-%d", i),
 					ProtocolVersion: p.version,
-					AutoKeepalive:   false,
+					AutoKeepalive:   boolPtr(false),
 				})
 				if err != nil {
 					b.Fatalf("connect failed: %v", err)
@@ -442,7 +445,7 @@ func BenchmarkHighThroughputStress(b *testing.B) {
 		sub, err := Connect(ctx, ClientConfig{
 			Addr:          "tcp://" + addr,
 			ClientID:      fmt.Sprintf("stress-sub-%d", i),
-			AutoKeepalive: false,
+			AutoKeepalive: boolPtr(false),
 		})
 		if err != nil {
 			b.Fatalf("connect subscriber failed: %v", err)
@@ -456,7 +459,7 @@ func BenchmarkHighThroughputStress(b *testing.B) {
 		pub, err := Connect(ctx, ClientConfig{
 			Addr:          "tcp://" + addr,
 			ClientID:      fmt.Sprintf("stress-pub-%d", i),
-			AutoKeepalive: false,
+			AutoKeepalive: boolPtr(false),
 		})
 		if err != nil {
 			b.Fatalf("connect publisher failed: %v", err)
@@ -501,7 +504,7 @@ func BenchmarkMessageRate(b *testing.B) {
 	client, err := Connect(ctx, ClientConfig{
 		Addr:          "tcp://" + addr,
 		ClientID:      "rate-client",
-		AutoKeepalive: false,
+		AutoKeepalive: boolPtr(false),
 	})
 	if err != nil {
 		b.Fatalf("connect failed: %v", err)

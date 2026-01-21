@@ -95,12 +95,13 @@ func TestClientConnectV5WithSessionExpiry(t *testing.T) {
 
 	ctx := context.Background()
 	sessionExpiry := uint32(3600)
+	cleanSession := false
 	client, err := Connect(ctx, ClientConfig{
 		Addr:            "tcp://" + addr,
 		ClientID:        "test-client-session",
 		ProtocolVersion: ProtocolV5,
 		SessionExpiry:   &sessionExpiry,
-		CleanSession:    false,
+		CleanSession:    &cleanSession,
 	})
 	if err != nil {
 		t.Fatalf("connect failed: %v", err)
@@ -322,10 +323,11 @@ func TestClientPing(t *testing.T) {
 	defer cleanup()
 
 	ctx := context.Background()
+	autoKeepalive := false
 	client, err := Connect(ctx, ClientConfig{
 		Addr:          "tcp://" + addr,
 		ClientID:      "ping-client",
-		AutoKeepalive: false, // Disable auto keepalive
+		AutoKeepalive: &autoKeepalive, // Disable auto keepalive
 	})
 	if err != nil {
 		t.Fatalf("connect failed: %v", err)
