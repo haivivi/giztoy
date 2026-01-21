@@ -1,0 +1,39 @@
+[package]
+name = "giztoy-mqtt0"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Lightweight QoS 0 MQTT client and broker with full ACL support"
+
+[dependencies]
+# MQTT protocol parsing (reuse from rumqttc)
+rumqttc = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["net", "io-util", "sync", "time", "rt-multi-thread", "macros"] }
+
+# Utilities
+bytes = { workspace = true }
+parking_lot = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+# For testing mqtt0c with standard broker
+rumqttd = { workspace = true }
+
+# Test utilities
+tokio-test = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Benchmark
+criterion = { workspace = true }
+
+[[bench]]
+name = "mqtt0_bench"
+harness = false

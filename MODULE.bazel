@@ -69,6 +69,7 @@ crate.from_cargo(
         "//rust/genx:Cargo.toml",
         "//rust/dashscope:Cargo.toml",
         "//rust/minimax:Cargo.toml",
+        "//rust/mqtt0:Cargo.toml",
         "//rust/cli:Cargo.toml",
         "//rust/cmd/dashscope:Cargo.toml",
         "//rust/cmd/minimax:Cargo.toml",

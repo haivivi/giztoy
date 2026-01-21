@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	github.com/haivivi/giztoy v0.0.0
+	github.com/mochi-mqtt/server/v2 v2.7.7
 	github.com/openai/openai-go v1.12.0
 	google.golang.org/genai v1.42.0
 )
