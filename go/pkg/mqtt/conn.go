@@ -39,7 +39,7 @@ func (conn *Conn) resubscribe() {
 	defer conn.resubscribeMu.Unlock()
 
 	if conn.resubscribeCtx != nil {
-		conn.resubscribeCancel(errors.New("resubscribe"))
+		conn.resubscribeCancel(errors.New("previous resubscribe attempt cancelled"))
 		conn.resubscribeCtx = nil
 		conn.resubscribeCancel = nil
 	}

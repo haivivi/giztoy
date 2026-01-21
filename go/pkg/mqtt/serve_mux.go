@@ -74,7 +74,7 @@ func (sm *ServeMux) Handle(pattern string, h Handler) error {
 	defer sm.mu.Unlock()
 
 	return sm.matchRoot.Set(pattern, func(node *trie) {
-		slog.Debug("handle pattern", "pattern", pattern, "node", fmt.Sprintf("%p", node), "type", fmt.Sprintf("%T", h))
+		slog.Debug("handle pattern", "pattern", pattern, "handler_type", fmt.Sprintf("%T", h))
 		node.handlers = append(node.handlers, h)
 	})
 }
