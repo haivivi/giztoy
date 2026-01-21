@@ -115,7 +115,7 @@ impl HttpClient {
             _ => return Err(Error::Other(format!("unsupported method: {}", method))),
         };
 
-        request = request.headers(self.default_headers());
+        request = request.headers(self.default_headers()?);
 
         if let Some(body) = body {
             request = request.json(body);
@@ -143,7 +143,7 @@ impl HttpClient {
             _ => return Err(Error::Other(format!("unsupported method: {}", method))),
         };
 
-        request = request.headers(self.default_headers());
+        request = request.headers(self.default_headers()?);
 
         if let Some(ref body) = body {
             request = request.json(body);
@@ -159,25 +159,40 @@ impl HttpClient {
     }
 
     /// Returns default headers for V1 API requests.
-    fn default_headers(&self) -> HeaderMap {
+    ///
+    /// Returns an error if authentication credentials contain invalid HTTP header characters.
+    fn default_headers(&self) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
 
         // Set authentication header
         if let Some(ref api_key) = self.auth.api_key {
             // Simple API Key (recommended)
-            headers.insert("x-api-key", HeaderValue::from_str(api_key).unwrap());
+            headers.insert(
+                "x-api-key",
+                HeaderValue::from_str(api_key)
+                    .map_err(|_| Error::Config("invalid api_key: contains invalid HTTP header characters".into()))?,
+            );
         } else if let Some(ref token) = self.auth.access_token {
             // Bearer Token (note: format is "Bearer;{token}" not "Bearer {token}")
             let auth_value = format!("Bearer;{}", token);
-            headers.insert(AUTHORIZATION, HeaderValue::from_str(&auth_value).unwrap());
+            headers.insert(
+                AUTHORIZATION,
+                HeaderValue::from_str(&auth_value)
+                    .map_err(|_| Error::Config("invalid access_token: contains invalid HTTP header characters".into()))?,
+            );
         } else if let Some(ref access_key) = self.auth.access_key {
             // V2/V3 API Key
             headers.insert(
                 "X-Api-Access-Key",
-                HeaderValue::from_str(access_key).unwrap(),
+                HeaderValue::from_str(access_key)
+                    .map_err(|_| Error::Config("invalid access_key: contains invalid HTTP header characters".into()))?,
             );
             if let Some(ref app_key) = self.auth.app_key {
-                headers.insert("X-Api-App-Key", HeaderValue::from_str(app_key).unwrap());
+                headers.insert(
+                    "X-Api-App-Key",
+                    HeaderValue::from_str(app_key)
+                        .map_err(|_| Error::Config("invalid app_key: contains invalid HTTP header characters".into()))?,
+                );
             }
         }
 
@@ -186,36 +201,49 @@ impl HttpClient {
             USER_AGENT,
             HeaderValue::from_static("giztoy-doubaospeech-rust/1.0"),
         );
-        headers
+        Ok(headers)
     }
 
     /// Returns headers for V2/V3 API requests.
-    pub fn v2_headers(&self, resource_id: Option<&str>) -> HeaderMap {
+    ///
+    /// Returns an error if authentication credentials contain invalid HTTP header characters.
+    pub fn v2_headers(&self, resource_id: Option<&str>) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
 
         // Set App Key (AppID)
         headers.insert(
             "X-Api-App-Key",
-            HeaderValue::from_str(&self.auth.app_id).unwrap(),
+            HeaderValue::from_str(&self.auth.app_id)
+                .map_err(|_| Error::Config("invalid app_id: contains invalid HTTP header characters".into()))?,
         );
 
         // Set Access Key (Bearer Token)
         if let Some(ref access_key) = self.auth.access_key {
             headers.insert(
                 "X-Api-Access-Key",
-                HeaderValue::from_str(access_key).unwrap(),
+                HeaderValue::from_str(access_key)
+                    .map_err(|_| Error::Config("invalid access_key: contains invalid HTTP header characters".into()))?,
             );
         } else if let Some(ref token) = self.auth.access_token {
-            headers.insert("X-Api-Access-Key", HeaderValue::from_str(token).unwrap());
+            headers.insert(
+                "X-Api-Access-Key",
+                HeaderValue::from_str(token)
+                    .map_err(|_| Error::Config("invalid access_token: contains invalid HTTP header characters".into()))?,
+            );
         } else if let Some(ref api_key) = self.auth.api_key {
-            headers.insert("x-api-key", HeaderValue::from_str(api_key).unwrap());
+            headers.insert(
+                "x-api-key",
+                HeaderValue::from_str(api_key)
+                    .map_err(|_| Error::Config("invalid api_key: contains invalid HTTP header characters".into()))?,
+            );
         }
 
         // Set Resource ID
         if let Some(resource_id) = resource_id {
             headers.insert(
                 "X-Api-Resource-Id",
-                HeaderValue::from_str(resource_id).unwrap(),
+                HeaderValue::from_str(resource_id)
+                    .map_err(|_| Error::Config("invalid resource_id: contains invalid HTTP header characters".into()))?,
             );
         }
 
@@ -225,7 +253,7 @@ impl HttpClient {
             HeaderValue::from_static("giztoy-doubaospeech-rust/1.0"),
         );
 
-        headers
+        Ok(headers)
     }
 
     /// Handles the API response.

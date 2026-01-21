@@ -372,6 +372,7 @@ impl RealtimeConnection {
             event_rx: Arc::new(Mutex::new(rx)),
             event_tx: tx,
             closed: Arc::new(RwLock::new(false)),
+            receive_task: Arc::new(Mutex::new(None)),
         };
 
         // Start receive loop
@@ -383,11 +384,18 @@ impl RealtimeConnection {
             event_rx: session.event_rx.clone(),
             event_tx: session.event_tx.clone(),
             closed: session.closed.clone(),
+            receive_task: session.receive_task.clone(),
         };
 
-        tokio::spawn(async move {
+        let handle = tokio::spawn(async move {
             session_clone.receive_loop().await;
         });
+
+        // Store the task handle for graceful shutdown
+        {
+            let mut task = session.receive_task.lock().await;
+            *task = Some(handle);
+        }
 
         // Wait for session start confirmation
         let mut rx = session.event_rx.lock().await;
@@ -480,6 +488,8 @@ pub struct RealtimeSession {
     event_rx: Arc<Mutex<mpsc::Receiver<RealtimeEvent>>>,
     event_tx: mpsc::Sender<RealtimeEvent>,
     closed: Arc<RwLock<bool>>,
+    /// Handle to the background receive task for graceful shutdown.
+    receive_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
 impl RealtimeSession {
@@ -579,12 +589,16 @@ impl RealtimeSession {
     }
 
     /// Closes the session.
+    ///
+    /// This will signal the receive loop to stop and wait for it to complete,
+    /// ensuring graceful shutdown.
     pub async fn close(&self) -> Result<()> {
         let mut closed = self.closed.write().await;
         if *closed {
             return Ok(());
         }
         *closed = true;
+        drop(closed); // Release lock before awaiting task
 
         // Send finish message
         let msg = serde_json::json!({
@@ -596,8 +610,23 @@ impl RealtimeSession {
 
         let json_data = serde_json::to_string(&msg).map_err(|e| Error::Json(e))?;
 
-        let mut write = self.conn_write.lock().await;
-        let _ = write.send(WsMessage::Text(json_data.into())).await;
+        {
+            let mut write = self.conn_write.lock().await;
+            let _ = write.send(WsMessage::Text(json_data.into())).await;
+        }
+
+        // Wait for the receive task to complete
+        let handle = {
+            let mut task = self.receive_task.lock().await;
+            task.take()
+        };
+        if let Some(handle) = handle {
+            // Wait with timeout to avoid hanging indefinitely
+            let _ = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                handle,
+            ).await;
+        }
 
         Ok(())
     }
