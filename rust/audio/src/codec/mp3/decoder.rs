@@ -229,6 +229,251 @@ mod tests {
         assert_eq!(decoder.bitrate(), 0);
     }
 
+    /// Generate a sine wave as i16 PCM samples.
+    fn generate_sine_wave(sample_rate: i32, frequency: f64, duration_ms: u32) -> Vec<i16> {
+        let num_samples = (sample_rate as u64 * duration_ms as u64 / 1000) as usize;
+        let mut samples = Vec::with_capacity(num_samples);
+        
+        for i in 0..num_samples {
+            let t = i as f64 / sample_rate as f64;
+            let value = (2.0 * std::f64::consts::PI * frequency * t).sin();
+            // Use 0.8 amplitude to avoid clipping
+            samples.push((value * 0.8 * i16::MAX as f64) as i16);
+        }
+        
+        samples
+    }
+
+    /// Convert i16 samples to bytes (little-endian).
+    fn samples_to_bytes(samples: &[i16]) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(samples.len() * 2);
+        for &sample in samples {
+            bytes.extend_from_slice(&sample.to_le_bytes());
+        }
+        bytes
+    }
+
+    /// Convert bytes to i16 samples (little-endian).
+    fn bytes_to_samples(bytes: &[u8]) -> Vec<i16> {
+        bytes.chunks_exact(2)
+            .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect()
+    }
+
+    /// Calculate RMS (Root Mean Square) energy of samples.
+    fn calculate_rms(samples: &[i16]) -> f64 {
+        if samples.is_empty() {
+            return 0.0;
+        }
+        let sum: f64 = samples.iter().map(|&s| (s as f64).powi(2)).sum();
+        (sum / samples.len() as f64).sqrt()
+    }
+
+    /// Find the dominant frequency using zero-crossing rate.
+    /// Returns approximate frequency in Hz.
+    fn estimate_frequency(samples: &[i16], sample_rate: i32) -> f64 {
+        if samples.len() < 4 {
+            return 0.0;
+        }
+
+        let mut zero_crossings = 0;
+        for i in 1..samples.len() {
+            if (samples[i-1] >= 0 && samples[i] < 0) || (samples[i-1] < 0 && samples[i] >= 0) {
+                zero_crossings += 1;
+            }
+        }
+
+        // Each complete cycle has 2 zero crossings
+        let duration_sec = samples.len() as f64 / sample_rate as f64;
+        zero_crossings as f64 / (2.0 * duration_sec)
+    }
+
+    /// Find best alignment offset using cross-correlation on a subset.
+    fn find_best_offset(original: &[i16], decoded: &[i16], max_offset: usize) -> usize {
+        let chunk_size = 2000.min(original.len() / 2);
+        if chunk_size < 100 || decoded.len() < chunk_size + max_offset {
+            return 0;
+        }
+
+        let orig_chunk = &original[..chunk_size];
+        let mut best_offset = 0;
+        let mut best_corr = f64::NEG_INFINITY;
+
+        for offset in 0..max_offset.min(decoded.len() - chunk_size) {
+            let dec_chunk = &decoded[offset..offset + chunk_size];
+            
+            // Calculate dot product as correlation proxy
+            let mut dot: f64 = 0.0;
+            for i in 0..chunk_size {
+                dot += orig_chunk[i] as f64 * dec_chunk[i] as f64;
+            }
+            
+            if dot > best_corr {
+                best_corr = dot;
+                best_offset = offset;
+            }
+        }
+
+        best_offset
+    }
+
+    #[test]
+    fn test_encode_decode_roundtrip() {
+        use super::super::encoder::{Mp3Encoder, EncoderOptions, Quality};
+
+        let sample_rate = 44100;
+        let channels = 1;
+        let frequency = 440.0; // A4 note
+        let duration_ms = 500; // 500ms of audio
+
+        // Step 1: Generate sine wave PCM
+        let original_samples = generate_sine_wave(sample_rate, frequency, duration_ms);
+        let pcm_bytes = samples_to_bytes(&original_samples);
+        
+        // Step 2: Encode to MP3
+        let mut mp3_data = Vec::new();
+        {
+            let mut encoder = Mp3Encoder::new(
+                &mut mp3_data,
+                sample_rate,
+                channels,
+                EncoderOptions::default().with_quality(Quality::High),
+            ).expect("Failed to create encoder");
+            
+            encoder.write(&pcm_bytes).expect("Failed to encode");
+            encoder.flush().expect("Failed to flush");
+        }
+
+        // Verify MP3 data was generated
+        assert!(!mp3_data.is_empty(), "MP3 data should not be empty");
+        assert!(mp3_data.len() < pcm_bytes.len(), "MP3 should be smaller than raw PCM");
+
+        // Step 3: Decode MP3 back to PCM
+        let mut decoder = Mp3Decoder::new(Cursor::new(mp3_data));
+        let mut decoded_bytes = vec![0u8; pcm_bytes.len() * 2]; // Extra space for padding
+        let mut total_decoded = 0;
+
+        loop {
+            let n = decoder.read(&mut decoded_bytes[total_decoded..]).expect("Failed to decode");
+            if n == 0 {
+                break;
+            }
+            total_decoded += n;
+        }
+
+        decoded_bytes.truncate(total_decoded);
+        let decoded_samples = bytes_to_samples(&decoded_bytes);
+
+        // Step 4: Verify decoded audio properties
+        assert_eq!(decoder.sample_rate(), sample_rate, "Sample rate should match");
+        assert_eq!(decoder.channels(), channels, "Channels should match");
+
+        // Decoded length should be similar (MP3 adds padding, typically up to 2304 samples)
+        let length_ratio = decoded_samples.len() as f64 / original_samples.len() as f64;
+        assert!(
+            length_ratio > 0.8 && length_ratio < 1.3,
+            "Decoded length ratio {} is out of expected range (0.8-1.3)",
+            length_ratio
+        );
+
+        // Step 5: Verify audio content quality
+        
+        // 5a: Decoded audio should have significant energy (not silence)
+        let original_rms = calculate_rms(&original_samples);
+        let decoded_rms = calculate_rms(&decoded_samples);
+        
+        assert!(decoded_rms > 0.0, "Decoded audio should not be silent");
+        
+        // RMS should be within 50% of original (lossy compression affects amplitude)
+        let rms_ratio = decoded_rms / original_rms;
+        assert!(
+            rms_ratio > 0.5 && rms_ratio < 2.0,
+            "RMS ratio {} is out of expected range (0.5-2.0)",
+            rms_ratio
+        );
+
+        // 5b: Verify the dominant frequency is preserved
+        // Find best alignment to account for encoder delay
+        let offset = find_best_offset(&original_samples, &decoded_samples, 3000);
+        
+        // Skip encoder delay and use middle portion
+        let analyze_start = offset + 1000;
+        let analyze_len = 8000.min(decoded_samples.len().saturating_sub(analyze_start + 1000));
+        
+        if analyze_len > 2000 {
+            let orig_freq = estimate_frequency(
+                &original_samples[1000..1000 + analyze_len],
+                sample_rate
+            );
+            let dec_freq = estimate_frequency(
+                &decoded_samples[analyze_start..analyze_start + analyze_len],
+                sample_rate
+            );
+
+            // Frequency should be preserved within 10%
+            let freq_ratio = dec_freq / orig_freq;
+            assert!(
+                freq_ratio > 0.9 && freq_ratio < 1.1,
+                "Frequency {} Hz differs too much from original {} Hz (ratio: {})",
+                dec_freq, orig_freq, freq_ratio
+            );
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_stereo() {
+        use super::super::encoder::{Mp3Encoder, EncoderOptions, Quality};
+
+        let sample_rate = 44100;
+        let channels = 2;
+        let duration_ms = 200;
+
+        // Generate stereo sine wave (different frequencies for L/R)
+        let num_samples = (sample_rate as u64 * duration_ms as u64 / 1000) as usize;
+        let mut stereo_samples = Vec::with_capacity(num_samples * 2);
+        
+        for i in 0..num_samples {
+            let t = i as f64 / sample_rate as f64;
+            // Left channel: 440 Hz
+            let left = ((2.0 * std::f64::consts::PI * 440.0 * t).sin() * 0.7 * i16::MAX as f64) as i16;
+            // Right channel: 880 Hz
+            let right = ((2.0 * std::f64::consts::PI * 880.0 * t).sin() * 0.7 * i16::MAX as f64) as i16;
+            stereo_samples.push(left);
+            stereo_samples.push(right);
+        }
+
+        let pcm_bytes = samples_to_bytes(&stereo_samples);
+
+        // Encode
+        let mut mp3_data = Vec::new();
+        {
+            let mut encoder = Mp3Encoder::new(
+                &mut mp3_data,
+                sample_rate,
+                channels,
+                EncoderOptions::default().with_quality(Quality::Medium),
+            ).expect("Failed to create encoder");
+            
+            encoder.write(&pcm_bytes).expect("Failed to encode");
+            encoder.flush().expect("Failed to flush");
+        }
+
+        // Decode
+        let mut decoder = Mp3Decoder::new(Cursor::new(mp3_data));
+        let mut decoded_bytes = vec![0u8; pcm_bytes.len() * 2];
+        let mut total = 0;
+
+        loop {
+            let n = decoder.read(&mut decoded_bytes[total..]).expect("Decode failed");
+            if n == 0 { break; }
+            total += n;
+        }
+
+        // Verify stereo
+        assert_eq!(decoder.channels(), 2, "Should decode as stereo");
+        assert!(total > 0, "Should have decoded some audio");
+    }
+
     #[test]
     fn test_decoder_close() {
         let data = Vec::<u8>::new();
