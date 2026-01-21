@@ -42,13 +42,18 @@ mod broker;
 mod client;
 mod error;
 mod protocol;
+pub mod transport;
 pub mod trie;
 mod types;
 
 pub use broker::{Broker, BrokerConfig, BrokerBuilder};
 pub use client::{Client, ClientConfig};
 pub use error::{Error, Result};
+pub use transport::TransportType;
 pub use types::{Authenticator, Handler, Message, ProtocolVersion, QoS};
+
+#[cfg(feature = "tls")]
+pub use transport::tls::TlsConfig;
 
 #[cfg(test)]
 mod tests;
