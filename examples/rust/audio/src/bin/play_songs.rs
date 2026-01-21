@@ -101,13 +101,13 @@ fn main() {
             print!("   Rendering...");
             std::io::stdout().flush().ok();
             
-            let pcm_data = song.render_bytes(opts);
+            let pcm_data = song.render_bytes(opts.clone());
             
-            let duration_ms = pcm_data.len() as u64 * 1000 / (16000 * 2);
+            let duration_ms = pcm_data.len() as u64 * 1000 / (opts.format.bytes_rate() as u64);
             println!(" {} bytes ({:.1}s)", pcm_data.len(), duration_ms as f64 / 1000.0);
             
             // Create WAV data
-            let wav_data = create_wav(&pcm_data, 16000, 1, 16);
+            let wav_data = create_wav(&pcm_data, opts.format);
             
             // Determine output file
             let wav_path = output_file.clone().unwrap_or_else(|| {
@@ -186,7 +186,10 @@ fn list_all_songs() {
 }
 
 /// Creates a WAV file from raw PCM data.
-fn create_wav(pcm: &[u8], sample_rate: u32, channels: u16, bits_per_sample: u16) -> Vec<u8> {
+fn create_wav(pcm: &[u8], format: Format) -> Vec<u8> {
+    let sample_rate = format.sample_rate();
+    let channels = format.channels() as u16;
+    let bits_per_sample = format.depth() as u16;
     let byte_rate = sample_rate * channels as u32 * bits_per_sample as u32 / 8;
     let block_align = channels * bits_per_sample / 8;
     let data_size = pcm.len() as u32;

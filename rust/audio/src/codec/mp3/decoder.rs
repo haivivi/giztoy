@@ -138,7 +138,7 @@ impl<R: Read> Mp3Decoder<R> {
             return 0;
         }
 
-        let channels = if self.info.channels > 0 { self.info.channels } else { 2 };
+        let channels = if self.info.channels > 0 { self.info.channels } else { 1 };
         let available_samples = self.pcm_len - self.pcm_pos;
         let available_bytes = available_samples * (channels as usize) * 2;
         let to_copy = (buf.len() - offset).min(available_bytes);

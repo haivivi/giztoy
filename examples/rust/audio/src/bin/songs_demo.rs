@@ -27,14 +27,15 @@ fn main() {
             .with_volume(0.5)
             .with_rich_sound(true);
 
-        let data = song.render_bytes(opts);
+        let data = song.render_bytes(opts.clone());
         let duration_ms = song.duration();
 
         println!("  Format: L16Mono16K (16-bit, 16kHz, mono)");
         println!("  Duration: {} ms", duration_ms);
         println!("  Audio data size: {} bytes", data.len());
-        println!("  Expected bytes: {} (16kHz * 2 bytes * {} ms / 1000)", 
-                 16000 * 2 * duration_ms / 1000, duration_ms);
+        println!("  Expected bytes: {} ({} bytes/s * {} ms / 1000)", 
+                 opts.format.bytes_rate() as i32 * duration_ms / 1000, 
+                 opts.format.bytes_rate(), duration_ms);
 
         // Verify audio content
         let non_zero = data.iter().filter(|&&b| b != 0).count();
