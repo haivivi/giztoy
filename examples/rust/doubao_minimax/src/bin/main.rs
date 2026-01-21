@@ -275,7 +275,7 @@ async fn test_minimax(api_key: &str, _group_id: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-/// Test hybrid mode: Doubao + MiniMax
+/// Test hybrid mode: MiniMax TTS -> Doubao ASR -> MiniMax LLM -> MiniMax TTS
 async fn test_hybrid_mode(
     doubao_app_id: &str,
     doubao_token: &str,
@@ -290,21 +290,68 @@ async fn test_hybrid_mode(
         .bearer_token(doubao_token)
         .build()?;
 
-    println!("  Testing full hybrid pipeline...");
-    println!("  (Doubao Realtime) <-> (MiniMax LLM) -> (MiniMax TTS)");
+    println!("  Full hybrid pipeline:");
+    println!("  MiniMax TTS → Doubao ASR → MiniMax LLM → MiniMax TTS");
+    println!();
 
-    // Simulate user input (in real use, this would come from Doubao ASR)
-    let test_input = "帮我查一下明天北京的天气";
-    println!("  User Input: {}", test_input);
+    // Step 1: Use MiniMax TTS to generate audio for a question
+    let user_question = "明天北京的天气怎么样";
+    println!("  [Step 1] MiniMax TTS: Generating audio for '{}'", user_question);
 
-    // Use MiniMax LLM to process
+    let tts_resp1 = mm_client
+        .speech()
+        .synthesize(&SpeechRequest {
+            model: "speech-01-turbo".to_string(),
+            text: user_question.to_string(),
+            voice_setting: Some(VoiceSetting {
+                voice_id: "female-shaonv".to_string(),
+                ..Default::default()
+            }),
+            audio_setting: Some(AudioSetting {
+                format: Some(AudioFormat::Pcm),
+                sample_rate: Some(16000),
+                ..Default::default()
+            }),
+            ..Default::default()
+        })
+        .await?;
+
+    println!("  ✅ Generated audio: {} bytes (PCM 16kHz)", tts_resp1.audio.len());
+
+    // Save the question audio
+    fs::create_dir_all("tmp")?;
+    fs::write("tmp/hybrid_question_rust.pcm", &tts_resp1.audio)?;
+    println!("  ✅ Saved: tmp/hybrid_question_rust.pcm");
+
+    // Step 2: Use Doubao ASR to recognize the audio
+    println!("\n  [Step 2] Doubao ASR: Recognizing audio...");
+
+    use giztoy_doubaospeech::{AudioFormat as DsAudioFormat, Language, OneSentenceRequest, SampleRate};
+
+    let asr_resp = ds_client
+        .asr()
+        .recognize_one_sentence(&OneSentenceRequest {
+            audio: Some(tts_resp1.audio.clone()),
+            format: DsAudioFormat::Pcm,
+            sample_rate: Some(SampleRate::Rate16000),
+            language: Some(Language::ZhCn),
+            ..Default::default()
+        })
+        .await?;
+
+    let recognized_text = &asr_resp.text;
+    println!("  ✅ ASR Result: '{}'", recognized_text);
+
+    // Step 3: Use MiniMax LLM to process the recognized text
+    println!("\n  [Step 3] MiniMax LLM: Processing recognized text...");
+
     let llm_resp = mm_client
         .text()
         .create_chat_completion(&ChatCompletionRequest {
             model: "MiniMax-Text-01".to_string(),
             messages: vec![
-                Message::system("你是一个天气助手，简短回答天气问题"),
-                Message::user(test_input),
+                Message::system("你是一个天气助手，简短回答天气问题。回答不要超过50字。"),
+                Message::user(recognized_text),
             ],
             ..Default::default()
         })
@@ -316,10 +363,12 @@ async fn test_hybrid_mode(
         .and_then(|c| c.message.content_str())
         .unwrap_or("");
 
-    println!("  LLM Response: {}", truncate(llm_text, 100));
+    println!("  ✅ LLM Response: '{}'", truncate(llm_text, 100));
 
-    // Use MiniMax TTS to synthesize
-    let tts_resp = mm_client
+    // Step 4: Use MiniMax TTS to synthesize the response
+    println!("\n  [Step 4] MiniMax TTS: Synthesizing response...");
+
+    let tts_resp2 = mm_client
         .speech()
         .synthesize(&SpeechRequest {
             model: "speech-01-turbo".to_string(),
@@ -337,47 +386,18 @@ async fn test_hybrid_mode(
         })
         .await?;
 
-    println!("  TTS Audio: {} bytes", tts_resp.audio.len());
+    println!("  ✅ Response audio: {} bytes", tts_resp2.audio.len());
 
-    fs::write("tmp/hybrid_pipeline_rust.mp3", &tts_resp.audio)?;
-    println!("  ✅ Audio saved: tmp/hybrid_pipeline_rust.mp3");
+    fs::write("tmp/hybrid_response_rust.mp3", &tts_resp2.audio)?;
+    println!("  ✅ Saved: tmp/hybrid_response_rust.mp3");
 
-    // Also test Doubao Realtime connection
-    println!("\n  Testing Doubao Realtime connection...");
-    let config = RealtimeConfig {
-        dialog: RealtimeDialogConfig {
-            bot_name: "Test".to_string(),
-            system_role: "你是一个助手".to_string(),
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-
-    let session = ds_client.realtime().connect(&config).await?;
-    println!("  ✅ Doubao Realtime connected!");
-
-    // Send a test message
-    session.send_text("你好").await?;
-
-    // Wait for response
-    let mut got_response = false;
-    while let Some(event_result) = session.recv().await {
-        match event_result {
-            Ok(event) => {
-                if !event.text.is_empty() || event.audio.is_some() {
-                    got_response = true;
-                }
-                if event.event_type == Some(RealtimeEventType::TTSFinished) {
-                    break;
-                }
-            }
-            Err(_) => break,
-        }
-    }
-
-    if got_response {
-        println!("  ✅ Doubao Realtime response received!");
-    }
+    println!("\n  ========================================");
+    println!("  Hybrid Pipeline Summary:");
+    println!("  Input Question:    '{}'", user_question);
+    println!("  ASR Recognized:    '{}'", recognized_text);
+    println!("  LLM Response:      '{}'", truncate(llm_text, 60));
+    println!("  Output Audio:      tmp/hybrid_response_rust.mp3");
+    println!("  ========================================");
 
     println!("\n  ✅ Hybrid mode test completed!");
 

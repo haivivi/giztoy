@@ -209,38 +209,92 @@ func testMultiTurnConversation(appID, token string) {
 	fmt.Println("\n  ✅ Multi-turn conversation completed!")
 }
 
-// testHybridMode tests hybrid mode: Doubao ASR -> MiniMax LLM -> MiniMax TTS
+// testHybridMode tests hybrid mode: MiniMax TTS -> Doubao ASR -> MiniMax LLM -> MiniMax TTS
 func testHybridMode(doubaoAppID, doubaoToken, minimaxAPIKey, minimaxGroupID string) {
 	// Create MiniMax client
 	mmClient := mm.NewClient(minimaxAPIKey)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	// Create Doubao client
+	dsClient := ds.NewClient(doubaoAppID, ds.WithBearerToken(doubaoToken))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
 
-	// Test MiniMax LLM
-	fmt.Println("  Testing MiniMax LLM...")
-	llmResp, err := mmClient.Text.CreateChatCompletion(ctx, &mm.ChatCompletionRequest{
-		Model: "MiniMax-Text-01",
-		Messages: []mm.Message{
-			{Role: "system", Content: "你是一个友好的助手"},
-			{Role: "user", Content: "请用一句话介绍你自己"},
+	fmt.Println("  Full hybrid pipeline:")
+	fmt.Println("  MiniMax TTS → Doubao ASR → MiniMax LLM → MiniMax TTS")
+	fmt.Println()
+
+	// Step 1: Use MiniMax TTS to generate audio for a question
+	userQuestion := "明天北京的天气怎么样"
+	fmt.Printf("  [Step 1] MiniMax TTS: Generating audio for '%s'\n", userQuestion)
+
+	ttsResp1, err := mmClient.Speech.Synthesize(ctx, &mm.SpeechRequest{
+		Model: "speech-01-turbo",
+		Text:  userQuestion,
+		VoiceSetting: &mm.VoiceSetting{
+			VoiceID: "female-shaonv",
+		},
+		AudioSetting: &mm.AudioSetting{
+			Format:     mm.AudioFormatPCM,
+			SampleRate: 16000,
 		},
 	})
 	if err != nil {
-		fmt.Printf("  ❌ LLM failed: %v\n", err)
+		fmt.Printf("  ❌ MiniMax TTS failed: %v\n", err)
 		return
 	}
+	fmt.Printf("  ✅ Generated audio: %d bytes (PCM 16kHz)\n", len(ttsResp1.Audio))
+
+	// Save the question audio
+	os.MkdirAll("tmp", 0755)
+	if err := os.WriteFile("tmp/hybrid_question.pcm", ttsResp1.Audio, 0644); err == nil {
+		fmt.Println("  ✅ Saved: tmp/hybrid_question.pcm")
+	}
+
+	// Step 2: Use Doubao ASR to recognize the audio
+	fmt.Println("\n  [Step 2] Doubao ASR: Recognizing audio...")
+
+	asrResp, err := dsClient.ASR.RecognizeOneSentence(ctx, &ds.OneSentenceRequest{
+		Audio:      ttsResp1.Audio,
+		Format:     ds.FormatPCM,
+		SampleRate: ds.SampleRate16000,
+		Language:   ds.LanguageZhCN,
+	})
+	if err != nil {
+		fmt.Printf("  ❌ Doubao ASR failed: %v\n", err)
+		return
+	}
+
+	recognizedText := asrResp.Text
+	fmt.Printf("  ✅ ASR Result: '%s'\n", recognizedText)
+
+	// Step 3: Use MiniMax LLM to process the recognized text
+	fmt.Println("\n  [Step 3] MiniMax LLM: Processing recognized text...")
+
+	llmResp, err := mmClient.Text.CreateChatCompletion(ctx, &mm.ChatCompletionRequest{
+		Model: "MiniMax-Text-01",
+		Messages: []mm.Message{
+			{Role: "system", Content: "你是一个天气助手，简短回答天气问题。回答不要超过50字。"},
+			{Role: "user", Content: recognizedText},
+		},
+	})
+	if err != nil {
+		fmt.Printf("  ❌ MiniMax LLM failed: %v\n", err)
+		return
+	}
+
 	llmText := ""
 	if len(llmResp.Choices) > 0 {
 		if content, ok := llmResp.Choices[0].Message.Content.(string); ok {
 			llmText = content
 		}
 	}
-	fmt.Printf("  ✅ LLM Response: %s\n", truncate(llmText, 80))
+	fmt.Printf("  ✅ LLM Response: '%s'\n", truncate(llmText, 100))
 
-	// Test MiniMax TTS
-	fmt.Println("  Testing MiniMax TTS...")
-	ttsResp, err := mmClient.Speech.Synthesize(ctx, &mm.SpeechRequest{
+	// Step 4: Use MiniMax TTS to synthesize the response
+	fmt.Println("\n  [Step 4] MiniMax TTS: Synthesizing response...")
+
+	ttsResp2, err := mmClient.Speech.Synthesize(ctx, &mm.SpeechRequest{
 		Model: "speech-01-turbo",
 		Text:  llmText,
 		VoiceSetting: &mm.VoiceSetting{
@@ -252,82 +306,22 @@ func testHybridMode(doubaoAppID, doubaoToken, minimaxAPIKey, minimaxGroupID stri
 		},
 	})
 	if err != nil {
-		fmt.Printf("  ❌ TTS failed: %v\n", err)
+		fmt.Printf("  ❌ MiniMax TTS failed: %v\n", err)
 		return
 	}
-	fmt.Printf("  ✅ TTS Audio: %d bytes\n", len(ttsResp.Audio))
+	fmt.Printf("  ✅ Response audio: %d bytes\n", len(ttsResp2.Audio))
 
-	// Save audio
-	os.MkdirAll("tmp", 0755)
-	if err := os.WriteFile("tmp/hybrid_minimax.mp3", ttsResp.Audio, 0644); err == nil {
-		fmt.Println("  ✅ Audio saved: tmp/hybrid_minimax.mp3")
+	if err := os.WriteFile("tmp/hybrid_response.mp3", ttsResp2.Audio, 0644); err == nil {
+		fmt.Println("  ✅ Saved: tmp/hybrid_response.mp3")
 	}
 
-	// Now test the full hybrid pipeline
-	fmt.Println("\n  Testing full hybrid pipeline...")
-	fmt.Println("  (Doubao Realtime ASR) -> (MiniMax LLM) -> (MiniMax TTS)")
-
-	// Create Doubao client for ASR via Realtime
-	dsClient := ds.NewClient(doubaoAppID, ds.WithBearerToken(doubaoToken))
-	dsConfig := &ds.RealtimeConfig{
-		Dialog: ds.RealtimeDialogConfig{
-			BotName:    "Test",
-			SystemRole: "只做语音识别，不要回答问题",
-		},
-	}
-
-	session, err := dsClient.Realtime.Connect(ctx, dsConfig)
-	if err != nil {
-		fmt.Printf("  ❌ Doubao connect failed: %v\n", err)
-		return
-	}
-	defer session.Close()
-
-	// Send text to get ASR simulation (in real use, you'd send audio)
-	testInput := "帮我查一下明天北京的天气"
-	fmt.Printf("  User Input: %s\n", testInput)
-
-	// Use MiniMax LLM to process
-	llmResp2, err := mmClient.Text.CreateChatCompletion(ctx, &mm.ChatCompletionRequest{
-		Model: "MiniMax-Text-01",
-		Messages: []mm.Message{
-			{Role: "system", Content: "你是一个天气助手，简短回答天气问题"},
-			{Role: "user", Content: testInput},
-		},
-	})
-	if err != nil {
-		fmt.Printf("  ❌ LLM failed: %v\n", err)
-		return
-	}
-	llmText2 := ""
-	if len(llmResp2.Choices) > 0 {
-		if content, ok := llmResp2.Choices[0].Message.Content.(string); ok {
-			llmText2 = content
-		}
-	}
-	fmt.Printf("  LLM Response: %s\n", truncate(llmText2, 100))
-
-	// Use MiniMax TTS to synthesize
-	ttsResp2, err := mmClient.Speech.Synthesize(ctx, &mm.SpeechRequest{
-		Model: "speech-01-turbo",
-		Text:  llmText2,
-		VoiceSetting: &mm.VoiceSetting{
-			VoiceID: "female-shaonv",
-		},
-		AudioSetting: &mm.AudioSetting{
-			Format:     mm.AudioFormatMP3,
-			SampleRate: 24000,
-		},
-	})
-	if err != nil {
-		fmt.Printf("  ❌ TTS failed: %v\n", err)
-		return
-	}
-	fmt.Printf("  TTS Audio: %d bytes\n", len(ttsResp2.Audio))
-
-	if err := os.WriteFile("tmp/hybrid_pipeline.mp3", ttsResp2.Audio, 0644); err == nil {
-		fmt.Println("  ✅ Audio saved: tmp/hybrid_pipeline.mp3")
-	}
+	fmt.Println("\n  ========================================")
+	fmt.Println("  Hybrid Pipeline Summary:")
+	fmt.Printf("  Input Question:    '%s'\n", userQuestion)
+	fmt.Printf("  ASR Recognized:    '%s'\n", recognizedText)
+	fmt.Printf("  LLM Response:      '%s'\n", truncate(llmText, 60))
+	fmt.Println("  Output Audio:      tmp/hybrid_response.mp3")
+	fmt.Println("  ========================================")
 
 	fmt.Println("\n  ✅ Hybrid mode test completed!")
 }
