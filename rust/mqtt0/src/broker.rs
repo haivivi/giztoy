@@ -98,6 +98,7 @@ impl BrokerBuilder {
             on_disconnect: self.on_disconnect,
             subscriptions: Arc::new(RwLock::new(Trie::new())),
             clients: Arc::new(RwLock::new(HashMap::new())),
+            client_subscriptions: Arc::new(RwLock::new(HashMap::new())),
             running: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -125,6 +126,8 @@ pub struct Broker {
     on_disconnect: Option<Callback>,
     subscriptions: Arc<RwLock<Trie<ClientHandle>>>,
     clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
+    /// Track subscriptions per client for efficient cleanup on disconnect.
+    client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
     running: Arc<AtomicBool>,
 }
 
@@ -159,6 +162,7 @@ impl Broker {
                 on_disconnect: self.on_disconnect.clone(),
                 subscriptions: Arc::clone(&self.subscriptions),
                 clients: Arc::clone(&self.clients),
+                client_subscriptions: Arc::clone(&self.client_subscriptions),
                 max_packet_size: self.config.max_packet_size,
             };
 
@@ -199,6 +203,8 @@ struct BrokerContext {
     on_disconnect: Option<Callback>,
     subscriptions: Arc<RwLock<Trie<ClientHandle>>>,
     clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
+    /// Track subscriptions per client for efficient cleanup on disconnect.
+    client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
     max_packet_size: usize,
 }
 
@@ -287,9 +293,10 @@ impl BrokerContext {
         // Read CONNECT packet
         let packet = protocol::v4::read_packet(&mut reader, &mut read_buf, self.max_packet_size).await?;
 
-        let client_id = match packet {
+        let (client_id, keep_alive) = match packet {
             Packet::Connect(connect) => {
                 let client_id = connect.client_id.clone();
+                let keep_alive = connect.keep_alive;
                 let username = connect.login.as_ref().map(|l| l.username.as_str()).unwrap_or("");
                 let password = connect.login.as_ref().map(|l| l.password.as_bytes()).unwrap_or(&[]);
 
@@ -300,12 +307,12 @@ impl BrokerContext {
                     return Err(Error::AuthenticationFailed);
                 }
 
-                debug!("Client {} authenticated (v4)", client_id);
+                debug!("Client {} authenticated (v4), keep_alive={}s", client_id, keep_alive);
 
                 let connack = protocol::v4::create_connack(false, ConnectReturnCode::Success);
                 protocol::v4::write_packet(&mut writer, connack).await?;
 
-                client_id
+                (client_id, keep_alive)
             }
             other => {
                 return Err(Error::UnexpectedPacket {
@@ -315,7 +322,7 @@ impl BrokerContext {
             }
         };
 
-        self.run_client_v4(&client_id, reader, writer, read_buf).await
+        self.run_client_v4(&client_id, keep_alive, reader, writer, read_buf).await
     }
 
     async fn handle_connection_v5(
@@ -329,9 +336,10 @@ impl BrokerContext {
         // Read CONNECT packet
         let packet = protocol::v5::read_packet(&mut reader, &mut read_buf, self.max_packet_size).await?;
 
-        let client_id = match packet {
+        let (client_id, keep_alive) = match packet {
             Packet::Connect(connect, _, login) => {
                 let client_id = connect.client_id.clone();
+                let keep_alive = connect.keep_alive;
                 let username = login.as_ref().map(|l| l.username.as_str()).unwrap_or("");
                 let password = login.as_ref().map(|l| l.password.as_bytes()).unwrap_or(&[]);
 
@@ -352,12 +360,12 @@ impl BrokerContext {
                     return Err(Error::AuthenticationFailed);
                 }
 
-                debug!("Client {} authenticated (v5)", client_id);
+                debug!("Client {} authenticated (v5), keep_alive={}s", client_id, keep_alive);
 
                 let connack = protocol::v5::create_connack(false, ConnectReturnCode::Success);
                 protocol::v5::write_packet(&mut writer, connack).await?;
 
-                client_id
+                (client_id, keep_alive)
             }
             other => {
                 return Err(Error::UnexpectedPacket {
@@ -367,12 +375,13 @@ impl BrokerContext {
             }
         };
 
-        self.run_client_v5(&client_id, reader, writer, read_buf).await
+        self.run_client_v5(&client_id, keep_alive, reader, writer, read_buf).await
     }
 
     async fn run_client_v4(
         &self,
         client_id: &str,
+        keep_alive: u16,
         reader: ReadHalf<TcpStream>,
         writer: WriteHalf<TcpStream>,
         read_buf: BytesMut,
@@ -396,7 +405,7 @@ impl BrokerContext {
         };
 
         let result = self
-            .client_loop_v4(client_id, &client_handle, reader, writer, read_buf, rx)
+            .client_loop_v4(client_id, keep_alive, &client_handle, reader, writer, read_buf, rx)
             .await;
 
         self.cleanup_client(client_id);
@@ -412,6 +421,7 @@ impl BrokerContext {
     async fn run_client_v5(
         &self,
         client_id: &str,
+        keep_alive: u16,
         reader: ReadHalf<TcpStream>,
         writer: WriteHalf<TcpStream>,
         read_buf: BytesMut,
@@ -435,7 +445,7 @@ impl BrokerContext {
         };
 
         let result = self
-            .client_loop_v5(client_id, &client_handle, reader, writer, read_buf, rx)
+            .client_loop_v5(client_id, keep_alive, &client_handle, reader, writer, read_buf, rx)
             .await;
 
         self.cleanup_client(client_id);
@@ -451,6 +461,7 @@ impl BrokerContext {
     async fn client_loop_v4(
         &self,
         client_id: &str,
+        keep_alive: u16,
         client_handle: &ClientHandle,
         mut reader: ReadHalf<TcpStream>,
         mut writer: WriteHalf<TcpStream>,
@@ -458,47 +469,76 @@ impl BrokerContext {
         mut rx: mpsc::Receiver<Message>,
     ) -> Result<()> {
         use crate::protocol::v4::Packet;
+        use std::time::Duration;
+
+        // MQTT spec: disconnect if no packet received within 1.5 × keep_alive
+        // If keep_alive is 0, no timeout (client disabled keep-alive)
+        let timeout_duration = if keep_alive > 0 {
+            Some(Duration::from_secs((keep_alive as u64 * 3) / 2))
+        } else {
+            None
+        };
 
         loop {
-            tokio::select! {
-                msg = rx.recv() => {
-                    match msg {
-                        Some(msg) => {
-                            let publish = protocol::v4::create_publish(&msg.topic, &msg.payload, msg.retain);
-                            protocol::v4::write_packet(&mut writer, publish).await?;
-                        }
-                        None => return Ok(()),
-                    }
-                }
-
-                result = protocol::v4::read_packet(&mut reader, &mut read_buf, self.max_packet_size) => {
-                    let packet = result?;
-
-                    match packet {
-                        Packet::Publish(publish) => {
-                            self.handle_publish_v4(client_id, publish).await?;
-                        }
-                        Packet::Subscribe(subscribe) => {
-                            let return_codes = self.handle_subscribe_v4(client_id, client_handle, &subscribe.filters).await;
-                            let suback = protocol::v4::create_suback(subscribe.pkid, return_codes);
-                            protocol::v4::write_packet(&mut writer, suback).await?;
-                        }
-                        Packet::Unsubscribe(unsubscribe) => {
-                            self.handle_unsubscribe(client_id, &unsubscribe.topics);
-                            let unsuback = protocol::v4::create_unsuback(unsubscribe.pkid);
-                            protocol::v4::write_packet(&mut writer, unsuback).await?;
-                        }
-                        Packet::PingReq => {
-                            protocol::v4::write_packet(&mut writer, protocol::v4::create_pingresp()).await?;
-                        }
-                        Packet::Disconnect => {
-                            return Ok(());
-                        }
-                        _ => {
-                            trace!("Ignoring packet from {}: {:?}", client_id, packet);
+            let select_future = async {
+                tokio::select! {
+                    msg = rx.recv() => {
+                        match msg {
+                            Some(msg) => {
+                                let publish = protocol::v4::create_publish(&msg.topic, &msg.payload, msg.retain);
+                                protocol::v4::write_packet(&mut writer, publish).await?;
+                                Ok::<bool, Error>(false) // continue loop
+                            }
+                            None => Ok::<bool, Error>(true), // exit loop
                         }
                     }
+
+                    result = protocol::v4::read_packet(&mut reader, &mut read_buf, self.max_packet_size) => {
+                        let packet = result?;
+
+                        match packet {
+                            Packet::Publish(publish) => {
+                                self.handle_publish_v4(client_id, publish).await?;
+                            }
+                            Packet::Subscribe(subscribe) => {
+                                let return_codes = self.handle_subscribe_v4(client_id, client_handle, &subscribe.filters).await;
+                                let suback = protocol::v4::create_suback(subscribe.pkid, return_codes);
+                                protocol::v4::write_packet(&mut writer, suback).await?;
+                            }
+                            Packet::Unsubscribe(unsubscribe) => {
+                                self.handle_unsubscribe(client_id, &unsubscribe.topics);
+                                let unsuback = protocol::v4::create_unsuback(unsubscribe.pkid);
+                                protocol::v4::write_packet(&mut writer, unsuback).await?;
+                            }
+                            Packet::PingReq => {
+                                protocol::v4::write_packet(&mut writer, protocol::v4::create_pingresp()).await?;
+                            }
+                            Packet::Disconnect => {
+                                return Ok::<bool, Error>(true); // exit loop
+                            }
+                            _ => {
+                                trace!("Ignoring packet from {}: {:?}", client_id, packet);
+                            }
+                        }
+                        Ok::<bool, Error>(false) // continue loop
+                    }
                 }
+            };
+
+            let should_exit = if let Some(timeout) = timeout_duration {
+                match tokio::time::timeout(timeout, select_future).await {
+                    Ok(result) => result?,
+                    Err(_) => {
+                        warn!("Client {} keep-alive timeout ({}s), disconnecting", client_id, keep_alive);
+                        return Err(Error::Protocol("keep-alive timeout".to_string()));
+                    }
+                }
+            } else {
+                select_future.await?
+            };
+
+            if should_exit {
+                return Ok(());
             }
         }
     }
@@ -506,6 +546,7 @@ impl BrokerContext {
     async fn client_loop_v5(
         &self,
         client_id: &str,
+        keep_alive: u16,
         client_handle: &ClientHandle,
         mut reader: ReadHalf<TcpStream>,
         mut writer: WriteHalf<TcpStream>,
@@ -513,48 +554,77 @@ impl BrokerContext {
         mut rx: mpsc::Receiver<Message>,
     ) -> Result<()> {
         use crate::protocol::v5::Packet;
+        use std::time::Duration;
+
+        // MQTT spec: disconnect if no packet received within 1.5 × keep_alive
+        // If keep_alive is 0, no timeout (client disabled keep-alive)
+        let timeout_duration = if keep_alive > 0 {
+            Some(Duration::from_secs((keep_alive as u64 * 3) / 2))
+        } else {
+            None
+        };
 
         loop {
-            tokio::select! {
-                msg = rx.recv() => {
-                    match msg {
-                        Some(msg) => {
-                            let publish = protocol::v5::create_publish(&msg.topic, &msg.payload, msg.retain);
-                            protocol::v5::write_packet(&mut writer, publish).await?;
-                        }
-                        None => return Ok(()),
-                    }
-                }
-
-                result = protocol::v5::read_packet(&mut reader, &mut read_buf, self.max_packet_size) => {
-                    let packet = result?;
-
-                    match packet {
-                        Packet::Publish(publish) => {
-                            self.handle_publish_v5(client_id, publish).await?;
-                        }
-                        Packet::Subscribe(subscribe) => {
-                            let return_codes = self.handle_subscribe_v5(client_id, client_handle, &subscribe.filters).await;
-                            let suback = protocol::v5::create_suback(subscribe.pkid, return_codes);
-                            protocol::v5::write_packet(&mut writer, suback).await?;
-                        }
-                        Packet::Unsubscribe(unsubscribe) => {
-                            let topics: Vec<String> = unsubscribe.filters.clone();
-                            self.handle_unsubscribe(client_id, &topics);
-                            let unsuback = protocol::v5::create_unsuback(unsubscribe.pkid);
-                            protocol::v5::write_packet(&mut writer, unsuback).await?;
-                        }
-                        Packet::PingReq(_) => {
-                            protocol::v5::write_packet(&mut writer, protocol::v5::create_pingresp()).await?;
-                        }
-                        Packet::Disconnect(_) => {
-                            return Ok(());
-                        }
-                        _ => {
-                            trace!("Ignoring packet from {}: {:?}", client_id, packet);
+            let select_future = async {
+                tokio::select! {
+                    msg = rx.recv() => {
+                        match msg {
+                            Some(msg) => {
+                                let publish = protocol::v5::create_publish(&msg.topic, &msg.payload, msg.retain);
+                                protocol::v5::write_packet(&mut writer, publish).await?;
+                                Ok::<bool, Error>(false) // continue loop
+                            }
+                            None => Ok::<bool, Error>(true), // exit loop
                         }
                     }
+
+                    result = protocol::v5::read_packet(&mut reader, &mut read_buf, self.max_packet_size) => {
+                        let packet = result?;
+
+                        match packet {
+                            Packet::Publish(publish) => {
+                                self.handle_publish_v5(client_id, publish).await?;
+                            }
+                            Packet::Subscribe(subscribe) => {
+                                let return_codes = self.handle_subscribe_v5(client_id, client_handle, &subscribe.filters).await;
+                                let suback = protocol::v5::create_suback(subscribe.pkid, return_codes);
+                                protocol::v5::write_packet(&mut writer, suback).await?;
+                            }
+                            Packet::Unsubscribe(unsubscribe) => {
+                                let topics: Vec<String> = unsubscribe.filters.clone();
+                                self.handle_unsubscribe(client_id, &topics);
+                                let unsuback = protocol::v5::create_unsuback(unsubscribe.pkid);
+                                protocol::v5::write_packet(&mut writer, unsuback).await?;
+                            }
+                            Packet::PingReq(_) => {
+                                protocol::v5::write_packet(&mut writer, protocol::v5::create_pingresp()).await?;
+                            }
+                            Packet::Disconnect(_) => {
+                                return Ok::<bool, Error>(true); // exit loop
+                            }
+                            _ => {
+                                trace!("Ignoring packet from {}: {:?}", client_id, packet);
+                            }
+                        }
+                        Ok::<bool, Error>(false) // continue loop
+                    }
                 }
+            };
+
+            let should_exit = if let Some(timeout) = timeout_duration {
+                match tokio::time::timeout(timeout, select_future).await {
+                    Ok(result) => result?,
+                    Err(_) => {
+                        warn!("Client {} keep-alive timeout ({}s), disconnecting", client_id, keep_alive);
+                        return Err(Error::Protocol("keep-alive timeout".to_string()));
+                    }
+                }
+            } else {
+                select_future.await?
+            };
+
+            if should_exit {
+                return Ok(());
             }
         }
     }
@@ -647,9 +717,25 @@ impl BrokerContext {
                 continue;
             }
 
-            {
+            // Insert into trie and handle errors
+            let insert_result = {
                 let subs = self.subscriptions.read();
-                let _ = subs.insert(topic, client_handle.clone());
+                subs.insert(topic, client_handle.clone())
+            };
+
+            if let Err(e) = insert_result {
+                warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
+                return_codes.push(SubscribeReasonCode::Failure);
+                continue;
+            }
+
+            // Track subscription for cleanup on disconnect
+            {
+                let mut client_subs = self.client_subscriptions.write();
+                client_subs
+                    .entry(client_id.to_string())
+                    .or_default()
+                    .push(topic.to_string());
             }
 
             debug!("Client {} subscribed to {} (v4)", client_id, topic);
@@ -676,9 +762,25 @@ impl BrokerContext {
                 continue;
             }
 
-            {
+            // Insert into trie and handle errors
+            let insert_result = {
                 let subs = self.subscriptions.read();
-                let _ = subs.insert(topic, client_handle.clone());
+                subs.insert(topic, client_handle.clone())
+            };
+
+            if let Err(e) = insert_result {
+                warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
+                return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
+                continue;
+            }
+
+            // Track subscription for cleanup on disconnect
+            {
+                let mut client_subs = self.client_subscriptions.write();
+                client_subs
+                    .entry(client_id.to_string())
+                    .or_default()
+                    .push(topic.to_string());
             }
 
             debug!("Client {} subscribed to {} (v5)", client_id, topic);
@@ -697,10 +799,30 @@ impl BrokerContext {
             });
             debug!("Client {} unsubscribed from {}", client_id, topic);
         }
+
+        // Remove from tracking
+        let mut client_subs = self.client_subscriptions.write();
+        if let Some(subs_list) = client_subs.get_mut(client_id) {
+            subs_list.retain(|t| !topics.contains(t));
+        }
     }
 
     fn cleanup_client(&self, client_id: &str) {
+        // Remove from clients map
         self.clients.write().remove(client_id);
+
+        // Remove all subscriptions for this client
+        let topics = self.client_subscriptions.write().remove(client_id);
+        if let Some(topics) = topics {
+            let topic_count = topics.len();
+            let subs = self.subscriptions.write();
+            for topic in &topics {
+                subs.with_mut(|root| {
+                    root.remove(topic, |h| h.client_id == client_id);
+                });
+            }
+            debug!("Cleaned up {} subscriptions for client {}", topic_count, client_id);
+        }
     }
 }
 

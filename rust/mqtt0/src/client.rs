@@ -3,12 +3,13 @@
 //! A lightweight MQTT client that supports both MQTT 3.1.1 (v4) and MQTT 5.0 (v5).
 
 use bytes::BytesMut;
-use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
-use tracing::{debug, trace};
+use tracing::{debug, trace, warn};
 
 use crate::error::{Error, Result};
 use crate::protocol::{self, MAX_PACKET_SIZE};
@@ -39,6 +40,9 @@ pub struct ClientConfig {
     /// - Some(n): session persists for n seconds after disconnect
     /// - Some(0xFFFFFFFF): session never expires
     pub session_expiry: Option<u32>,
+    /// Enable automatic keep-alive (sends PINGREQ at keep_alive/2 intervals).
+    /// Default: true (like Go's autopaho).
+    pub auto_keepalive: bool,
 }
 
 impl ClientConfig {
@@ -54,6 +58,7 @@ impl ClientConfig {
             max_packet_size: MAX_PACKET_SIZE,
             protocol_version: ProtocolVersion::V4,
             session_expiry: None,
+            auto_keepalive: true, // Default: auto ping like Go's autopaho
         }
     }
 
@@ -91,23 +96,44 @@ impl ClientConfig {
         self.session_expiry = Some(seconds);
         self
     }
+
+    /// Enable or disable automatic keep-alive.
+    ///
+    /// When enabled (default), the client will automatically send PINGREQ
+    /// packets at `keep_alive / 2` intervals to prevent the broker from
+    /// disconnecting the client due to inactivity.
+    pub fn with_auto_keepalive(mut self, enabled: bool) -> Self {
+        self.auto_keepalive = enabled;
+        self
+    }
 }
 
 /// Internal client state for different protocol versions.
+#[derive(Clone, Copy)]
 enum ClientState {
     V4,
     V5,
 }
 
+/// Shared state for keepalive task.
+struct KeepaliveState {
+    writer: Arc<Mutex<WriteHalf<TcpStream>>>,
+    running: Arc<AtomicBool>,
+    interval: Duration,
+    state: ClientState,
+}
+
 /// QoS 0 MQTT client supporting both v4 and v5.
 pub struct Client {
     reader: Mutex<ReadHalf<TcpStream>>,
-    writer: Mutex<WriteHalf<TcpStream>>,
+    writer: Arc<Mutex<WriteHalf<TcpStream>>>,
     read_buf: Mutex<BytesMut>,
     client_id: String,
     next_pkid: AtomicU16,
     max_packet_size: usize,
     state: ClientState,
+    /// Flag to stop the keepalive task.
+    running: Arc<AtomicBool>,
 }
 
 impl Client {
@@ -165,14 +191,30 @@ impl Client {
             }
         }
 
+        let running = Arc::new(AtomicBool::new(true));
+        let writer = Arc::new(Mutex::new(writer));
+
+        // Start keepalive task if enabled
+        if config.auto_keepalive && config.keep_alive > 0 {
+            let keepalive_state = KeepaliveState {
+                writer: Arc::clone(&writer),
+                running: Arc::clone(&running),
+                interval: Duration::from_secs((config.keep_alive / 2).max(1) as u64),
+                state: ClientState::V4,
+            };
+            tokio::spawn(Self::keepalive_task(keepalive_state));
+            debug!("Started auto keepalive task (interval={}s)", config.keep_alive / 2);
+        }
+
         Ok(Self {
             reader: Mutex::new(reader),
-            writer: Mutex::new(writer),
+            writer,
             read_buf: Mutex::new(read_buf),
             client_id: config.client_id,
             next_pkid: AtomicU16::new(1),
             max_packet_size: config.max_packet_size,
             state: ClientState::V4,
+            running,
         })
     }
 
@@ -227,14 +269,30 @@ impl Client {
             }
         }
 
+        let running = Arc::new(AtomicBool::new(true));
+        let writer = Arc::new(Mutex::new(writer));
+
+        // Start keepalive task if enabled
+        if config.auto_keepalive && config.keep_alive > 0 {
+            let keepalive_state = KeepaliveState {
+                writer: Arc::clone(&writer),
+                running: Arc::clone(&running),
+                interval: Duration::from_secs((config.keep_alive / 2).max(1) as u64),
+                state: ClientState::V5,
+            };
+            tokio::spawn(Self::keepalive_task(keepalive_state));
+            debug!("Started auto keepalive task (interval={}s)", config.keep_alive / 2);
+        }
+
         Ok(Self {
             reader: Mutex::new(reader),
-            writer: Mutex::new(writer),
+            writer,
             read_buf: Mutex::new(read_buf),
             client_id: config.client_id,
             next_pkid: AtomicU16::new(1),
             max_packet_size: config.max_packet_size,
             state: ClientState::V5,
+            running,
         })
     }
 
@@ -516,6 +574,10 @@ impl Client {
     /// Disconnect from the broker.
     pub async fn disconnect(&self) -> Result<()> {
         debug!("Disconnecting");
+
+        // Stop keepalive task
+        self.running.store(false, Ordering::SeqCst);
+
         match &self.state {
             ClientState::V4 => {
                 let mut writer = self.writer.lock().await;
@@ -525,6 +587,43 @@ impl Client {
                 let mut writer = self.writer.lock().await;
                 protocol::v5::write_packet(&mut *writer, protocol::v5::create_disconnect()).await
             }
+        }
+    }
+
+    /// Check if the client is still running (not disconnected).
+    pub fn is_running(&self) -> bool {
+        self.running.load(Ordering::SeqCst)
+    }
+
+    /// Background task for automatic keep-alive.
+    async fn keepalive_task(state: KeepaliveState) {
+        loop {
+            tokio::time::sleep(state.interval).await;
+
+            if !state.running.load(Ordering::SeqCst) {
+                trace!("Keepalive task stopping");
+                break;
+            }
+
+            let result = {
+                let mut writer = state.writer.lock().await;
+                match state.state {
+                    ClientState::V4 => {
+                        protocol::v4::write_packet(&mut *writer, protocol::v4::create_pingreq()).await
+                    }
+                    ClientState::V5 => {
+                        protocol::v5::write_packet(&mut *writer, protocol::v5::create_pingreq()).await
+                    }
+                }
+            };
+
+            if let Err(e) = result {
+                warn!("Keepalive ping failed: {}", e);
+                state.running.store(false, Ordering::SeqCst);
+                break;
+            }
+
+            trace!("Keepalive ping sent");
         }
     }
 }

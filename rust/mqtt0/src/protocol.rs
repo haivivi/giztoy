@@ -71,7 +71,14 @@ pub mod v4 {
         connect.clean_session = clean_session;
 
         if let (Some(user), Some(pass)) = (username, password) {
-            connect.set_login(user, std::str::from_utf8(pass).unwrap_or(""));
+            let pass_str = std::str::from_utf8(pass).unwrap_or_else(|_| {
+                tracing::warn!(
+                    "Password contains non-UTF8 bytes for client {}, using empty string",
+                    client_id
+                );
+                ""
+            });
+            connect.set_login(user, pass_str);
         }
 
         Packet::Connect(connect)
@@ -216,9 +223,16 @@ pub mod v5 {
         // Set login if credentials provided
         let login = match (username, password) {
             (Some(user), Some(pass)) => {
+                let pass_str = std::str::from_utf8(pass).unwrap_or_else(|_| {
+                    tracing::warn!(
+                        "Password contains non-UTF8 bytes for client {}, using empty string",
+                        client_id
+                    );
+                    ""
+                });
                 Some(Login {
                     username: user.to_string(),
-                    password: std::str::from_utf8(pass).unwrap_or("").to_string(),
+                    password: pass_str.to_string(),
                 })
             }
             _ => None,
