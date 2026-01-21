@@ -12,7 +12,7 @@
 #   test_level: 1-6, all, quick
 #
 # 前置条件: 需要先配置 context
-#   doubao config add-context test --app-id YOUR_APP_ID --api-key YOUR_API_KEY
+#   doubaospeech config add-context test --app-id YOUR_APP_ID --api-key YOUR_API_KEY
 
 set -euo pipefail
 
@@ -48,9 +48,9 @@ build_cli() {
     local target="$1"
     case "$target" in
         go)
-            if [ ! -f "$PROJECT_ROOT/bazel-bin/go/cmd/doubao/doubao_/doubao" ]; then
-                log_info "构建 Go CLI (bazel build //go/cmd/doubao)..."
-                (cd "$PROJECT_ROOT" && bazel build //go/cmd/doubao)
+            if [ ! -f "$PROJECT_ROOT/bazel-bin/go/cmd/doubaospeech/doubaospeech_/doubaospeech" ]; then
+                log_info "构建 Go CLI (bazel build //go/cmd/doubaospeech)..."
+                (cd "$PROJECT_ROOT" && bazel build //go/cmd/doubaospeech)
             fi
             ;;
         rust)
@@ -67,7 +67,7 @@ build_cli() {
 }
 
 # CLI 命令路径
-GO_CMD="$PROJECT_ROOT/bazel-bin/go/cmd/doubao/doubao_/doubao"
+GO_CMD="$PROJECT_ROOT/bazel-bin/go/cmd/doubaospeech/doubaospeech_/doubaospeech"
 RUST_CMD="$PROJECT_ROOT/bazel-bin/rust/cmd/doubaospeech/doubaospeech"
 
 # 当前使用的命令

@@ -33,7 +33,7 @@ sh_binary(
     srcs = ["run.sh"],
     data = [
         ":run_data",
-        "//go/cmd/doubao",
+        "//go/cmd/doubaospeech",
         "@yq",
     ],
 )

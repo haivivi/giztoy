@@ -16,7 +16,7 @@ go_library(
         "util.go",
         "voice.go",
     ],
-    importpath = "github.com/haivivi/giztoy/cmd/doubao/commands",
+    importpath = "github.com/haivivi/giztoy/cmd/doubaospeech/commands",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/cli",

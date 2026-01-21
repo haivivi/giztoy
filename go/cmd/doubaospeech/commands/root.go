@@ -9,7 +9,7 @@ import (
 	"github.com/haivivi/giztoy/pkg/cli"
 )
 
-const appName = "doubao"
+const appName = "doubaospeech"
 
 var (
 	// Global flags
@@ -26,9 +26,9 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "doubao",
+	Use:   "doubaospeech",
 	Short: "Doubao Speech API CLI tool",
-	Long: `Doubao CLI - A command line interface for Doubao Speech API (火山引擎豆包语音).
+	Long: `Doubao Speech CLI - A command line interface for Doubao Speech API (火山引擎豆包语音).
 
 This tool allows you to interact with Doubao's speech services including:
   - TTS (Text-to-Speech): 语音合成，支持同步、流式、异步
@@ -40,21 +40,21 @@ This tool allows you to interact with Doubao's speech services including:
   - Translation: 同声传译
   - Media: 音视频字幕提取
 
-Configuration is stored in ~/.giztoy/doubao/ and supports multiple contexts,
+Configuration is stored in ~/.giztoy/doubaospeech/ and supports multiple contexts,
 similar to kubectl's context management.
 
 Examples:
   # Set up a new context
-  doubao config add-context myctx --token YOUR_TOKEN --app-id YOUR_APP_ID --cluster volcano_tts
+  doubaospeech config add-context myctx --token YOUR_TOKEN --app-id YOUR_APP_ID --cluster volcano_tts
 
   # Use context to run commands
-  doubao -c myctx tts synthesize -f request.yaml -o output.mp3
+  doubaospeech -c myctx tts synthesize -f request.yaml -o output.mp3
 
   # Pipe output to another command
-  doubao -c myctx asr one-sentence -f request.yaml --json | jq '.text'
+  doubaospeech -c myctx asr one-sentence -f request.yaml --json | jq '.text'
 
   # Real-time conversation
-  doubao -c myctx realtime interactive -f config.yaml
+  doubaospeech -c myctx realtime interactive -f config.yaml
 `,
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -69,7 +69,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Global persistent flags
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "", "", "config file (default is ~/.giztoy/doubao/config.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "", "", "config file (default is ~/.giztoy/doubaospeech/config.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&contextName, "context", "c", "", "context name to use")
 	rootCmd.PersistentFlags().StringVarP(&outputFile, "output", "o", "", "output file (default: stdout)")
 	rootCmd.PersistentFlags().StringVarP(&inputFile, "file", "f", "", "input request file (YAML or JSON)")
@@ -113,7 +113,7 @@ func getContext() (*cli.Context, error) {
 	ctx, err := cfg.ResolveContext(contextName)
 	if err != nil {
 		if contextName == "" {
-			return nil, fmt.Errorf("no context specified. Use -c flag or set a default context with 'doubao config use-context'")
+			return nil, fmt.Errorf("no context specified. Use -c flag or set a default context with 'doubaospeech config use-context'")
 		}
 		return nil, err
 	}
