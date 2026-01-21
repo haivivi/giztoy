@@ -1,569 +1,391 @@
 #!/bin/bash
+
+# Doubao Speech API 示例测试脚本
+# 
+# 支持同时测试 Go 和 Rust CLI
 #
-# Doubao CLI Test Script
-# Test doubao CLI 命令
+# 使用方式:
+#   直接运行: ./run.sh [runtime] [test_level]
+#   Bazel:    bazel run //examples/cmd/doubaospeech:run -- [runtime] [test_level]
 #
-# Usage:
-#   ./run.sh [test_name]
-#   ./run.sh tts          # Test TTS 命令
-#   ./run.sh asr          # Test ASR 命令
-#   ./run.sh all          # Run所有测试
+#   runtime: go | rust | both (默认: go)
+#   test_level: 1-6, all, quick
 #
-# 也可以通过 Bazel 运行:
-#   bazel run //examples/cmd/doubaospeech:run -- tts
+# 前置条件: 需要先配置 context
+#   doubao config add-context test --app-id YOUR_APP_ID --api-key YOUR_API_KEY
 
 set -euo pipefail
 
-# ==================== Configuration ====================
-
-# Determine script/config directory (handle both direct and Bazel execution)
-if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
-    # Running via bazel run
-    SCRIPT_DIR="$BUILD_WORKSPACE_DIRECTORY/examples/cmd/doubaospeech"
-else
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-fi
-OUTPUT_DIR="${DOUBAO_OUTPUT_DIR:-/tmp/doubao_output}"
-
-# Colors
+# 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# ==================== Logging ====================
+# 配置
+CONTEXT_NAME="${DOUBAO_CONTEXT:-test}"
+API_KEY="${DOUBAO_API_KEY:-}"
+APP_ID="${DOUBAO_APP_ID:-}"
 
-log_info() { echo -e "${BLUE}[INFO]${NC} $*"; }
-log_success() { echo -e "${GREEN}[PASS]${NC} $*"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
-log_error() { echo -e "${RED}[FAIL]${NC} $*"; }
-log_section() { echo -e "\n${BLUE}========================================${NC}"; echo -e "${BLUE}  $*${NC}"; echo -e "${BLUE}========================================${NC}\n"; }
+# 获取目录路径
+if [ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]; then
+    # Bazel 环境
+    PROJECT_ROOT="$BUILD_WORKSPACE_DIRECTORY"
+else
+    # 直接运行
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+fi
 
-# ==================== Setup ====================
+SCRIPT_DIR="$PROJECT_ROOT/examples/cmd/doubaospeech"
+COMMANDS_DIR="$SCRIPT_DIR/commands"
+OUTPUT_DIR="$SCRIPT_DIR/output"
 
-# Find doubao CLI binary
-find_doubao_cli() {
-    # Check if running via Bazel
-    if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
-        # Running via bazel run, use bazel-bin
-        local cli="$BUILD_WORKSPACE_DIRECTORY/bazel-bin/go/cmd/doubao/doubao_/doubao"
-        if [[ -x "$cli" ]]; then
-            echo "$cli"
-            return 0
-        fi
-    fi
-    
-    # Check PATH
-    if command -v doubao &>/dev/null; then
-        echo "doubao"
-        return 0
-    fi
-    
-    # Check bazel-bin relative to script (examples/cmd/doubaospeech -> project root)
-    local workspace_root="$SCRIPT_DIR/../../.."
-    local cli="$workspace_root/bazel-bin/go/cmd/doubao/doubao_/doubao"
-    if [[ -x "$cli" ]]; then
-        echo "$cli"
-        return 0
-    fi
-    
-    return 1
+# 构建 CLI（如果需要）
+build_cli() {
+    local target="$1"
+    case "$target" in
+        go)
+            if [ ! -f "$PROJECT_ROOT/bazel-bin/go/cmd/doubao/doubao_/doubao" ]; then
+                log_info "构建 Go CLI (bazel build //go/cmd/doubao)..."
+                (cd "$PROJECT_ROOT" && bazel build //go/cmd/doubao)
+            fi
+            ;;
+        rust)
+            # 优先使用 Bazel 构建
+            if [ ! -f "$PROJECT_ROOT/bazel-bin/rust/cmd/doubaospeech/doubaospeech" ]; then
+                log_info "构建 Rust CLI (bazel build //rust/cmd/doubaospeech)..."
+                if ! (cd "$PROJECT_ROOT" && bazel build //rust/cmd/doubaospeech); then
+                    log_error "Bazel 构建失败，请检查构建环境..."
+                    exit 1
+                fi
+            fi
+            ;;
+    esac
 }
 
-setup() {
+# CLI 命令路径
+GO_CMD="$PROJECT_ROOT/bazel-bin/go/cmd/doubao/doubao_/doubao"
+RUST_CMD="$PROJECT_ROOT/bazel-bin/rust/cmd/doubaospeech/doubaospeech"
+
+# 当前使用的命令
+DOUBAO_CMD=""
+RUNTIME=""
+
+# 创建输出目录
     mkdir -p "$OUTPUT_DIR"
     
-    # Find CLI
-    DOUBAO_CLI=$(find_doubao_cli) || {
-        log_error "doubao CLI not found. Build it first:"
-        echo "  bazel build //go/cmd/doubao:doubao"
-        exit 1
-    }
-    
-    log_info "Using CLI: $DOUBAO_CLI"
-    log_info "Output dir: $OUTPUT_DIR"
-    log_info "Config dir: $SCRIPT_DIR"
-    
-    # Check if context is configured
-    if ! "$DOUBAO_CLI" config get-context &>/dev/null; then
-        log_warn "No context configured. Set up with:"
-        echo "  $DOUBAO_CLI config add-context test --app-id YOUR_APP_ID --api-key YOUR_API_KEY"
-        echo "  $DOUBAO_CLI config use-context test"
-    fi
+# 辅助函数
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-# ==================== Test Functions ====================
-
-test_tts_synthesize() {
-    log_section "TTS Synthesize (volcano_mega)"
-    
-    local config="$SCRIPT_DIR/commands/tts.yaml"
-    local output="$OUTPUT_DIR/tts_output.mp3"
-    
-    log_info "Config: $config"
-    log_info "Output: $output"
-    
-    local result
-    if result=$("$DOUBAO_CLI" tts synthesize -f "$config" -o "$output" -v 2>&1); then
-        if [[ -f "$output" ]]; then
-            local size=$(wc -c < "$output" | tr -d ' ')
-            log_success "TTS synthesize completed ($size bytes)"
-            record_result "TTS 2.0 大模型" "PASS" "$output ($size bytes)"
-        else
-            log_warn "Output file not created"
-            record_result "TTS 2.0 大模型" "FAIL" "" "No output file"
-        fi
-    else
-        local error_type=$(parse_error "$result")
-        log_error "TTS synthesize failed"
-        echo "$result" | sed 's/^/  /' | head -3
-        record_result "TTS 2.0 大模型" "$error_type" "" "$result"
-    fi
+log_success() {
+    echo -e "${GREEN}[PASS]${NC} $1"
 }
 
-test_tts_stream() {
-    log_section "TTS Stream (HTTP)"
-    
-    local config="$SCRIPT_DIR/commands/tts.yaml"
-    local output="$OUTPUT_DIR/tts_stream_output.mp3"
-    
-    log_info "Config: $config"
-    log_info "Output: $output"
-    
-    local result
-    if result=$("$DOUBAO_CLI" tts stream -f "$config" -o "$output" -v 2>&1); then
-        if [[ -f "$output" ]]; then
-            local size=$(wc -c < "$output" | tr -d ' ')
-            log_success "TTS stream completed ($size bytes)"
-            record_result "TTS Stream" "PASS" "$output ($size bytes)"
-        else
-            log_warn "Output file not created"
-            record_result "TTS Stream" "FAIL" "" "No output file"
-        fi
-    else
-        local error_type=$(parse_error "$result")
-        log_error "TTS stream failed"
-        record_result "TTS Stream" "$error_type" "" "$result"
-    fi
+log_error() {
+    echo -e "${RED}[FAIL]${NC} $1"
 }
 
-test_tts_async() {
-    log_section "TTS Async"
-    
-    local config="$SCRIPT_DIR/commands/tts-async.yaml"
-    
-    log_info "Config: $config"
-    
-    local result
-    if result=$("$DOUBAO_CLI" tts async -f "$config" -v --json 2>&1) && echo "$result" > "$OUTPUT_DIR/tts_async_response.json"; then
-        log_success "TTS async task submitted"
-        echo "$result" | jq . 2>/dev/null || echo "$result"
-        record_result "TTS Async" "PASS" "tts_async_response.json"
-    else
-        local error_type=$(parse_error "$result")
-        log_error "TTS async failed"
-        record_result "TTS Async" "$error_type" "" "$result"
-    fi
+log_warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-test_asr_one_sentence() {
-    log_section "ASR One Sentence"
-    
-    local config="$SCRIPT_DIR/commands/asr-one-sentence.yaml"
-    
-    log_info "Config: $config"
-    
-    local result
-    if result=$("$DOUBAO_CLI" asr one-sentence -f "$config" -v --json 2>&1) && echo "$result" > "$OUTPUT_DIR/asr_one_sentence_response.json"; then
-        log_success "ASR one-sentence completed"
-        echo "$result" | jq . 2>/dev/null || echo "$result"
-        record_result "ASR One-Sentence" "PASS" "asr_one_sentence_response.json"
-    else
-        local error_type=$(parse_error "$result")
-        log_error "ASR one-sentence failed"
-        record_result "ASR One-Sentence" "$error_type" "" "$result"
-    fi
+log_runtime() {
+    echo -e "${CYAN}[$RUNTIME]${NC} $1"
 }
 
-test_asr_stream() {
-    log_section "ASR Stream"
-    
-    local config="$SCRIPT_DIR/commands/asr-stream.yaml"
-    
-    log_info "Config: $config"
-    
-    local result
-    if result=$("$DOUBAO_CLI" asr stream -f "$config" -v --json 2>&1) && echo "$result" > "$OUTPUT_DIR/asr_stream_response.json"; then
-        log_success "ASR stream completed"
-        echo "$result" | jq . 2>/dev/null || echo "$result"
-        record_result "ASR Stream" "PASS" "asr_stream_response.json"
-    else
-        local error_type=$(parse_error "$result")
-        log_error "ASR stream failed"
-        record_result "ASR Stream" "$error_type" "" "$result"
-    fi
+# 显示帮助信息
+show_help() {
+    echo "用法: $0 [runtime] [test_level]"
+    echo ""
+    echo "runtime:"
+    echo "  go         - 使用 Go CLI"
+    echo "  rust       - 使用 Rust CLI"
+    echo "  both       - 同时测试 Go 和 Rust (默认)"
+    echo ""
+    echo "test_level:"
+    echo "  1          - TTS 基础测试 (同步合成)"
+    echo "  2          - TTS 流式测试"
+    echo "  3          - ASR 测试 (单句识别)"
+    echo "  4          - 会议转写测试"
+    echo "  5          - 播客合成测试"
+    echo "  6          - 字幕提取测试"
+    echo "  7          - Realtime 测试 (仅 Rust)"
+    echo "  all        - 全部测试 (默认)"
+    echo "  quick      - 快速测试 (TTS + ASR)"
+    echo "  realtime   - Realtime 测试"
+    echo ""
+    echo "环境变量:"
+    echo "  DOUBAO_CONTEXT   - 上下文名称 (默认: test)"
+    echo "  DOUBAO_APP_ID    - App ID"
+    echo "  DOUBAO_API_KEY   - API Key"
+    echo ""
+    echo "示例:"
+    echo "  $0 go 1                                              # 直接运行"
+    echo "  bazel run //examples/cmd/doubaospeech:run -- go 1    # Bazel 运行"
+    echo "  bazel run //examples/cmd/doubaospeech:run -- rust quick"
+    echo "  bazel run //examples/cmd/doubaospeech:run -- both all"
 }
 
-test_realtime() {
-    log_section "Realtime Conversation"
-    
-    local config="$SCRIPT_DIR/commands/realtime.yaml"
-    
-    log_info "Config: $config"
-    log_info "This is an interactive test, press Ctrl+C to exit"
-    
-    record_result "Realtime V3" "SKIPPED" "" "Interactive test"
-    "$DOUBAO_CLI" realtime start -f "$config" -v || log_warn "Realtime test ended"
-}
-
-test_podcast() {
-    log_section "Podcast Synthesis"
-    
-    local config="$SCRIPT_DIR/commands/podcast.yaml"
-    
-    log_info "Config: $config"
-    
-    local result
-    if result=$("$DOUBAO_CLI" podcast create -f "$config" -v --json 2>&1) && echo "$result" > "$OUTPUT_DIR/podcast_response.json"; then
-        log_success "Podcast task submitted"
-        echo "$result" | jq . 2>/dev/null || echo "$result"
-        record_result "Podcast" "PASS" "podcast_response.json"
-    else
-        local error_type=$(parse_error "$result")
-        log_error "Podcast failed"
-        record_result "Podcast" "$error_type" "" "$result"
-    fi
-}
-
-test_meeting() {
-    log_section "Meeting Transcription"
-    
-    local config="$SCRIPT_DIR/commands/meeting.yaml"
-    
-    log_info "Config: $config"
-    
-    local result
-    if result=$("$DOUBAO_CLI" meeting create -f "$config" -v --json 2>&1) && echo "$result" > "$OUTPUT_DIR/meeting_response.json"; then
-        log_success "Meeting task submitted"
-        echo "$result" | jq . 2>/dev/null || echo "$result"
-        record_result "Meeting" "PASS" "meeting_response.json"
-    else
-        local error_type=$(parse_error "$result")
-        log_error "Meeting failed"
-        record_result "Meeting" "$error_type" "" "$result"
-    fi
-}
-
-test_translation() {
-    log_section "Translation"
-    
-    local config="$SCRIPT_DIR/commands/translation.yaml"
-    
-    log_info "Config: $config"
-    log_info "This is an interactive test, press Ctrl+C to exit"
-    
-    record_result "Translation" "SKIPPED" "" "Interactive test"
-    "$DOUBAO_CLI" translation start -f "$config" -v || log_warn "Translation test ended"
-}
-
-test_subtitle() {
-    log_section "Subtitle Extraction"
-    
-    local config="$SCRIPT_DIR/commands/subtitle.yaml"
-    
-    log_info "Config: $config"
-    
-    local result
-    if result=$("$DOUBAO_CLI" media subtitle -f "$config" -v --json 2>&1) && echo "$result" > "$OUTPUT_DIR/subtitle_response.json"; then
-        log_success "Subtitle task submitted"
-        echo "$result" | jq . 2>/dev/null || echo "$result"
-        record_result "Media Subtitle" "PASS" "subtitle_response.json"
-    else
-        local error_type=$(parse_error "$result")
-        log_error "Subtitle failed"
-        record_result "Media Subtitle" "$error_type" "" "$result"
-    fi
-}
-
-test_voice_train() {
-    log_section "Voice Clone Training"
-    
-    local config="$SCRIPT_DIR/commands/voice-train.yaml"
-    
-    log_info "Config: $config"
-    
-    local result
-    if result=$("$DOUBAO_CLI" voice train -f "$config" -v --json 2>&1) && echo "$result" > "$OUTPUT_DIR/voice_train_response.json"; then
-        log_success "Voice clone training submitted"
-        echo "$result" | jq . 2>/dev/null || echo "$result"
-        record_result "Voice Clone" "PASS" "voice_train_response.json"
-    else
-        local error_type=$(parse_error "$result")
-        log_error "Voice clone training failed"
-        record_result "Voice Clone" "$error_type" "" "$result"
-    fi
-}
-
-# ==================== Result Tracking ====================
-
-# Arrays to track test results
-declare -a TEST_NAMES=()
-declare -a TEST_STATUS=()  # PASS, FAIL, NOT_ENABLED, SKIPPED
-declare -a TEST_OUTPUT=()
-declare -a TEST_ERROR=()
-
-# Record test result
-record_result() {
+run_test_verbose() {
     local name="$1"
-    local status="$2"
-    local output="${3:-}"
-    local error="${4:-}"
+    local cmd="$2"
     
-    TEST_NAMES+=("$name")
-    TEST_STATUS+=("$status")
-    TEST_OUTPUT+=("$output")
-    TEST_ERROR+=("$error")
-}
-
-# Parse error to determine if service not enabled
-parse_error() {
-    local error="$1"
-    if [[ "$error" == *"resource not granted"* ]] || [[ "$error" == *"code=3001"* ]]; then
-        echo "NOT_ENABLED"
-    elif [[ "$error" == *"code=3050"* ]] || [[ "$error" == *"model not found"* ]]; then
-        echo "INVALID_VOICE"
+    log_info "测试: $name"
+    
+    # Use bash -c to safely execute the command string
+    # This avoids word-splitting issues with paths containing spaces
+    if bash -c "$cmd"; then
+        log_success "$name"
+        return 0
     else
-        echo "FAIL"
+        log_error "$name"
+        return 1
     fi
 }
 
-# ==================== Summary ====================
-
-print_summary() {
-    log_section "Test Results"
+# 设置运行时环境
+setup_runtime() {
+    local runtime="$1"
+    RUNTIME="$runtime"
     
-    # Print table header
-    echo ""
-    printf "%-20s %-15s %-30s\n" "Service" "Status" "Output/Error"
-    printf "%-20s %-15s %-30s\n" "-------" "------" "------------"
-    
-    local pass_count=0
-    local fail_count=0
-    local not_enabled_count=0
-    
-    for i in "${!TEST_NAMES[@]}"; do
-        local name="${TEST_NAMES[$i]}"
-        local status="${TEST_STATUS[$i]}"
-        local output="${TEST_OUTPUT[$i]}"
-        local error="${TEST_ERROR[$i]}"
-        
-        local status_str=""
-        local detail=""
-        
-        case "$status" in
-            PASS)
-                status_str="${GREEN}✅ PASS${NC}"
-                detail="$output"
-                ((pass_count++))
-                ;;
-            FAIL)
-                status_str="${RED}❌ FAIL${NC}"
-                detail="$error"
-                ((fail_count++))
-                ;;
-            NOT_ENABLED)
-                status_str="${YELLOW}⚠️  Not enabled${NC}"
-                detail="需要在控制台开通服务"
-                ((not_enabled_count++))
-                ;;
-            INVALID_VOICE)
-                status_str="${YELLOW}⚠️  音色错误${NC}"
-                detail="$error"
-                ((fail_count++))
-                ;;
-            SKIPPED)
-                status_str="${BLUE}⏭️  跳过${NC}"
-                detail="交互式测试"
-                ;;
-        esac
-        
-        # Truncate detail if too long
-        if [[ ${#detail} -gt 40 ]]; then
-            detail="${detail:0:37}..."
-        fi
-        
-        printf "%-20s %-15b %-40s\n" "$name" "$status_str" "$detail"
-    done
-    
-    echo ""
-    printf "%-20s %-15s %-30s\n" "-------" "------" "------------"
-    echo ""
-    echo -e "Summary: ${GREEN}$pass_count passed${NC}, ${RED}$fail_count failed${NC}, ${YELLOW}$not_enabled_count not enabled${NC}"
-    
-    # Print output directory info
-    echo ""
-    log_section "Output Files"
-    echo "Directory: $OUTPUT_DIR"
-    echo ""
-    
-    if [[ -d "$OUTPUT_DIR" ]]; then
-        shopt -s nullglob
-        
-        # Audio files
-        local audio_files=("$OUTPUT_DIR"/*.mp3 "$OUTPUT_DIR"/*.wav "$OUTPUT_DIR"/*.ogg)
-        if [[ ${#audio_files[@]} -gt 0 ]]; then
-            echo "🎵 Audio files:"
-            for f in "${audio_files[@]}"; do
-                if [[ -f "$f" ]]; then
-                    local size=$(wc -c < "$f" | tr -d ' ')
-                    printf "   %-40s %10s bytes\n" "$(basename "$f")" "$size"
-                fi
-            done
-            echo ""
-            echo "   Play: ffplay '$OUTPUT_DIR/<file>'"
-        fi
-        
-        # JSON files
-        local json_files=("$OUTPUT_DIR"/*.json)
-        if [[ ${#json_files[@]} -gt 0 ]]; then
-            echo ""
-            echo "📄 JSON responses:"
-            for f in "${json_files[@]}"; do
-                [[ -f "$f" ]] && printf "   %s\n" "$(basename "$f")"
-            done
-            echo ""
-            echo "   View: cat '$OUTPUT_DIR/<file>' | jq"
-        fi
-        
-        shopt -u nullglob
-    fi
-    
-    # Service enablement hint
-    if [[ $not_enabled_count -gt 0 ]]; then
-        echo ""
-        log_section "⚠️  服务Not enabled提示"
-        echo "部分服务Not enabled，请在火山引擎控制台检查："
-        echo "  https://console.volcengine.com/speech"
-    echo ""
-        echo "确保以下服务已开通并绑定到 App ID:"
-        echo "  - TTS 1.0: volcano_tts (volc.tts.default)"
-        echo "  - TTS 2.0 大模型: volcano_mega (volc.seedtts.default)"
-        echo "  - ASR: volcengine_streaming_common"
-        echo "  - Voice Clone: volcano_icl"
-    fi
-}
-
-# ==================== Main ====================
-
-print_help() {
-    echo "Doubao CLI Test Script"
-    echo ""
-    echo "Usage: $0 [test_name]"
-    echo ""
-    echo "Available tests:"
-    echo "  tts           TTS synthesize (sync)"
-    echo "  tts-stream    TTS stream (HTTP)"
-    echo "  tts-async     TTS async task"
-    echo "  asr           ASR one-sentence"
-    echo "  asr-stream    ASR streaming"
-    echo "  realtime      Realtime conversation (interactive)"
-    echo "  podcast       Podcast synthesis"
-    echo "  meeting       Meeting transcription"
-    echo "  translation   Simultaneous translation (interactive)"
-    echo "  subtitle      Subtitle extraction"
-    echo "  voice-train   Voice clone training"
-    echo "  all           Run all non-interactive tests"
-    echo "  help          Show this help"
-    echo ""
-    echo "Examples:"
-    echo "  $0 tts                    # Test TTS synthesize"
-    echo "  $0 all                    # Run all tests"
-    echo "  bazel run //examples/cmd/doubaospeech:run -- tts"
-}
-
-main() {
-    local test_name="${1:-help}"
-    
-    case "$test_name" in
-        tts)
-            setup
-            test_tts_synthesize
-            print_summary
+    case "$runtime" in
+        go)
+            build_cli go
+            DOUBAO_CMD="$GO_CMD"
+            log_runtime "使用 Go CLI (Bazel build)"
             ;;
-        tts-stream)
-            setup
-            test_tts_stream
-            print_summary
-            ;;
-        tts-async)
-            setup
-            test_tts_async
-            print_summary
-            ;;
-        asr)
-            setup
-            test_asr_one_sentence
-            print_summary
-            ;;
-        asr-stream)
-            setup
-            test_asr_stream
-            print_summary
-            ;;
-        realtime)
-            setup
-            test_realtime
-            ;;
-        podcast)
-            setup
-            test_podcast
-            print_summary
-            ;;
-        meeting)
-            setup
-            test_meeting
-            print_summary
-            ;;
-        translation)
-            setup
-            test_translation
-            ;;
-        subtitle)
-            setup
-            test_subtitle
-            print_summary
-            ;;
-        voice-train)
-            setup
-            test_voice_train
-            print_summary
-            ;;
-        all)
-            setup
-            echo ""
-            echo "╔══════════════════════════════════════════════════════════╗"
-            echo "║           Running All Non-Interactive Tests              ║"
-            echo "╚══════════════════════════════════════════════════════════╝"
-            echo ""
-            test_tts_synthesize || true
-            test_tts_stream || true
-            test_tts_async || true
-            test_asr_one_sentence || true
-            test_podcast || true
-            test_meeting || true
-            test_subtitle || true
-            print_summary
-            ;;
-        help|--help|-h)
-            print_help
+        rust)
+            build_cli rust
+            DOUBAO_CMD="$RUST_CMD"
+            log_runtime "使用 Rust CLI (Bazel build)"
             ;;
         *)
-            log_error "Unknown test: $test_name"
-            print_help
+            log_error "未知的运行时: $runtime"
             exit 1
             ;;
     esac
+}
+
+# =====================================
+# 阶段 0: 配置上下文
+# =====================================
+setup_context() {
+    log_info "=== 阶段 0: 配置上下文 ==="
+    
+    if [ -n "$API_KEY" ] && [ -n "$APP_ID" ]; then
+        $DOUBAO_CMD config add-context "$CONTEXT_NAME" --app-id "$APP_ID" --api-key "$API_KEY" 2>/dev/null || true
+    fi
+    
+    $DOUBAO_CMD config use-context "$CONTEXT_NAME" 2>/dev/null || true
+    
+    # 检查 context 是否存在
+    if ! $DOUBAO_CMD config list-contexts 2>/dev/null | grep -q "$CONTEXT_NAME"; then
+        log_error "Context '$CONTEXT_NAME' 不存在！请先运行:"
+        echo "  $DOUBAO_CMD config add-context $CONTEXT_NAME --app-id YOUR_APP_ID --api-key YOUR_API_KEY"
+        exit 1
+    fi
+    
+    log_success "上下文配置完成: $CONTEXT_NAME"
+    echo ""
+}
+
+# =====================================
+# 阶段 1: TTS 基础测试
+# =====================================
+test_level_1() {
+    log_info "=== 阶段 1: TTS 基础测试 ==="
+    
+    run_test_verbose "TTS 语音合成 (同步)" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME tts synthesize -f $COMMANDS_DIR/tts.yaml -o $OUTPUT_DIR/tts_${RUNTIME}.mp3"
+    
+    log_success "阶段 1 完成"
+    echo ""
+}
+
+# =====================================
+# 阶段 2: TTS 流式测试
+# =====================================
+test_level_2() {
+    log_info "=== 阶段 2: TTS 流式测试 ==="
+    
+    run_test_verbose "TTS 流式合成" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME tts stream -f $COMMANDS_DIR/tts.yaml -o $OUTPUT_DIR/tts_stream_${RUNTIME}.mp3"
+    
+    log_success "阶段 2 完成"
+    echo ""
+}
+
+# =====================================
+# 阶段 3: ASR 测试
+# =====================================
+test_level_3() {
+    log_info "=== 阶段 3: ASR 测试 ==="
+    
+    run_test_verbose "ASR 单句识别" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME asr one-sentence -f $COMMANDS_DIR/asr-one-sentence.yaml --json"
+    
+    log_success "阶段 3 完成"
+    echo ""
+}
+
+# =====================================
+# 阶段 4: 会议转写测试
+# =====================================
+test_level_4() {
+    log_info "=== 阶段 4: 会议转写测试 ==="
+    
+    run_test_verbose "会议转写任务创建" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME meeting create -f $COMMANDS_DIR/meeting.yaml --json"
+    
+    log_success "阶段 4 完成"
+    echo ""
+}
+
+# =====================================
+# 阶段 5: 播客合成测试
+# =====================================
+test_level_5() {
+    log_info "=== 阶段 5: 播客合成测试 ==="
+    
+    run_test_verbose "播客合成任务创建" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME podcast create -f $COMMANDS_DIR/podcast.yaml --json"
+    
+    log_success "阶段 5 完成"
+    echo ""
+}
+
+# =====================================
+# 阶段 6: 字幕提取测试
+# =====================================
+test_level_6() {
+    log_info "=== 阶段 6: 字幕提取测试 ==="
+    
+    run_test_verbose "字幕提取任务创建" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME media subtitle -f $COMMANDS_DIR/subtitle.yaml --json"
+    
+    log_success "阶段 6 完成"
+    echo ""
+}
+
+# =====================================
+# 阶段 7: Realtime 测试 (仅 Rust)
+# =====================================
+test_level_7() {
+    log_info "=== 阶段 7: Realtime 测试 ==="
+    
+    # Realtime 目前只在 Rust CLI 实现
+    if [ "$RUNTIME" = "rust" ]; then
+        run_test_verbose "Realtime 测试 (发送问候)" \
+            "$DOUBAO_CMD -c $CONTEXT_NAME realtime test -f $COMMANDS_DIR/realtime.yaml -g '你好，今天天气怎么样？' --json"
+    else
+        log_warn "Realtime 测试仅支持 Rust CLI (Go CLI 暂未实现)"
+    fi
+    
+    log_success "阶段 7 完成"
+    echo ""
+}
+
+# 运行所有测试
+run_tests() {
+    local test_level="$1"
+    
+    setup_context
+    
+    case "$test_level" in
+        1) test_level_1 ;;
+        2) test_level_2 ;;
+        3) test_level_3 ;;
+        4) test_level_4 ;;
+        5) test_level_5 ;;
+        6) test_level_6 ;;
+        7) test_level_7 ;;
+        all)
+            test_level_1
+            test_level_2
+            test_level_3
+            test_level_4
+            test_level_5
+            test_level_6
+            test_level_7
+            ;;
+        quick)
+            test_level_1
+            test_level_3
+            ;;
+        realtime)
+            test_level_7
+            ;;
+        *)
+            return 1
+                ;;
+        esac
+}
+
+# =====================================
+# 主程序
+# =====================================
+main() {
+    local runtime="${1:-go}"
+    local test_level="${2:-all}"
+    
+    echo ""
+    echo "======================================"
+    echo "   Doubao Speech API 示例测试脚本"
+    echo "======================================"
+    echo ""
+    echo "运行时:   $runtime"
+    echo "测试级别: $test_level"
+    echo "请求目录: $COMMANDS_DIR"
+    echo "输出目录: $OUTPUT_DIR"
+    echo "上下文名: $CONTEXT_NAME"
+    echo ""
+    
+    case "$runtime" in
+        go|rust)
+            setup_runtime "$runtime"
+            if ! run_tests "$test_level"; then
+                echo "Error: Unknown test level: $test_level"
+                show_help
+                exit 1
+            fi
+            ;;
+        both)
+            echo "===== 使用 Go CLI 测试 ====="
+            setup_runtime "go"
+            if ! run_tests "$test_level"; then
+                echo "Error: Unknown test level: $test_level"
+                show_help
+                exit 1
+            fi
+            
+            echo ""
+            echo "===== 使用 Rust CLI 测试 ====="
+            setup_runtime "rust"
+            if ! run_tests "$test_level"; then
+                echo "Error: Unknown test level: $test_level"
+                show_help
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Error: Unknown runtime: $runtime"
+            show_help
+            exit 1
+            ;;
+    esac
+    
+    echo ""
+    echo "======================================"
+    echo "   测试完成"
+    echo "======================================"
+    echo ""
+    echo "输出文件保存在: $OUTPUT_DIR"
+    ls -la "$OUTPUT_DIR" 2>/dev/null || true
 }
 
 main "$@"

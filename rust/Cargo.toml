@@ -5,9 +5,11 @@ members = [
     "genx",
     "dashscope",
     "minimax",
+    "doubaospeech",
     "cli",
     "cmd/dashscope",
     "cmd/minimax",
+    "cmd/doubaospeech",
 ]
 
 [workspace.package]
@@ -22,6 +24,7 @@ giztoy-buffer = { path = "buffer" }
 giztoy-genx = { path = "genx" }
 giztoy-dashscope = { path = "dashscope" }
 giztoy-minimax = { path = "minimax" }
+giztoy-doubaospeech = { path = "doubaospeech" }
 giztoy-cli = { path = "cli" }
 
 # Async runtime
@@ -47,10 +50,12 @@ clap = { version = "4", features = ["derive"] }
 
 # Utilities
 hex = "0.4"
+base64 = "0.22"
 futures = "0.3"
 async-stream = "0.3"
 async-trait = "0.1"
 tokio-stream = "0.1"
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
 bytes = "1"
 dirs = "6"
 uuid = { version = "1", features = ["v4"] }
@@ -60,7 +65,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # WebSocket
-base64 = "0.22"
 http = "1"
 
 # Dev

@@ -44,7 +44,16 @@ pub struct Context {
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub name: String,
 
-    /// API key for authentication.
+    /// Client credentials for speech APIs (TTS, ASR, etc.) - used by doubao.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client: Option<ClientCredentials>,
+
+    /// Console credentials for console APIs (ListTimbres, etc.) - used by doubao.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub console: Option<ConsoleCredentials>,
+
+    /// API key for authentication - used by minimax.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub api_key: String,
 
     /// API base URL (optional, uses default if empty).
@@ -59,9 +68,33 @@ pub struct Context {
     #[serde(default, skip_serializing_if = "is_zero")]
     pub max_retries: i32,
 
+    /// Default voice for TTS (optional).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub default_voice: String,
+
     /// Application-specific settings.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub extra: HashMap<String, String>,
+}
+
+/// Client credentials for speech APIs (TTS, ASR, Realtime, etc.).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ClientCredentials {
+    /// Application ID.
+    pub app_id: String,
+
+    /// API key (Bearer token or x-api-key).
+    pub api_key: String,
+}
+
+/// Console credentials for console APIs (ListTimbres, etc.).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ConsoleCredentials {
+    /// Volcengine AK for OpenAPI signature.
+    pub access_key: String,
+
+    /// Volcengine SK for OpenAPI signature.
+    pub secret_key: String,
 }
 
 fn is_zero(n: &i32) -> bool {

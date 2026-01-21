@@ -1,0 +1,27 @@
+[package]
+name = "doubaospeech-examples"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Examples demonstrating how to use the giztoy-doubaospeech SDK"
+
+[dependencies]
+giztoy-doubaospeech = { path = "../../../rust/doubaospeech" }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+
+[[bin]]
+name = "tts"
+path = "src/bin/tts.rs"
+
+[[bin]]
+name = "asr"
+path = "src/bin/asr.rs"
+
+[[bin]]
+name = "voice_clone"
+path = "src/bin/voice_clone.rs"
+
+[[bin]]
+name = "translation"
+path = "src/bin/translation.rs"
