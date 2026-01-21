@@ -98,6 +98,39 @@ log_runtime() {
     echo -e "${CYAN}[$RUNTIME]${NC} $1"
 }
 
+# 显示帮助信息
+show_help() {
+    echo "用法: $0 [runtime] [test_level]"
+    echo ""
+    echo "runtime:"
+    echo "  go         - 使用 Go CLI"
+    echo "  rust       - 使用 Rust CLI"
+    echo "  both       - 同时测试 Go 和 Rust (默认)"
+    echo ""
+    echo "test_level:"
+    echo "  1          - TTS 基础测试 (同步合成)"
+    echo "  2          - TTS 流式测试"
+    echo "  3          - ASR 测试 (单句识别)"
+    echo "  4          - 会议转写测试"
+    echo "  5          - 播客合成测试"
+    echo "  6          - 字幕提取测试"
+    echo "  7          - Realtime 测试 (仅 Rust)"
+    echo "  all        - 全部测试 (默认)"
+    echo "  quick      - 快速测试 (TTS + ASR)"
+    echo "  realtime   - Realtime 测试"
+    echo ""
+    echo "环境变量:"
+    echo "  DOUBAO_CONTEXT   - 上下文名称 (默认: test)"
+    echo "  DOUBAO_APP_ID    - App ID"
+    echo "  DOUBAO_API_KEY   - API Key"
+    echo ""
+    echo "示例:"
+    echo "  $0 go 1                                              # 直接运行"
+    echo "  bazel run //examples/cmd/doubaospeech:run -- go 1    # Bazel 运行"
+    echo "  bazel run //examples/cmd/doubaospeech:run -- rust quick"
+    echo "  bazel run //examples/cmd/doubaospeech:run -- both all"
+}
+
 run_test_verbose() {
     local name="$1"
     local cmd="$2"
@@ -340,36 +373,8 @@ main() {
             fi
             ;;
         *)
-            echo "用法: $0 [runtime] [test_level]"
-            echo "      bazel run //examples/cmd/doubaospeech:run -- [runtime] [test_level]"
-            echo ""
-            echo "runtime:"
-            echo "  go    - 使用 Go CLI (默认)"
-            echo "  rust  - 使用 Rust CLI"
-            echo "  both  - 同时测试 Go 和 Rust"
-            echo ""
-            echo "test_level:"
-            echo "  1        - TTS 基础测试 (同步合成)"
-            echo "  2        - TTS 流式测试"
-            echo "  3        - ASR 测试 (单句识别)"
-            echo "  4        - 会议转写测试"
-            echo "  5        - 播客合成测试"
-            echo "  6        - 字幕提取测试"
-            echo "  7        - Realtime 测试 (仅 Rust)"
-            echo "  all      - 全部测试 (默认)"
-            echo "  quick    - 快速测试 (TTS + ASR)"
-            echo "  realtime - Realtime 测试"
-            echo ""
-            echo "环境变量:"
-            echo "  DOUBAO_CONTEXT   - 上下文名称 (默认: test)"
-            echo "  DOUBAO_APP_ID    - App ID"
-            echo "  DOUBAO_API_KEY   - API Key"
-            echo ""
-            echo "示例:"
-            echo "  $0 go 1                                              # 直接运行"
-            echo "  bazel run //examples/cmd/doubaospeech:run -- go 1    # Bazel 运行"
-            echo "  bazel run //examples/cmd/doubaospeech:run -- rust quick"
-            echo "  bazel run //examples/cmd/doubaospeech:run -- both all"
+            echo "Error: Unknown runtime: $runtime"
+            show_help
             exit 1
             ;;
     esac

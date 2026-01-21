@@ -135,20 +135,43 @@ pub fn format_duration(ms: i64) -> String {
 
 /// Creates a Doubao Speech API client from context configuration.
 pub fn create_client(ctx: &Context) -> anyhow::Result<Client> {
-    // Get app_id and api_key from client credentials (doubao format)
-    // or fall back to extra fields / api_key (minimax format)
-    let (app_id, api_key) = if let Some(ref client) = ctx.client {
-        (client.app_id.as_str(), client.api_key.as_str())
+    // Get app_id from client credentials or extra fields
+    let app_id = if let Some(ref client) = ctx.client {
+        client.app_id.as_str()
     } else {
-        let app_id = ctx.get_extra("app_id").unwrap_or(&ctx.api_key);
-        let api_key = ctx.get_extra("api_key").unwrap_or(&ctx.api_key);
-        (app_id, api_key)
+        ctx.get_extra("app_id").unwrap_or(&ctx.api_key)
     };
-    
+
+    if app_id.is_empty() {
+        anyhow::bail!("app_id not found in context '{}'", ctx.name);
+    }
+
     let mut builder = Client::builder(app_id);
 
-    // Set authentication - use bearer token by default for doubao
-    builder = builder.bearer_token(api_key);
+    // Set authentication - check for token (bearer) or api_key
+    // Priority: client.api_key > extra["token"] > extra["api_key"]
+    let has_auth = if let Some(ref client) = ctx.client {
+        if !client.api_key.is_empty() {
+            // client.api_key is used as bearer token for doubao
+            builder = builder.bearer_token(&client.api_key);
+            true
+        } else {
+            false
+        }
+    } else {
+        false
+    };
+
+    if !has_auth {
+        // Fall back to extra fields
+        if let Some(token) = ctx.get_extra("token") {
+            builder = builder.bearer_token(token);
+        } else if let Some(api_key) = ctx.get_extra("api_key") {
+            builder = builder.api_key(api_key);
+        } else {
+            anyhow::bail!("no token or api_key found in context '{}'", ctx.name);
+        }
+    }
 
     // Set cluster if specified
     if let Some(cluster) = ctx.get_extra("cluster") {

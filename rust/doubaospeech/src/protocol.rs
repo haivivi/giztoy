@@ -311,11 +311,22 @@ impl BinaryProtocol {
         let header_size = (version_and_size & 0x0f) as usize;
         if header_size > 1 {
             // Skip additional header bytes
-            cursor.advance((header_size - 1) * 4);
+            let advance_bytes = (header_size - 1) * 4;
+            if cursor.remaining() < advance_bytes {
+                return Err(Error::Other(format!(
+                    "buffer too short for header: need {} bytes, have {}",
+                    advance_bytes,
+                    cursor.remaining()
+                )));
+            }
+            cursor.advance(advance_bytes);
         }
 
         // Read sequence if present
         if msg.flags == MessageFlags::PosSequence || msg.flags == MessageFlags::NegSequence {
+            if cursor.remaining() < 4 {
+                return Err(Error::Other("buffer too short for sequence".to_string()));
+            }
             msg.sequence = cursor.get_i32();
         }
 
