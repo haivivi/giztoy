@@ -21,14 +21,14 @@ use commands::{
 ///   - Media: Audio/video subtitle extraction
 ///   - Translation: Simultaneous interpretation
 ///
-/// Configuration is stored in ~/.giztoy/doubao/ and supports multiple contexts,
+/// Configuration is stored in ~/.giztoy/doubaospeech/ and supports multiple contexts,
 /// similar to kubectl's context management.
 #[derive(Parser)]
 #[command(name = "doubaospeech")]
 #[command(about = "Doubao Speech API CLI tool")]
 #[command(version)]
 pub struct Cli {
-    /// Config file (default is ~/.giztoy/doubao/config.yaml)
+    /// Config file (default is ~/.giztoy/doubaospeech/config.yaml)
     #[arg(long, global = true)]
     pub config: Option<String>,
 

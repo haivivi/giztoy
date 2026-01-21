@@ -100,7 +100,7 @@ func formatBytes(bytes int64) string {
 // createClient creates a Doubao Speech API client from context configuration
 func createClient(ctx *cli.Context) (*ds.Client, error) {
 	if ctx.Client == nil {
-		return nil, fmt.Errorf("client credentials not configured, run: doubao config add-context")
+		return nil, fmt.Errorf("client credentials not configured, run: doubaospeech config add-context")
 	}
 
 	var opts []ds.Option

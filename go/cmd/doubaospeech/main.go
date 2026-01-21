@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	doubao [flags] <service> <command> [args]
+//	doubaospeech [flags] <service> <command> [args]
 //
 // Services:
 //
@@ -19,15 +19,15 @@
 //
 // Configuration:
 //
-//	The CLI stores configuration in ~/.giztoy/doubao/
-//	Use 'doubao config' commands to manage contexts.
+//	The CLI stores configuration in ~/.giztoy/doubaospeech/
+//	Use 'doubaospeech config' commands to manage contexts.
 package main
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/haivivi/giztoy/cmd/doubao/commands"
+	"github.com/haivivi/giztoy/cmd/doubaospeech/commands"
 )
 
 func main() {

@@ -7,7 +7,7 @@ use giztoy_doubaospeech::Client;
 
 use crate::Cli;
 
-const APP_NAME: &str = "doubao";
+const APP_NAME: &str = "doubaospeech";
 
 /// Gets the global configuration.
 pub fn get_config(cli: &Cli) -> anyhow::Result<Config> {

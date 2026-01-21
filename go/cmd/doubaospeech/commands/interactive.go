@@ -21,14 +21,14 @@ Features:
   - Save and load request templates
 
 Examples:
-  doubao interactive
-  doubao i
-  doubao tui`,
+  doubaospeech interactive
+  doubaospeech i
+  doubaospeech tui`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, err := getContext()
 		if err != nil {
 			// Don't require context for interactive mode
-			fmt.Println("Note: No context selected. Use 'doubao config use-context' to set one.")
+			fmt.Println("Note: No context selected. Use 'doubaospeech config use-context' to set one.")
 		} else {
 			fmt.Printf("Using context: %s\n", ctx.Name)
 		}

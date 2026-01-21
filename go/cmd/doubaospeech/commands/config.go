@@ -18,7 +18,7 @@ var configCmd = &cobra.Command{
 Contexts allow you to manage multiple API configurations,
 similar to kubectl's context management.
 
-Configuration is stored in ~/.giztoy/doubao/config.yaml`,
+Configuration is stored in ~/.giztoy/doubaospeech/config.yaml`,
 }
 
 var configAddContextCmd = &cobra.Command{
@@ -38,10 +38,10 @@ Note: cluster is NOT stored in context, it should be specified in request YAML f
 
 Example:
   # Add context with client credentials only
-  doubao config add-context myctx --app-id YOUR_APP_ID --api-key YOUR_API_KEY
+  doubaospeech config add-context myctx --app-id YOUR_APP_ID --api-key YOUR_API_KEY
 
   # Add context with both client and console credentials
-  doubao config add-context prod \
+  doubaospeech config add-context prod \
     --app-id YOUR_APP_ID --api-key YOUR_API_KEY \
     --console-ak YOUR_AK --console-sk YOUR_SK \
     --default-voice zh_female_cancan`,

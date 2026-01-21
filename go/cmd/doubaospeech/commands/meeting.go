@@ -37,8 +37,8 @@ Example request file (meeting.yaml):
   enable_timestamp: true
 
 Examples:
-  doubao -c myctx meeting create -f meeting.yaml
-  doubao -c myctx meeting create -f meeting.yaml --json`,
+  doubaospeech -c myctx meeting create -f meeting.yaml
+  doubaospeech -c myctx meeting create -f meeting.yaml --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -74,8 +74,8 @@ var meetingStatusCmd = &cobra.Command{
 	Long: `Query the status of a meeting transcription task.
 
 Examples:
-  doubao -c myctx meeting status task_12345
-  doubao -c myctx meeting status task_12345 --json`,
+  doubaospeech -c myctx meeting status task_12345
+  doubaospeech -c myctx meeting status task_12345 --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskID := args[0]

@@ -42,7 +42,7 @@ Example config file (translation.yaml):
   tts_voice: en_female_sweet
 
 Examples:
-  doubao -c myctx translation stream -f translation.yaml --audio input.pcm -o output.pcm`,
+  doubaospeech -c myctx translation stream -f translation.yaml --audio input.pcm -o output.pcm`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -91,7 +91,7 @@ This mode captures audio from your microphone and plays
 translated audio through your speakers.
 
 Examples:
-  doubao -c myctx translation interactive -f translation.yaml`,
+  doubaospeech -c myctx translation interactive -f translation.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err

@@ -39,7 +39,7 @@ var realtimeConnectCmd = &cobra.Command{
 Establishes a WebSocket connection for bidirectional communication.
 
 Examples:
-  doubao -c myctx realtime connect -f realtime.yaml`,
+  doubaospeech -c myctx realtime connect -f realtime.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -74,7 +74,7 @@ This mode captures audio from your microphone and plays
 responses through your speakers.
 
 Examples:
-  doubao -c myctx realtime interactive -f realtime.yaml`,
+  doubaospeech -c myctx realtime interactive -f realtime.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err

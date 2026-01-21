@@ -39,8 +39,8 @@ Example request file (voice-train.yaml):
   model_type: standard
 
 Examples:
-  doubao -c myctx voice train -f voice-train.yaml
-  doubao -c myctx voice train -f voice-train.yaml --json`,
+  doubaospeech -c myctx voice train -f voice-train.yaml
+  doubaospeech -c myctx voice train -f voice-train.yaml --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -79,8 +79,8 @@ var voiceStatusCmd = &cobra.Command{
 	Long: `Query the status of voice training.
 
 Examples:
-  doubao -c myctx voice status my_custom_voice
-  doubao -c myctx voice status my_custom_voice --json`,
+  doubaospeech -c myctx voice status my_custom_voice
+  doubaospeech -c myctx voice status my_custom_voice --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		speakerID := args[0]
@@ -111,8 +111,8 @@ var voiceListCmd = &cobra.Command{
 	Long: `List all trained custom voices.
 
 Examples:
-  doubao -c myctx voice list
-  doubao -c myctx voice list --json`,
+  doubaospeech -c myctx voice list
+  doubaospeech -c myctx voice list --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, err := getContext()
 		if err != nil {

@@ -36,7 +36,7 @@ giztoy/
 │   ├── go.sum                # Go dependency checksum
 │   ├── cmd/                  # CLI executables
 │   │   ├── dashscope/        # DashScope CLI
-│   │   ├── doubao/           # Doubao Speech CLI
+│   │   ├── doubaospeech/     # Doubao Speech CLI
 │   │   └── minimax/          # MiniMax CLI
 │   └── pkg/                  # Public libraries
 │       ├── audio/            # Audio processing library

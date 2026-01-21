@@ -43,8 +43,8 @@ Example request file (podcast.yaml):
   sample_rate: 24000
 
 Examples:
-  doubao -c myctx podcast create -f podcast.yaml
-  doubao -c myctx podcast create -f podcast.yaml --json`,
+  doubaospeech -c myctx podcast create -f podcast.yaml
+  doubaospeech -c myctx podcast create -f podcast.yaml --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -81,8 +81,8 @@ var podcastStatusCmd = &cobra.Command{
 	Long: `Query the status of a podcast synthesis task.
 
 Examples:
-  doubao -c myctx podcast status task_12345
-  doubao -c myctx podcast status task_12345 --json`,
+  doubaospeech -c myctx podcast status task_12345
+  doubaospeech -c myctx podcast status task_12345 --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskID := args[0]
