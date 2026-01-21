@@ -37,8 +37,8 @@ Example request file (subtitle.yaml):
   target_language: en-US
 
 Examples:
-  doubao -c myctx media subtitle -f subtitle.yaml
-  doubao -c myctx media subtitle -f subtitle.yaml --json`,
+  doubaospeech -c myctx media subtitle -f subtitle.yaml
+  doubaospeech -c myctx media subtitle -f subtitle.yaml --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -74,8 +74,8 @@ var mediaStatusCmd = &cobra.Command{
 	Long: `Query the status of a media processing task.
 
 Examples:
-  doubao -c myctx media status task_12345
-  doubao -c myctx media status task_12345 --json`,
+  doubaospeech -c myctx media status task_12345
+  doubaospeech -c myctx media status task_12345 --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskID := args[0]

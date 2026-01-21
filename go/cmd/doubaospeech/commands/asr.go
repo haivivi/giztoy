@@ -43,8 +43,8 @@ Example request file (asr-one-sentence.yaml):
   enable_punc: true
 
 Examples:
-  doubao -c myctx asr one-sentence -f asr.yaml
-  doubao -c myctx asr one-sentence -f asr.yaml --json`,
+  doubaospeech -c myctx asr one-sentence -f asr.yaml
+  doubaospeech -c myctx asr one-sentence -f asr.yaml --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -91,7 +91,7 @@ Example config file (asr-stream.yaml):
   enable_punc: true
 
 Examples:
-  doubao -c myctx asr stream -f asr-stream.yaml --audio input.pcm`,
+  doubaospeech -c myctx asr stream -f asr-stream.yaml --audio input.pcm`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -133,7 +133,7 @@ var asrFileCmd = &cobra.Command{
 	Long: `Submit audio file for asynchronous recognition.
 
 For long audio files. Returns a task ID for tracking.
-Use 'doubao asr status <task_id>' to check the task status.
+Use 'doubaospeech asr status <task_id>' to check the task status.
 
 Example request file (asr-file.yaml):
   audio_url: https://example.com/long-audio.mp3
@@ -142,8 +142,8 @@ Example request file (asr-file.yaml):
   callback_url: https://your-callback-url.com/webhook
 
 Examples:
-  doubao -c myctx asr file -f asr-file.yaml
-  doubao -c myctx asr file -f asr-file.yaml --json`,
+  doubaospeech -c myctx asr file -f asr-file.yaml
+  doubaospeech -c myctx asr file -f asr-file.yaml --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -179,8 +179,8 @@ var asrStatusCmd = &cobra.Command{
 	Long: `Query the status of an asynchronous recognition task.
 
 Examples:
-  doubao -c myctx asr status task_12345
-  doubao -c myctx asr status task_12345 --json`,
+  doubaospeech -c myctx asr status task_12345
+  doubaospeech -c myctx asr status task_12345 --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskID := args[0]

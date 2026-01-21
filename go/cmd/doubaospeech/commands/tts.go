@@ -63,8 +63,8 @@ V1 request file (tts-v1.yaml):
   cluster: volcano_tts
 
 Examples:
-  doubao -c myctx tts synthesize -f tts.yaml -o output.mp3
-  doubao -c myctx tts synthesize -f tts.yaml -o output.mp3 --v1`,
+  doubaospeech -c myctx tts synthesize -f tts.yaml -o output.mp3
+  doubaospeech -c myctx tts synthesize -f tts.yaml -o output.mp3 --v1`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -193,7 +193,7 @@ Audio chunks are received as they are generated and saved incrementally.
 This provides lower latency than synchronous synthesis.
 
 Examples:
-  doubao -c myctx tts stream -f tts.yaml -o output.mp3`,
+  doubaospeech -c myctx tts stream -f tts.yaml -o output.mp3`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -274,7 +274,7 @@ Similar to HTTP streaming but uses WebSocket protocol for
 bidirectional communication capability.
 
 Examples:
-  doubao -c myctx tts stream-ws -f tts.yaml -o output.mp3`,
+  doubaospeech -c myctx tts stream-ws -f tts.yaml -o output.mp3`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -316,7 +316,7 @@ This is useful for synthesizing text as it is being generated
 (e.g., from an LLM).
 
 Examples:
-  doubao -c myctx tts duplex -f tts.yaml -o output.mp3`,
+  doubaospeech -c myctx tts duplex -f tts.yaml -o output.mp3`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -354,7 +354,7 @@ var ttsAsyncCmd = &cobra.Command{
 	Long: `Create an asynchronous synthesis task for long text.
 
 Supports text up to 10,000 characters. Returns a task ID for tracking.
-Use 'doubao tts status <task_id>' to check the task status.
+Use 'doubaospeech tts status <task_id>' to check the task status.
 
 Example request file (tts-async.yaml):
   text: Very long text here...
@@ -363,8 +363,8 @@ Example request file (tts-async.yaml):
   callback_url: https://your-callback-url.com/webhook
 
 Examples:
-  doubao -c myctx tts async -f tts-async.yaml
-  doubao -c myctx tts async -f tts-async.yaml --json`,
+  doubaospeech -c myctx tts async -f tts-async.yaml
+  doubaospeech -c myctx tts async -f tts-async.yaml --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -401,8 +401,8 @@ var ttsStatusCmd = &cobra.Command{
 	Long: `Query the status of an asynchronous synthesis task.
 
 Examples:
-  doubao -c myctx tts status task_12345
-  doubao -c myctx tts status task_12345 --json`,
+  doubaospeech -c myctx tts status task_12345
+  doubaospeech -c myctx tts status task_12345 --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskID := args[0]
