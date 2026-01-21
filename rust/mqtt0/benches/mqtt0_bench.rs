@@ -88,17 +88,20 @@ fn bench_e2e_latency(c: &mut Criterion) {
         (pub_client, sub_client)
     });
 
+    let publisher = Arc::new(publisher);
     let subscriber = Arc::new(subscriber);
 
     c.bench_function("e2e_latency_64b", |b| {
         let payload = vec![0u8; 64];
+        let pub_clone = Arc::clone(&publisher);
         let sub = Arc::clone(&subscriber);
 
         b.to_async(&rt).iter(|| {
+            let pub_clone = Arc::clone(&pub_clone);
             let sub = Arc::clone(&sub);
             let payload = payload.clone();
             async move {
-                publisher.publish("bench/latency", &payload).await.unwrap();
+                pub_clone.publish("bench/latency", &payload).await.unwrap();
                 sub.recv_timeout(Duration::from_secs(1)).await.unwrap();
             }
         });
