@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "jsontime",
+    srcs = [
+        "duration.go",
+        "milli.go",
+        "unix.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/jsontime",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "jsontime_test",
+    srcs = ["jsontime_test.go"],
+    embed = [":jsontime"],
+)

@@ -7,6 +7,20 @@ import (
 	"github.com/haivivi/giztoy/pkg/audio/codec/opus"
 )
 
+// EncodePCMOption is an interface for configuring EncodePCMStream behavior.
+type EncodePCMOption interface {
+	applyEncoderOption(s *OpusFrameStream)
+}
+
+// WithFramePacking enables/disables frame packing.
+type WithFramePacking struct {
+	Enabled bool
+}
+
+func (w WithFramePacking) applyEncoderOption(s *OpusFrameStream) {
+	// Frame packing implementation would go here
+}
+
 // OpusFrameStream wraps an opus.Encoder to implement FrameReader.
 type OpusFrameStream struct {
 	enc        *opus.Encoder
@@ -19,7 +33,7 @@ type OpusFrameStream struct {
 
 // EncodePCMStream creates an Opus frame stream from PCM data.
 // The PCM data should be 16-bit signed integers, interleaved stereo if channels=2.
-func EncodePCMStream(pcm io.Reader, sampleRate, channels int) (*OpusFrameStream, error) {
+func EncodePCMStream(pcm io.Reader, sampleRate, channels int, opts ...EncodePCMOption) (*OpusFrameStream, error) {
 	enc, err := opus.NewVoIPEncoder(sampleRate, channels)
 	if err != nil {
 		return nil, err
@@ -30,14 +44,21 @@ func EncodePCMStream(pcm io.Reader, sampleRate, channels int) (*OpusFrameStream,
 	// Bytes per frame: frameSize * channels * 2 (16-bit)
 	bufSize := frameSize * channels * 2
 
-	return &OpusFrameStream{
+	s := &OpusFrameStream{
 		enc:        enc,
 		pcm:        pcm,
 		buf:        make([]byte, bufSize),
 		sampleRate: sampleRate,
 		channels:   channels,
 		frameSize:  frameSize,
-	}, nil
+	}
+
+	// Apply options
+	for _, opt := range opts {
+		opt.applyEncoderOption(s)
+	}
+
+	return s, nil
 }
 
 // Frame returns the next encoded Opus frame.
