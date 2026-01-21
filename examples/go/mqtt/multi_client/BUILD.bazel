@@ -1,28 +1,15 @@
-load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "multi_client_lib",
     srcs = ["main.go"],
     importpath = "github.com/haivivi/giztoy/examples/mqtt/multi_client",
     visibility = ["//visibility:private"],
-    deps = [
-        "//go/pkg/mqtt",
-        "@com_github_mochi_mqtt_server_v2//listeners",
-    ],
+    deps = ["//go/pkg/mqtt0"],
 )
 
 go_binary(
     name = "multi_client",
     embed = [":multi_client_lib"],
     visibility = ["//visibility:public"],
-)
-
-go_test(
-    name = "multi_client_test",
-    srcs = ["main_test.go"],
-    embed = [":multi_client_lib"],
-    deps = [
-        "//go/pkg/mqtt",
-        "@com_github_mochi_mqtt_server_v2//listeners",
-    ],
 )

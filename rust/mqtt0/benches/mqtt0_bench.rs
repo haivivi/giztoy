@@ -88,17 +88,20 @@ fn bench_e2e_latency(c: &mut Criterion) {
         (pub_client, sub_client)
     });
 
+    let publisher = Arc::new(publisher);
     let subscriber = Arc::new(subscriber);
 
     c.bench_function("e2e_latency_64b", |b| {
         let payload = vec![0u8; 64];
+        let pub_clone = Arc::clone(&publisher);
         let sub = Arc::clone(&subscriber);
 
         b.to_async(&rt).iter(|| {
+            let pub_clone = Arc::clone(&pub_clone);
             let sub = Arc::clone(&sub);
             let payload = payload.clone();
             async move {
-                publisher.publish("bench/latency", &payload).await.unwrap();
+                pub_clone.publish("bench/latency", &payload).await.unwrap();
                 sub.recv_timeout(Duration::from_secs(1)).await.unwrap();
             }
         });
@@ -131,10 +134,17 @@ fn bench_trie_matching(c: &mut Criterion) {
 
     let mut group = c.benchmark_group("trie_matching");
 
-    // Benchmark exact match
+    // Benchmark exact match (with clone - old API)
     group.bench_function("exact_match", |b| {
         b.iter(|| {
             trie.get("device/gear-001/state");
+        });
+    });
+
+    // Benchmark exact match (zero-copy - new API)
+    group.bench_function("exact_match_zerocopy", |b| {
+        b.iter(|| {
+            trie.with_values("device/gear-001/state", |values| values.len());
         });
     });
 
@@ -142,6 +152,13 @@ fn bench_trie_matching(c: &mut Criterion) {
     group.bench_function("wildcard_match", |b| {
         b.iter(|| {
             trie.get("device/gear-001/events/click/button");
+        });
+    });
+
+    // Benchmark wildcard match (zero-copy)
+    group.bench_function("wildcard_match_zerocopy", |b| {
+        b.iter(|| {
+            trie.with_values("device/gear-001/events/click/button", |values| values.len());
         });
     });
 

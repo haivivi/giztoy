@@ -1,0 +1,34 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mqtt0",
+    srcs = [
+        "broker.go",
+        "client.go",
+        "dialer.go",
+        "doc.go",
+        "error.go",
+        "listener.go",
+        "packet.go",
+        "packet_v4.go",
+        "packet_v5.go",
+        "trie.go",
+        "types.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/mqtt0",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_gorilla_websocket//:websocket",
+    ],
+)
+
+go_test(
+    name = "mqtt0_test",
+    srcs = [
+        "broker_test.go",
+        "client_test.go",
+        "packet_test.go",
+        "trie_test.go",
+    ],
+    embed = [":mqtt0"],
+)

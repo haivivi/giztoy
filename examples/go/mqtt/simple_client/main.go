@@ -1,4 +1,4 @@
-// Package main demonstrates a simple MQTT client.
+// Package main demonstrates a simple MQTT client using mqtt0.
 //
 // This example shows basic MQTT client operations:
 // - Connecting to a broker
@@ -9,6 +9,7 @@
 // Run with: go run ./examples/go/mqtt/simple_client/main.go
 //
 // Note: Requires an MQTT broker running on localhost:1883
+// You can start one with: go run ./examples/go/mqtt/echo_server/main.go
 package main
 
 import (
@@ -20,72 +21,62 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/mqtt"
+	"github.com/haivivi/giztoy/pkg/mqtt0"
 )
 
 func main() {
-	log.Println("Starting Simple MQTT Client")
+	log.Println("Starting Simple MQTT Client (mqtt0)")
 
-	// Create message handler
-	mux := mqtt.NewServeMux()
-
-	// Handle messages on subscribed topics
-	mux.HandleFunc("response/#", func(msg mqtt.Message) error {
-		payload := string(msg.Packet.Payload)
-		log.Printf("Received on '%s': %s", msg.Packet.Topic, payload)
-		return nil
-	})
-
-	mux.HandleFunc("broadcast/#", func(msg mqtt.Message) error {
-		payload := string(msg.Packet.Payload)
-		log.Printf("[BROADCAST] %s: %s", msg.Packet.Topic, payload)
-		return nil
-	})
-
-	// Create dialer
-	dialer := &mqtt.Dialer{
-		ID:        "simple-client",
-		KeepAlive: 30,
-		ServeMux:  mux,
-		OnConnectionUp: func() {
-			log.Println("Connected to broker!")
-		},
-		OnConnectError: func(err error) {
-			log.Printf("Connection error: %v", err)
-		},
-	}
-
-	log.Println("Connecting to mqtt://127.0.0.1:1883...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	conn, err := dialer.Dial(ctx, "tcp://127.0.0.1:1883")
+	// Connect to broker
+	log.Println("Connecting to tcp://127.0.0.1:1883...")
+	client, err := mqtt0.Connect(ctx, mqtt0.ClientConfig{
+		Addr:     "tcp://127.0.0.1:1883",
+		ClientID: "simple-client",
+	})
 	if err != nil {
 		log.Printf("Failed to connect: %v", err)
 		log.Println("Make sure an MQTT broker is running on localhost:1883")
 		log.Println("You can start one with: go run ./examples/go/mqtt/echo_server/main.go")
 		os.Exit(1)
 	}
-	defer conn.Close()
+	defer client.Close()
 
 	log.Println("Connected!")
 
 	// Subscribe to topics
-	if err := conn.Subscribe(ctx, "response/#"); err != nil {
+	if err := client.Subscribe(ctx, "response/#"); err != nil {
 		log.Fatalf("Failed to subscribe: %v", err)
 	}
-	if err := conn.Subscribe(ctx, "broadcast/#"); err != nil {
+	if err := client.Subscribe(ctx, "broadcast/#"); err != nil {
 		log.Fatalf("Failed to subscribe: %v", err)
 	}
 	log.Println("Subscribed to response/# and broadcast/#")
+
+	// Start message receiver goroutine
+	go func() {
+		for {
+			msg, err := client.RecvTimeout(5 * time.Second)
+			if err != nil {
+				if err.Error() != "timeout" {
+					log.Printf("Receive error: %v", err)
+				}
+				return
+			}
+			if msg != nil {
+				log.Printf("Received on '%s': %s", msg.Topic, string(msg.Payload))
+			}
+		}
+	}()
 
 	// Publish some messages
 	for i := 1; i <= 5; i++ {
 		topic := fmt.Sprintf("request/test/%d", i)
 		payload := fmt.Sprintf("Message %d", i)
 
-		if err := conn.WriteToTopic(ctx, []byte(payload), topic); err != nil {
+		if err := client.Publish(ctx, topic, []byte(payload)); err != nil {
 			log.Printf("Failed to publish: %v", err)
 			continue
 		}
@@ -102,6 +93,6 @@ func main() {
 	<-sigCh
 
 	log.Println("Disconnecting...")
-	conn.Close()
+	client.Close()
 	log.Println("Disconnected")
 }

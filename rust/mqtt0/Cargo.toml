@@ -6,6 +6,12 @@ license.workspace = true
 authors.workspace = true
 description = "Lightweight QoS 0 MQTT client and broker with full ACL support"
 
+[features]
+default = []
+tls = ["tokio-rustls", "rustls-pemfile", "webpki-roots"]
+websocket = ["tokio-tungstenite", "futures-util"]
+full = ["tls", "websocket"]
+
 [dependencies]
 # MQTT protocol parsing (reuse from rumqttc)
 rumqttc = { workspace = true }
@@ -23,6 +29,15 @@ thiserror = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
+# TLS support (optional)
+tokio-rustls = { version = "0.26", optional = true }
+rustls-pemfile = { version = "2", optional = true }
+webpki-roots = { version = "0.26", optional = true }
+
+# WebSocket support (optional)
+tokio-tungstenite = { version = "0.24", optional = true }
+futures-util = { version = "0.3", optional = true }
+
 [dev-dependencies]
 # For testing mqtt0c with standard broker
 rumqttd = { workspace = true }
@@ -33,6 +48,9 @@ tracing-subscriber = { workspace = true }
 
 # Benchmark
 criterion = { workspace = true }
+
+# For TLS tests
+rcgen = "0.13"
 
 [[bench]]
 name = "mqtt0_bench"

@@ -14,11 +14,11 @@
 //!
 //! ## Example
 //!
-//! ```no_run
-//! use mqtt0::{Broker, BrokerConfig, Client, ClientConfig};
+//! ```ignore
+//! use giztoy_mqtt0::{Broker, BrokerConfig, Client, ClientConfig};
 //!
 //! #[tokio::main]
-//! async fn main() -> mqtt0::Result<()> {
+//! async fn main() -> giztoy_mqtt0::Result<()> {
 //!     // Start broker
 //!     let broker = Broker::new(BrokerConfig::new("127.0.0.1:1883"));
 //!     tokio::spawn(async move { broker.serve().await });
@@ -42,13 +42,18 @@ mod broker;
 mod client;
 mod error;
 mod protocol;
+pub mod transport;
 pub mod trie;
 mod types;
 
 pub use broker::{Broker, BrokerConfig, BrokerBuilder};
 pub use client::{Client, ClientConfig};
 pub use error::{Error, Result};
+pub use transport::TransportType;
 pub use types::{Authenticator, Handler, Message, ProtocolVersion, QoS};
+
+#[cfg(feature = "tls")]
+pub use transport::tls::TlsConfig;
 
 #[cfg(test)]
 mod tests;

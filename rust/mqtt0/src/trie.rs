@@ -126,24 +126,95 @@ impl<T> TrieNode<T> {
     }
 
     /// Get values for the given topic (exact match).
+    /// This is optimized to avoid unnecessary allocations.
     pub fn get(&self, topic: &str) -> Vec<&T> {
-        let (_, values, ok) = self.match_topic(topic);
-        if ok {
-            values
-        } else {
-            Vec::new()
+        self.get_values(topic)
+    }
+
+    /// Get values without building matched path (fast path).
+    fn get_values(&self, topic: &str) -> Vec<&T> {
+        if topic.is_empty() {
+            return self.values.iter().collect();
         }
+
+        let (first, subseq) = match topic.find('/') {
+            None => (topic, ""),
+            Some(idx) => (&topic[..idx], &topic[idx + 1..]),
+        };
+
+        // Try exact match first
+        if let Some(child) = self.children.get(first) {
+            let values = child.get_values(subseq);
+            if !values.is_empty() {
+                return values;
+            }
+        }
+
+        // Try single-level wildcard (+)
+        if let Some(ref match_any) = self.match_any {
+            let values = match_any.get_values(subseq);
+            if !values.is_empty() {
+                return values;
+            }
+        }
+
+        // Try multi-level wildcard (#)
+        if let Some(ref match_all) = self.match_all {
+            if !match_all.values.is_empty() {
+                return match_all.values.iter().collect();
+            }
+        }
+
+        Vec::new()
+    }
+
+    /// Get values as a slice reference (zero-copy).
+    fn get_values_slice(&self, topic: &str) -> &[T] {
+        if topic.is_empty() {
+            return &self.values;
+        }
+
+        let (first, subseq) = match topic.find('/') {
+            None => (topic, ""),
+            Some(idx) => (&topic[..idx], &topic[idx + 1..]),
+        };
+
+        // Try exact match first
+        if let Some(child) = self.children.get(first) {
+            let values = child.get_values_slice(subseq);
+            if !values.is_empty() {
+                return values;
+            }
+        }
+
+        // Try single-level wildcard (+)
+        if let Some(ref match_any) = self.match_any {
+            let values = match_any.get_values_slice(subseq);
+            if !values.is_empty() {
+                return values;
+            }
+        }
+
+        // Try multi-level wildcard (#)
+        if let Some(ref match_all) = self.match_all {
+            if !match_all.values.is_empty() {
+                return &match_all.values;
+            }
+        }
+
+        &[]
     }
 
     /// Match a topic and return the matched values.
     pub fn match_topic(&self, topic: &str) -> (String, Vec<&T>, bool) {
-        self.match_topic_internal("", topic)
+        let mut matched = String::new();
+        self.match_topic_internal(&mut matched, topic)
     }
 
-    fn match_topic_internal(&self, matched: &str, topic: &str) -> (String, Vec<&T>, bool) {
+    fn match_topic_internal(&self, matched: &mut String, topic: &str) -> (String, Vec<&T>, bool) {
         if topic.is_empty() {
             return (
-                matched.to_string(),
+                matched.clone(),
                 self.values.iter().collect(),
                 !self.values.is_empty(),
             );
@@ -154,43 +225,45 @@ impl<T> TrieNode<T> {
             Some(idx) => (&topic[..idx], &topic[idx + 1..]),
         };
 
+        let matched_len = matched.len();
+
         // Try exact match first
         if let Some(child) = self.children.get(first) {
-            let new_matched = if matched.is_empty() {
-                first.to_string()
-            } else {
-                format!("{}/{}", matched, first)
-            };
-            let (route, values, ok) = child.match_topic_internal(&new_matched, subseq);
+            if !matched.is_empty() {
+                matched.push('/');
+            }
+            matched.push_str(first);
+            let (route, values, ok) = child.match_topic_internal(matched, subseq);
             if ok {
                 return (route, values, true);
             }
+            matched.truncate(matched_len);
         }
 
         // Try single-level wildcard (+)
         if let Some(ref match_any) = self.match_any {
-            let new_matched = if matched.is_empty() {
-                "+".to_string()
-            } else {
-                format!("{}/+", matched)
-            };
-            let (route, values, ok) = match_any.match_topic_internal(&new_matched, subseq);
+            if !matched.is_empty() {
+                matched.push('/');
+            }
+            matched.push('+');
+            let (route, values, ok) = match_any.match_topic_internal(matched, subseq);
             if ok {
                 return (route, values, true);
             }
+            matched.truncate(matched_len);
         }
 
         // Try multi-level wildcard (#)
         if let Some(ref match_all) = self.match_all {
-            let new_matched = if matched.is_empty() {
-                "#".to_string()
-            } else {
-                format!("{}/#", matched)
-            };
-            let (route, values, ok) = match_all.match_topic_internal(&new_matched, "");
+            if !matched.is_empty() {
+                matched.push('/');
+            }
+            matched.push('#');
+            let (route, values, ok) = match_all.match_topic_internal(matched, "");
             if ok {
                 return (route, values, true);
             }
+            matched.truncate(matched_len);
         }
 
         (String::new(), Vec::new(), false)
@@ -282,11 +355,23 @@ impl<T> Trie<T> {
     }
 
     /// Get values matching the given topic.
+    /// Note: This clones values. For zero-copy access, use `with_values`.
     pub fn get(&self, topic: &str) -> Vec<T>
     where
         T: Clone,
     {
         self.root.read().get(topic).into_iter().cloned().collect()
+    }
+
+    /// Get values matching the given topic without cloning.
+    /// The callback receives a slice of references to the matched values.
+    pub fn with_values<F, R>(&self, topic: &str, f: F) -> R
+    where
+        F: FnOnce(&[T]) -> R,
+    {
+        let guard = self.root.read();
+        let values = guard.get_values_slice(topic);
+        f(values)
     }
 
     /// Match a topic and return the matched route and values.
