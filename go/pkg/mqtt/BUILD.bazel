@@ -10,7 +10,7 @@ go_library(
         "topic.go",
         "trie.go",
     ],
-    importpath = "github.com/haivivi/giztoy/go/pkg/mqtt",
+    importpath = "github.com/haivivi/giztoy/pkg/mqtt",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_eclipse_paho_golang//autopaho",
