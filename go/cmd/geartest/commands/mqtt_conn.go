@@ -180,8 +180,10 @@ func (c *mqttConn) Close() error {
 	c.mu.Unlock()
 
 	c.cancel()
-	close(c.opusFrames)
-	close(c.commands)
+	// Don't close channels here - receiveLoop may still be sending to them.
+	// After cancel(), receiveLoop will exit on its next iteration, and
+	// the iterator consumers will exit when they see ctx.Done().
+	// GC will clean up the channels after all references are gone.
 	return c.client.Close()
 }
 
@@ -189,9 +191,17 @@ func (c *mqttConn) Close() error {
 
 func (c *mqttConn) OpusFrames() iter.Seq2[[]byte, error] {
 	return func(yield func([]byte, error) bool) {
-		for frame := range c.opusFrames {
-			if !yield(frame, nil) {
+		for {
+			select {
+			case <-c.ctx.Done():
 				return
+			case frame, ok := <-c.opusFrames:
+				if !ok {
+					return
+				}
+				if !yield(frame, nil) {
+					return
+				}
 			}
 		}
 	}
@@ -199,9 +209,17 @@ func (c *mqttConn) OpusFrames() iter.Seq2[[]byte, error] {
 
 func (c *mqttConn) Commands() iter.Seq2[*chatgear.SessionCommandEvent, error] {
 	return func(yield func(*chatgear.SessionCommandEvent, error) bool) {
-		for cmd := range c.commands {
-			if !yield(cmd, nil) {
+		for {
+			select {
+			case <-c.ctx.Done():
 				return
+			case cmd, ok := <-c.commands:
+				if !ok {
+					return
+				}
+				if !yield(cmd, nil) {
+					return
+				}
 			}
 		}
 	}
