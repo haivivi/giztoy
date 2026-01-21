@@ -21,3 +21,7 @@ path = "src/bin/asr.rs"
 [[bin]]
 name = "voice_clone"
 path = "src/bin/voice_clone.rs"
+
+[[bin]]
+name = "translation"
+path = "src/bin/translation.rs"

@@ -5,7 +5,9 @@
 use clap::{Args, Subcommand};
 use serde::{Deserialize, Serialize};
 
-use giztoy_doubaospeech::{AudioFormat, Language, OneSentenceRequest, SampleRate};
+use giztoy_doubaospeech::{
+    AudioFormat, FileAsrRequest, Language, OneSentenceRequest, SampleRate, StreamAsrConfig,
+};
 
 use super::{create_client, get_context, load_request, output_result, print_success, print_verbose};
 use crate::Cli;
@@ -276,20 +278,113 @@ impl AsrCommand {
     async fn stream(
         &self,
         cli: &Cli,
-        _audio_path: Option<&str>,
-        _format: Option<&str>,
-        _sample_rate: Option<i32>,
-        _language: Option<&str>,
+        audio_path: Option<&str>,
+        format: Option<&str>,
+        sample_rate: Option<i32>,
+        language: Option<&str>,
     ) -> anyhow::Result<()> {
         let ctx = get_context(cli)?;
+        let client = create_client(&ctx)?;
         print_verbose(cli, &format!("Using context: {}", ctx.name));
 
-        // TODO: Implement streaming ASR
-        eprintln!("[Streaming ASR not implemented yet]");
-        eprintln!("Would start real-time streaming recognition");
+        // Load audio file
+        let audio_file = if let Some(input_file) = cli.input.as_deref() {
+            let file_req: AsrFileRequest = load_request(input_file)?;
+            audio_path
+                .or(file_req.audio_file.as_deref())
+                .ok_or_else(|| anyhow::anyhow!("audio file is required"))?
+                .to_string()
+        } else {
+            audio_path
+                .ok_or_else(|| anyhow::anyhow!("audio file is required, use -a flag"))?
+                .to_string()
+        };
+
+        let audio_data = std::fs::read(&audio_file)?;
+        print_verbose(cli, &format!("Audio file: {} ({} bytes)", audio_file, audio_data.len()));
+
+        // Parse format
+        let format_str = format.unwrap_or("pcm");
+        let audio_format = match format_str {
+            "wav" => AudioFormat::Wav,
+            "mp3" => AudioFormat::Mp3,
+            "pcm" => AudioFormat::Pcm,
+            "ogg" => AudioFormat::Ogg,
+            _ => AudioFormat::Pcm,
+        };
+
+        // Parse sample rate
+        let sr = sample_rate.unwrap_or(16000);
+        let sample_rate_enum = match sr {
+            8000 => SampleRate::Rate8000,
+            16000 => SampleRate::Rate16000,
+            22050 => SampleRate::Rate22050,
+            24000 => SampleRate::Rate24000,
+            32000 => SampleRate::Rate32000,
+            44100 => SampleRate::Rate44100,
+            48000 => SampleRate::Rate48000,
+            _ => SampleRate::Rate16000,
+        };
+
+        // Parse language
+        let language_enum = language.and_then(|l| match l {
+            "zh-CN" => Some(Language::ZhCn),
+            "en-US" => Some(Language::EnUs),
+            "ja-JP" => Some(Language::JaJp),
+            _ => None,
+        });
+
+        let config = StreamAsrConfig {
+            format: audio_format,
+            sample_rate: sample_rate_enum,
+            bits: 16,
+            channel: 1,
+            language: language_enum,
+            show_utterances: Some(true),
+            ..Default::default()
+        };
+
+        print_verbose(cli, "Opening streaming ASR session...");
+        let session = client.asr().open_stream_session(&config).await?;
+
+        // Send audio in chunks
+        let chunk_size = 3200; // 100ms of 16kHz 16-bit mono audio
+        let chunks: Vec<&[u8]> = audio_data.chunks(chunk_size).collect();
+        let total_chunks = chunks.len();
+
+        for (i, chunk) in chunks.iter().enumerate() {
+            let is_last = i == total_chunks - 1;
+            session.send_audio(chunk, is_last).await?;
+            if !is_last {
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            }
+        }
+        print_verbose(cli, &format!("Sent {} audio chunks", total_chunks));
+
+        // Receive results
+        let mut final_text = String::new();
+        while let Some(result) = session.recv().await {
+            match result {
+                Ok(chunk) => {
+                    if !chunk.text.is_empty() {
+                        print_verbose(cli, &format!("Partial: {}", chunk.text));
+                    }
+                    if chunk.is_final {
+                        final_text = chunk.text;
+                        break;
+                    }
+                }
+                Err(e) => {
+                    return Err(anyhow::anyhow!("ASR error: {}", e));
+                }
+            }
+        }
+
+        session.close().await?;
+        print_success("Streaming ASR completed");
 
         let result = serde_json::json!({
-            "_note": "Streaming ASR not implemented yet",
+            "text": final_text,
         });
         output_result(&result, cli.output.as_deref(), cli.json)
     }
@@ -297,35 +392,64 @@ impl AsrCommand {
     async fn file(
         &self,
         cli: &Cli,
-        _audio: Option<&str>,
+        audio: Option<&str>,
         _format: Option<&str>,
-        _language: Option<&str>,
-        _callback_url: Option<&str>,
+        language: Option<&str>,
+        callback_url: Option<&str>,
     ) -> anyhow::Result<()> {
         let ctx = get_context(cli)?;
+        let client = create_client(&ctx)?;
         print_verbose(cli, &format!("Using context: {}", ctx.name));
 
-        // TODO: Implement file ASR
-        eprintln!("[File ASR not implemented yet]");
+        // Get audio URL
+        let audio_url = if let Some(input_file) = cli.input.as_deref() {
+            let file_req: AsrFileRequest = load_request(input_file)?;
+            audio
+                .map(|s| s.to_string())
+                .or(file_req.audio_url)
+                .ok_or_else(|| anyhow::anyhow!("audio URL is required"))?
+        } else {
+            audio
+                .ok_or_else(|| anyhow::anyhow!("audio URL is required, use -a flag"))?
+                .to_string()
+        };
+
+        // Parse language
+        let language_enum = language.and_then(|l| match l {
+            "zh-CN" => Some(Language::ZhCn),
+            "en-US" => Some(Language::EnUs),
+            "ja-JP" => Some(Language::JaJp),
+            _ => None,
+        });
+
+        let req = FileAsrRequest {
+            audio_url,
+            language: language_enum,
+            callback_url: callback_url.map(|s| s.to_string()),
+            ..Default::default()
+        };
+
+        print_verbose(cli, &format!("Submitting file ASR task..."));
+        let task_id = client.asr().recognize_file(&req).await?;
+
+        print_success(&format!("Task submitted: {}", task_id));
 
         let result = serde_json::json!({
-            "_note": "File ASR not implemented yet",
-            "task_id": "placeholder-task-id",
+            "task_id": task_id,
         });
         output_result(&result, cli.output.as_deref(), cli.json)
     }
 
     async fn status(&self, cli: &Cli, task_id: &str) -> anyhow::Result<()> {
         let ctx = get_context(cli)?;
+        let client = create_client(&ctx)?;
         print_verbose(cli, &format!("Using context: {}", ctx.name));
         print_verbose(cli, &format!("Querying task: {}", task_id));
 
-        // TODO: Implement task status query
-        let result = serde_json::json!({
-            "_note": "Task status query not implemented yet",
-            "task_id": task_id,
-            "status": "pending",
-        });
+        let result = client.asr().query_task(task_id).await?;
+
+        print_success(&format!("Task status: {}", result.status));
+
         output_result(&result, cli.output.as_deref(), cli.json)
     }
 }

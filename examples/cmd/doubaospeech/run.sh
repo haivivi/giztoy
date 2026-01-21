@@ -30,7 +30,7 @@ API_KEY="${DOUBAO_API_KEY:-}"
 APP_ID="${DOUBAO_APP_ID:-}"
 
 # 获取目录路径
-if [ -n "$BUILD_WORKSPACE_DIRECTORY" ]; then
+if [ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]; then
     # Bazel 环境
     PROJECT_ROOT="$BUILD_WORKSPACE_DIRECTORY"
 else
@@ -75,8 +75,8 @@ DOUBAO_CMD=""
 RUNTIME=""
 
 # 创建输出目录
-mkdir -p "$OUTPUT_DIR"
-
+    mkdir -p "$OUTPUT_DIR"
+    
 # 辅助函数
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -104,7 +104,9 @@ run_test_verbose() {
     
     log_info "测试: $name"
     
-    if eval "$cmd"; then
+    # Use bash -c to safely execute the command string
+    # This avoids word-splitting issues with paths containing spaces
+    if bash -c "$cmd"; then
         log_success "$name"
         return 0
     else
@@ -313,17 +315,29 @@ main() {
     case "$runtime" in
         go|rust)
             setup_runtime "$runtime"
-            run_tests "$test_level"
+            if ! run_tests "$test_level"; then
+                echo "Error: Unknown test level: $test_level"
+                show_help
+                exit 1
+            fi
             ;;
         both)
             echo "===== 使用 Go CLI 测试 ====="
             setup_runtime "go"
-            run_tests "$test_level"
+            if ! run_tests "$test_level"; then
+                echo "Error: Unknown test level: $test_level"
+                show_help
+                exit 1
+            fi
             
             echo ""
             echo "===== 使用 Rust CLI 测试 ====="
             setup_runtime "rust"
-            run_tests "$test_level"
+            if ! run_tests "$test_level"; then
+                echo "Error: Unknown test level: $test_level"
+                show_help
+                exit 1
+            fi
             ;;
         *)
             echo "用法: $0 [runtime] [test_level]"

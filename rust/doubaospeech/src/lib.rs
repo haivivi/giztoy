@@ -82,8 +82,8 @@ mod types;
 mod voice_clone;
 
 pub use asr::{
-    AsrChunk, AsrResult, AsrService, FileAsrRequest, OneSentenceRequest, StreamAsrConfig,
-    Utterance, Word,
+    AsrChunk, AsrResult, AsrService, AsrStreamSession, FileAsrRequest, FileAsrTaskResult,
+    OneSentenceRequest, StreamAsrConfig, Utterance, Word,
 };
 pub use client::{
     Client, ClientBuilder, DEFAULT_BASE_URL, DEFAULT_WS_URL,
@@ -116,7 +116,10 @@ pub use console::{
     ListVoiceCloneStatusRequest, ListVoiceCloneStatusResponse, SpeakerInfo, TimbreCategory,
     TimbreDetailInfo, TimbreEmotion, TimbreInfo, VoiceCloneTrainStatus,
 };
-pub use translation::{TranslationAudioConfig, TranslationChunk, TranslationConfig, TranslationService};
+pub use translation::{
+    TranslationAudioConfig, TranslationChunk, TranslationConfig, TranslationService,
+    TranslationSession,
+};
 pub use voice_clone::{
     VoiceCloneInfo, VoiceCloneResult, VoiceCloneService, VoiceCloneStatus, VoiceCloneTrainRequest,
 };

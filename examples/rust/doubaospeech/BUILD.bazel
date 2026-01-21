@@ -25,3 +25,9 @@ rust_binary(
     srcs = ["src/bin/voice_clone.rs"],
     deps = DEPS,
 )
+
+rust_binary(
+    name = "translation",
+    srcs = ["src/bin/translation.rs"],
+    deps = DEPS,
+)

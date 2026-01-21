@@ -325,10 +325,16 @@ impl BinaryProtocol {
 
         // Read event if present
         if msg.flags == MessageFlags::WithEvent {
+            if cursor.remaining() < 4 {
+                return Err(Error::Other("buffer too short for event".to_string()));
+            }
             msg.event = cursor.get_i32();
 
             // Read session ID (for non-connection events)
             if !is_connection_event(msg.event) {
+                if cursor.remaining() < 4 {
+                    return Err(Error::Other("buffer too short for session_id length".to_string()));
+                }
                 let session_id_len = cursor.get_u32() as usize;
                 if session_id_len > MAX_ID_SIZE {
                     return Err(Error::Other(format!(
@@ -337,6 +343,12 @@ impl BinaryProtocol {
                     )));
                 }
                 if session_id_len > 0 {
+                    if cursor.remaining() < session_id_len {
+                        return Err(Error::Other(format!(
+                            "buffer too short for session_id: need {} bytes, have {}",
+                            session_id_len, cursor.remaining()
+                        )));
+                    }
                     let mut session_id_bytes = vec![0u8; session_id_len];
                     cursor.copy_to_slice(&mut session_id_bytes);
                     msg.session_id = String::from_utf8_lossy(&session_id_bytes).to_string();
@@ -345,6 +357,9 @@ impl BinaryProtocol {
 
             // Read connect ID for connection events
             if is_connection_event(msg.event) {
+                if cursor.remaining() < 4 {
+                    return Err(Error::Other("buffer too short for connect_id length".to_string()));
+                }
                 let connect_id_len = cursor.get_u32() as usize;
                 if connect_id_len > MAX_ID_SIZE {
                     return Err(Error::Other(format!(
@@ -353,6 +368,12 @@ impl BinaryProtocol {
                     )));
                 }
                 if connect_id_len > 0 {
+                    if cursor.remaining() < connect_id_len {
+                        return Err(Error::Other(format!(
+                            "buffer too short for connect_id: need {} bytes, have {}",
+                            connect_id_len, cursor.remaining()
+                        )));
+                    }
                     let mut connect_id_bytes = vec![0u8; connect_id_len];
                     cursor.copy_to_slice(&mut connect_id_bytes);
                     msg.connect_id = String::from_utf8_lossy(&connect_id_bytes).to_string();
@@ -362,10 +383,16 @@ impl BinaryProtocol {
 
         // Read error code for error messages
         if msg.msg_type == MessageType::Error {
+            if cursor.remaining() < 4 {
+                return Err(Error::Other("buffer too short for error_code".to_string()));
+            }
             msg.error_code = cursor.get_u32();
         }
 
         // Read payload
+        if cursor.remaining() < 4 {
+            return Err(Error::Other("buffer too short for payload_size".to_string()));
+        }
         let payload_size = cursor.get_u32() as usize;
         if payload_size > MAX_PAYLOAD_SIZE {
             return Err(Error::Other(format!(
@@ -374,6 +401,12 @@ impl BinaryProtocol {
             )));
         }
         if payload_size > 0 {
+            if cursor.remaining() < payload_size {
+                return Err(Error::Other(format!(
+                    "buffer too short for payload: need {} bytes, have {}",
+                    payload_size, cursor.remaining()
+                )));
+            }
             let mut payload = vec![0u8; payload_size];
             cursor.copy_to_slice(&mut payload);
 
