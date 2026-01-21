@@ -1,0 +1,32 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Common dependencies for audio examples
+DEPS = [
+    "//rust/audio:giztoy_audio",
+]
+
+rust_binary(
+    name = "pcm_basic",
+    srcs = ["src/bin/pcm_basic.rs"],
+    deps = DEPS,
+)
+
+rust_binary(
+    name = "mixer_demo",
+    srcs = ["src/bin/mixer_demo.rs"],
+    deps = DEPS,
+)
+
+rust_binary(
+    name = "songs_demo",
+    srcs = ["src/bin/songs_demo.rs"],
+    deps = DEPS,
+)
+
+rust_binary(
+    name = "play_songs",
+    srcs = ["src/bin/play_songs.rs"],
+    deps = DEPS,
+)
