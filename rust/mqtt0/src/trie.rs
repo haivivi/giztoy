@@ -168,6 +168,43 @@ impl<T> TrieNode<T> {
         Vec::new()
     }
 
+    /// Get values as a slice reference (zero-copy).
+    fn get_values_slice(&self, topic: &str) -> &[T] {
+        if topic.is_empty() {
+            return &self.values;
+        }
+
+        let (first, subseq) = match topic.find('/') {
+            None => (topic, ""),
+            Some(idx) => (&topic[..idx], &topic[idx + 1..]),
+        };
+
+        // Try exact match first
+        if let Some(child) = self.children.get(first) {
+            let values = child.get_values_slice(subseq);
+            if !values.is_empty() {
+                return values;
+            }
+        }
+
+        // Try single-level wildcard (+)
+        if let Some(ref match_any) = self.match_any {
+            let values = match_any.get_values_slice(subseq);
+            if !values.is_empty() {
+                return values;
+            }
+        }
+
+        // Try multi-level wildcard (#)
+        if let Some(ref match_all) = self.match_all {
+            if !match_all.values.is_empty() {
+                return &match_all.values;
+            }
+        }
+
+        &[]
+    }
+
     /// Match a topic and return the matched values.
     pub fn match_topic(&self, topic: &str) -> (String, Vec<&T>, bool) {
         let mut matched = String::new();
@@ -318,11 +355,23 @@ impl<T> Trie<T> {
     }
 
     /// Get values matching the given topic.
+    /// Note: This clones values. For zero-copy access, use `with_values`.
     pub fn get(&self, topic: &str) -> Vec<T>
     where
         T: Clone,
     {
         self.root.read().get(topic).into_iter().cloned().collect()
+    }
+
+    /// Get values matching the given topic without cloning.
+    /// The callback receives a slice of references to the matched values.
+    pub fn with_values<F, R>(&self, topic: &str, f: F) -> R
+    where
+        F: FnOnce(&[T]) -> R,
+    {
+        let guard = self.root.read();
+        let values = guard.get_values_slice(topic);
+        f(values)
     }
 
     /// Match a topic and return the matched route and values.
