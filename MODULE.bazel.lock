@@ -300,7 +300,7 @@
         "usagesDigest": "x1Ln3ffwBgoha5+Fk2eEM1PVXTodRCiQs+HwrREALm4=",
         "recordedFileInputs": {
           "@@//examples/rust/minimax/Cargo.toml": "4ccecf89636d39760b456688d5b3a96df6e9e069aeb1c66e98c06f6129900d3e",
-          "@@//rust/Cargo.lock": "f98312af0b72f0540416bdc886797aff6efe2f99fee61718efeb7ee0c6103da7",
+          "@@//rust/Cargo.lock": "17caa2c02979a984e3bf903c59882ea19b50cfc2a8ca3db7cac3a0eb18220bd7",
           "@@//rust/Cargo.toml": "e6bdb2c0e4666755a6c1b6fb1e55618f84fee20b385ff880393e2f5ba98acc6c",
           "@@//rust/cli/Cargo.toml": "02d1ba5055a0de421d96d015f97cfd8db3e6888d0cd85ba34ef6652cf0012826",
           "@@//rust/cmd/dashscope/Cargo.toml": "159b2a6e03053bed90d4788b6f3fb0828880a1b3861ca38a3c4d71550e94ae53",

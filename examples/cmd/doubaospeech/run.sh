@@ -75,8 +75,8 @@ DOUBAO_CMD=""
 RUNTIME=""
 
 # 创建输出目录
-    mkdir -p "$OUTPUT_DIR"
-    
+mkdir -p "$OUTPUT_DIR"
+
 # 辅助函数
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"

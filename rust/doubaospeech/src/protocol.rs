@@ -319,6 +319,10 @@ impl BinaryProtocol {
             msg.sequence = cursor.get_i32();
         }
 
+        // Maximum allowed sizes to prevent OOM attacks
+        const MAX_ID_SIZE: usize = 1024; // 1KB for session/connect IDs
+        const MAX_PAYLOAD_SIZE: usize = 100 * 1024 * 1024; // 100MB for payload
+
         // Read event if present
         if msg.flags == MessageFlags::WithEvent {
             msg.event = cursor.get_i32();
@@ -326,6 +330,12 @@ impl BinaryProtocol {
             // Read session ID (for non-connection events)
             if !is_connection_event(msg.event) {
                 let session_id_len = cursor.get_u32() as usize;
+                if session_id_len > MAX_ID_SIZE {
+                    return Err(Error::Other(format!(
+                        "session_id length {} exceeds maximum {}",
+                        session_id_len, MAX_ID_SIZE
+                    )));
+                }
                 if session_id_len > 0 {
                     let mut session_id_bytes = vec![0u8; session_id_len];
                     cursor.copy_to_slice(&mut session_id_bytes);
@@ -336,6 +346,12 @@ impl BinaryProtocol {
             // Read connect ID for connection events
             if is_connection_event(msg.event) {
                 let connect_id_len = cursor.get_u32() as usize;
+                if connect_id_len > MAX_ID_SIZE {
+                    return Err(Error::Other(format!(
+                        "connect_id length {} exceeds maximum {}",
+                        connect_id_len, MAX_ID_SIZE
+                    )));
+                }
                 if connect_id_len > 0 {
                     let mut connect_id_bytes = vec![0u8; connect_id_len];
                     cursor.copy_to_slice(&mut connect_id_bytes);
@@ -351,6 +367,12 @@ impl BinaryProtocol {
 
         // Read payload
         let payload_size = cursor.get_u32() as usize;
+        if payload_size > MAX_PAYLOAD_SIZE {
+            return Err(Error::Other(format!(
+                "payload size {} exceeds maximum {}",
+                payload_size, MAX_PAYLOAD_SIZE
+            )));
+        }
         if payload_size > 0 {
             let mut payload = vec![0u8; payload_size];
             cursor.copy_to_slice(&mut payload);
@@ -390,13 +412,30 @@ fn gzip_compress(data: &[u8]) -> Result<Vec<u8>> {
         .map_err(|e| Error::Other(format!("gzip finish: {}", e)))
 }
 
-/// Gzip decompress data.
+/// Gzip decompress data with size limit to prevent decompression bombs.
 fn gzip_decompress(data: &[u8]) -> Result<Vec<u8>> {
+    const MAX_DECOMPRESSED_SIZE: usize = 100 * 1024 * 1024; // 100MB limit
+
     let mut decoder = GzDecoder::new(data);
     let mut decompressed = Vec::new();
-    decoder
-        .read_to_end(&mut decompressed)
-        .map_err(|e| Error::Other(format!("gzip decompress: {}", e)))?;
+
+    // Read in chunks to check size limit
+    let mut chunk = [0u8; 8192];
+    loop {
+        let bytes_read = decoder
+            .read(&mut chunk)
+            .map_err(|e| Error::Other(format!("gzip decompress: {}", e)))?;
+        if bytes_read == 0 {
+            break;
+        }
+        if decompressed.len() + bytes_read > MAX_DECOMPRESSED_SIZE {
+            return Err(Error::Other(format!(
+                "decompressed data exceeds maximum size of {} bytes",
+                MAX_DECOMPRESSED_SIZE
+            )));
+        }
+        decompressed.extend_from_slice(&chunk[..bytes_read]);
+    }
     Ok(decompressed)
 }
 

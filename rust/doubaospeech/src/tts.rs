@@ -106,11 +106,23 @@ impl TtsService {
         let mut stream = Box::pin(byte_stream);
         
         Ok(try_stream! {
+            // Maximum buffer size to prevent memory exhaustion (1MB)
+            const MAX_BUFFER_SIZE: usize = 1024 * 1024;
+
             let mut buffer = String::new();
 
             while let Some(result) = stream.next().await {
                 let bytes = result?;
                 buffer.push_str(&String::from_utf8_lossy(&bytes));
+
+                // Check buffer size limit
+                if buffer.len() > MAX_BUFFER_SIZE {
+                    Err(Error::Other(format!(
+                        "stream buffer exceeded maximum size of {} bytes without newline",
+                        MAX_BUFFER_SIZE
+                    )))?;
+                    return;
+                }
 
                 // Process complete lines
                 while let Some(newline_pos) = buffer.find('\n') {
