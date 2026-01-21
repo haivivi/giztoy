@@ -33,12 +33,14 @@ go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//go:go.mod")
 use_repo(
     go_deps,
+    "com_github_eclipse_paho_golang",
     "com_github_goccy_go_yaml",
     "com_github_google_jsonschema_go",
     "com_github_google_uuid",
     "com_github_googleapis_gax_go_v2",
     "com_github_gorilla_websocket",
     "com_github_kaptinlin_jsonrepair",
+    "com_github_mochi_mqtt_server_v2",
     "com_github_openai_openai_go",
     "com_github_spf13_cobra",
     "org_golang_google_genai",
@@ -74,4 +76,4 @@ use_repo(crate, "crate_index")
 
 # Audio libraries (soxr, portaudio, opus, lame, ogg)
 audio_libs = use_extension("//:extensions.bzl", "audio_libs")
-use_repo(audio_libs, "soxr", "portaudio", "opus", "lame", "ogg")
+use_repo(audio_libs, "lame", "ogg", "opus", "portaudio", "soxr")
