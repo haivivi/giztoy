@@ -61,9 +61,15 @@ type Simulator struct {
 	port *chatgear.ClientPort
 
 	// WebRTC for browser audio
-	webrtc       *WebRTCBridge
-	rtpSeqNum    uint32 // atomic counter for RTP sequence number
-	rtpTimestamp uint32 // atomic counter for RTP timestamp
+	webrtc *WebRTCBridge
+	// RTP sequence number and timestamp are updated from both the WebRTC
+	// callback goroutine and the playback loop. To avoid taking the
+	// Simulator mutex on every audio packet, these counters are accessed
+	// exclusively via sync/atomic operations and are intentionally *not*
+	// protected by mu. All other mutable fields in Simulator must be
+	// accessed under mu.
+	rtpSeqNum    uint32
+	rtpTimestamp uint32
 
 	mu         sync.RWMutex
 	state      chatgear.GearState
@@ -231,8 +237,14 @@ func (s *Simulator) Stop() {
 	// Note: WebRTC bridge is not closed here - it persists across power cycles
 	// This allows browser to stay connected while device is powered off
 
-	// Note: events channel is NOT closed - TUI keeps listening to it
-	// Only close statsTrigger (internal channel)
+	// Note: the events channel is intentionally NOT closed here.
+	// It is designed to be long-lived (across simulator power cycles), and
+	// consumers such as the TUI must not rely on a closed events channel to
+	// detect shutdown. Instead, they should also select on s.ctx.Done() (or
+	// their own cancellation) and terminate when the simulator context ends.
+	//
+	// Only close statsTrigger (internal channel), which is used purely inside
+	// the simulator implementation.
 	if s.statsTrigger != nil {
 		close(s.statsTrigger)
 		s.statsTrigger = nil
@@ -373,15 +385,20 @@ func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
 
 	case *chatgear.OTA:
 		slog.Info("cmd: ota_upgrade", "version", t.Version)
-		// Simulate OTA upgrade
-		go func() {
+		// Simulate OTA upgrade with context cancellation support
+		go func(ctx context.Context) {
 			s.mu.Lock()
 			oldVersion := s.sysVersion
 			s.mu.Unlock()
 
 			// Simulate download/install progress
 			for i := 0; i <= 100; i += 10 {
-				time.Sleep(200 * time.Millisecond)
+				select {
+				case <-ctx.Done():
+					slog.Info("OTA cancelled")
+					return
+				case <-time.After(200 * time.Millisecond):
+				}
 				slog.Info("OTA progress", "percent", i)
 			}
 
@@ -392,7 +409,7 @@ func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
 			s.mu.Unlock()
 
 			slog.Info("OTA complete", "from", oldVersion, "to", t.Version)
-		}()
+		}(s.ctx)
 
 	default:
 		slog.Warn("cmd: unknown type", "type", fmt.Sprintf("%T", cmd.Payload))
@@ -817,13 +834,23 @@ func (s *Simulator) sendState() {
 }
 
 // sendStateLocked sends the current state (must hold lock).
+// Uses goroutine to avoid blocking while holding the lock.
 func (s *Simulator) sendStateLocked() {
 	if s.port == nil {
 		return
 	}
 	stateEvent := chatgear.NewGearStateEvent(s.state, time.Now())
 	port := s.port // capture reference for goroutine
+	ctx := s.ctx   // capture context for cancellation check
 	go func() {
+		// Check context before sending to avoid work after shutdown
+		if ctx != nil {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+		}
 		if err := port.SendState(stateEvent); err == nil {
 			data, _ := json.Marshal(stateEvent)
 			s.emitEvent("state_sent", string(data))

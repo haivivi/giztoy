@@ -144,7 +144,9 @@ func (ws *WebServer) handleUpdateStats(w http.ResponseWriter, r *http.Request) {
 	// Skip empty fields (likely browser bug or stale event)
 	if field == "" {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"message": "ignored"})
+		if err := json.NewEncoder(w).Encode(map[string]string{"message": "ignored"}); err != nil {
+			slog.Error("failed to encode response", "error", err)
+		}
 		return
 	}
 
