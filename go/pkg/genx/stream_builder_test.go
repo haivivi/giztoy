@@ -28,24 +28,6 @@ func TestStatus_Constants(t *testing.T) {
 	}
 }
 
-func TestStreamEvent_Structure(t *testing.T) {
-	evt := &StreamEvent{
-		Chunk:   &MessageChunk{Role: RoleModel},
-		Status:  StatusOK,
-		Usage:   Usage{PromptTokenCount: 100},
-		Refusal: "content policy",
-		Error:   errors.New("test error"),
-	}
-
-	if evt.Status != StatusOK {
-		t.Errorf("Status = %v, want %v", evt.Status, StatusOK)
-	}
-
-	if evt.Usage.PromptTokenCount != 100 {
-		t.Errorf("Usage.PromptTokenCount = %d, want 100", evt.Usage.PromptTokenCount)
-	}
-}
-
 func TestNewStreamBuilder(t *testing.T) {
 	mcb := &ModelContextBuilder{}
 	tool := MustNewFuncTool[TestArg]("test_tool", "Test tool")

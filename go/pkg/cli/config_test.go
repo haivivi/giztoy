@@ -125,14 +125,17 @@ func TestConfig_AddContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 
 	ctx := &Context{
 		APIKey:  "test-key",
 		BaseURL: "https://api.example.com",
 	}
 
-	err := cfg.AddContext("production", ctx)
+	err = cfg.AddContext("production", ctx)
 	if err != nil {
 		t.Fatalf("AddContext error: %v", err)
 	}
@@ -154,14 +157,17 @@ func TestConfig_DeleteContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 
 	cfg.AddContext("ctx1", &Context{APIKey: "key1"})
 	cfg.AddContext("ctx2", &Context{APIKey: "key2"})
 	cfg.UseContext("ctx1")
 
 	// Delete non-current context
-	err := cfg.DeleteContext("ctx2")
+	err = cfg.DeleteContext("ctx2")
 	if err != nil {
 		t.Fatalf("DeleteContext error: %v", err)
 	}
@@ -185,9 +191,12 @@ func TestConfig_DeleteContext_NotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 
-	err := cfg.DeleteContext("nonexistent")
+	err = cfg.DeleteContext("nonexistent")
 	if err == nil {
 		t.Error("DeleteContext should fail for non-existent context")
 	}
@@ -197,10 +206,13 @@ func TestConfig_UseContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 	cfg.AddContext("production", &Context{APIKey: "prod-key"})
 
-	err := cfg.UseContext("production")
+	err = cfg.UseContext("production")
 	if err != nil {
 		t.Fatalf("UseContext error: %v", err)
 	}
@@ -214,9 +226,12 @@ func TestConfig_UseContext_NotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 
-	err := cfg.UseContext("nonexistent")
+	err = cfg.UseContext("nonexistent")
 	if err == nil {
 		t.Error("UseContext should fail for non-existent context")
 	}
@@ -226,7 +241,10 @@ func TestConfig_GetContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 	cfg.AddContext("test", &Context{APIKey: "test-key"})
 
 	ctx, err := cfg.GetContext("test")
@@ -243,9 +261,12 @@ func TestConfig_GetContext_NotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 
-	_, err := cfg.GetContext("nonexistent")
+	_, err = cfg.GetContext("nonexistent")
 	if err == nil {
 		t.Error("GetContext should fail for non-existent context")
 	}
@@ -255,7 +276,10 @@ func TestConfig_GetCurrentContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 	cfg.AddContext("default", &Context{APIKey: "default-key"})
 	cfg.UseContext("default")
 
@@ -273,9 +297,12 @@ func TestConfig_GetCurrentContext_NotSet(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 
-	_, err := cfg.GetCurrentContext()
+	_, err = cfg.GetCurrentContext()
 	if err == nil {
 		t.Error("GetCurrentContext should fail when no current context")
 	}
@@ -285,7 +312,10 @@ func TestConfig_ResolveContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 	cfg.AddContext("ctx1", &Context{APIKey: "key1"})
 	cfg.AddContext("ctx2", &Context{APIKey: "key2"})
 	cfg.UseContext("ctx1")
@@ -313,7 +343,10 @@ func TestConfig_ListContexts(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 	cfg.AddContext("production", &Context{})
 	cfg.AddContext("staging", &Context{})
 	cfg.AddContext("development", &Context{})
@@ -341,7 +374,10 @@ func TestConfig_Path(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 
 	if cfg.Path() != configPath {
 		t.Errorf("Path() = %q, want %q", cfg.Path(), configPath)
@@ -352,7 +388,10 @@ func TestConfig_Dir(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
-	cfg, _ := LoadConfigWithPath("testapp", configPath)
+	cfg, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 
 	if cfg.Dir() != tmpDir {
 		t.Errorf("Dir() = %q, want %q", cfg.Dir(), tmpDir)
@@ -364,7 +403,10 @@ func TestConfig_Persistence(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
 	// Create and save config
-	cfg1, _ := LoadConfigWithPath("testapp", configPath)
+	cfg1, err := LoadConfigWithPath("testapp", configPath)
+	if err != nil {
+		t.Fatalf("LoadConfigWithPath error: %v", err)
+	}
 	cfg1.AddContext("test", &Context{
 		APIKey:  "secret-key",
 		BaseURL: "https://api.test.com",
@@ -381,7 +423,10 @@ func TestConfig_Persistence(t *testing.T) {
 		t.Errorf("CurrentContext = %q, want %q", cfg2.CurrentContext, "test")
 	}
 
-	ctx, _ := cfg2.GetContext("test")
+	ctx, err := cfg2.GetContext("test")
+	if err != nil {
+		t.Fatalf("GetContext error: %v", err)
+	}
 	if ctx.APIKey != "secret-key" {
 		t.Errorf("APIKey = %q, want %q", ctx.APIKey, "secret-key")
 	}

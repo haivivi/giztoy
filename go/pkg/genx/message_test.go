@@ -149,37 +149,3 @@ func TestText_isPart(t *testing.T) {
 	var _ Part = text
 	text.isPart() // Just verify it doesn't panic
 }
-
-func TestMessage_Structure(t *testing.T) {
-	msg := Message{
-		Role:    RoleUser,
-		Name:    "test-user",
-		Payload: Contents{Text("Hello, world!")},
-	}
-
-	if msg.Role != RoleUser {
-		t.Errorf("Role = %v, want %v", msg.Role, RoleUser)
-	}
-
-	if msg.Name != "test-user" {
-		t.Errorf("Name = %q, want %q", msg.Name, "test-user")
-	}
-
-	contents, ok := msg.Payload.(Contents)
-	if !ok {
-		t.Fatalf("Payload type = %T, want Contents", msg.Payload)
-	}
-
-	if len(contents) != 1 {
-		t.Fatalf("len(contents) = %d, want 1", len(contents))
-	}
-
-	text, ok := contents[0].(Text)
-	if !ok {
-		t.Fatalf("contents[0] type = %T, want Text", contents[0])
-	}
-
-	if text != "Hello, world!" {
-		t.Errorf("text = %q, want %q", text, "Hello, world!")
-	}
-}

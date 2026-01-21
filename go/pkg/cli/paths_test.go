@@ -23,11 +23,11 @@ func TestNewPaths(t *testing.T) {
 }
 
 func TestPaths_BaseDir(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	baseDir := paths.BaseDir()
-	expected := filepath.Join(home, DefaultBaseDir)
+	expected := filepath.Join(tmpDir, DefaultBaseDir)
 
 	if baseDir != expected {
 		t.Errorf("BaseDir() = %q, want %q", baseDir, expected)
@@ -35,11 +35,11 @@ func TestPaths_BaseDir(t *testing.T) {
 }
 
 func TestPaths_AppDir(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	appDir := paths.AppDir()
-	expected := filepath.Join(home, DefaultBaseDir, "testapp")
+	expected := filepath.Join(tmpDir, DefaultBaseDir, "testapp")
 
 	if appDir != expected {
 		t.Errorf("AppDir() = %q, want %q", appDir, expected)
@@ -47,11 +47,11 @@ func TestPaths_AppDir(t *testing.T) {
 }
 
 func TestPaths_ConfigFile(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	configFile := paths.ConfigFile()
-	expected := filepath.Join(home, DefaultBaseDir, "testapp", DefaultConfigFile)
+	expected := filepath.Join(tmpDir, DefaultBaseDir, "testapp", DefaultConfigFile)
 
 	if configFile != expected {
 		t.Errorf("ConfigFile() = %q, want %q", configFile, expected)
@@ -59,8 +59,8 @@ func TestPaths_ConfigFile(t *testing.T) {
 }
 
 func TestPaths_CacheDir(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	cacheDir := paths.CacheDir()
 
@@ -70,8 +70,8 @@ func TestPaths_CacheDir(t *testing.T) {
 }
 
 func TestPaths_LogDir(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	logDir := paths.LogDir()
 
@@ -81,8 +81,8 @@ func TestPaths_LogDir(t *testing.T) {
 }
 
 func TestPaths_DataDir(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	dataDir := paths.DataDir()
 
@@ -92,8 +92,8 @@ func TestPaths_DataDir(t *testing.T) {
 }
 
 func TestPaths_CachePath(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	cachePath := paths.CachePath("file.txt")
 	expected := filepath.Join(paths.CacheDir(), "file.txt")
@@ -104,8 +104,8 @@ func TestPaths_CachePath(t *testing.T) {
 }
 
 func TestPaths_LogPath(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	logPath := paths.LogPath("app.log")
 	expected := filepath.Join(paths.LogDir(), "app.log")
@@ -116,8 +116,8 @@ func TestPaths_LogPath(t *testing.T) {
 }
 
 func TestPaths_DataPath(t *testing.T) {
-	home, _ := os.UserHomeDir()
-	paths := &Paths{AppName: "testapp", HomeDir: home}
+	tmpDir := t.TempDir()
+	paths := &Paths{AppName: "testapp", HomeDir: tmpDir}
 
 	dataPath := paths.DataPath("db.sqlite")
 	expected := filepath.Join(paths.DataDir(), "db.sqlite")

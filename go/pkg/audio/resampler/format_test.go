@@ -56,13 +56,3 @@ func TestFormat_sampleBytes(t *testing.T) {
 	}
 }
 
-func TestFormat_SampleRates(t *testing.T) {
-	// Test common sample rates
-	rates := []int{8000, 16000, 22050, 44100, 48000, 96000}
-	for _, rate := range rates {
-		f := Format{SampleRate: rate, Stereo: false}
-		if f.SampleRate != rate {
-			t.Errorf("SampleRate = %d, want %d", f.SampleRate, rate)
-		}
-	}
-}

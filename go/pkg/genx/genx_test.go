@@ -166,38 +166,3 @@ func TestSearchWebTool_isTool(t *testing.T) {
 	var _ Tool = tool
 	tool.isTool() // Should not panic
 }
-
-func TestModelParams_Structure(t *testing.T) {
-	params := ModelParams{
-		MaxTokens:        4096,
-		Temperature:      0.7,
-		TopP:             0.9,
-		FrequencyPenalty: 0.5,
-		PresencePenalty:  0.3,
-		TopK:             40,
-		N:                1,
-	}
-
-	if params.MaxTokens != 4096 {
-		t.Errorf("MaxTokens = %d, want 4096", params.MaxTokens)
-	}
-
-	if params.Temperature != 0.7 {
-		t.Errorf("Temperature = %f, want 0.7", params.Temperature)
-	}
-}
-
-func TestPrompt_Structure(t *testing.T) {
-	prompt := Prompt{
-		Name: "system",
-		Text: "You are a helpful assistant.",
-	}
-
-	if prompt.Name != "system" {
-		t.Errorf("Name = %q, want %q", prompt.Name, "system")
-	}
-
-	if prompt.Text != "You are a helpful assistant." {
-		t.Errorf("Text = %q", prompt.Text)
-	}
-}
