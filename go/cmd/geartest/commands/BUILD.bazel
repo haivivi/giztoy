@@ -4,6 +4,7 @@ go_library(
     name = "commands",
     srcs = [
         "config.go",
+        "mqtt_conn.go",
         "root.go",
         "run.go",
         "simulator.go",
@@ -19,7 +20,7 @@ go_library(
         "//go/pkg/chatgear",
         "//go/pkg/cli",
         "//go/pkg/jsontime",
-        "//go/pkg/mqtt",
+        "//go/pkg/mqtt0",
         "@com_github_charmbracelet_bubbles//viewport",
         "@com_github_charmbracelet_bubbletea//:bubbletea",
         "@com_github_pion_rtp//:rtp",

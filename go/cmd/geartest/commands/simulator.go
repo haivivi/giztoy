@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/haivivi/giztoy/pkg/audio/opusrt"
 	"github.com/haivivi/giztoy/pkg/chatgear"
 	"github.com/haivivi/giztoy/pkg/jsontime"
-	"github.com/haivivi/giztoy/pkg/mqtt"
 )
 
 // Note: Audio is handled via WebRTC, format negotiated with browser
@@ -171,39 +169,13 @@ func (s *Simulator) Start(ctx context.Context) error {
 
 	slog.Info("connecting to MQTT broker", "url", s.cfg.MQTTURL)
 
-	// Connect to MQTT with retry logging
-	mux := mqtt.NewServeMux()
-	dialer := &mqtt.Dialer{
-		ServeMux: mux,
-		OnConnectError: func(err error) {
-			slog.Warn("MQTT connection failed, retrying...", "error", err)
-		},
-		OnConnectionUp: func() {
-			slog.Info("MQTT connection established")
-		},
-	}
-	conn, err := dialer.Dial(s.ctx, s.cfg.MQTTURL)
+	// Connect to MQTT using mqtt0
+	clientConn, err := mqttDial(s.ctx, s.cfg.MQTTURL, s.cfg.Namespace, s.cfg.GearID)
 	if err != nil {
-		slog.Error("MQTT connection failed (gave up)", "error", err)
+		slog.Error("MQTT connection failed", "error", err)
 		return err
 	}
 	slog.Info("MQTT connected successfully")
-
-	// Create transport client connection
-	scope := s.cfg.Namespace
-	if scope != "" && !strings.HasSuffix(scope, "/") {
-		scope += "/"
-	}
-	slog.Info("creating client connection", "scope", scope, "gearID", s.cfg.GearID)
-	clientConn, err := chatgear.MQTTDial(s.ctx, conn, mux, scope, s.cfg.GearID)
-	if err != nil {
-		slog.Error("transport dial failed", "error", err)
-		conn.Close()
-		return err
-	}
-	slog.Info("subscribed topics",
-		"audio", fmt.Sprintf("%sdevice/%s/output_audio_stream", scope, s.cfg.GearID),
-		"command", fmt.Sprintf("%sdevice/%s/command", scope, s.cfg.GearID))
 
 	// Create ClientPort
 	s.port = chatgear.NewClientPort(s.ctx, clientConn)
