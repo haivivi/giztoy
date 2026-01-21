@@ -105,9 +105,10 @@ impl BrokerBuilder {
 }
 
 /// Client handle for message delivery.
+/// Uses Arc<str> for client_id to make Clone cheap (O(1) ref count increment).
 #[derive(Clone)]
 struct ClientHandle {
-    client_id: String,
+    client_id: Arc<str>,
     tx: mpsc::Sender<Message>,
 }
 
@@ -400,7 +401,7 @@ impl BrokerContext {
         info!("Client {} connected (MQTT 3.1.1)", client_id);
 
         let client_handle = ClientHandle {
-            client_id: client_id.to_string(),
+            client_id: Arc::from(client_id),
             tx,
         };
 
@@ -440,7 +441,7 @@ impl BrokerContext {
         info!("Client {} connected (MQTT 5.0)", client_id);
 
         let client_handle = ClientHandle {
-            client_id: client_id.to_string(),
+            client_id: Arc::from(client_id),
             tx,
         };
 
@@ -795,7 +796,7 @@ impl BrokerContext {
 
         for topic in topics {
             subs.with_mut(|root| {
-                root.remove(topic, |h| h.client_id == client_id);
+                root.remove(topic, |h| h.client_id.as_ref() == client_id);
             });
             debug!("Client {} unsubscribed from {}", client_id, topic);
         }
@@ -818,7 +819,7 @@ impl BrokerContext {
             let subs = self.subscriptions.write();
             for topic in &topics {
                 subs.with_mut(|root| {
-                    root.remove(topic, |h| h.client_id == client_id);
+                    root.remove(topic, |h| h.client_id.as_ref() == client_id);
                 });
             }
             debug!("Cleaned up {} subscriptions for client {}", topic_count, client_id);
