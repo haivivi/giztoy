@@ -45,7 +45,7 @@ fn main() {
         // Save to file
         let filename = "twinkle_star.pcm";
         if let Ok(mut file) = std::fs::File::create(filename) {
-            let _ = file.write_all(&data);
+            file.write_all(&data).expect("Failed to write to file");
             println!("  Saved to: {}", filename);
             println!("  Play with: ffplay -f s16le -ar 16000 -ac 1 {}", filename);
         }

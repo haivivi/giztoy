@@ -254,28 +254,26 @@ impl Mixer {
                     state.running_silence += self.output.duration(len as u64);
                 }
 
-                // Convert to i16 samples
-                let samples = unsafe {
-                    std::slice::from_raw_parts_mut(buf.as_mut_ptr() as *mut i16, sample_count)
-                };
-
+                // Convert mixed float32 samples to int16 and write to buffer byte-by-byte
+                // (avoids alignment issues with from_raw_parts_mut)
                 if peak == 0.0 {
                     // Output silence
-                    for sample in samples.iter_mut() {
-                        *sample = 0;
-                    }
+                    buf[..len].fill(0);
                 } else {
                     // Convert mixed float32 samples to int16
-                    for (i, sample) in samples.iter_mut().enumerate() {
+                    for i in 0..sample_count {
                         let mut t = mix_buf[i];
                         // Clip to prevent overflow
                         t = t.clamp(-1.0, 1.0);
                         // Convert to int16
-                        if t >= 0.0 {
-                            *sample = (t * 32767.0) as i16;
+                        let sample_i16 = if t >= 0.0 {
+                            (t * 32767.0) as i16
                         } else {
-                            *sample = (t * 32768.0) as i16;
-                        }
+                            (t * 32768.0) as i16
+                        };
+                        let bytes = sample_i16.to_le_bytes();
+                        buf[i * 2] = bytes[0];
+                        buf[i * 2 + 1] = bytes[1];
                     }
                 }
 

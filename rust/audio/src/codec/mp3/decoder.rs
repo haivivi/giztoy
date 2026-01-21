@@ -54,6 +54,7 @@ impl<R: Read> Mp3Decoder<R> {
             dec: Mp3Dec::new(),
             info: Mp3FrameInfo {
                 frame_bytes: 0,
+                frame_offset: 0,
                 channels: 0,
                 hz: 0,
                 layer: 0,

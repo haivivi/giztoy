@@ -152,12 +152,13 @@ impl Encoder {
     /// Encodes PCM samples from bytes (little-endian i16).
     pub fn encode_bytes(&mut self, pcm: &[u8], frame_size: i32) -> Result<Frame, EncoderError> {
         // Reinterpret bytes as i16 samples
-        let samples: &[i16] = unsafe {
-            std::slice::from_raw_parts(
-                pcm.as_ptr() as *const i16,
-                pcm.len() / 2,
-            )
-        };
+        // Safely reinterpret bytes as i16 samples with alignment check
+        let (prefix, samples, suffix) = unsafe { pcm.align_to::<i16>() };
+        if !prefix.is_empty() || !suffix.is_empty() {
+            return Err(EncoderError::EncodeFailed(
+                "PCM data is not aligned for i16 samples".to_string(),
+            ));
+        }
         self.encode(samples, frame_size)
     }
 

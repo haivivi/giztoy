@@ -204,9 +204,11 @@ pub enum FrameDuration {
 
 impl FrameDuration {
     /// Returns the duration in milliseconds.
+    /// 
+    /// **Note:** 2.5ms is truncated to 2ms. For precise timing, use the `duration()` method.
     pub fn millis(&self) -> i64 {
         match self {
-            Self::Duration2500us => 2,
+            Self::Duration2500us => 2, // Truncated from 2.5ms
             Self::Duration5ms => 5,
             Self::Duration10ms => 10,
             Self::Duration20ms => 20,

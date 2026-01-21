@@ -58,15 +58,24 @@ unsafe extern "C" {
 pub const MINIMP3_MAX_SAMPLES_PER_FRAME: usize = 1152 * 2;
 
 /// MP3 decoder state.
+/// Size matches mp3dec_t from minimp3.h:
+///   float mdct_overlap[2][9*32]  = 2304 bytes
+///   float qmf_state[15*2*32]     = 3840 bytes
+///   int reserv, free_format_bytes = 8 bytes
+///   unsigned char header[4]      = 4 bytes
+///   unsigned char reserv_buf[511] = 511 bytes
+///   Total ≈ 6667 bytes, rounded up to 6672 for alignment
 #[repr(C)]
 pub struct Mp3Dec {
-    _data: [u8; 1152], // Internal state, size is implementation-dependent
+    _data: [u8; 6672], // Internal state matching minimp3's mp3dec_t
 }
 
 /// Frame info returned by decoder.
+/// Matches mp3dec_frame_info_t from minimp3.h
 #[repr(C)]
 pub struct Mp3FrameInfo {
     pub frame_bytes: c_int,
+    pub frame_offset: c_int,  // Added: offset of first frame in buffer
     pub channels: c_int,
     pub hz: c_int,
     pub layer: c_int,
@@ -88,7 +97,7 @@ unsafe extern "C" {
 impl Mp3Dec {
     /// Creates and initializes a new decoder.
     pub fn new() -> Self {
-        let mut dec = Self { _data: [0; 1152] };
+        let mut dec = Self { _data: [0; 6672] };
         unsafe { mp3dec_init(&mut dec) };
         dec
     }
