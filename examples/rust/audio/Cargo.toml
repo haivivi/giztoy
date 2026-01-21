@@ -1,0 +1,25 @@
+[package]
+name = "audio-examples"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Examples demonstrating how to use the giztoy-audio crate"
+
+[dependencies]
+giztoy-audio = { path = "../../../rust/audio" }
+
+[[bin]]
+name = "pcm_basic"
+path = "src/bin/pcm_basic.rs"
+
+[[bin]]
+name = "mixer_demo"
+path = "src/bin/mixer_demo.rs"
+
+[[bin]]
+name = "songs_demo"
+path = "src/bin/songs_demo.rs"
+
+[[bin]]
+name = "play_songs"
+path = "src/bin/play_songs.rs"

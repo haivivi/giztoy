@@ -1,0 +1,27 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# C library dependencies
+C_DEPS = [
+    "//third_party/soxr",
+    "//third_party/opus",
+    "//third_party/ogg",
+    "//third_party/lame",
+    "//third_party/minimp3",
+]
+
+rust_library(
+    name = "giztoy_audio",
+    srcs = glob(["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "giztoy_audio",
+    deps = all_crate_deps(normal = True) + C_DEPS,
+)
+
+rust_test(
+    name = "giztoy_audio_test",
+    crate = ":giztoy_audio",
+    deps = all_crate_deps(normal_dev = True) + C_DEPS,
+)

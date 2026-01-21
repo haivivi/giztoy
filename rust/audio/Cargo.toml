@@ -1,0 +1,13 @@
+[package]
+name = "giztoy-audio"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Audio processing utilities for PCM data"
+
+[dependencies]
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio-test.workspace = true

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "audio",
     "buffer",
     "genx",
     "dashscope",
@@ -20,6 +21,7 @@ authors = ["giztoy"]
 
 [workspace.dependencies]
 # Internal crates
+giztoy-audio = { path = "audio" }
 giztoy-buffer = { path = "buffer" }
 giztoy-genx = { path = "genx" }
 giztoy-dashscope = { path = "dashscope" }
