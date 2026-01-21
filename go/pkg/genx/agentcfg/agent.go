@@ -69,7 +69,7 @@ func (d *ReActAgent) UnmarshalJSON(data []byte) error {
 //
 // Validation:
 //   - Inherits AgentBase validation (Name required)
-//   - Route: each MatchRoute.Rules must reference valid rule names from Rules
+//   - Route: each MatchRoute must have non-empty Rules and a valid Agent
 type MatchAgent struct {
 	AgentBase `msgpack:",inline"`
 	Rules     []RuleRef    `json:"rules,omitzero" msgpack:"rules,omitempty"`

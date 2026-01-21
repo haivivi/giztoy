@@ -13,12 +13,13 @@ type EncodePCMOption interface {
 }
 
 // WithFramePacking enables/disables frame packing.
+// NOTE: This option is reserved for future use and currently has no effect.
 type WithFramePacking struct {
 	Enabled bool
 }
 
 func (w WithFramePacking) applyEncoderOption(s *OpusFrameStream) {
-	// Frame packing implementation would go here
+	// TODO: implement frame packing
 }
 
 // OpusFrameStream wraps an opus.Encoder to implement FrameReader.

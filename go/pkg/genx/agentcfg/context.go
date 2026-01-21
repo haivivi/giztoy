@@ -42,10 +42,6 @@ type ContextLayer struct {
 }
 
 // MemoryOptions defines options for memory injection in context layers.
-//
-// Validation:
-//   - At least one of Summary, Query, or Recent must be set (non-zero)
-//   - Recent: must be >= 0 if set
 type MemoryOptions struct {
 	Summary bool `json:"summary,omitzero" yaml:"summary,omitempty"`
 	Query   bool `json:"query,omitzero" yaml:"query,omitempty"`
