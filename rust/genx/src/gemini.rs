@@ -23,6 +23,7 @@
 //! ```
 
 use async_trait::async_trait;
+use base64::Engine;
 use futures::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -128,10 +129,13 @@ impl GeminiGenerator {
                                 current_parts.push(json!({"text": t}));
                             }
                             Part::Blob(b) => {
+                                // Use base64 crate for encoding
+                                let encoded =
+                                    base64::engine::general_purpose::STANDARD.encode(&b.data);
                                 current_parts.push(json!({
                                     "inline_data": {
                                         "mime_type": b.mime_type,
-                                        "data": base64_encode(&b.data),
+                                        "data": encoded,
                                     }
                                 }));
                             }
@@ -218,38 +222,20 @@ impl GeminiGenerator {
             if stream { "&alt=sse" } else { "" }
         )
     }
-}
 
-/// Simple base64 encoder.
-fn base64_encode(data: &[u8]) -> String {
-    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
-    let mut result = String::new();
-    for chunk in data.chunks(3) {
-        let mut n = (chunk[0] as u32) << 16;
-        if chunk.len() > 1 {
-            n |= (chunk[1] as u32) << 8;
-        }
-        if chunk.len() > 2 {
-            n |= chunk[2] as u32;
+    /// Parse usage metadata from Gemini response.
+    fn parse_usage(json: &Value) -> Usage {
+        let usage = &json["usageMetadata"];
+        if usage.is_null() {
+            return Usage::default();
         }
 
-        result.push(ALPHABET[(n >> 18) as usize & 0x3F] as char);
-        result.push(ALPHABET[(n >> 12) as usize & 0x3F] as char);
-
-        if chunk.len() > 1 {
-            result.push(ALPHABET[(n >> 6) as usize & 0x3F] as char);
-        } else {
-            result.push('=');
-        }
-
-        if chunk.len() > 2 {
-            result.push(ALPHABET[n as usize & 0x3F] as char);
-        } else {
-            result.push('=');
+        Usage {
+            prompt_token_count: usage["promptTokenCount"].as_i64().unwrap_or(0),
+            cached_content_token_count: usage["cachedContentTokenCount"].as_i64().unwrap_or(0),
+            generated_token_count: usage["candidatesTokenCount"].as_i64().unwrap_or(0),
         }
     }
-    result
 }
 
 #[async_trait]
@@ -291,6 +277,7 @@ impl Generator for GeminiGenerator {
         let mut stream = response.bytes_stream();
         tokio::spawn(async move {
             let mut buffer = String::new();
+            let mut final_usage = Usage::default();
 
             while let Some(chunk_result) = stream.next().await {
                 match chunk_result {
@@ -317,6 +304,12 @@ impl Generator for GeminiGenerator {
                             };
 
                             if let Ok(json) = serde_json::from_str::<Value>(data) {
+                                // Parse usage metadata
+                                let usage = GeminiGenerator::parse_usage(&json);
+                                if usage.prompt_token_count > 0 || usage.generated_token_count > 0 {
+                                    final_usage = usage;
+                                }
+
                                 // Extract text from candidates
                                 if let Some(candidates) = json["candidates"].as_array() {
                                     for candidate in candidates {
@@ -336,19 +329,16 @@ impl Generator for GeminiGenerator {
                                         if let Some(reason) = candidate["finishReason"].as_str() {
                                             match reason {
                                                 "STOP" => {
-                                                    let _ = builder_clone.done(Usage::default());
+                                                    let _ = builder_clone.done(final_usage);
                                                     return;
                                                 }
                                                 "MAX_TOKENS" => {
-                                                    let _ =
-                                                        builder_clone.truncated(Usage::default());
+                                                    let _ = builder_clone.truncated(final_usage);
                                                     return;
                                                 }
                                                 "SAFETY" => {
-                                                    let _ = builder_clone.blocked(
-                                                        Usage::default(),
-                                                        "safety filter",
-                                                    );
+                                                    let _ = builder_clone
+                                                        .blocked(final_usage, "safety filter");
                                                     return;
                                                 }
                                                 _ => {}
@@ -381,7 +371,7 @@ impl Generator for GeminiGenerator {
                 }
             }
 
-            let _ = builder_clone.done(Usage::default());
+            let _ = builder_clone.done(final_usage);
         });
 
         Ok(Box::new(builder.stream()))
@@ -428,11 +418,14 @@ impl Generator for GeminiGenerator {
             .await
             .map_err(|e| GenxError::Other(anyhow::anyhow!("JSON parse error: {}", e)))?;
 
+        // Parse usage metadata
+        let usage = Self::parse_usage(&json);
+
         // Extract text from response
         let content = json["candidates"][0]["content"]["parts"][0]["text"]
             .as_str()
             .ok_or_else(|| GenxError::Other(anyhow::anyhow!("No content in response")))?;
 
-        Ok((Usage::default(), tool.new_func_call(content)))
+        Ok((usage, tool.new_func_call(content)))
     }
 }

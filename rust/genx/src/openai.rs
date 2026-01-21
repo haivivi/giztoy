@@ -23,6 +23,7 @@
 //! ```
 
 use async_trait::async_trait;
+use base64::Engine;
 use futures::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -33,7 +34,7 @@ use crate::context::{ModelContext, ModelParams};
 use crate::error::{GenxError, Usage};
 use crate::stream::StreamBuilder;
 use crate::tool::FuncTool;
-use crate::types::{FuncCall, MessageChunk, Part, Payload, Role};
+use crate::types::{FuncCall, MessageChunk, Part, Payload, Role, ToolCall};
 use crate::{Generator, Stream};
 
 /// OpenAI Generator configuration.
@@ -139,18 +140,54 @@ impl OpenAIGenerator {
                         Role::Tool => continue,
                     };
 
-                    let mut text_parts = Vec::new();
-                    for part in contents {
-                        if let Part::Text(t) = part {
-                            text_parts.push(t.clone());
-                        }
-                    }
+                    // Check if we have any non-text parts
+                    let has_multimodal = contents.iter().any(|p| matches!(p, Part::Blob(_)));
 
-                    if !text_parts.is_empty() {
-                        messages.push(json!({
-                            "role": role,
-                            "content": text_parts.join(""),
-                        }));
+                    if has_multimodal {
+                        // Use multimodal format with content array
+                        let mut content_parts = Vec::new();
+                        for part in contents {
+                            match part {
+                                Part::Text(t) => {
+                                    content_parts.push(json!({
+                                        "type": "text",
+                                        "text": t,
+                                    }));
+                                }
+                                Part::Blob(blob) => {
+                                    // Encode blob as base64 data URL
+                                    let b64 = base64::engine::general_purpose::STANDARD
+                                        .encode(&blob.data);
+                                    let data_url = format!("data:{};base64,{}", blob.mime_type, b64);
+                                    content_parts.push(json!({
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": data_url,
+                                        }
+                                    }));
+                                }
+                            }
+                        }
+                        if !content_parts.is_empty() {
+                            messages.push(json!({
+                                "role": role,
+                                "content": content_parts,
+                            }));
+                        }
+                    } else {
+                        // Use simple text format
+                        let mut text_parts = Vec::new();
+                        for part in contents {
+                            if let Part::Text(t) = part {
+                                text_parts.push(t.clone());
+                            }
+                        }
+                        if !text_parts.is_empty() {
+                            messages.push(json!({
+                                "role": role,
+                                "content": text_parts.join(""),
+                            }));
+                        }
                     }
                 }
                 Payload::ToolCall(tc) => {
@@ -179,6 +216,27 @@ impl OpenAIGenerator {
         messages
     }
 
+    /// Convert tools to OpenAI format.
+    fn convert_tools(&self, ctx: &dyn ModelContext) -> Vec<Value> {
+        let mut tools = Vec::new();
+        for tool in ctx.tools() {
+            // Only include function tools (those with a schema)
+            if let Some(schema) = tool.schema() {
+                tools.push(json!({
+                    "type": "function",
+                    "function": {
+                        "name": tool.name(),
+                        "description": tool.description(),
+                        "parameters": schema,
+                        "strict": true,
+                    }
+                }));
+            }
+            // Skip built-in tools like SearchWebTool that don't have schemas
+        }
+        tools
+    }
+
     /// Build request body.
     fn build_request(&self, ctx: &dyn ModelContext, stream: bool) -> Value {
         let messages = self.convert_messages(ctx);
@@ -189,6 +247,19 @@ impl OpenAIGenerator {
             "messages": messages,
             "stream": stream,
         });
+
+        // Add stream options to get usage in streaming mode
+        if stream {
+            body["stream_options"] = json!({
+                "include_usage": true
+            });
+        }
+
+        // Add tools if any
+        let tools = self.convert_tools(ctx);
+        if !tools.is_empty() {
+            body["tools"] = json!(tools);
+        }
 
         if let Some(p) = params {
             if let Some(max) = p.max_tokens {
@@ -203,6 +274,22 @@ impl OpenAIGenerator {
         }
 
         body
+    }
+
+    /// Parse usage from OpenAI response.
+    fn parse_usage(json: &Value) -> Usage {
+        let usage = &json["usage"];
+        if usage.is_null() {
+            return Usage::default();
+        }
+
+        Usage {
+            prompt_token_count: usage["prompt_tokens"].as_i64().unwrap_or(0),
+            cached_content_token_count: usage["prompt_tokens_details"]["cached_tokens"]
+                .as_i64()
+                .unwrap_or(0),
+            generated_token_count: usage["completion_tokens"].as_i64().unwrap_or(0),
+        }
     }
 }
 
@@ -246,6 +333,7 @@ impl Generator for OpenAIGenerator {
         let mut stream = response.bytes_stream();
         tokio::spawn(async move {
             let mut buffer = String::new();
+            let mut final_usage = Usage::default();
 
             while let Some(chunk_result) = stream.next().await {
                 match chunk_result {
@@ -260,19 +348,61 @@ impl Generator for OpenAIGenerator {
                             for line in event.lines() {
                                 if let Some(data) = line.strip_prefix("data: ") {
                                     if data == "[DONE]" {
-                                        let _ = builder_clone.done(Usage::default());
+                                        let _ = builder_clone.done(final_usage);
                                         return;
                                     }
 
                                     if let Ok(json) = serde_json::from_str::<Value>(data) {
+                                        // Parse usage from streaming response (if available)
+                                        let usage = Self::parse_usage(&json);
+                                        if usage.prompt_token_count > 0
+                                            || usage.generated_token_count > 0
+                                        {
+                                            final_usage = usage;
+                                        }
+
                                         if let Some(choices) = json["choices"].as_array() {
                                             for choice in choices {
+                                                // Handle text content
                                                 if let Some(content) =
                                                     choice["delta"]["content"].as_str()
                                                 {
                                                     let _ = builder_clone.add(&[
                                                         MessageChunk::text(Role::Model, content),
                                                     ]);
+                                                }
+
+                                                // Handle streaming tool calls
+                                                if let Some(tool_calls) =
+                                                    choice["delta"]["tool_calls"].as_array()
+                                                {
+                                                    for tc in tool_calls {
+                                                        let index =
+                                                            tc["index"].as_i64().unwrap_or(0);
+                                                        let id = tc["id"]
+                                                            .as_str()
+                                                            .unwrap_or("")
+                                                            .to_string();
+                                                        let name = tc["function"]["name"]
+                                                            .as_str()
+                                                            .unwrap_or("")
+                                                            .to_string();
+                                                        let arguments = tc["function"]["arguments"]
+                                                            .as_str()
+                                                            .unwrap_or("")
+                                                            .to_string();
+
+                                                        let _ = builder_clone.add(&[
+                                                            MessageChunk::tool_call(
+                                                                Role::Model,
+                                                                ToolCall::with_index(
+                                                                    id,
+                                                                    index,
+                                                                    FuncCall { name, arguments },
+                                                                ),
+                                                            ),
+                                                        ]);
+                                                    }
                                                 }
 
                                                 // Check finish reason
@@ -282,17 +412,17 @@ impl Generator for OpenAIGenerator {
                                                     match reason {
                                                         "stop" | "tool_calls" => {
                                                             let _ =
-                                                                builder_clone.done(Usage::default());
+                                                                builder_clone.done(final_usage);
                                                             return;
                                                         }
                                                         "length" => {
                                                             let _ = builder_clone
-                                                                .truncated(Usage::default());
+                                                                .truncated(final_usage);
                                                             return;
                                                         }
                                                         "content_filter" => {
                                                             let _ = builder_clone.blocked(
-                                                                Usage::default(),
+                                                                final_usage,
                                                                 "content_filter",
                                                             );
                                                             return;
@@ -317,7 +447,7 @@ impl Generator for OpenAIGenerator {
                 }
             }
 
-            let _ = builder_clone.done(Usage::default());
+            let _ = builder_clone.done(final_usage);
         });
 
         Ok(Box::new(builder.stream()))
@@ -329,19 +459,42 @@ impl Generator for OpenAIGenerator {
         ctx: &dyn ModelContext,
         tool: &FuncTool,
     ) -> Result<(Usage, FuncCall), GenxError> {
-        let mut body = self.build_request(ctx, false);
+        // Use tool-calling approach instead of response_format
+        // This is the correct way to get structured output from OpenAI
+        let messages = self.convert_messages(ctx);
+        let params = ctx.params().or(self.config.invoke_params.as_ref());
 
-        // Add JSON schema for structured output
-        if self.config.support_json_output {
-            body["response_format"] = json!({
-                "type": "json_schema",
-                "json_schema": {
+        let mut body = json!({
+            "model": self.config.model,
+            "messages": messages,
+            "stream": false,
+            "tools": [{
+                "type": "function",
+                "function": {
                     "name": tool.name,
                     "description": tool.description,
-                    "schema": tool.argument,
+                    "parameters": tool.argument,
                     "strict": true,
                 }
-            });
+            }],
+            "tool_choice": {
+                "type": "function",
+                "function": {
+                    "name": tool.name
+                }
+            }
+        });
+
+        if let Some(p) = params {
+            if let Some(max) = p.max_tokens {
+                body["max_completion_tokens"] = json!(max);
+            }
+            if let Some(temp) = p.temperature {
+                body["temperature"] = json!(temp);
+            }
+            if let Some(top_p) = p.top_p {
+                body["top_p"] = json!(top_p);
+            }
         }
 
         let url = format!("{}/chat/completions", self.config.base_url);
@@ -374,10 +527,31 @@ impl Generator for OpenAIGenerator {
             .await
             .map_err(|e| GenxError::Other(anyhow::anyhow!("JSON parse error: {}", e)))?;
 
-        let content = json["choices"][0]["message"]["content"]
-            .as_str()
-            .ok_or_else(|| GenxError::Other(anyhow::anyhow!("No content in response")))?;
+        // Parse usage
+        let usage = Self::parse_usage(&json);
 
-        Ok((Usage::default(), tool.new_func_call(content)))
+        // Extract tool call from response
+        let tool_calls = &json["choices"][0]["message"]["tool_calls"];
+        if let Some(tc) = tool_calls.as_array().and_then(|arr| arr.first()) {
+            let arguments = tc["function"]["arguments"]
+                .as_str()
+                .unwrap_or("{}")
+                .to_string();
+
+            Ok((
+                usage,
+                FuncCall {
+                    name: tool.name.clone(),
+                    arguments,
+                },
+            ))
+        } else {
+            // Fallback: try to extract content if tool_calls is not present
+            let content = json["choices"][0]["message"]["content"]
+                .as_str()
+                .ok_or_else(|| GenxError::Other(anyhow::anyhow!("No tool_calls or content in response")))?;
+
+            Ok((usage, tool.new_func_call(content)))
+        }
     }
 }

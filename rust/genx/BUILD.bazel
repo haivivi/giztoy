@@ -12,6 +12,7 @@ rust_library(
         "//rust/buffer:giztoy_buffer",
         "@crate_index//:anyhow",
         "@crate_index//:async-stream",
+        "@crate_index//:base64",
         "@crate_index//:bytes",
         "@crate_index//:futures",
         "@crate_index//:reqwest",

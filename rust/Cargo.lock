@@ -498,6 +498,7 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
+ "base64",
  "bytes",
  "futures",
  "giztoy-buffer",

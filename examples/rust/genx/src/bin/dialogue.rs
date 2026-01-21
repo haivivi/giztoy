@@ -109,8 +109,8 @@ async fn generate_response(
         }
     }
 
-    // Add the message to respond to (if not already in history)
-    if history.is_empty() || history.last().map(|(_, m)| m.as_str()) != Some(last_message) {
+    // Add the message to respond to (only for the initial message when history is empty)
+    if history.is_empty() {
         builder.user_text("", last_message);
     }
 

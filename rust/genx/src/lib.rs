@@ -51,7 +51,10 @@ pub mod types;
 // Re-exports for convenience
 pub use context::{ModelContext, ModelContextBuilder, ModelParams, MultiModelContext, Prompt};
 pub use error::{GenxError, State, Status, Usage};
-pub use stream::{Stream, StreamBuilder, StreamEvent, StreamImpl};
+pub use stream::{
+    collect_text, collect_tool_calls, collect_tool_calls_streamed, Stream, StreamBuilder,
+    StreamEvent, StreamImpl, StreamResult,
+};
 pub use tool::{AnyTool, BoxFuture, FuncTool, SearchWebTool, Tool};
 pub use types::{
     Blob, Contents, FuncCall, Message, MessageChunk, Part, Payload, Role, ToolCall, ToolResult,

@@ -22,6 +22,17 @@ pub trait Tool: Send + Sync {
 
     /// Get the description of this tool.
     fn description(&self) -> &str;
+
+    /// Get the JSON Schema for the tool's arguments (if applicable).
+    /// Returns None for built-in tools like SearchWebTool.
+    fn schema(&self) -> Option<&JsonValue> {
+        None
+    }
+
+    /// Check if this is a function tool.
+    fn is_func_tool(&self) -> bool {
+        self.schema().is_some()
+    }
 }
 
 /// A function tool with JSON Schema parameter definition.
@@ -54,6 +65,10 @@ impl Tool for FuncTool {
 
     fn description(&self) -> &str {
         &self.description
+    }
+
+    fn schema(&self) -> Option<&JsonValue> {
+        Some(&self.argument)
     }
 }
 
@@ -153,10 +168,7 @@ impl FuncTool {
 
     /// Create a tool call for this tool with the given ID and arguments.
     pub fn new_tool_call(&self, id: impl Into<String>, arguments: impl Into<String>) -> ToolCall {
-        ToolCall {
-            id: id.into(),
-            func_call: self.new_func_call(arguments),
-        }
+        ToolCall::new(id, self.new_func_call(arguments))
     }
 
     /// Check if this tool has an invoke handler.
@@ -238,6 +250,13 @@ impl Tool for AnyTool {
         match self {
             AnyTool::Func(t) => t.description(),
             AnyTool::SearchWeb(t) => t.description(),
+        }
+    }
+
+    fn schema(&self) -> Option<&JsonValue> {
+        match self {
+            AnyTool::Func(t) => t.schema(),
+            AnyTool::SearchWeb(t) => t.schema(),
         }
     }
 }

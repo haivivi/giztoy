@@ -118,6 +118,9 @@ impl FuncCall {
 pub struct ToolCall {
     /// Unique identifier for this tool call
     pub id: String,
+    /// Index of this tool call in a batch (used for streaming)
+    #[serde(default)]
+    pub index: i64,
     /// The function call details
     pub func_call: FuncCall,
 }
@@ -127,6 +130,16 @@ impl ToolCall {
     pub fn new(id: impl Into<String>, func_call: FuncCall) -> Self {
         Self {
             id: id.into(),
+            index: 0,
+            func_call,
+        }
+    }
+
+    /// Create a new tool call with an index.
+    pub fn with_index(id: impl Into<String>, index: i64, func_call: FuncCall) -> Self {
+        Self {
+            id: id.into(),
+            index,
             func_call,
         }
     }
