@@ -1,6 +1,6 @@
 # mqtt0 Benchmark Results
 
-Benchmarks comparing Go and Rust mqtt0 implementations for performance parity verification.
+Performance comparison between Go and Rust mqtt0 implementations.
 
 ## How to Run
 
@@ -24,45 +24,78 @@ go test ./pkg/mqtt0/... -bench=BenchmarkMessageRate -benchmem
 cd rust && cargo bench -p giztoy-mqtt0
 ```
 
-## Benchmark Results
+## Test Environment
 
-### Test Environment
 - **CPU**: Apple M4 Max
 - **OS**: macOS
 - **Go**: 1.24+ (GOMAXPROCS=16)
+- **Rust**: stable-aarch64-apple-darwin
 
-### Message Throughput (QoS 0)
+## Go vs Rust Performance Comparison
 
-| Benchmark | ops/sec | latency | throughput | allocs/op |
-|-----------|---------|---------|------------|-----------|
-| **Publish (single client)** |
-| 64 bytes | 323,000 | 3.1μs | 20.6 MB/s | 17 |
-| 256 bytes | 290,000 | 3.4μs | 74.5 MB/s | 18 |
-| 1024 bytes | 280,000 | 3.6μs | 280 MB/s | 18 |
-| 4096 bytes | 230,000 | 4.3μs | 950 MB/s | 18 |
+### Publish Throughput (QoS 0)
 
-### Message Rate
-
-| Test | messages/sec |
-|------|--------------|
-| Minimal payload (1 byte) | **324,000 msg/s** |
-| High throughput stress (4 pairs) | ~72,000 ops/s |
+| Payload | Go | Rust | Rust/Go |
+|---------|-----|------|---------|
+| 64 bytes | 3.1μs (20.6 MB/s) | **0.85μs (70.4 MB/s)** | 3.6x faster |
+| 256 bytes | 3.4μs (74.5 MB/s) | **0.73μs (333 MB/s)** | 4.5x faster |
+| 1024 bytes | 3.6μs (280 MB/s) | **1.05μs (927 MB/s)** | 3.3x faster |
+| 4096 bytes | 4.3μs (950 MB/s) | **1.82μs (2.1 GB/s)** | 2.2x faster |
 
 ### End-to-End Latency (pub → recv)
 
-| Payload | latency | throughput |
-|---------|---------|------------|
-| 64 bytes | 21μs | 3 MB/s |
-| 256 bytes | 22μs | 11 MB/s |
-| 1024 bytes | 25μs | 40 MB/s |
+| Payload | Go | Rust | Notes |
+|---------|-----|------|-------|
+| 64 bytes | 21-22μs | 24-25μs | Network I/O dominates |
 
 ### Trie Pattern Matching
 
-| Operation | ops/sec | latency | allocs |
-|-----------|---------|---------|--------|
-| exact_match | 16.6M | 60ns | 2 |
-| wildcard_match (`+`, `#`) | 11.7M | 85ns | 3 |
-| no_match | 86M | 12ns | 0 |
+| Operation | Go | Rust | Winner |
+|-----------|-----|------|--------|
+| exact_match | **60ns** | 196ns | Go 3.3x faster |
+| wildcard_match | **85ns** | 270ns | Go 3.2x faster |
+| no_match | **12ns** | 14ns | Similar |
+
+### Message Rate
+
+| Metric | Go | Rust |
+|--------|-----|------|
+| Messages/sec | **324,000** | ~1,200,000 (estimated) |
+| Allocs/op | 17-18 | 0 |
+
+## Key Findings
+
+### Rust Advantages
+- **3-4x faster** in pure CPU-bound publish operations
+- Zero memory allocations per message
+- Better suited for extremely high throughput scenarios
+
+### Go Advantages  
+- **3x faster** trie-based topic matching
+- Similar E2E latency (network-bound)
+- Lower development complexity
+- Sufficient performance for most real-world MQTT use cases
+
+### Shared Characteristics
+- Both achieve sub-25μs E2E latency
+- Both handle 300K+ msg/s on modern hardware
+- Network I/O is the bottleneck in real deployments
+
+## Optimization Opportunities (Go)
+
+1. **Buffer pooling**: Reduce allocations from 17-18/op to ~5/op
+2. **Batch publishing**: Amortize syscall overhead
+3. **Zero-copy receive**: Avoid payload copying in broker routing
+4. **Pre-allocated packet buffers**: Reuse encode/decode buffers
+
+## Detailed Go Benchmarks
+
+### Connection Establishment
+
+| Protocol | ops/sec | latency |
+|----------|---------|---------|
+| MQTT v4 | 2,900 | 340μs |
+| MQTT v5 | 2,600 | 380μs |
 
 ### Packet Encoding
 
@@ -72,29 +105,3 @@ cd rust && cargo bench -p giztoy-mqtt0
 | v4 PUBLISH 1kb | 3.7M | 3.7 GB/s |
 | v5 PUBLISH 64b | 10.2M | 650 MB/s |
 | v5 PUBLISH 1kb | 3.5M | 3.5 GB/s |
-
-### Connection Establishment
-
-| Protocol | ops/sec | latency |
-|----------|---------|---------|
-| MQTT v4 | 2,900 | 340μs |
-| MQTT v5 | 2,600 | 380μs |
-
-## Comparison with Rust
-
-Both implementations measure:
-1. **Publish Throughput** - Single client QoS 0 publishing
-2. **E2E Latency** - Round-trip time publish → receive
-3. **Trie Matching** - Topic pattern matching performance
-
-### Expected Differences
-
-- **Go**: Garbage collection overhead (~17-18 allocs/op for publish)
-- **Rust**: Zero-copy optimizations possible
-- **Both**: Network I/O is typically the bottleneck
-
-## Optimization Opportunities
-
-1. **Buffer pooling**: Reduce allocations per message
-2. **Batch publishing**: Amortize syscall overhead
-3. **Zero-copy receive**: Avoid payload copying in broker routing
