@@ -1,0 +1,31 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+rust_binary(
+    name = "dialogue",
+    srcs = ["src/bin/dialogue.rs"],
+    deps = [
+        "//rust/genx",
+        "@crate_index//:anyhow",
+        "@crate_index//:tokio",
+        "@crate_index//:tracing",
+        "@crate_index//:tracing-subscriber",
+    ],
+)
+
+rust_binary(
+    name = "tools",
+    srcs = ["src/bin/tools.rs"],
+    proc_macro_deps = [
+        "@crate_index//:schemars_derive",
+    ],
+    deps = [
+        "//rust/genx",
+        "@crate_index//:anyhow",
+        "@crate_index//:schemars",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:tokio",
+        "@crate_index//:tracing",
+        "@crate_index//:tracing-subscriber",
+    ],
+)
