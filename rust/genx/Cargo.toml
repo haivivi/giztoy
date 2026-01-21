@@ -1,0 +1,28 @@
+[package]
+name = "giztoy-genx"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "GenX - LLM universal interface for Rust"
+
+[dependencies]
+giztoy-buffer = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+schemars = { workspace = true }
+thiserror = { workspace = true }
+futures = { workspace = true }
+async-stream = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+bytes = { workspace = true }
+reqwest = { workspace = true }
+base64 = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }
+tokio = { workspace = true }
