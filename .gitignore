@@ -17,6 +17,14 @@ go/vendor/
 **/*.rs.bk
 # Note: Cargo.lock is committed for applications (reproducible builds)
 
+# ESP-RS / ESP-IDF
+**/.embuild/
+**/sdkconfig
+**/sdkconfig.old
+**/managed_components/
+**/dependencies.lock
+esp/**/build/
+
 # Zig
 zig/zig-cache/
 zig/zig-out/
@@ -35,6 +43,39 @@ zig/zig-out/
 *.swo
 *~
 .DS_Store
+
+# iOS / Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.hmap
+*.mobileprovision
+*.provisionprofile
+Pods/
+Podfile.lock
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+local.properties
+.gradle/
+gradle/
+gradlew
+gradlew.bat
+captures/
+.externalNativeBuild/
+.cxx/
+*.keystore
+!debug.keystore
+google-services.json
 
 # Build artifacts
 /dist/

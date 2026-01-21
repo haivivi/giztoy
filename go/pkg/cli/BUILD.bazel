@@ -6,13 +6,17 @@ go_library(
         "config.go",
         "doc.go",
         "format.go",
+        "log_writer.go",
         "output.go",
         "paths.go",
         "request.go",
+        "tui.go",
     ],
     importpath = "github.com/haivivi/giztoy/pkg/cli",
     visibility = ["//visibility:public"],
     deps = [
+        "//go/pkg/buffer",
+        "@com_github_charmbracelet_lipgloss//:lipgloss",
         "@com_github_goccy_go_yaml//:go-yaml",
     ],
 )
