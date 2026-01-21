@@ -1,0 +1,9 @@
+state_type: match
+id: match_minimal
+agent_def: router_agent
+messages:
+  - role: user
+    content: Play some music
+phase: matching
+input: Play some music
+matched: false

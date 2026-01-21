@@ -1,0 +1,8 @@
+{
+    "type": "text_processor",
+    "name": "translator",
+    "description": "Translate text to English",
+    "model": "test-model",
+    "prompt": "Translate the following text to English:",
+    "output_mode": "text"
+}

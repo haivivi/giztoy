@@ -1,0 +1,5 @@
+{
+    "role": "user",
+    "content": "Hello",
+    "tool_call_id": "call_1"
+}

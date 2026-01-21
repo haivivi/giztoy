@@ -1,0 +1,14 @@
+{
+  "name": "play_song",
+  "description": "Play a song by name",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "song_name": {
+        "type": "string",
+        "description": "Name of the song to play"
+      }
+    },
+    "required": ["song_name"]
+  }
+}

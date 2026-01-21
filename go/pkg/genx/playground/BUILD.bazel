@@ -1,0 +1,33 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "playground",
+    srcs = [
+        "agent_state.go",
+        "kv_store.go",
+        "logger.go",
+        "runtime.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/genx/playground",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/agent",
+        "//go/pkg/genx/agentcfg",
+        "//go/pkg/genx/generators",
+        "//go/pkg/genx/match",
+        "@com_github_goccy_go_yaml//:go-yaml",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "playground_test",
+    srcs = ["playground_test.go"],
+    embed = [":playground"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/agent",
+        "//go/pkg/genx/agentcfg",
+    ],
+)

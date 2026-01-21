@@ -1,0 +1,9 @@
+{
+  "type": "http",
+  "name": "mock_post",
+  "description": "Mock POST tool for testing",
+  "method": "POST",
+  "endpoint": "PLACEHOLDER_URL/submit",
+  "req_body_jq": "{data: .input}",
+  "resp_body_jq": ".response"
+}

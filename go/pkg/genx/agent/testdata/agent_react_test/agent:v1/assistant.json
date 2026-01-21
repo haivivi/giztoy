@@ -1,0 +1,20 @@
+{
+    "type": "react",
+    "name": "assistant",
+    "prompt": "You are a helpful assistant.",
+    "generator": {
+        "model": "test-model"
+    },
+    "tools": [
+        {
+            "$ref": "calculator"
+        },
+        {
+            "$ref": "search"
+        },
+        {
+            "$ref": "finish",
+            "quit": true
+        }
+    ]
+}

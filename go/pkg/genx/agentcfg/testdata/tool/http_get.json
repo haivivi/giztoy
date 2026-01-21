@@ -1,0 +1,10 @@
+{
+    "type": "http",
+    "name": "get_weather",
+    "description": "Get weather information",
+    "method": "GET",
+    "endpoint": "https://api.weather.com/v1/weather",
+    "headers": {
+        "X-API-Key": "${WEATHER_API_KEY}"
+    }
+}

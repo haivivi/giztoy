@@ -1,0 +1,7 @@
+{
+    "type": "text_processor",
+    "name": "summarizer",
+    "description": "Summarize conversation history",
+    "prompt": "Please summarize the following conversation concisely.",
+    "model": "gpt-4o-mini"
+}

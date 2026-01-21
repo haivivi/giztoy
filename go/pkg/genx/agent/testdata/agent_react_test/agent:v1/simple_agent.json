@@ -1,0 +1,9 @@
+{
+  "type": "react",
+  "name": "simple_agent",
+  "prompt": "You are a simple assistant that just responds.",
+  "generator": {
+    "model": "test-model"
+  },
+  "tools": []
+}

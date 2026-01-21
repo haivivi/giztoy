@@ -1,0 +1,6 @@
+{
+    "type": "text_processor",
+    "name": "broken_processor",
+    "description": "Text processor without model",
+    "prompt": "Summarize the text"
+}

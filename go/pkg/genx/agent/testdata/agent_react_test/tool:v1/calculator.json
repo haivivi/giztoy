@@ -1,0 +1,15 @@
+{
+  "type": "builtin",
+  "name": "calculator",
+  "description": "Perform basic math calculations",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "expression": {
+        "type": "string",
+        "description": "Math expression to evaluate"
+      }
+    },
+    "required": ["expression"]
+  }
+}

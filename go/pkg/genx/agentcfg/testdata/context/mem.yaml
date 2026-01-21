@@ -1,0 +1,4 @@
+$mem:
+  summary: true
+  query: true
+  recent: 100

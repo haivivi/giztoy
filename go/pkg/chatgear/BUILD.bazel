@@ -1,0 +1,39 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "chatgear",
+    srcs = [
+        "client_port.go",
+        "command.go",
+        "conn.go",
+        "conn_mqtt.go",
+        "conn_pipe.go",
+        "logger.go",
+        "port.go",
+        "server_port.go",
+        "state.go",
+        "stats.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/chatgear",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/opusrt",
+        "//go/pkg/audio/pcm",
+        "//go/pkg/encoding",
+        "//go/pkg/jsontime",
+        "//go/pkg/mqtt",
+    ],
+)
+
+go_test(
+    name = "chatgear_test",
+    srcs = [
+        "chatgear_test.go",
+        "port_test.go",
+    ],
+    embed = [":chatgear"],
+    deps = [
+        "//go/pkg/audio/opusrt",
+        "//go/pkg/jsontime",
+    ],
+)

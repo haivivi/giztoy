@@ -1,0 +1,15 @@
+{
+    "type": "text_processor",
+    "name": "extractor",
+    "description": "Extract structured data from text",
+    "prompt": "Extract key information from the text.",
+    "model": "gpt-4o",
+    "output_mode": "json",
+    "output_schema": {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"},
+            "keywords": {"type": "array", "items": {"type": "string"}}
+        }
+    }
+}

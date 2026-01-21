@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "generators",
+    srcs = ["generators.go"],
+    importpath = "github.com/haivivi/giztoy/pkg/genx/generators",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/trie",
+    ],
+)
+
+go_test(
+    name = "generators_test",
+    srcs = ["generators_test.go"],
+    embed = [":generators"],
+    deps = ["//go/pkg/genx"],
+)

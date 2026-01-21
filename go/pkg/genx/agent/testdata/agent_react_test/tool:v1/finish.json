@@ -1,0 +1,15 @@
+{
+  "type": "builtin",
+  "name": "finish",
+  "description": "Finish the task and provide final answer",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "answer": {
+        "type": "string",
+        "description": "Final answer to return"
+      }
+    },
+    "required": ["answer"]
+  }
+}

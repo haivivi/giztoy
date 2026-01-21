@@ -1,0 +1,17 @@
+state_type: react
+id: react_tool_call
+agent_def: weather_agent
+messages:
+  - role: user
+    content: "What's the weather in NYC?"
+  - role: model
+    tool_call_id: call_1
+    tool_call_name: get_weather
+    tool_call_args: '{"city":"NYC"}'
+  - role: tool
+    content: "Sunny, 72°F"
+    tool_result_id: call_1
+  - role: model
+    content: "The weather in NYC is sunny and 72°F."
+phase: idle
+finished: false

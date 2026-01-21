@@ -1,0 +1,27 @@
+type: composite
+name: extract_and_translate
+description: Extract keywords and translate
+steps:
+  - id: extract
+    tool:
+      type: generator
+      name: extractor
+      model: gpt-4o
+      mode: json_output
+      prompt: Extract keywords.
+      output_schema:
+        type: object
+        properties:
+          keywords:
+            type: array
+            items:
+              type: string
+
+  - id: translate
+    tool:
+      type: generator
+      name: translator
+      model: gpt-4o
+      mode: generate
+      prompt: Translate the keywords to Chinese.
+    input_jq: '{text: .steps.extract.keywords | join(", ")}'

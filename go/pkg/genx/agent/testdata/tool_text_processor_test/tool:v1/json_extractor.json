@@ -1,0 +1,29 @@
+{
+    "type": "text_processor",
+    "name": "json_extractor",
+    "description": "Extract structured data from text",
+    "model": "test-model",
+    "prompt": "Extract key information from the text:",
+    "output_mode": "json",
+    "output_schema": {
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string"
+            },
+            "summary": {
+                "type": "string"
+            },
+            "keywords": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "required": [
+            "title",
+            "summary"
+        ]
+    }
+}

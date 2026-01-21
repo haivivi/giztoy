@@ -1,0 +1,12 @@
+name: full_agent
+prompt: You are a comprehensive assistant.
+generator:
+  model: gpt-4o
+context_layers:
+  - System prompt here.
+  - $ref: personality:friendly
+tools:
+  - $ref: search
+  - $ref: calculator
+  - name: inline_tool
+    description: Inline tool example

@@ -1,0 +1,59 @@
+{
+  "type": "match",
+  "name": "intent_router",
+  "generator": {
+    "model": "test-model"
+  },
+  "rules": [
+    {
+      "$ref": "play_music"
+    },
+    {
+      "$ref": "weather_query"
+    },
+    {
+      "name": "greeting",
+      "examples": [
+        [
+          "hello"
+        ],
+        [
+          "hi"
+        ],
+        [
+          "good morning"
+        ]
+      ]
+    }
+  ],
+  "route": [
+    {
+      "rules": [
+        "play_music"
+      ],
+      "agent": {
+        "$ref": "music_agent"
+      }
+    },
+    {
+      "rules": [
+        "weather_query"
+      ],
+      "agent": {
+        "$ref": "weather_agent"
+      }
+    },
+    {
+      "rules": [
+        "greeting"
+      ],
+      "agent": {
+        "name": "greeting_agent",
+        "prompt": "You are a friendly assistant. Greet the user warmly.",
+        "generator": {
+          "model": "test-model"
+        }
+      }
+    }
+  ]
+}

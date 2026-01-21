@@ -1,0 +1,14 @@
+{
+    "type": "react",
+    "name": "child_agent",
+    "prompt": "You are a helpful child assistant. When asked a question, answer briefly and then call finish.",
+    "generator": {
+        "model": "child-model"
+    },
+    "tools": [
+        {
+            "$ref": "finish",
+            "quit": true
+        }
+    ]
+}

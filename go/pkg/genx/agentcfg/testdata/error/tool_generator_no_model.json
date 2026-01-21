@@ -1,0 +1,7 @@
+{
+    "type": "generator",
+    "name": "no_model",
+    "description": "Generator without model",
+    "mode": "generate",
+    "prompt": "Test prompt"
+}

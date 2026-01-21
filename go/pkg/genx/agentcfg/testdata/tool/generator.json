@@ -1,0 +1,8 @@
+{
+    "type": "generator",
+    "name": "summarizer",
+    "description": "Summarize text",
+    "model": "gpt-4o",
+    "mode": "generate",
+    "prompt": "Summarize the following text concisely."
+}

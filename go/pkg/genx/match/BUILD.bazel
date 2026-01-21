@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "match",
+    srcs = [
+        "match.go",
+        "rule.go",
+        "yaml.go",
+    ],
+    embedsrcs = ["default.gotmpl"],
+    importpath = "github.com/haivivi/giztoy/pkg/genx/match",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+        "@com_github_goccy_go_yaml//:go-yaml",
+        "@org_golang_google_api//iterator",
+    ],
+)
+
+go_test(
+    name = "match_test",
+    srcs = ["match_test.go"],
+    embed = [":match"],
+)
