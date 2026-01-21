@@ -6,7 +6,6 @@ go_library(
         "client_port.go",
         "command.go",
         "conn.go",
-        "conn_mqtt.go",
         "conn_pipe.go",
         "logger.go",
         "port.go",
@@ -21,7 +20,6 @@ go_library(
         "//go/pkg/audio/pcm",
         "//go/pkg/encoding",
         "//go/pkg/jsontime",
-        "//go/pkg/mqtt",
     ],
 )
 

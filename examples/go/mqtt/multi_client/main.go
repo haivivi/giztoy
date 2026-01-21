@@ -1,7 +1,7 @@
-// Package main demonstrates multi-client MQTT communication.
+// Package main demonstrates multi-client MQTT communication using mqtt0.
 //
 // This example demonstrates:
-// - Starting an embedded MQTT broker (server)
+// - Starting an embedded MQTT broker
 // - Multiple clients connecting to the broker
 // - Clients subscribing and publishing messages
 // - Verifying all clients receive the expected messages
@@ -18,8 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/mqtt"
-	"github.com/mochi-mqtt/server/v2/listeners"
+	"github.com/haivivi/giztoy/pkg/mqtt0"
 )
 
 // MessageTracker tracks received messages for verification.
@@ -85,7 +84,7 @@ func findAvailablePort() (string, error) {
 }
 
 func main() {
-	log.Println("Starting multi-client MQTT test")
+	log.Println("Starting multi-client MQTT test (mqtt0)")
 
 	addr, err := findAvailablePort()
 	if err != nil {
@@ -96,38 +95,32 @@ func main() {
 	// Create message tracker
 	tracker := NewMessageTracker()
 
-	// Create broker handler
-	brokerMux := mqtt.NewServeMux()
-	brokerMux.HandleFunc("chat/#", func(msg mqtt.Message) error {
-		payload := string(msg.Packet.Payload)
-		tracker.RecordBrokerMessage(msg.Packet.Topic, payload)
-		return nil
-	})
-
-	// Start broker
-	srv := &mqtt.Server{
-		Handler: brokerMux,
+	// Start broker with handler
+	broker := &mqtt0.Broker{
+		Handler: mqtt0.HandlerFunc(func(clientID string, msg *mqtt0.Message) {
+			tracker.RecordBrokerMessage(msg.Topic, string(msg.Payload))
+		}),
 	}
-	defer srv.Close()
+	defer broker.Close()
 
-	tcp := listeners.NewTCP(listeners.Config{
-		ID:      "tcp",
-		Address: addr,
-	})
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
 
 	go func() {
-		if err := srv.Serve(tcp); err != nil {
+		if err := broker.Serve(ln); err != nil {
 			log.Printf("Server stopped: %v", err)
 		}
 	}()
 
 	// Wait for server to start
-	time.Sleep(500 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	log.Printf("Broker started on %s", addr)
 
 	// Create clients
 	numClients := 3
-	clients := make([]*mqtt.Conn, numClients)
+	clients := make([]*mqtt0.Client, numClients)
 	clientIDs := make([]string, numClients)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -137,43 +130,46 @@ func main() {
 		clientID := fmt.Sprintf("client-%d", i)
 		clientIDs[i] = clientID
 
-		// Create client mux with handler
-		clientMux := mqtt.NewServeMux()
-		cid := clientID // capture for closure
-		clientMux.HandleFunc("chat/#", func(msg mqtt.Message) error {
-			payload := string(msg.Packet.Payload)
-			tracker.RecordClientMessage(cid, msg.Packet.Topic, payload)
-			return nil
+		client, err := mqtt0.Connect(ctx, mqtt0.ClientConfig{
+			Addr:     "tcp://" + addr,
+			ClientID: clientID,
 		})
-
-		dialer := &mqtt.Dialer{
-			ID:       clientID,
-			ServeMux: clientMux,
-		}
-
-		conn, err := dialer.Dial(ctx, fmt.Sprintf("tcp://%s", addr))
 		if err != nil {
 			log.Fatalf("Client %s failed to connect: %v", clientID, err)
 		}
 
 		// Subscribe to chat topic
-		if err := conn.Subscribe(ctx, "chat/#"); err != nil {
+		if err := client.Subscribe(ctx, "chat/#"); err != nil {
 			log.Fatalf("Client %s failed to subscribe: %v", clientID, err)
 		}
 
 		log.Printf("Client %s connected and subscribed", clientID)
-		clients[i] = conn
+		clients[i] = client
+
+		// Start message receiver goroutine for this client
+		go func(cid string, c *mqtt0.Client) {
+			for {
+				msg, err := c.RecvTimeout(5 * time.Second)
+				if err != nil {
+					return
+				}
+				if msg == nil {
+					continue
+				}
+				tracker.RecordClientMessage(cid, msg.Topic, string(msg.Payload))
+			}
+		}(clientID, client)
 	}
 
 	// Wait for subscriptions to complete
 	time.Sleep(300 * time.Millisecond)
 
 	// Each client publishes a message
-	for i, conn := range clients {
+	for i, client := range clients {
 		topic := "chat/room1"
 		payload := fmt.Sprintf("Hello from %s", clientIDs[i])
 
-		if err := conn.WriteToTopic(ctx, []byte(payload), topic); err != nil {
+		if err := client.Publish(ctx, topic, []byte(payload)); err != nil {
 			log.Fatalf("Client %s failed to publish: %v", clientIDs[i], err)
 		}
 		log.Printf("Client %s published: %s", clientIDs[i], payload)
@@ -217,12 +213,12 @@ func main() {
 
 	// Cleanup
 	log.Println("\n=== Cleanup ===")
-	for i, conn := range clients {
-		conn.Close()
+	for i, client := range clients {
+		client.Close()
 		log.Printf("Client %s disconnected", clientIDs[i])
 	}
 
-	srv.Close()
+	broker.Close()
 	log.Println("Broker stopped")
 
 	log.Println("\n=== Test Complete ===")

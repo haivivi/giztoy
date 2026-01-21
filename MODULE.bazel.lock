@@ -224,7 +224,7 @@
     },
     "//:extensions.bzl%yq": {
       "general": {
-        "bzlTransitiveDigest": "rfb7N9A/OsSrx7k1uiVfdCRYsIaYMVJOckiOjirzNK8=",
+        "bzlTransitiveDigest": "q1WZ7ut0rKzcXZ/rsvveUyDF8Faci9ZNQ2XBOVogdiM=",
         "usagesDigest": "Fth34LdLVC+iB2NfiJFRWkbRVhRG/rESzqXg9ZHMGME=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -238,6 +238,16 @@
         "recordedRepoMappingEntries": [
           [
             "",
+            "bazel_tools",
+            "bazel_tools"
+          ],
+          [
+            "",
+            "gazelle",
+            "gazelle+"
+          ],
+          [
+            "gazelle+",
             "bazel_tools",
             "bazel_tools"
           ]

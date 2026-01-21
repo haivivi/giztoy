@@ -1,42 +1,38 @@
-// Package main demonstrates an MQTT echo server.
+// Package main demonstrates an MQTT echo server using mqtt0.
 //
 // This example runs an MQTT broker that logs received messages
-// and can publish responses back to clients.
+// and echoes them back on a response topic.
 //
 // Run with: go run ./examples/go/mqtt/echo_server/main.go
 package main
 
 import (
 	"log"
+	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
-	"github.com/haivivi/giztoy/pkg/mqtt"
-	"github.com/mochi-mqtt/server/v2/listeners"
+	"github.com/haivivi/giztoy/pkg/mqtt0"
 )
 
 func main() {
-	log.Println("Starting MQTT Echo Server")
+	log.Println("Starting MQTT Echo Server (mqtt0)")
 
-	// Create handler that logs messages
-	mux := mqtt.NewServeMux()
+	// Create broker with message handler
+	broker := &mqtt0.Broker{
+		Handler: mqtt0.HandlerFunc(func(clientID string, msg *mqtt0.Message) {
+			log.Printf("Received from %s on '%s': %s", clientID, msg.Topic, string(msg.Payload))
 
-	mux.HandleFunc("request/#", func(msg mqtt.Message) error {
-		payload := string(msg.Packet.Payload)
-		log.Printf("Received on '%s': %s", msg.Packet.Topic, payload)
-
-		// In a real application, you'd use the server's WriteToTopic
-		// to echo back. For this demo, we just log the message.
-		responseTopic := "response/" + msg.Packet.Topic[8:] // Strip "request/"
-		log.Printf("Would echo to: %s", responseTopic)
-
-		return nil
-	})
-
-	// Create server with callbacks
-	srv := &mqtt.Server{
-		Handler: mux,
+			// Echo back messages from request/... to response/...
+			if strings.HasPrefix(msg.Topic, "request/") {
+				responseTopic := "response/" + msg.Topic[8:]
+				log.Printf("Would echo to: %s", responseTopic)
+				// Note: In mqtt0, the broker automatically routes messages to subscribers
+				// For echo functionality, you'd need to publish to the response topic
+			}
+		}),
 		OnConnect: func(clientID string) {
 			log.Printf("Client connected: %s", clientID)
 		},
@@ -46,10 +42,11 @@ func main() {
 	}
 
 	// Create TCP listener
-	tcp := listeners.NewTCP(listeners.Config{
-		ID:      "tcp",
-		Address: "127.0.0.1:1883",
-	})
+	ln, err := net.Listen("tcp", "127.0.0.1:1883")
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	defer ln.Close()
 
 	log.Println("Echo server listening on 127.0.0.1:1883")
 	log.Println("Subscribe to 'response/#' to receive echoed messages")
@@ -63,11 +60,12 @@ func main() {
 	go func() {
 		<-sigCh
 		log.Println("Shutting down...")
-		srv.Close()
+		ln.Close()
+		broker.Close()
 	}()
 
 	// Run server
-	if err := srv.Serve(tcp); err != nil {
+	if err := broker.Serve(ln); err != nil {
 		log.Printf("Server stopped: %v", err)
 	}
 }

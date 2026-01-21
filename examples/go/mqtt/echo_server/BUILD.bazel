@@ -5,7 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/haivivi/giztoy/examples/mqtt/echo_server",
     visibility = ["//visibility:private"],
-    deps = ["@com_github_mochi_mqtt_server_v2//listeners"],
+    deps = ["//go/pkg/mqtt0"],
 )
 
 go_binary(
