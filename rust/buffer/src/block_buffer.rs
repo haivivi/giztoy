@@ -192,6 +192,7 @@ impl<T> BlockBuffer<T> {
     /// Closes the buffer with the specified error.
     ///
     /// All blocking operations are immediately unblocked and return the error.
+    /// The internal buffer is cleared to free resources held by stored items.
     pub fn close_with_error<E>(&self, err: E) -> Result<(), BufferError>
     where
         E: Error + Send + Sync + 'static,
@@ -201,6 +202,13 @@ impl<T> BlockBuffer<T> {
             return Ok(());
         }
         state.close_err = Some(Arc::new(err));
+        // Clear the buffer to drop stored items and prevent reading stale data
+        for slot in &mut state.buf {
+            *slot = None;
+        }
+        state.head = 0;
+        state.tail = 0;
+        state.count = 0;
         if !state.close_write {
             state.close_write = true;
         }

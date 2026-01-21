@@ -176,6 +176,10 @@ impl<T: Clone> Buffer<T> {
     ///
     /// Returns an error if the buffer is closed.
     pub fn write(&self, data: &[T]) -> Result<usize, BufferError> {
+        if data.is_empty() {
+            return Ok(0);
+        }
+
         let mut state = self.inner.state.lock().unwrap();
         if let Some(ref err) = state.close_err {
             return Err(BufferError::ClosedWithError(Arc::clone(err)));

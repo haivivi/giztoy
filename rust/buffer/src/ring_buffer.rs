@@ -139,6 +139,7 @@ impl<T> RingBuffer<T> {
     /// Closes the buffer with the specified error.
     ///
     /// All blocking operations are immediately unblocked and return the error.
+    /// The internal buffer is cleared to free resources held by stored items.
     pub fn close_with_error<E>(&self, err: E) -> Result<(), BufferError>
     where
         E: Error + Send + Sync + 'static,
@@ -148,6 +149,12 @@ impl<T> RingBuffer<T> {
             return Ok(());
         }
         state.close_err = Some(Arc::new(err));
+        // Clear the buffer to drop stored items and prevent reading stale data
+        for slot in &mut state.buf {
+            *slot = None;
+        }
+        state.head = 0;
+        state.tail = 0;
         if !state.close_write {
             state.close_write = true;
         }
@@ -171,6 +178,10 @@ impl<T: Clone> RingBuffer<T> {
     /// Write operations never block (except when closed).
     /// Returns the number of elements written (always `data.len()` on success).
     pub fn write(&self, data: &[T]) -> Result<usize, BufferError> {
+        if data.is_empty() {
+            return Ok(0);
+        }
+
         let mut state = self.inner.state.lock().unwrap();
 
         // Check for errors

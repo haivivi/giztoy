@@ -68,6 +68,11 @@ pub fn block_bytes_256b() -> BlockBuffer<u8> {
     BlockBuffer::new(256)
 }
 
+/// Creates a default 1KB blocking buffer for bytes.
+pub fn block_bytes() -> BlockBuffer<u8> {
+    block_bytes_1kb()
+}
+
 // ============================================================================
 // RingBuffer convenience functions
 // ============================================================================
