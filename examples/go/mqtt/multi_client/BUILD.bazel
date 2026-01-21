@@ -5,10 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/haivivi/giztoy/examples/mqtt/multi_client",
     visibility = ["//visibility:private"],
-    deps = [
-        "//go/pkg/mqtt",
-        "@com_github_mochi_mqtt_server_v2//listeners",
-    ],
+    deps = ["@com_github_mochi_mqtt_server_v2//listeners"],
 )
 
 go_binary(
@@ -21,8 +18,5 @@ go_test(
     name = "multi_client_test",
     srcs = ["main_test.go"],
     embed = [":multi_client_lib"],
-    deps = [
-        "//go/pkg/mqtt",
-        "@com_github_mochi_mqtt_server_v2//listeners",
-    ],
+    deps = ["@com_github_mochi_mqtt_server_v2//listeners"],
 )
