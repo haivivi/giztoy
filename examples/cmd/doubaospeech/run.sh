@@ -14,7 +14,7 @@
 # 前置条件: 需要先配置 context
 #   doubao config add-context test --app-id YOUR_APP_ID --api-key YOUR_API_KEY
 
-set -e
+set -euo pipefail
 
 # 颜色定义
 RED='\033[0;31m'
