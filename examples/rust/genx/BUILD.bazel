@@ -15,9 +15,6 @@ rust_binary(
 rust_binary(
     name = "tools",
     srcs = ["src/bin/tools.rs"],
-    proc_macro_deps = [
-        "@crate_index//:schemars_derive",
-    ],
     deps = [
         "//rust/genx",
         "@crate_index//:anyhow",
