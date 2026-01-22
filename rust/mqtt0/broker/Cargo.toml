@@ -1,0 +1,35 @@
+[package]
+name = "mqtt0-broker"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Lightweight QoS 0 MQTT broker with full ACL support"
+
+[features]
+default = ["tokio"]
+tokio = ["mqtt0/std", "dep:tokio", "dep:parking_lot"]
+tls = ["dep:tokio-rustls", "dep:rustls-pemfile", "dep:webpki-roots"]
+websocket = ["dep:tokio-tungstenite", "dep:futures-util"]
+full = ["tls", "websocket"]
+
+[dependencies]
+mqtt0 = { path = ".." }
+bytes = "1"
+tracing = "0.1"
+
+# Tokio runtime
+tokio = { version = "1", features = ["net", "io-util", "sync", "time", "rt"], optional = true }
+parking_lot = { version = "0.12", optional = true }
+
+# TLS support (optional)
+tokio-rustls = { version = "0.26", optional = true }
+rustls-pemfile = { version = "2", optional = true }
+webpki-roots = { version = "0.26", optional = true }
+
+# WebSocket support (optional)
+tokio-tungstenite = { version = "0.24", optional = true }
+futures-util = { version = "0.3", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+mqtt0-client = { path = "../client" }

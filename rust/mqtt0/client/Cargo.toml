@@ -1,0 +1,31 @@
+[package]
+name = "mqtt0-client"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Lightweight QoS 0 MQTT client (supports tokio and embassy runtimes)"
+
+[features]
+default = ["tokio"]
+
+# Runtime selection
+tokio = ["mqtt0/std", "dep:tokio", "dep:parking_lot"]
+embassy = ["dep:embassy-net", "dep:embassy-time", "dep:embassy-sync", "dep:embedded-io-async"]
+
+[dependencies]
+mqtt0 = { path = ".." }
+bytes = { version = "1", default-features = false }
+tracing = { version = "0.1", default-features = false }
+
+# Tokio runtime (optional)
+tokio = { version = "1", features = ["net", "io-util", "sync", "time", "rt"], optional = true }
+parking_lot = { version = "0.12", optional = true }
+
+# Embassy runtime (optional)
+embassy-net = { version = "0.4", optional = true }
+embassy-time = { version = "0.3", optional = true }
+embassy-sync = { version = "0.6", optional = true }
+embedded-io-async = { version = "0.6", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }

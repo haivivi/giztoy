@@ -1,59 +1,34 @@
-//! Lightweight QoS 0 MQTT client and broker with full ACL support.
+//! Lightweight QoS 0 MQTT protocol library.
 //!
-//! This crate provides a minimal MQTT implementation that only supports QoS 0,
-//! but with complete control over authentication and ACL at every step:
+//! This crate provides MQTT protocol types and encoding/decoding utilities
+//! that are compatible with both `std` and `no_std` environments.
 //!
-//! - **Connect**: Authenticate client credentials
-//! - **Publish**: Check write permission for topic
-//! - **Subscribe**: Check read permission for topic
+//! ## Features
 //!
-//! ## Components
+//! - `std` (default): Enable standard library support
+//! - `alloc`: Enable heap allocation (required for most operations)
+//! - `rumqttc-compat`: Use rumqttc's mqttbytes for parsing (std only)
 //!
-//! - [`Client`]: QoS 0 MQTT client (mqtt0c)
-//! - [`Broker`]: QoS 0 MQTT broker (mqtt0d)
+//! ## no_std Support
 //!
-//! ## Example
+//! To use this crate in a `no_std` environment:
 //!
-//! ```ignore
-//! use giztoy_mqtt0::{Broker, BrokerConfig, Client, ClientConfig};
-//!
-//! #[tokio::main]
-//! async fn main() -> giztoy_mqtt0::Result<()> {
-//!     // Start broker
-//!     let broker = Broker::new(BrokerConfig::new("127.0.0.1:1883"));
-//!     tokio::spawn(async move { broker.serve().await });
-//!
-//!     // Connect client
-//!     let mut client = Client::connect(ClientConfig::new("127.0.0.1:1883", "client-1")).await?;
-//!
-//!     // Subscribe and publish
-//!     client.subscribe(&["test/topic"]).await?;
-//!     client.publish("test/topic", b"hello").await?;
-//!
-//!     // Receive message
-//!     let msg = client.recv().await?;
-//!     println!("Received: {:?}", msg);
-//!
-//!     Ok(())
-//! }
+//! ```toml
+//! [dependencies]
+//! mqtt0 = { version = "0.1", default-features = false, features = ["alloc"] }
 //! ```
 
-mod broker;
-mod client;
-mod error;
-mod protocol;
-pub mod transport;
-pub mod trie;
-mod types;
+#![cfg_attr(not(feature = "std"), no_std)]
 
-pub use broker::{Broker, BrokerConfig, BrokerBuilder};
-pub use client::{Client, ClientConfig};
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
+pub mod error;
+pub mod protocol;
+pub mod types;
+
 pub use error::{Error, Result};
-pub use transport::TransportType;
-pub use types::{Authenticator, Handler, Message, ProtocolVersion, QoS};
+pub use types::{Message, ProtocolVersion, QoS};
 
-#[cfg(feature = "tls")]
-pub use transport::tls::TlsConfig;
-
-#[cfg(test)]
-mod tests;
+// Re-export protocol modules
+pub use protocol::{v4, v5};

@@ -1,57 +1,23 @@
 [package]
-name = "giztoy-mqtt0"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-authors.workspace = true
-description = "Lightweight QoS 0 MQTT client and broker with full ACL support"
+name = "mqtt0"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Lightweight QoS 0 MQTT protocol library (no_std compatible)"
 
 [features]
-default = []
-tls = ["tokio-rustls", "rustls-pemfile", "webpki-roots"]
-websocket = ["tokio-tungstenite", "futures-util"]
-full = ["tls", "websocket"]
+default = ["std"]
+std = ["alloc"]
+alloc = []
+
+# Use rumqttc's mqttbytes for parsing (std only, for compatibility)
+rumqttc-compat = ["std", "dep:rumqttc"]
 
 [dependencies]
-# MQTT protocol parsing (reuse from rumqttc)
-rumqttc = { workspace = true }
+# Optional: rumqttc for compatibility with existing code
+rumqttc = { version = "0.25", optional = true }
 
-# Async runtime
-tokio = { workspace = true, features = ["net", "io-util", "sync", "time", "rt-multi-thread", "macros"] }
-
-# Utilities
-bytes = { workspace = true }
-parking_lot = { workspace = true }
-
-# Error handling
-thiserror = { workspace = true }
-
-# Logging
-tracing = { workspace = true }
-
-# TLS support (optional)
-tokio-rustls = { version = "0.26", optional = true }
-rustls-pemfile = { version = "2", optional = true }
-webpki-roots = { version = "0.26", optional = true }
-
-# WebSocket support (optional)
-tokio-tungstenite = { version = "0.24", optional = true }
-futures-util = { version = "0.3", optional = true }
+# no_std compatible
+bytes = { version = "1", default-features = false }
 
 [dev-dependencies]
-# For testing mqtt0c with standard broker
-rumqttd = { workspace = true }
-
-# Test utilities
-tokio-test = { workspace = true }
-tracing-subscriber = { workspace = true }
-
-# Benchmark
-criterion = { workspace = true }
-
-# For TLS tests
-rcgen = "0.13"
-
-[[bench]]
-name = "mqtt0_bench"
-harness = false
