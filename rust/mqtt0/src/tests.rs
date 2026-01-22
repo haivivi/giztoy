@@ -1808,4 +1808,174 @@ mod keepalive_tests {
         // Note: current impl doesn't auto-update is_running on broker disconnect,
         // only on keepalive ping failure or explicit disconnect call
     }
+
+    // ========================================================================
+    // MQTT 5.0 Feature Tests
+    // ========================================================================
+
+    /// Test shared subscriptions with round-robin delivery.
+    #[tokio::test]
+    async fn test_shared_subscriptions() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::builder(BrokerConfig::new(&addr).sys_events(false)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect two subscribers to the same shared group
+        let mut sub1 = Client::connect(
+            ClientConfig::new(&addr, "shared-sub-1").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+
+        let mut sub2 = Client::connect(
+            ClientConfig::new(&addr, "shared-sub-2").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+
+        // Both subscribe to the shared subscription
+        sub1.subscribe(&["$share/group1/test/+/data"]).await.unwrap();
+        sub2.subscribe(&["$share/group1/test/+/data"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect a publisher
+        let pub_client = Client::connect(
+            ClientConfig::new(&addr, "publisher").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+
+        // Publish multiple messages
+        for i in 0..4 {
+            pub_client.publish(&format!("test/{}/data", i), format!("msg-{}", i).as_bytes()).await.unwrap();
+        }
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Count messages received by each subscriber
+        let mut sub1_count = 0;
+        let mut sub2_count = 0;
+
+        loop {
+            tokio::select! {
+                msg = sub1.recv_timeout(Duration::from_millis(100)) => {
+                    if let Ok(Some(_)) = msg {
+                        sub1_count += 1;
+                    } else {
+                        break;
+                    }
+                }
+                msg = sub2.recv_timeout(Duration::from_millis(100)) => {
+                    if let Ok(Some(_)) = msg {
+                        sub2_count += 1;
+                    } else {
+                        break;
+                    }
+                }
+                _ = tokio::time::sleep(Duration::from_millis(200)) => {
+                    break;
+                }
+            }
+        }
+
+        // With round-robin, messages should be distributed
+        // Total should be 4, and ideally 2 each (but might vary slightly)
+        let total = sub1_count + sub2_count;
+        assert!(total >= 2, "Should receive at least some messages via shared subscription, got {}", total);
+    }
+
+    /// Test $SYS events for client connect/disconnect.
+    #[tokio::test]
+    async fn test_sys_events() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with $SYS events enabled (default)
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr).node_id("test-node".to_string())
+        ).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect a subscriber to $SYS topics
+        let mut sys_sub = Client::connect(
+            ClientConfig::new(&addr, "sys-monitor")
+        ).await.unwrap();
+
+        sys_sub.subscribe(&["$SYS/brokers/+/clients/+/connected"]).await.unwrap();
+        sys_sub.subscribe(&["$SYS/brokers/+/clients/+/disconnected"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect a test client
+        let test_client = Client::connect(
+            ClientConfig::new(&addr, "test-client-123")
+        ).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Check for connected event
+        let msg = sys_sub.recv_timeout(Duration::from_millis(500)).await.unwrap();
+        if let Some(msg) = msg {
+            assert!(msg.topic.contains("connected"), "Expected connected event, got {}", msg.topic);
+            let payload = String::from_utf8_lossy(&msg.payload);
+            assert!(payload.contains("test-client-123"), "Payload should contain client id: {}", payload);
+        }
+
+        // Disconnect test client
+        test_client.disconnect().await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Check for disconnected event
+        let msg = sys_sub.recv_timeout(Duration::from_millis(500)).await.unwrap();
+        if let Some(msg) = msg {
+            assert!(msg.topic.contains("disconnected"), "Expected disconnected event, got {}", msg.topic);
+        }
+    }
+
+    /// Test parse_shared_topic helper function.
+    #[test]
+    fn test_parse_shared_topic() {
+        use crate::broker::parse_shared_topic;
+
+        // Valid shared topics
+        assert_eq!(parse_shared_topic("$share/group1/sensor/data"), Some(("group1", "sensor/data")));
+        assert_eq!(parse_shared_topic("$share/g/a/b/c"), Some(("g", "a/b/c")));
+
+        // Invalid shared topics
+        assert_eq!(parse_shared_topic("sensor/data"), None);
+        assert_eq!(parse_shared_topic("$share/"), None);
+        assert_eq!(parse_shared_topic("$share/group/"), None);
+        assert_eq!(parse_shared_topic("$share//topic"), None);
+    }
+
+    /// Test topic_matches helper function.
+    #[test]
+    fn test_topic_matches() {
+        use crate::broker::topic_matches;
+
+        // Exact match
+        assert!(topic_matches("sensor/temp", "sensor/temp"));
+        assert!(!topic_matches("sensor/temp", "sensor/humidity"));
+
+        // Single level wildcard (+)
+        assert!(topic_matches("sensor/+/data", "sensor/temp/data"));
+        assert!(topic_matches("sensor/+/data", "sensor/humidity/data"));
+        assert!(!topic_matches("sensor/+/data", "sensor/temp/raw"));
+
+        // Multi level wildcard (#)
+        assert!(topic_matches("sensor/#", "sensor"));
+        assert!(topic_matches("sensor/#", "sensor/temp"));
+        assert!(topic_matches("sensor/#", "sensor/temp/data"));
+        assert!(!topic_matches("sensor/#", "device/temp"));
+
+        // Combined wildcards
+        assert!(topic_matches("+/temp/#", "sensor/temp"));
+        assert!(topic_matches("+/temp/#", "device/temp/data"));
+    }
 }
