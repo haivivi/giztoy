@@ -1978,4 +1978,242 @@ mod keepalive_tests {
         assert!(topic_matches("+/temp/#", "sensor/temp"));
         assert!(topic_matches("+/temp/#", "device/temp/data"));
     }
+
+    /// Test $SYS events can be disabled.
+    #[tokio::test]
+    async fn test_sys_events_disabled() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with $SYS events disabled
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr).sys_events(false)
+        ).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect a subscriber to $SYS topics
+        let mut sys_sub = Client::connect(
+            ClientConfig::new(&addr, "sys-monitor-disabled")
+        ).await.unwrap();
+
+        sys_sub.subscribe(&["$SYS/brokers/+/connected"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect a test client
+        let _test_client = Client::connect(
+            ClientConfig::new(&addr, "test-client-no-event")
+        ).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Should NOT receive connected event because sys_events is disabled
+        let msg = sys_sub.recv_timeout(Duration::from_millis(200)).await.unwrap();
+        assert!(msg.is_none(), "Should not receive $SYS event when disabled");
+    }
+
+    /// Test $SYS event JSON payload format.
+    #[tokio::test]
+    async fn test_sys_events_json_format() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::new(BrokerConfig::new(&addr));
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut sys_sub = Client::connect(
+            ClientConfig::new(&addr, "json-checker")
+        ).await.unwrap();
+
+        sys_sub.subscribe(&["$SYS/brokers/+/connected"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect with credentials
+        let config = ClientConfig::new(&addr, "json-test-client")
+            .with_credentials("testuser", b"testpass".to_vec());
+        let _test_client = Client::connect(config).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let msg = sys_sub.recv_timeout(Duration::from_millis(500)).await.unwrap();
+        if let Some(msg) = msg {
+            let payload = String::from_utf8_lossy(&msg.payload);
+            
+            // Verify JSON structure
+            assert!(payload.contains("\"clientid\""), "Missing clientid field: {}", payload);
+            assert!(payload.contains("\"username\""), "Missing username field: {}", payload);
+            assert!(payload.contains("\"ipaddress\""), "Missing ipaddress field: {}", payload);
+            assert!(payload.contains("\"proto_ver\""), "Missing proto_ver field: {}", payload);
+            assert!(payload.contains("\"keepalive\""), "Missing keepalive field: {}", payload);
+            assert!(payload.contains("\"connected_at\""), "Missing connected_at field: {}", payload);
+            
+            // Verify values
+            assert!(payload.contains("json-test-client"), "Wrong clientid: {}", payload);
+            assert!(payload.contains("testuser"), "Wrong username: {}", payload);
+        }
+    }
+
+    /// Test shared subscriptions with multiple groups.
+    #[tokio::test]
+    async fn test_shared_subscriptions_multiple_groups() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::builder(BrokerConfig::new(&addr).sys_events(false)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Group A subscribers
+        let mut group_a_1 = Client::connect(ClientConfig::new(&addr, "group-a-1")).await.unwrap();
+        let mut group_a_2 = Client::connect(ClientConfig::new(&addr, "group-a-2")).await.unwrap();
+
+        // Group B subscribers
+        let mut group_b_1 = Client::connect(ClientConfig::new(&addr, "group-b-1")).await.unwrap();
+
+        // Subscribe to different groups
+        group_a_1.subscribe(&["$share/groupA/sensor/+"]).await.unwrap();
+        group_a_2.subscribe(&["$share/groupA/sensor/+"]).await.unwrap();
+        group_b_1.subscribe(&["$share/groupB/sensor/+"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Publisher
+        let pub_client = Client::connect(ClientConfig::new(&addr, "multi-group-pub")).await.unwrap();
+
+        // Publish messages
+        pub_client.publish("sensor/temp", b"25").await.unwrap();
+        pub_client.publish("sensor/humidity", b"60").await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // Group B should receive both messages (only one subscriber)
+        let mut group_b_count = 0;
+        while let Ok(Some(_)) = group_b_1.recv_timeout(Duration::from_millis(100)).await {
+            group_b_count += 1;
+        }
+        assert_eq!(group_b_count, 2, "Group B single subscriber should get all messages");
+    }
+
+    /// Test shared subscription unsubscribe.
+    #[tokio::test]
+    async fn test_shared_subscription_unsubscribe() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::builder(BrokerConfig::new(&addr).sys_events(false)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut sub1 = Client::connect(ClientConfig::new(&addr, "unsub-test-1")).await.unwrap();
+        let mut sub2 = Client::connect(ClientConfig::new(&addr, "unsub-test-2")).await.unwrap();
+
+        sub1.subscribe(&["$share/test-group/data"]).await.unwrap();
+        sub2.subscribe(&["$share/test-group/data"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Unsubscribe sub1
+        sub1.unsubscribe(&["$share/test-group/data"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Publish
+        let pub_client = Client::connect(ClientConfig::new(&addr, "unsub-pub")).await.unwrap();
+        pub_client.publish("data", b"test").await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // sub1 should NOT receive (unsubscribed)
+        let msg1 = sub1.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(msg1.is_none(), "Unsubscribed client should not receive messages");
+
+        // sub2 SHOULD receive
+        let msg2 = sub2.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(msg2.is_some(), "Remaining subscriber should receive messages");
+    }
+
+    /// Test topic_matches edge cases.
+    #[test]
+    fn test_topic_matches_edge_cases() {
+        use crate::broker::topic_matches;
+
+        // Empty pattern/topic
+        assert!(!topic_matches("", "sensor"));
+        assert!(!topic_matches("sensor", ""));
+        
+        // Root level
+        assert!(topic_matches("#", "anything"));
+        assert!(topic_matches("#", "multi/level/topic"));
+        assert!(topic_matches("+", "single"));
+        assert!(!topic_matches("+", "multi/level"));
+
+        // Trailing slash
+        assert!(!topic_matches("sensor/", "sensor"));
+        assert!(topic_matches("sensor/", "sensor/"));
+
+        // Multiple wildcards
+        assert!(topic_matches("+/+/+", "a/b/c"));
+        assert!(!topic_matches("+/+/+", "a/b"));
+        assert!(!topic_matches("+/+/+", "a/b/c/d"));
+    }
+
+    /// Test parse_shared_topic edge cases.
+    #[test]
+    fn test_parse_shared_topic_edge_cases() {
+        use crate::broker::parse_shared_topic;
+
+        // With wildcards in topic
+        assert_eq!(
+            parse_shared_topic("$share/mygroup/sensor/+/data"),
+            Some(("mygroup", "sensor/+/data"))
+        );
+        assert_eq!(
+            parse_shared_topic("$share/mygroup/sensor/#"),
+            Some(("mygroup", "sensor/#"))
+        );
+
+        // Special characters in group name
+        assert_eq!(
+            parse_shared_topic("$share/group-1/topic"),
+            Some(("group-1", "topic"))
+        );
+        assert_eq!(
+            parse_shared_topic("$share/group_2/topic"),
+            Some(("group_2", "topic"))
+        );
+
+        // Case sensitivity
+        assert_eq!(parse_shared_topic("$SHARE/group/topic"), None); // Must be lowercase
+        assert_eq!(
+            parse_shared_topic("$share/GROUP/Topic"),
+            Some(("GROUP", "Topic"))
+        );
+    }
+
+    /// Test BrokerConfig builder methods.
+    #[test]
+    fn test_broker_config_builder() {
+        let config = BrokerConfig::new("127.0.0.1:1883")
+            .node_id("my-node")
+            .sys_events(false);
+
+        assert_eq!(config.addr, "127.0.0.1:1883");
+        assert_eq!(config.node_id, "my-node");
+        assert!(!config.sys_events_enabled);
+    }
 }

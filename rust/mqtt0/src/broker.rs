@@ -1104,13 +1104,14 @@ impl BrokerContext {
 
         // JSON format compatible with EMQX
         let payload = format!(
-            r#"{{"clientid":"{}","username":"{}","ipaddress":"{}","proto_ver":{},"keepalive":{},"connected_at":{}}}"#,
+            r#"{{"clientid":"{}","username":"{}","ipaddress":"{}","proto_ver":{},"keepalive":{},"connected_at":{},"node":"{}"}}"#,
             client_id,
             username,
             addr.ip(),
             proto_ver_num,
             keepalive,
-            connected_at
+            connected_at,
+            self.node_id
         );
 
         let msg = Message::new(topic.clone(), Bytes::from(payload));
@@ -1134,8 +1135,8 @@ impl BrokerContext {
 
         // JSON format compatible with EMQX
         let payload = format!(
-            r#"{{"clientid":"{}","username":"{}","reason":"normal","disconnected_at":{}}}"#,
-            client_id, username, disconnected_at
+            r#"{{"clientid":"{}","username":"{}","reason":"normal","disconnected_at":{},"node":"{}"}}"#,
+            client_id, username, disconnected_at, self.node_id
         );
 
         let msg = Message::new(topic.clone(), Bytes::from(payload));
