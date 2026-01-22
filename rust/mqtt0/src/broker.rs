@@ -1076,7 +1076,8 @@ impl BrokerContext {
     }
 
     /// Publish $SYS client connected event.
-    /// Topic: $SYS/brokers/{node}/clients/{clientid}/connected
+    /// Topic: $SYS/brokers/{clientid}/connected
+    /// Format compatible with EMQX: https://docs.emqx.com/en/emqx/latest/observability/mqtt-system-topics.html
     async fn publish_sys_connected(
         &self,
         client_id: &str,
@@ -1089,10 +1090,7 @@ impl BrokerContext {
             return;
         }
 
-        let topic = format!(
-            "$SYS/brokers/{}/clients/{}/connected",
-            self.node_id, client_id
-        );
+        let topic = format!("$SYS/brokers/{}/connected", client_id);
 
         let connected_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -1120,16 +1118,14 @@ impl BrokerContext {
     }
 
     /// Publish $SYS client disconnected event.
-    /// Topic: $SYS/brokers/{node}/clients/{clientid}/disconnected
+    /// Topic: $SYS/brokers/{clientid}/disconnected
+    /// Format compatible with EMQX: https://docs.emqx.com/en/emqx/latest/observability/mqtt-system-topics.html
     async fn publish_sys_disconnected(&self, client_id: &str, username: &str) {
         if !self.sys_events_enabled {
             return;
         }
 
-        let topic = format!(
-            "$SYS/brokers/{}/clients/{}/disconnected",
-            self.node_id, client_id
-        );
+        let topic = format!("$SYS/brokers/{}/disconnected", client_id);
 
         let disconnected_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)

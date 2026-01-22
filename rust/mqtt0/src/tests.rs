@@ -1906,8 +1906,8 @@ mod keepalive_tests {
             ClientConfig::new(&addr, "sys-monitor")
         ).await.unwrap();
 
-        sys_sub.subscribe(&["$SYS/brokers/+/clients/+/connected"]).await.unwrap();
-        sys_sub.subscribe(&["$SYS/brokers/+/clients/+/disconnected"]).await.unwrap();
+        sys_sub.subscribe(&["$SYS/brokers/+/connected"]).await.unwrap();
+        sys_sub.subscribe(&["$SYS/brokers/+/disconnected"]).await.unwrap();
 
         tokio::time::sleep(Duration::from_millis(50)).await;
 

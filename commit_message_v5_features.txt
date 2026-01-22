@@ -1,0 +1,25 @@
+rust/mqtt0: add MQTT 5.0 features - $SYS events, shared subscriptions, topic alias
+
+The mqtt0 broker needed additional MQTT 5.0 features to better support production use cases including load balancing and monitoring capabilities.
+
+- Add $SYS client events for connect/disconnect notifications
+  - Publishes to $SYS/brokers/{node}/clients/{clientid}/connected
+  - Publishes to $SYS/brokers/{node}/clients/{clientid}/disconnected
+  - JSON format compatible with EMQX for easy integration
+  - Configurable via BrokerConfig.sys_events() and node_id()
+
+- Implement shared subscriptions ($share/group/topic)
+  - Parse $share/{group}/{topic} subscription format
+  - Round-robin message distribution among group subscribers
+  - Works with both MQTT v4 and v5 clients
+  - Proper cleanup on client disconnect
+
+- Add Topic Alias support (MQTT 5.0)
+  - Maintain per-client alias -> topic mapping
+  - Handle alias with topic (update mapping) and alias without topic (lookup)
+  - Reduces bandwidth for repeated publishes to same topic
+
+- Add helper functions for topic matching with MQTT wildcards (+, #)
+- Add comprehensive test cases for all new features
+
+Generated with [Cursor](https://cursor.sh/)
