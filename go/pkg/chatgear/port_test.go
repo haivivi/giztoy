@@ -42,15 +42,49 @@ func TestClientServerPort_OpusFrames_ClientToServer(t *testing.T) {
 		t.Fatalf("SendOpusFrames: %v", err)
 	}
 
-	// Read from server port
-	readFrame, _, err := serverPort.Frame()
-	if err != nil {
-		t.Fatalf("Frame: %v", err)
-	}
+	// Read from server port with timeout
+	// The RealtimeBuffer has a pull goroutine that processes frames asynchronously,
+	// and may return loss events (nil frames) before the actual frame arrives.
+	// We need to skip loss events and wait for the actual frame.
+	frameCh := make(chan opusrt.Frame, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		timeout := time.After(2 * time.Second)
+		for {
+			select {
+			case <-timeout:
+				errCh <- context.DeadlineExceeded
+				return
+			default:
+			}
+			readFrame, loss, err := serverPort.Frame()
+			if err != nil {
+				errCh <- err
+				return
+			}
+			// Skip loss events (nil frames with non-zero loss duration)
+			if readFrame == nil && loss > 0 {
+				continue
+			}
+			// Skip empty frames
+			if len(readFrame) == 0 {
+				continue
+			}
+			frameCh <- readFrame
+			return
+		}
+	}()
 
-	// Verify frame content
-	if len(readFrame) != len(frame) {
-		t.Errorf("frame length mismatch: got %d, want %d", len(readFrame), len(frame))
+	select {
+	case readFrame := <-frameCh:
+		// Verify frame content
+		if len(readFrame) != len(frame) {
+			t.Errorf("frame length mismatch: got %d, want %d", len(readFrame), len(frame))
+		}
+	case err := <-errCh:
+		t.Fatalf("Frame: %v", err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for frame")
 	}
 
 	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
