@@ -26,6 +26,7 @@ type WebRTCSession struct {
 	closeCh     chan struct{}
 	eventsCh    chan eventOrError
 	closeOnce   sync.Once
+	eventsOnce  sync.Once // protects eventsCh from double close
 	mu          sync.Mutex
 	remoteTrack *webrtc.TrackRemote
 	localTrack  *webrtc.TrackLocalStaticSample
@@ -163,7 +164,9 @@ func (c *Client) connectWebRTC(ctx context.Context, config *ConnectConfig) (*Web
 
 	dataChannel.OnClose(func() {
 		slog.Debug("data channel closed")
-		close(session.eventsCh)
+		session.eventsOnce.Do(func() {
+			close(session.eventsCh)
+		})
 	})
 
 	// Set up track handler for remote audio
@@ -190,9 +193,14 @@ func (c *Client) connectWebRTC(ctx context.Context, config *ConnectConfig) (*Web
 		return nil, fmt.Errorf("failed to set local description: %w", err)
 	}
 
-	// Wait for ICE gathering to complete
+	// Wait for ICE gathering to complete (respecting context cancellation)
 	gatherComplete := webrtc.GatheringCompletePromise(peerConnection)
-	<-gatherComplete
+	select {
+	case <-ctx.Done():
+		peerConnection.Close()
+		return nil, ctx.Err()
+	case <-gatherComplete:
+	}
 
 	// Step 6: Send offer to OpenAI and get answer
 	answer, err := c.sendOffer(ctx, token, config.Model, peerConnection.LocalDescription().SDP)
