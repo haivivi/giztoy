@@ -1,0 +1,17 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "giztoy_trie",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "giztoy_trie",
+    deps = [
+        "@crate_index//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "giztoy_trie_test",
+    crate = ":giztoy_trie",
+)

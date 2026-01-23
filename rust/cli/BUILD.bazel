@@ -1,4 +1,3 @@
-load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -6,13 +5,24 @@ package(default_visibility = ["//visibility:public"])
 rust_library(
     name = "giztoy_cli",
     srcs = glob(["src/**/*.rs"]),
-    aliases = aliases(),
     crate_name = "giztoy_cli",
-    deps = all_crate_deps(normal = True),
+    deps = [
+        "//rust/buffer:giztoy_buffer",
+        "@crate_index//:anyhow",
+        "@crate_index//:dirs",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:serde_yaml",
+        "@crate_index//:thiserror",
+        "@crate_index//:tokio",
+    ],
 )
 
 rust_test(
     name = "giztoy_cli_test",
     crate = ":giztoy_cli",
-    deps = all_crate_deps(normal_dev = True),
+    deps = [
+        "@crate_index//:tempfile",
+        "@crate_index//:tokio",
+    ],
 )

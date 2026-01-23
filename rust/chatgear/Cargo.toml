@@ -1,0 +1,23 @@
+[package]
+name = "giztoy-chatgear"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Core types for device state, statistics, and commands"
+
+[dependencies]
+giztoy-jsontime = { workspace = true }
+giztoy-encoding = { workspace = true }
+giztoy-audio = { workspace = true }
+
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "rt"] }
+tokio-util = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }

@@ -9,6 +9,11 @@ members = [
     "doubaospeech",
     "mqtt0",
     "cli",
+    "jsontime",
+    "encoding",
+    "trie",
+    "chatgear",
+    "speech",
     "cmd/dashscope",
     "cmd/minimax",
     "cmd/doubaospeech",
@@ -30,9 +35,18 @@ giztoy-minimax = { path = "minimax" }
 giztoy-doubaospeech = { path = "doubaospeech" }
 giztoy-mqtt0 = { path = "mqtt0" }
 giztoy-cli = { path = "cli" }
+giztoy-jsontime = { path = "jsontime" }
+giztoy-encoding = { path = "encoding" }
+giztoy-trie = { path = "trie" }
+giztoy-chatgear = { path = "chatgear" }
+giztoy-speech = { path = "speech" }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
 
 # HTTP client (rustls-tls for pure Rust TLS, ring for crypto)
 reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "multipart", "rustls-tls"] }

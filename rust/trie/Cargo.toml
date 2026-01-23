@@ -1,0 +1,17 @@
+[package]
+name = "giztoy-trie"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Generic trie data structure with MQTT-style wildcard support"
+
+[dependencies]
+thiserror = { workspace = true }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "trie_bench"
+harness = false
