@@ -1857,23 +1857,30 @@ mod keepalive_tests {
         let mut sub1_count = 0;
         let mut sub2_count = 0;
 
+        // Drain each subscriber independently to avoid flaky behavior
+        let mut sub1_done = false;
+        let mut sub2_done = false;
+
         loop {
+            if sub1_done && sub2_done {
+                break;
+            }
+
             tokio::select! {
-                msg = sub1.recv_timeout(Duration::from_millis(100)) => {
-                    if let Ok(Some(_)) = msg {
-                        sub1_count += 1;
-                    } else {
-                        break;
+                msg = sub1.recv_timeout(Duration::from_millis(100)), if !sub1_done => {
+                    match msg {
+                        Ok(Some(_)) => sub1_count += 1,
+                        _ => sub1_done = true,
                     }
                 }
-                msg = sub2.recv_timeout(Duration::from_millis(100)) => {
-                    if let Ok(Some(_)) = msg {
-                        sub2_count += 1;
-                    } else {
-                        break;
+                msg = sub2.recv_timeout(Duration::from_millis(100)), if !sub2_done => {
+                    match msg {
+                        Ok(Some(_)) => sub2_count += 1,
+                        _ => sub2_done = true,
                     }
                 }
-                _ = tokio::time::sleep(Duration::from_millis(200)) => {
+                _ = tokio::time::sleep(Duration::from_millis(300)) => {
+                    // Overall timeout
                     break;
                 }
             }

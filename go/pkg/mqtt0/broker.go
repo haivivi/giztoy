@@ -33,7 +33,8 @@ type Broker struct {
 	// Default is MaxPacketSize (1MB).
 	MaxPacketSize int
 
-	// SysEventsEnabled enables $SYS event publishing (default: true).
+	// SysEventsEnabled enables $SYS event publishing.
+	// Note: Must be explicitly set to true to enable; default is false.
 	SysEventsEnabled bool
 
 	// MaxTopicAlias is the maximum topic alias value per client (default: 65535).
