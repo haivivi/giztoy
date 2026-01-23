@@ -410,14 +410,6 @@ func printIndented(text, indent string) {
 	}
 }
 
-func truncateString(s string, maxLen int) string {
-	runes := []rune(s)
-	if len(runes) <= maxLen {
-		return s
-	}
-	return string(runes[:maxLen]) + "..."
-}
-
 func normalizeText(text string) string {
 	// Remove punctuation and whitespace for comparison
 	text = strings.ReplaceAll(text, "\n", "")

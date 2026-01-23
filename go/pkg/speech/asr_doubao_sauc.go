@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 
@@ -129,7 +130,10 @@ func (h *DoubaoSAUCASRHandler) TranscribeStream(ctx context.Context, model strin
 
 	// Select PCM format based on sample rate
 	// Note: Only mono audio is supported for ASR
-	format := sampleRateToFormat(h.sampleRate, h.channels)
+	format, err := sampleRateToFormat(h.sampleRate, h.channels)
+	if err != nil {
+		return nil, fmt.Errorf("invalid audio format: %w", err)
+	}
 
 	stream := &doubaoSAUCSpeechStream{
 		ctx:        ctx,
@@ -152,23 +156,21 @@ func (h *DoubaoSAUCASRHandler) TranscribeStream(ctx context.Context, model strin
 
 // sampleRateToFormat converts sample rate to pcm.Format.
 // Note: This handler only supports mono audio. Stereo is not supported.
-func sampleRateToFormat(sampleRate int, channels int) pcm.Format {
+func sampleRateToFormat(sampleRate int, channels int) (pcm.Format, error) {
 	// Validate channels - only mono is supported
 	if channels != 1 {
-		// Log warning but continue with mono format
-		// Stereo audio will be decoded but reported as mono format
+		return 0, fmt.Errorf("only mono audio is supported, got %d channels", channels)
 	}
 
 	switch sampleRate {
 	case 16000:
-		return pcm.L16Mono16K
+		return pcm.L16Mono16K, nil
 	case 24000:
-		return pcm.L16Mono24K
+		return pcm.L16Mono24K, nil
 	case 48000:
-		return pcm.L16Mono48K
+		return pcm.L16Mono48K, nil
 	default:
-		// Default to 16kHz for ASR - log warning for unexpected rates
-		return pcm.L16Mono16K
+		return 0, fmt.Errorf("unsupported sample rate: %d (supported: 16000, 24000, 48000)", sampleRate)
 	}
 }
 
