@@ -86,7 +86,8 @@ func (g *sharedGroup) nextSubscriber() *clientHandle {
 	if len(g.subscribers) == 0 {
 		return nil
 	}
-	idx := g.nextIndex.Add(1) % uint64(len(g.subscribers))
+	// Use (Add(1) - 1) to get pre-increment value, consistent with Rust's fetch_add
+	idx := (g.nextIndex.Add(1) - 1) % uint64(len(g.subscribers))
 	return g.subscribers[idx]
 }
 

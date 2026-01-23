@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"math/big"
 	"net"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -733,8 +734,11 @@ func TestSharedSubscriptions(t *testing.T) {
 	}
 
 	total := sub1Count + sub2Count
-	if total < 2 {
-		t.Errorf("Expected at least 2 messages delivered, got %d", total)
+	if total != 4 {
+		t.Errorf("Expected exactly 4 messages total, got %d (sub1=%d, sub2=%d)", total, sub1Count, sub2Count)
+	}
+	if sub1Count == 0 || sub2Count == 0 {
+		t.Errorf("Expected messages distributed between both subscribers, got sub1=%d, sub2=%d", sub1Count, sub2Count)
 	}
 
 	broker.Close()
@@ -790,7 +794,7 @@ func TestSysEvents(t *testing.T) {
 		t.Logf("recv connected event error: %v", err)
 	}
 	if msg != nil {
-		if !contains(msg.Topic, "connected") {
+		if !strings.Contains(msg.Topic, "connected") {
 			t.Errorf("Expected connected event, got topic: %s", msg.Topic)
 		}
 	}
@@ -805,23 +809,10 @@ func TestSysEvents(t *testing.T) {
 		t.Logf("recv disconnected event error: %v", err)
 	}
 	if msg != nil {
-		if !contains(msg.Topic, "disconnected") {
+		if !strings.Contains(msg.Topic, "disconnected") {
 			t.Errorf("Expected disconnected event, got topic: %s", msg.Topic)
 		}
 	}
 
 	broker.Close()
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
