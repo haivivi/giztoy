@@ -1,0 +1,14 @@
+[package]
+name = "giztoy-jsontime"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "JSON-serializable time types"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }

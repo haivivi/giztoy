@@ -1,0 +1,23 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "giztoy_encoding",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "giztoy_encoding",
+    deps = [
+        "@crate_index//:base64",
+        "@crate_index//:hex",
+        "@crate_index//:serde",
+        "@crate_index//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "giztoy_encoding_test",
+    crate = ":giztoy_encoding",
+    deps = [
+        "@crate_index//:serde_json",
+    ],
+)

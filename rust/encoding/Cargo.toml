@@ -1,0 +1,16 @@
+[package]
+name = "giztoy-encoding"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "JSON-serializable encoding types (Base64, Hex)"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+base64 = "0.22"
+hex = "0.4"
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
