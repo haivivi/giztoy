@@ -17,6 +17,7 @@ package doubaospeech
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -86,6 +87,9 @@ type ASRV2Result struct {
 	// Is final result (sentence complete)
 	IsFinal bool `json:"is_final"`
 
+	// Audio duration in milliseconds
+	Duration int `json:"duration,omitempty"`
+
 	// Request ID
 	ReqID string `json:"reqid"`
 }
@@ -95,6 +99,7 @@ type ASRV2Utterance struct {
 	Text       string       `json:"text"`
 	StartTime  int          `json:"start_time"`  // milliseconds
 	EndTime    int          `json:"end_time"`    // milliseconds
+	Definite   bool         `json:"definite"`    // Whether this utterance is final
 	SpeakerID  string       `json:"speaker_id,omitempty"`
 	Words      []ASRV2Word  `json:"words,omitempty"`
 	Confidence float64      `json:"confidence,omitempty"`
@@ -124,7 +129,6 @@ type ASRV2Session struct {
 	errChan   chan error
 	closeChan chan struct{}
 	closeOnce sync.Once
-	sequence  int32
 }
 
 // OpenStreamSession opens a streaming ASR WebSocket session
@@ -201,23 +205,23 @@ func (s *ASRServiceV2) OpenStreamSession(ctx context.Context, config *ASRV2Confi
 // SendAudio sends audio data to the ASR session
 //
 // If isLast is true, this marks the end of the audio stream.
+//
+// Note: The client->server protocol for audio frames does not include a sequence number,
+// unlike the server->client responses which do include sequence numbers.
+// This asymmetry is intentional per the SAUC protocol specification.
 func (s *ASRV2Session) SendAudio(ctx context.Context, audio []byte, isLast bool) error {
-	s.sequence++
-
-	// Build binary message with audio data
-	var buf bytes.Buffer
-
-	// Header
-	header := uint32(0x10000000) | // Version 1
-		uint32(0x01000000) | // Header size 1
-		uint32(0x00020000) | // Message type: audio only
-		uint32(0x00000000) // Raw audio, no serialization
-
+	// Build binary message with audio data per SAUC protocol:
+	// Byte 0: version (4 bits) + header_size (4 bits) = 0x11
+	// Byte 1: message_type (4 bits) + flags (4 bits) = 0x20 (Audio only) or 0x22 (last audio)
+	// Byte 2: serialization (4 bits) + compression (4 bits) = 0x00 (raw bytes, no compression)
+	// Byte 3: reserved = 0x00
+	header := []byte{0x11, 0x20, 0x00, 0x00}
 	if isLast {
-		header |= uint32(0x00000002) // Last chunk flag
+		header[1] = 0x22 // Set last audio flag
 	}
 
-	binary.Write(&buf, binary.BigEndian, header)
+	var buf bytes.Buffer
+	buf.Write(header)
 	binary.Write(&buf, binary.BigEndian, uint32(len(audio)))
 	buf.Write(audio)
 
@@ -268,36 +272,52 @@ const (
 )
 
 func (s *ASRV2Session) sendSessionStart() error {
-	audioConfig := map[string]any{
+	// SAUC BigModel message format per documentation
+	// Reference: docs/doubaospeech/asr2.0/README.md
+	audio := map[string]any{
 		"format":      s.config.Format,
 		"sample_rate": s.config.SampleRate,
+		"channel":     1,
+		"bits":        16,
 	}
 	if s.config.Channels > 0 {
-		audioConfig["channel"] = s.config.Channels
+		audio["channel"] = s.config.Channels
 	}
 	if s.config.Bits > 0 {
-		audioConfig["bits"] = s.config.Bits
+		audio["bits"] = s.config.Bits
+	}
+
+	request := map[string]any{
+		"reqid":           s.reqID,
+		"sequence":        1,
+		"show_utterances": true,
+		"result_type":     "single",
+	}
+	if s.config.Language != "" {
+		request["language"] = s.config.Language
+	}
+	if s.config.EnableITN {
+		request["enable_itn"] = true
+	}
+	if s.config.EnablePunc {
+		request["enable_punc"] = true
+	}
+	if s.config.EnableDiarization {
+		request["enable_diarization"] = true
+	}
+	if len(s.config.Hotwords) > 0 {
+		request["hotwords"] = s.config.Hotwords
+	}
+	if s.config.SpeakerNum > 0 {
+		request["speaker_num"] = s.config.SpeakerNum
 	}
 
 	req := map[string]any{
-		"event": asrEventSessionStart,
 		"user": map[string]any{
 			"uid": s.client.config.userID,
 		},
-		"audio_config": audioConfig,
-		"req_params": map[string]any{
-			"language":           s.config.Language,
-			"enable_itn":         s.config.EnableITN,
-			"enable_punc":        s.config.EnablePunc,
-			"enable_diarization": s.config.EnableDiarization,
-		},
-	}
-
-	if len(s.config.Hotwords) > 0 {
-		req["req_params"].(map[string]any)["hotwords"] = s.config.Hotwords
-	}
-	if s.config.SpeakerNum > 0 {
-		req["req_params"].(map[string]any)["speaker_num"] = s.config.SpeakerNum
+		"audio":   audio,
+		"request": request,
 	}
 
 	return s.sendBinaryMessage(req)
@@ -316,14 +336,15 @@ func (s *ASRV2Session) sendBinaryMessage(data any) error {
 		return err
 	}
 
-	// Build binary header
-	header := uint32(0x10000000) | // Version 1
-		uint32(0x01000000) | // Header size 1
-		uint32(0x00010000) | // Message type: full client request
-		uint32(0x00001000) // Serialization: JSON
+	// Build binary header per SAUC protocol:
+	// Byte 0: version (4 bits) + header_size (4 bits) = 0x11
+	// Byte 1: message_type (4 bits) + flags (4 bits) = 0x10 (Full client request)
+	// Byte 2: serialization (4 bits) + compression (4 bits) = 0x10 (JSON, no compression)
+	// Byte 3: reserved = 0x00
+	header := []byte{0x11, 0x10, 0x10, 0x00}
 
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, header)
+	buf.Write(header)
 	binary.Write(&buf, binary.BigEndian, uint32(len(jsonData)))
 	buf.Write(jsonData)
 
@@ -344,67 +365,136 @@ func (s *ASRV2Session) receiveLoop() {
 		if err != nil {
 			if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 				select {
-				case s.errChan <- err:
+				case s.errChan <- fmt.Errorf("ws read: %w", err):
 				default:
 				}
 			}
 			return
 		}
 
-		if msgType != websocket.BinaryMessage || len(data) < 8 {
+		// Log raw message for debugging
+		if len(data) > 0 && len(data) < 1000 {
+			// Try to decode as text message for error responses
+			if msgType == websocket.TextMessage {
+				select {
+				case s.errChan <- fmt.Errorf("server text response: %s", string(data)):
+				default:
+				}
+				return
+			}
+		}
+
+		if msgType != websocket.BinaryMessage || len(data) < 12 {
+			continue
+		}
+		
+		// Parse binary header per SAUC protocol:
+		// Byte 0: version (4 bits) + header_size (4 bits) = 0x11
+		// Byte 1: message_type (4 bits) + flags (4 bits) = e.g. 0x91 (type=9, flags=1)
+		// Byte 2: serialization (4 bits) + compression (4 bits) = e.g. 0x10 (JSON, no compression)
+		// Byte 3: reserved = 0x00
+		// Byte 4-7: sequence number (4 bytes, big-endian) - read but not used
+		// Byte 8-11: payload size (4 bytes, big-endian)
+		// Byte 12+: payload
+		messageType := (data[1] >> 4) & 0x0F
+		messageFlags := data[1] & 0x0F
+		compression := data[2] & 0x0F
+		_ = binary.BigEndian.Uint32(data[4:8]) // sequence number (unused)
+		payloadSize := binary.BigEndian.Uint32(data[8:12])
+
+		if int(payloadSize) > len(data)-12 {
 			continue
 		}
 
-		// Parse binary header
-		header := binary.BigEndian.Uint32(data[0:4])
-		payloadSize := binary.BigEndian.Uint32(data[4:8])
-
-		messageType := (header >> 16) & 0xFF
-
-		if int(payloadSize) > len(data)-8 {
-			continue
+		payload := data[12 : 12+payloadSize]
+		
+		// Decompress if needed
+		if compression == 1 { // Gzip
+			reader, err := gzip.NewReader(bytes.NewReader(payload))
+			if err != nil {
+				continue
+			}
+			// Limit decompression to 10MB to prevent Zip Bomb DoS attacks
+			payload, err = io.ReadAll(io.LimitReader(reader, 10*1024*1024))
+			reader.Close()
+			if err != nil {
+				continue
+			}
 		}
 
-		payload := data[8 : 8+payloadSize]
-
-		switch messageType {
-		case asrEventResult:
+		// SAUC response format:
+		// message_type = 9 (Full server response)
+		// flags = 1 (interim), 3 (final)
+		if messageType == 9 { // Full server response
 			var resp struct {
-				Text string `json:"text"`
+				AudioInfo struct {
+					Duration int `json:"duration"`
+				} `json:"audio_info"`
+				Result struct {
+					Text       string `json:"text"`
+					Utterances []struct {
+						Text      string `json:"text"`
+						StartTime int    `json:"start_time"`
+						EndTime   int    `json:"end_time"`
+						Definite  bool   `json:"definite"`
+						Words     []struct {
+							Text      string `json:"text"`
+							StartTime int    `json:"start_time"`
+							EndTime   int    `json:"end_time"`
+						} `json:"words"`
+					} `json:"utterances"`
+				} `json:"result"`
 			}
-			if json.Unmarshal(payload, &resp) == nil {
-				result := &ASRV2Result{
-					Text:    resp.Text,
-					IsFinal: false,
-					ReqID:   s.reqID,
-				}
-				select {
-				case s.recvChan <- result:
-				case <-s.closeChan:
-					return
-				}
+			if err := json.Unmarshal(payload, &resp); err != nil {
+				continue
 			}
-
-		case asrEventFinalResult:
-			var resp struct {
-				Text       string           `json:"text"`
-				Utterances []ASRV2Utterance `json:"utterances"`
-			}
-			if json.Unmarshal(payload, &resp) == nil {
-				result := &ASRV2Result{
-					Text:       resp.Text,
-					Utterances: resp.Utterances,
-					IsFinal:    true,
-					ReqID:      s.reqID,
-				}
-				select {
-				case s.recvChan <- result:
-				case <-s.closeChan:
-					return
+			
+			// Check if this is the final result
+			isFinal := messageFlags == 3
+			for _, u := range resp.Result.Utterances {
+				if u.Definite {
+					isFinal = true
+					break
 				}
 			}
-
-		case asrEventError:
+			
+			// Convert utterances
+			var utterances []ASRV2Utterance
+			for _, u := range resp.Result.Utterances {
+				utt := ASRV2Utterance{
+					Text:      u.Text,
+					StartTime: u.StartTime,
+					EndTime:   u.EndTime,
+					Definite:  u.Definite,
+				}
+				for _, w := range u.Words {
+					utt.Words = append(utt.Words, ASRV2Word{
+						Text:      w.Text,
+						StartTime: w.StartTime,
+						EndTime:   w.EndTime,
+					})
+				}
+				utterances = append(utterances, utt)
+			}
+			
+			result := &ASRV2Result{
+				Text:       resp.Result.Text,
+				Utterances: utterances,
+				Duration:   resp.AudioInfo.Duration,
+				IsFinal:    isFinal,
+				ReqID:      s.reqID,
+			}
+			
+			select {
+			case s.recvChan <- result:
+			case <-s.closeChan:
+				return
+			}
+			
+			if isFinal {
+				return
+			}
+		} else if messageType == 15 { // Error response
 			var errResp struct {
 				Code    int    `json:"code"`
 				Message string `json:"message"`
