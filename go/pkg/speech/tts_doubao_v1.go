@@ -3,9 +3,13 @@ package speech
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"sync"
 
+	"github.com/haivivi/giztoy/pkg/audio/codec/mp3"
+	"github.com/haivivi/giztoy/pkg/audio/codec/opus"
+	"github.com/haivivi/giztoy/pkg/audio/opusrt"
 	"github.com/haivivi/giztoy/pkg/audio/pcm"
 	"github.com/haivivi/giztoy/pkg/doubaospeech"
 
@@ -46,7 +50,9 @@ func WithDoubaoTTSV1Cluster(cluster string) DoubaoTTSV1Option {
 	}
 }
 
-// WithDoubaoTTSV1Encoding sets the audio encoding.
+// WithDoubaoTTSV1Encoding sets the audio encoding (pcm, mp3, ogg_opus, etc.).
+// Using compressed formats (like MP3) reduces memory usage as compressed
+// audio is stored until Decode() is called.
 func WithDoubaoTTSV1Encoding(encoding doubaospeech.AudioEncoding) DoubaoTTSV1Option {
 	return func(h *DoubaoTTSV1Handler) {
 		h.encoding = encoding
@@ -174,9 +180,10 @@ func (s *doubaoV1Speech) Next() (SpeechSegment, error) {
 	}
 
 	return &doubaoV1SpeechSegment{
-		text:   text,
-		audio:  audioBuf.Bytes(),
-		format: s.format,
+		text:     text,
+		audio:    audioBuf.Bytes(),
+		encoding: s.handler.encoding,
+		format:   s.format,
 	}, nil
 }
 
@@ -188,18 +195,147 @@ func (s *doubaoV1Speech) Close() error {
 
 // doubaoV1SpeechSegment implements the SpeechSegment interface.
 type doubaoV1SpeechSegment struct {
-	text   string
-	audio  []byte
-	format pcm.Format
+	text     string
+	audio    []byte
+	encoding doubaospeech.AudioEncoding // Original audio encoding
+	format   pcm.Format                 // Target PCM format
 }
 
 var _ SpeechSegment = (*doubaoV1SpeechSegment)(nil)
 
 func (seg *doubaoV1SpeechSegment) Decode(best pcm.Format) VoiceSegment {
-	return &doubaoV1VoiceSegment{
-		audio:  seg.audio,
-		format: seg.format,
+	switch seg.encoding {
+	case doubaospeech.EncodingMP3:
+		// Return streaming MP3 decoder
+		decoder := mp3.NewDecoder(bytes.NewReader(seg.audio))
+		return &streamingVoiceSegmentV1{
+			reader: decoder,
+			closer: decoder,
+			format: seg.format,
+		}
+
+	case doubaospeech.EncodingOGG:
+		// Return streaming OGG Opus decoder
+		decoder, err := newOggOpusDecoder(bytes.NewReader(seg.audio), seg.format)
+		if err != nil {
+			return &doubaoV1VoiceSegment{
+				audio:  nil,
+				format: seg.format,
+				decErr: fmt.Errorf("create ogg decoder failed: %w", err),
+			}
+		}
+		return &streamingVoiceSegmentV1{
+			reader: decoder,
+			closer: decoder,
+			format: seg.format,
+		}
+
+	case doubaospeech.EncodingPCM, doubaospeech.EncodingPCMS16LE, "":
+		// Already PCM, wrap in simple reader
+		return &doubaoV1VoiceSegment{
+			audio:  seg.audio,
+			format: seg.format,
+		}
+
+	default:
+		// Unsupported format
+		return &doubaoV1VoiceSegment{
+			audio:  nil,
+			format: seg.format,
+			decErr: fmt.Errorf("unsupported audio encoding: %s", seg.encoding),
+		}
 	}
+}
+
+// oggOpusDecoder is a streaming OGG Opus to PCM decoder.
+// It decodes on-demand during Read() calls, minimizing memory usage.
+type oggOpusDecoder struct {
+	oggReader *opusrt.OggReader
+	opusDec   *opus.Decoder
+	format    pcm.Format
+
+	// Buffer for decoded PCM data (holds one frame at a time)
+	buf    []byte
+	offset int
+}
+
+func newOggOpusDecoder(r io.Reader, format pcm.Format) (*oggOpusDecoder, error) {
+	oggReader, err := opusrt.NewOggReader(r)
+	if err != nil {
+		return nil, err
+	}
+
+	opusDec, err := opus.NewDecoder(format.SampleRate(), format.Channels())
+	if err != nil {
+		oggReader.Close()
+		return nil, err
+	}
+
+	return &oggOpusDecoder{
+		oggReader: oggReader,
+		opusDec:   opusDec,
+		format:    format,
+	}, nil
+}
+
+func (d *oggOpusDecoder) Read(p []byte) (n int, err error) {
+	// First, drain any buffered data from previous frame
+	if d.offset < len(d.buf) {
+		n = copy(p, d.buf[d.offset:])
+		d.offset += n
+		return n, nil
+	}
+
+	// Need to decode next frame
+	for {
+		frame, _, err := d.oggReader.Frame()
+		if err != nil {
+			return 0, err // includes io.EOF
+		}
+
+		decoded, err := d.opusDec.Decode(opus.Frame(frame))
+		if err != nil {
+			return 0, err
+		}
+
+		if len(decoded) > 0 {
+			d.buf = decoded
+			d.offset = 0
+			n = copy(p, d.buf)
+			d.offset = n
+			return n, nil
+		}
+		// Empty frame, try next
+	}
+}
+
+func (d *oggOpusDecoder) Close() error {
+	d.opusDec.Close()
+	return d.oggReader.Close()
+}
+
+// streamingVoiceSegmentV1 implements VoiceSegment with streaming decode.
+type streamingVoiceSegmentV1 struct {
+	reader io.Reader
+	closer io.Closer
+	format pcm.Format
+}
+
+var _ VoiceSegment = (*streamingVoiceSegmentV1)(nil)
+
+func (v *streamingVoiceSegmentV1) Read(p []byte) (n int, err error) {
+	return v.reader.Read(p)
+}
+
+func (v *streamingVoiceSegmentV1) Format() pcm.Format {
+	return v.format
+}
+
+func (v *streamingVoiceSegmentV1) Close() error {
+	if v.closer != nil {
+		return v.closer.Close()
+	}
+	return nil
 }
 
 func (seg *doubaoV1SpeechSegment) Transcribe() io.ReadCloser {
@@ -216,6 +352,7 @@ type doubaoV1VoiceSegment struct {
 	audio  []byte
 	offset int
 	format pcm.Format
+	decErr error // Decoding error, if any
 }
 
 var _ VoiceSegment = (*doubaoV1VoiceSegment)(nil)
@@ -223,6 +360,11 @@ var _ VoiceSegment = (*doubaoV1VoiceSegment)(nil)
 func (v *doubaoV1VoiceSegment) Read(p []byte) (n int, err error) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
+
+	// Return decoding error if any
+	if v.decErr != nil {
+		return 0, v.decErr
+	}
 
 	if v.offset >= len(v.audio) {
 		return 0, io.EOF

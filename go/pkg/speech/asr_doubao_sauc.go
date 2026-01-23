@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/haivivi/giztoy/pkg/audio/codec/opus"
 	"github.com/haivivi/giztoy/pkg/audio/opusrt"
@@ -132,6 +133,8 @@ func (h *DoubaoSAUCASRHandler) TranscribeStream(ctx context.Context, model strin
 	// Note: Only mono audio is supported for ASR
 	format, err := sampleRateToFormat(h.sampleRate, h.channels)
 	if err != nil {
+		session.Close() // Clean up session on error
+		decoder.Close() // Clean up decoder on error
 		return nil, fmt.Errorf("invalid audio format: %w", err)
 	}
 
@@ -349,8 +352,17 @@ func (s *doubaoSAUCSpeechStream) Close() error {
 	s.closeOnce.Do(func() {
 		close(s.closeCh)
 		// Wait for sendLoop to finish before closing session
-		// to avoid concurrent websocket writes
-		<-s.sendDone
+		// to avoid concurrent websocket writes.
+		// Use select with context to prevent deadlock if sendLoop is blocked.
+		select {
+		case <-s.sendDone:
+			// sendLoop completed normally
+		case <-s.ctx.Done():
+			// Context cancelled - sendLoop may be blocked, proceed with cleanup
+		case <-time.After(5 * time.Second):
+			// Timeout - sendLoop may be blocked on opusReader.Frame()
+			// Proceed with cleanup to avoid indefinite hang
+		}
 		s.session.Close()
 		s.decoder.Close()
 		s.closed = true

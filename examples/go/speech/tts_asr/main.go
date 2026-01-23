@@ -100,13 +100,15 @@ func main() {
 	// Test each TTS handler
 	// Note: Skip doubao-v1 for now as it requires special voice_type format
 	handlers := []string{
-		// "doubao-v1",  // Doubao TTS 1.0 (skipped - requires BV* voice format)
-		"doubao-v2",  // Doubao TTS 2.0
+		// "doubao-v1",      // Doubao TTS 1.0 (skipped - requires BV* voice format)
+		"doubao-v2",      // Doubao TTS 2.0 (PCM)
+		"doubao-v2-ogg",  // Doubao TTS 2.0 (OGG Opus - compressed)
 	}
 
-	// Add MiniMax if available
+	// Add MiniMax handlers if available
 	if minimaxAPIKey != "" {
-		handlers = append(handlers, "minimax")
+		handlers = append(handlers, "minimax")     // MiniMax (PCM)
+		handlers = append(handlers, "minimax-mp3") // MiniMax (MP3 - compressed)
 	}
 
 	for _, name := range handlers {
@@ -158,7 +160,7 @@ func registerTTSHandlers(doubaoClient *doubaospeech.Client, minimaxAPIKey string
 		fmt.Println("   ✅ Registered: doubao-v1 (Doubao TTS 1.0 - Classic)")
 	}
 
-	// Register Doubao TTS V2 handler
+	// Register Doubao TTS V2 handler (PCM format)
 	// V2 BigModel requires specific speaker IDs with _uranus_bigtts suffix
 	doubaoV2Handler := speech.NewDoubaoTTSV2Handler(doubaoClient,
 		speech.WithDoubaoTTSV2Speaker("zh_female_vv_uranus_bigtts"),
@@ -169,21 +171,52 @@ func registerTTSHandlers(doubaoClient *doubaospeech.Client, minimaxAPIKey string
 	if err := speech.HandleTTS("doubao-v2", doubaoV2Handler); err != nil {
 		fmt.Printf("   ⚠️  Failed to register doubao-v2: %v\n", err)
 	} else {
-		fmt.Println("   ✅ Registered: doubao-v2 (Doubao TTS 2.0 - BigModel)")
+		fmt.Println("   ✅ Registered: doubao-v2 (Doubao TTS 2.0 - PCM)")
 	}
 
-	// Register MiniMax TTS handler (if API key available)
+	// Register Doubao TTS V2 handler (OGG Opus format - compressed)
+	// Using OGG Opus reduces memory usage as compressed audio is stored until Decode()
+	doubaoV2OggHandler := speech.NewDoubaoTTSV2Handler(doubaoClient,
+		speech.WithDoubaoTTSV2Speaker("zh_female_vv_uranus_bigtts"),
+		speech.WithDoubaoTTSV2ResourceID(doubaospeech.ResourceTTSV2),
+		speech.WithDoubaoTTSV2Format("ogg_opus"), // Compressed format
+		speech.WithDoubaoTTSV2Speed(1.0),
+	)
+	if err := speech.HandleTTS("doubao-v2-ogg", doubaoV2OggHandler); err != nil {
+		fmt.Printf("   ⚠️  Failed to register doubao-v2-ogg: %v\n", err)
+	} else {
+		fmt.Println("   ✅ Registered: doubao-v2-ogg (Doubao TTS 2.0 - OGG Opus)")
+	}
+
+	// Register MiniMax TTS handlers (if API key available)
 	if minimaxAPIKey != "" {
 		minimaxClient := minimax.NewClient(minimaxAPIKey)
+
+		// MiniMax handler with PCM format (default)
 		minimaxHandler := speech.NewMinimaxTTSHandler(minimaxClient,
 			speech.WithMinimaxTTSModel(minimax.ModelSpeech26HD),
 			speech.WithMinimaxTTSVoice(minimax.VoiceFemaleShaonv),
+			speech.WithMinimaxTTSFormat(minimax.AudioFormatPCM),
 			speech.WithMinimaxTTSSpeed(1.0),
 		)
 		if err := speech.HandleTTS("minimax", minimaxHandler); err != nil {
 			fmt.Printf("   ⚠️  Failed to register minimax: %v\n", err)
 		} else {
-			fmt.Println("   ✅ Registered: minimax (MiniMax TTS)")
+			fmt.Println("   ✅ Registered: minimax (MiniMax TTS - PCM)")
+		}
+
+		// MiniMax handler with MP3 format (compressed)
+		// Using MP3 reduces memory usage as compressed audio is stored until Decode()
+		minimaxMP3Handler := speech.NewMinimaxTTSHandler(minimaxClient,
+			speech.WithMinimaxTTSModel(minimax.ModelSpeech26HD),
+			speech.WithMinimaxTTSVoice(minimax.VoiceFemaleShaonv),
+			speech.WithMinimaxTTSFormat(minimax.AudioFormatMP3), // Compressed format
+			speech.WithMinimaxTTSSpeed(1.0),
+		)
+		if err := speech.HandleTTS("minimax-mp3", minimaxMP3Handler); err != nil {
+			fmt.Printf("   ⚠️  Failed to register minimax-mp3: %v\n", err)
+		} else {
+			fmt.Println("   ✅ Registered: minimax-mp3 (MiniMax TTS - MP3)")
 		}
 	}
 }
@@ -254,11 +287,17 @@ func testTTSAndASR(handlerName, text string, doubaoClient *doubaospeech.Client) 
 
 	fmt.Printf("   ✅ TTS completed: %d segments, %d bytes (%.1f seconds audio)\n",
 		segmentCount, audioBuffer.Len(), audioDuration.Seconds())
-	fmt.Printf("   ⏱️  Synthesis time: %v (RTF: %.2f)\n",
-		synthesisTime, synthesisTime.Seconds()/audioDuration.Seconds())
+	if audioDuration.Seconds() > 0 {
+		fmt.Printf("   ⏱️  Synthesis time: %v (RTF: %.2f)\n",
+			synthesisTime, synthesisTime.Seconds()/audioDuration.Seconds())
+	} else {
+		fmt.Printf("   ⏱️  Synthesis time: %v\n", synthesisTime)
+	}
 
 	// Save audio to file
-	os.MkdirAll("tmp", 0755)
+	if err := os.MkdirAll("tmp", 0755); err != nil {
+		return fmt.Errorf("create tmp directory failed: %w", err)
+	}
 	audioFile := fmt.Sprintf("tmp/speech_%s.pcm", handlerName)
 	if err := os.WriteFile(audioFile, audioBuffer.Bytes(), 0644); err != nil {
 		return fmt.Errorf("save audio failed: %w", err)

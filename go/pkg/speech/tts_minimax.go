@@ -3,9 +3,11 @@ package speech
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"sync"
 
+	"github.com/haivivi/giztoy/pkg/audio/codec/mp3"
 	"github.com/haivivi/giztoy/pkg/audio/pcm"
 	"github.com/haivivi/giztoy/pkg/minimax"
 
@@ -14,14 +16,15 @@ import (
 
 // MinimaxTTSHandler is a MiniMax TTS handler that implements the Synthesizer interface.
 type MinimaxTTSHandler struct {
-	client    *minimax.Client
-	model     string
-	voiceID   string
-	speed     float64
-	vol       float64
-	pitch     int
-	emotion   string
-	segmenter SentenceSegmenter
+	client      *minimax.Client
+	model       string
+	voiceID     string
+	audioFormat minimax.AudioFormat // Audio format: pcm, mp3, flac, wav
+	speed       float64
+	vol         float64
+	pitch       int
+	emotion     string
+	segmenter   SentenceSegmenter
 }
 
 var _ Synthesizer = (*MinimaxTTSHandler)(nil)
@@ -71,6 +74,15 @@ func WithMinimaxTTSEmotion(emotion string) MinimaxTTSOption {
 	}
 }
 
+// WithMinimaxTTSFormat sets the audio format (pcm, mp3, flac, wav).
+// Using non-PCM formats (like MP3) reduces memory usage as compressed
+// audio is stored until Decode() is called.
+func WithMinimaxTTSFormat(format minimax.AudioFormat) MinimaxTTSOption {
+	return func(h *MinimaxTTSHandler) {
+		h.audioFormat = format
+	}
+}
+
 // WithMinimaxTTSSegmenter sets the sentence segmenter.
 func WithMinimaxTTSSegmenter(segmenter SentenceSegmenter) MinimaxTTSOption {
 	return func(h *MinimaxTTSHandler) {
@@ -79,14 +91,17 @@ func WithMinimaxTTSSegmenter(segmenter SentenceSegmenter) MinimaxTTSOption {
 }
 
 // NewMinimaxTTSHandler creates a new MiniMax TTS handler.
+// Default audio format is PCM. Use WithMinimaxTTSFormat to set a compressed
+// format like MP3 to reduce memory usage.
 func NewMinimaxTTSHandler(client *minimax.Client, opts ...MinimaxTTSOption) *MinimaxTTSHandler {
 	h := &MinimaxTTSHandler{
-		client:    client,
-		model:     minimax.ModelSpeech26HD,
-		voiceID:   minimax.VoiceFemaleShaonv,
-		speed:     1.0,
-		vol:       1.0,
-		segmenter: DefaultSentenceSegmenter{},
+		client:      client,
+		model:       minimax.ModelSpeech26HD,
+		voiceID:     minimax.VoiceFemaleShaonv,
+		audioFormat: minimax.AudioFormatPCM, // Default to PCM
+		speed:       1.0,
+		vol:         1.0,
+		segmenter:   DefaultSentenceSegmenter{},
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -143,7 +158,7 @@ func (s *minimaxSpeech) Next() (SpeechSegment, error) {
 		},
 		AudioSetting: &minimax.AudioSetting{
 			SampleRate: s.format.SampleRate(),
-			Format:     minimax.AudioFormatPCM,
+			Format:     s.handler.audioFormat,
 			Channel:    s.format.Channels(),
 		},
 	}
@@ -160,9 +175,10 @@ func (s *minimaxSpeech) Next() (SpeechSegment, error) {
 	}
 
 	return &minimaxSpeechSegment{
-		text:   text,
-		audio:  audioBuf.Bytes(),
-		format: s.format,
+		text:        text,
+		audio:       audioBuf.Bytes(),
+		audioFormat: s.handler.audioFormat,
+		format:      s.format,
 	}, nil
 }
 
@@ -174,18 +190,65 @@ func (s *minimaxSpeech) Close() error {
 
 // minimaxSpeechSegment implements the SpeechSegment interface.
 type minimaxSpeechSegment struct {
-	text   string
-	audio  []byte
-	format pcm.Format
+	text        string
+	audio       []byte
+	audioFormat minimax.AudioFormat // Original audio format (pcm, mp3, etc.)
+	format      pcm.Format          // Target PCM format
 }
 
 var _ SpeechSegment = (*minimaxSpeechSegment)(nil)
 
 func (seg *minimaxSpeechSegment) Decode(best pcm.Format) VoiceSegment {
-	return &minimaxVoiceSegment{
-		audio:  seg.audio,
-		format: seg.format,
+	switch seg.audioFormat {
+	case minimax.AudioFormatMP3:
+		// Return streaming MP3 decoder
+		decoder := mp3.NewDecoder(bytes.NewReader(seg.audio))
+		return &streamingVoiceSegment{
+			reader: decoder,
+			closer: decoder,
+			format: seg.format,
+		}
+
+	case minimax.AudioFormatPCM, "":
+		// Already PCM, wrap in simple reader
+		return &minimaxVoiceSegment{
+			audio:  seg.audio,
+			format: seg.format,
+		}
+
+	default:
+		// Unsupported format (FLAC, WAV) - return error
+		return &minimaxVoiceSegment{
+			audio:  nil,
+			format: seg.format,
+			decErr: fmt.Errorf("unsupported audio format: %s", seg.audioFormat),
+		}
 	}
+}
+
+// streamingVoiceSegment implements VoiceSegment with streaming decode.
+// It decodes audio on-demand during Read() calls, minimizing memory usage.
+type streamingVoiceSegment struct {
+	reader io.Reader
+	closer io.Closer
+	format pcm.Format
+}
+
+var _ VoiceSegment = (*streamingVoiceSegment)(nil)
+
+func (v *streamingVoiceSegment) Read(p []byte) (n int, err error) {
+	return v.reader.Read(p)
+}
+
+func (v *streamingVoiceSegment) Format() pcm.Format {
+	return v.format
+}
+
+func (v *streamingVoiceSegment) Close() error {
+	if v.closer != nil {
+		return v.closer.Close()
+	}
+	return nil
 }
 
 func (seg *minimaxSpeechSegment) Transcribe() io.ReadCloser {
@@ -202,6 +265,7 @@ type minimaxVoiceSegment struct {
 	audio  []byte
 	offset int
 	format pcm.Format
+	decErr error // Decoding error, if any
 }
 
 var _ VoiceSegment = (*minimaxVoiceSegment)(nil)
@@ -209,6 +273,11 @@ var _ VoiceSegment = (*minimaxVoiceSegment)(nil)
 func (v *minimaxVoiceSegment) Read(p []byte) (n int, err error) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
+
+	// Return decoding error if any
+	if v.decErr != nil {
+		return 0, v.decErr
+	}
 
 	if v.offset >= len(v.audio) {
 		return 0, io.EOF

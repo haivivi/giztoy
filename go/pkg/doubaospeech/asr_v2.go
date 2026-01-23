@@ -129,7 +129,6 @@ type ASRV2Session struct {
 	errChan   chan error
 	closeChan chan struct{}
 	closeOnce sync.Once
-	sequence  int32
 }
 
 // OpenStreamSession opens a streaming ASR WebSocket session
@@ -206,9 +205,11 @@ func (s *ASRServiceV2) OpenStreamSession(ctx context.Context, config *ASRV2Confi
 // SendAudio sends audio data to the ASR session
 //
 // If isLast is true, this marks the end of the audio stream.
+//
+// Note: The client->server protocol for audio frames does not include a sequence number,
+// unlike the server->client responses which do include sequence numbers.
+// This asymmetry is intentional per the SAUC protocol specification.
 func (s *ASRV2Session) SendAudio(ctx context.Context, audio []byte, isLast bool) error {
-	s.sequence++
-
 	// Build binary message with audio data per SAUC protocol:
 	// Byte 0: version (4 bits) + header_size (4 bits) = 0x11
 	// Byte 1: message_type (4 bits) + flags (4 bits) = 0x20 (Audio only) or 0x22 (last audio)

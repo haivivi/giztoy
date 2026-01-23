@@ -17,6 +17,7 @@ go_library(
     importpath = "github.com/haivivi/giztoy/pkg/speech",
     visibility = ["//visibility:public"],
     deps = [
+        "//go/pkg/audio/codec/mp3",
         "//go/pkg/audio/codec/opus",
         "//go/pkg/audio/opusrt",
         "//go/pkg/audio/pcm",
