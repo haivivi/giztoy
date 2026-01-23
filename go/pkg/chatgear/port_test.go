@@ -32,6 +32,15 @@ func TestClientServerPort_OpusFrames_ClientToServer(t *testing.T) {
 		serverPort.RecvFrom(serverConn)
 	}()
 
+	// Register cleanup to ensure resources are released even on test failure
+	t.Cleanup(func() {
+		clientConn.Close()
+		serverConn.Close()
+		wg.Wait()
+		clientPort.Close()
+		serverPort.Close()
+	})
+
 	// Client sends opus frame to server
 	frame := []byte{0xFC, 0x01, 0x02, 0x03} // CELT FB 20ms
 	stamp := opusrt.FromTime(time.Now())
@@ -42,23 +51,43 @@ func TestClientServerPort_OpusFrames_ClientToServer(t *testing.T) {
 		t.Fatalf("SendOpusFrames: %v", err)
 	}
 
-	// Read from server port
-	readFrame, _, err := serverPort.Frame()
-	if err != nil {
+	// Read from server port with timeout
+	// The RealtimeBuffer has a pull goroutine that processes frames asynchronously,
+	// and may return loss events (nil frames) before the actual frame arrives.
+	// We need to skip loss events and wait for the actual frame.
+	frameCh := make(chan opusrt.Frame, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		for {
+			readFrame, loss, err := serverPort.Frame()
+			if err != nil {
+				errCh <- err
+				return
+			}
+			// Skip loss events (nil frames with non-zero loss duration)
+			if readFrame == nil && loss > 0 {
+				continue
+			}
+			// Skip empty frames
+			if len(readFrame) == 0 {
+				continue
+			}
+			frameCh <- readFrame
+			return
+		}
+	}()
+
+	select {
+	case readFrame := <-frameCh:
+		// Verify frame content
+		if len(readFrame) != len(frame) {
+			t.Errorf("frame length mismatch: got %d, want %d", len(readFrame), len(frame))
+		}
+	case err := <-errCh:
 		t.Fatalf("Frame: %v", err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for frame")
 	}
-
-	// Verify frame content
-	if len(readFrame) != len(frame) {
-		t.Errorf("frame length mismatch: got %d, want %d", len(readFrame), len(frame))
-	}
-
-	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
-	clientConn.Close()
-	serverConn.Close()
-	wg.Wait()
-	clientPort.Close()
-	serverPort.Close()
 }
 
 func TestClientServerPort_StateEvents(t *testing.T) {
