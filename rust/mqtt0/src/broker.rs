@@ -184,16 +184,26 @@ impl BrokerBuilder {
 }
 
 /// Client handle for message delivery.
-/// Uses Arc<str> for client_id to make Clone cheap (O(1) ref count increment).
+/// Uses Arc<str> for client_id and Arc<Sender> for tx to enable:
+/// - Cheap cloning (O(1) ref count increment)
+/// - Pointer comparison for race condition prevention in cleanup
 #[derive(Clone)]
 struct ClientHandle {
     client_id: Arc<str>,
-    tx: mpsc::Sender<Message>,
+    tx: Arc<mpsc::Sender<Message>>,
 }
 
 impl PartialEq for ClientHandle {
     fn eq(&self, other: &Self) -> bool {
         self.client_id == other.client_id
+    }
+}
+
+impl ClientHandle {
+    /// Check if this handle's sender is the same instance as another.
+    /// Used for race condition prevention during cleanup.
+    fn same_sender(&self, other: &Arc<mpsc::Sender<Message>>) -> bool {
+        Arc::ptr_eq(&self.tx, other)
     }
 }
 
@@ -205,7 +215,8 @@ pub struct Broker {
     on_connect: Option<Callback>,
     on_disconnect: Option<Callback>,
     subscriptions: Arc<RwLock<Trie<ClientHandle>>>,
-    clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
+    /// Maps client_id -> Arc<Sender> for pointer comparison during cleanup.
+    clients: Arc<RwLock<HashMap<String, Arc<mpsc::Sender<Message>>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
     /// Shared subscriptions trie for O(topic_length) lookup ($share/group/topic).
@@ -287,7 +298,8 @@ struct BrokerContext {
     on_connect: Option<Callback>,
     on_disconnect: Option<Callback>,
     subscriptions: Arc<RwLock<Trie<ClientHandle>>>,
-    clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
+    /// Maps client_id -> Arc<Sender> for pointer comparison during cleanup.
+    clients: Arc<RwLock<HashMap<String, Arc<mpsc::Sender<Message>>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
     /// Shared subscriptions trie for O(topic_length) lookup.
@@ -483,10 +495,11 @@ impl BrokerContext {
         read_buf: BytesMut,
     ) -> Result<()> {
         let (tx, rx) = mpsc::channel::<Message>(100);
+        let tx = Arc::new(tx);
 
         {
             let mut clients = self.clients.write();
-            clients.insert(client_id.to_string(), tx.clone());
+            clients.insert(client_id.to_string(), Arc::clone(&tx));
         }
 
         if let Some(ref on_connect) = self.on_connect {
@@ -500,14 +513,15 @@ impl BrokerContext {
 
         let client_handle = ClientHandle {
             client_id: Arc::from(client_id),
-            tx,
+            tx: Arc::clone(&tx),
         };
 
         let result = self
             .client_loop_v4(client_id, keep_alive, &client_handle, reader, writer, read_buf, rx)
             .await;
 
-        self.cleanup_client(client_id, username).await;
+        // Pass tx for pointer comparison to prevent race conditions
+        self.cleanup_client(client_id, username, &tx).await;
 
         if let Some(ref on_disconnect) = self.on_disconnect {
             on_disconnect(client_id);
@@ -529,10 +543,11 @@ impl BrokerContext {
         read_buf: BytesMut,
     ) -> Result<()> {
         let (tx, rx) = mpsc::channel::<Message>(100);
+        let tx = Arc::new(tx);
 
         {
             let mut clients = self.clients.write();
-            clients.insert(client_id.to_string(), tx.clone());
+            clients.insert(client_id.to_string(), Arc::clone(&tx));
         }
 
         if let Some(ref on_connect) = self.on_connect {
@@ -546,14 +561,15 @@ impl BrokerContext {
 
         let client_handle = ClientHandle {
             client_id: Arc::from(client_id),
-            tx,
+            tx: Arc::clone(&tx),
         };
 
         let result = self
             .client_loop_v5(client_id, keep_alive, &client_handle, reader, writer, read_buf, rx)
             .await;
 
-        self.cleanup_client(client_id, username).await;
+        // Pass tx for pointer comparison to prevent race conditions
+        self.cleanup_client(client_id, username, &tx).await;
 
         if let Some(ref on_disconnect) = self.on_disconnect {
             on_disconnect(client_id);
@@ -1088,9 +1104,20 @@ impl BrokerContext {
         }
     }
 
-    async fn cleanup_client(&self, client_id: &str, username: &str) {
-        // Remove from clients map
-        self.clients.write().remove(client_id);
+    /// Cleanup client state on disconnect.
+    /// The `tx` parameter is used for pointer comparison to prevent race conditions
+    /// where a new client with the same client_id replaces an old one before cleanup.
+    async fn cleanup_client(&self, client_id: &str, username: &str, tx: &Arc<mpsc::Sender<Message>>) {
+        // Remove from clients map only if the current sender matches (pointer comparison)
+        // This prevents removing a new client that connected with the same client_id
+        {
+            let mut clients = self.clients.write();
+            if let Some(current) = clients.get(client_id) {
+                if Arc::ptr_eq(current, tx) {
+                    clients.remove(client_id);
+                }
+            }
+        }
 
         // Remove all subscriptions for this client
         let topics = self.client_subscriptions.write().remove(client_id);
@@ -1100,22 +1127,24 @@ impl BrokerContext {
             for topic in &topics {
                 // Check if it's a shared subscription
                 if let Some((group, actual_topic)) = parse_shared_topic(topic) {
-                    // Use Trie for cleanup
+                    // Use Trie for cleanup - use pointer comparison
                     let shared_trie = self.shared_trie.write();
                     shared_trie.with_mut(|root| {
                         let _ = root.set(actual_topic, |node| {
                             let values = node.values_mut();
                             if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
-                                entry.group.remove(client_id);
+                                // Use pointer comparison via same_sender
+                                entry.group.subscribers.retain(|h| !h.same_sender(tx));
                             }
                             // Remove empty groups
                             values.retain(|e| !e.group.is_empty());
                         });
                     });
                 } else {
-                subs.with_mut(|root| {
-                    root.remove(topic, |h| h.client_id.as_ref() == client_id);
-                });
+                    // Use pointer comparison for normal subscriptions
+                    subs.with_mut(|root| {
+                        root.remove(topic, |h| h.same_sender(tx));
+                    });
                 }
             }
             debug!("Cleaned up {} subscriptions for client {}", topic_count, client_id);
@@ -1161,7 +1190,13 @@ impl BrokerContext {
             keepalive,
             connected_at,
         };
-        let payload = serde_json::to_string(&event).unwrap_or_default();
+        let payload = match serde_json::to_string(&event) {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("Failed to serialize $SYS connected event for {}: {}", client_id, e);
+                return;
+            }
+        };
 
         let msg = Message::new(topic.clone(), Bytes::from(payload));
         self.route_to_subscribers(&topic, &msg).await;
@@ -1189,7 +1224,13 @@ impl BrokerContext {
             reason: "normal",
             disconnected_at,
         };
-        let payload = serde_json::to_string(&event).unwrap_or_default();
+        let payload = match serde_json::to_string(&event) {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("Failed to serialize $SYS disconnected event for {}: {}", client_id, e);
+                return;
+            }
+        };
 
         let msg = Message::new(topic.clone(), Bytes::from(payload));
         self.route_to_subscribers(&topic, &msg).await;

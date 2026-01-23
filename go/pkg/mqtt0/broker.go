@@ -50,7 +50,9 @@ type Broker struct {
 }
 
 // sharedGroup manages subscribers for a shared subscription.
+// All methods are thread-safe via internal mutex.
 type sharedGroup struct {
+	mu          sync.RWMutex
 	subscribers []*clientHandle
 	nextIndex   atomic.Uint64
 }
@@ -62,6 +64,8 @@ type sharedEntry struct {
 }
 
 func (g *sharedGroup) add(h *clientHandle) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	for _, s := range g.subscribers {
 		if s.clientID == h.clientID {
 			return // already subscribed
@@ -71,6 +75,8 @@ func (g *sharedGroup) add(h *clientHandle) {
 }
 
 func (g *sharedGroup) remove(clientID string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	for i, s := range g.subscribers {
 		if s.clientID == clientID {
 			g.subscribers = append(g.subscribers[:i], g.subscribers[i+1:]...)
@@ -79,11 +85,28 @@ func (g *sharedGroup) remove(clientID string) {
 	}
 }
 
+// removeByHandle removes a subscriber only if it matches the given handle pointer.
+// This prevents race conditions where a new client with the same clientID replaces an old one.
+func (g *sharedGroup) removeByHandle(h *clientHandle) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for i, s := range g.subscribers {
+		if s == h { // Pointer comparison
+			g.subscribers = append(g.subscribers[:i], g.subscribers[i+1:]...)
+			return
+		}
+	}
+}
+
 func (g *sharedGroup) isEmpty() bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	return len(g.subscribers) == 0
 }
 
 func (g *sharedGroup) nextSubscriber() *clientHandle {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 	if len(g.subscribers) == 0 {
 		return nil
 	}
@@ -287,8 +310,8 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 	// Run client loop
 	b.clientLoopV4(conn, reader, connect.ClientID, connect.KeepAlive, handle, auth)
 
-	// Cleanup
-	b.cleanupClient(connect.ClientID, connect.Username)
+	// Cleanup - pass handle for pointer comparison to prevent race conditions
+	b.cleanupClient(connect.ClientID, connect.Username, handle)
 
 	if b.OnDisconnect != nil {
 		b.OnDisconnect(connect.ClientID)
@@ -367,8 +390,8 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 	// Run client loop
 	b.clientLoopV5(conn, reader, connect.ClientID, connect.KeepAlive, handle, auth)
 
-	// Cleanup
-	b.cleanupClient(connect.ClientID, connect.Username)
+	// Cleanup - pass handle for pointer comparison to prevent race conditions
+	b.cleanupClient(connect.ClientID, connect.Username, handle)
 
 	if b.OnDisconnect != nil {
 		b.OnDisconnect(connect.ClientID)
@@ -761,9 +784,16 @@ func (b *Broker) routeMessage(msg *Message) {
 	}
 }
 
-func (b *Broker) cleanupClient(clientID, username string) {
+// cleanupClient removes a client and its subscriptions.
+// The handle parameter is used for pointer comparison to prevent race conditions
+// where a new client with the same clientID replaces an old one before cleanup.
+func (b *Broker) cleanupClient(clientID, username string, handle *clientHandle) {
 	b.mu.Lock()
-	delete(b.clients, clientID)
+	// Only delete from clients map if the current handle matches (pointer comparison)
+	// This prevents removing a new client that connected with the same clientID
+	if current, exists := b.clients[clientID]; exists && current == handle {
+		delete(b.clients, clientID)
+	}
 	topics := b.clientSubscriptions[clientID]
 	delete(b.clientSubscriptions, clientID)
 	b.mu.Unlock()
@@ -772,11 +802,11 @@ func (b *Broker) cleanupClient(clientID, username string) {
 	for _, topic := range topics {
 		// Handle shared subscriptions
 		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
-			// Use Trie for cleanup
+			// Use Trie for cleanup - use pointer comparison
 			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
 				for _, e := range *entries {
 					if e.groupName == group {
-						e.group.remove(clientID)
+						e.group.removeByHandle(handle) // Pointer comparison
 						break
 					}
 				}
@@ -790,8 +820,9 @@ func (b *Broker) cleanupClient(clientID, username string) {
 				*entries = newEntries
 			})
 		} else {
+			// Use pointer comparison for normal subscriptions
 			b.subscriptions.Remove(topic, func(h *clientHandle) bool {
-				return h.clientID == clientID
+				return h == handle // Pointer comparison
 			})
 		}
 	}
