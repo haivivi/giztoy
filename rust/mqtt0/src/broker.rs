@@ -807,6 +807,15 @@ impl BrokerContext {
 
         // Resolve the actual topic
         let topic = if let Some(alias) = topic_alias {
+            // MQTT 5.0 spec: Topic Alias value 0 is invalid
+            if alias == 0 {
+                warn!(
+                    "Client {} used invalid topic alias 0, ignoring publish",
+                    client_id
+                );
+                return Ok(());
+            }
+
             // DoS protection: enforce alias limit
             if alias > self.max_topic_alias {
                 warn!(
@@ -1142,9 +1151,9 @@ impl BrokerContext {
                     });
                 } else {
                     // Use pointer comparison for normal subscriptions
-                    subs.with_mut(|root| {
+                subs.with_mut(|root| {
                         root.remove(topic, |h| h.same_sender(tx));
-                    });
+                });
                 }
             }
             debug!("Cleaned up {} subscriptions for client {}", topic_count, client_id);
