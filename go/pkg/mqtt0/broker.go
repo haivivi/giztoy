@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/netip"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -303,7 +304,9 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 	}
 
 	// Publish $SYS connected event
-	b.publishSysConnected(connect.ClientID, connect.Username, conn.RemoteAddr(), ProtocolV4, connect.KeepAlive)
+	if tcpAddr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+		b.publishSysConnected(connect.ClientID, connect.Username, tcpAddr.AddrPort(), ProtocolV4, connect.KeepAlive)
+	}
 
 	slog.Info("mqtt0: client connected", "clientID", connect.ClientID, "version", "v4")
 
@@ -383,7 +386,9 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 	}
 
 	// Publish $SYS connected event
-	b.publishSysConnected(connect.ClientID, connect.Username, conn.RemoteAddr(), ProtocolV5, connect.KeepAlive)
+	if tcpAddr, ok := conn.RemoteAddr().(*net.TCPAddr); ok {
+		b.publishSysConnected(connect.ClientID, connect.Username, tcpAddr.AddrPort(), ProtocolV5, connect.KeepAlive)
+	}
 
 	slog.Info("mqtt0: client connected", "clientID", connect.ClientID, "version", "v5")
 
@@ -943,29 +948,17 @@ type sysDisconnectedEvent struct {
 }
 
 // publishSysConnected publishes a $SYS client connected event.
-func (b *Broker) publishSysConnected(clientID, username string, addr net.Addr, protoVer ProtocolVersion, keepAlive uint16) {
+func (b *Broker) publishSysConnected(clientID, username string, addr netip.AddrPort, protoVer ProtocolVersion, keepAlive uint16) {
 	if !b.SysEventsEnabled {
 		return
 	}
 
 	topic := fmt.Sprintf("$SYS/brokers/%s/connected", clientID)
 
-	ipAddr := ""
-	if addr != nil {
-		switch v := addr.(type) {
-		case *net.TCPAddr:
-			ipAddr = v.IP.String()
-		case *net.UDPAddr:
-			ipAddr = v.IP.String()
-		default:
-			ipAddr = addr.String() // Fallback for other address types
-		}
-	}
-
 	event := sysConnectedEvent{
 		ClientID:    clientID,
 		Username:    username,
-		IPAddress:   ipAddr,
+		IPAddress:   addr.Addr().String(),
 		ProtoVer:    int(protoVer),
 		KeepAlive:   keepAlive,
 		ConnectedAt: time.Now().Unix(),
