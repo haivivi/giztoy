@@ -284,20 +284,21 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 	b.mu.Lock()
 	// Per MQTT spec: if a client connects with a clientID already in use,
 	// disconnect the old client first
+	var oldHandle *clientHandle
+	var oldTopics []string
 	if old, exists := b.clients[connect.ClientID]; exists {
 		close(old.msgCh) // Signal old client to disconnect
-		// Clean up old subscriptions
-		if topics, ok := b.clientSubscriptions[connect.ClientID]; ok {
-			for _, topic := range topics {
-				b.subscriptions.Remove(topic, func(h *clientHandle) bool {
-					return h == old
-				})
-			}
+		oldHandle = old
+		oldTopics = b.clientSubscriptions[connect.ClientID]
 			delete(b.clientSubscriptions, connect.ClientID)
-		}
 	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
+
+	// Clean up old client's subscriptions (both normal and shared) outside the lock
+	if oldHandle != nil {
+		b.removeClientSubscriptions(oldTopics, oldHandle)
+	}
 
 	if b.OnConnect != nil {
 		b.OnConnect(connect.ClientID)
@@ -366,20 +367,21 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 	b.mu.Lock()
 	// Per MQTT spec: if a client connects with a clientID already in use,
 	// disconnect the old client first
+	var oldHandle *clientHandle
+	var oldTopics []string
 	if old, exists := b.clients[connect.ClientID]; exists {
 		close(old.msgCh) // Signal old client to disconnect
-		// Clean up old subscriptions
-		if topics, ok := b.clientSubscriptions[connect.ClientID]; ok {
-			for _, topic := range topics {
-				b.subscriptions.Remove(topic, func(h *clientHandle) bool {
-					return h == old
-				})
-			}
+		oldHandle = old
+		oldTopics = b.clientSubscriptions[connect.ClientID]
 			delete(b.clientSubscriptions, connect.ClientID)
-		}
 	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
+
+	// Clean up old client's subscriptions (both normal and shared) outside the lock
+	if oldHandle != nil {
+		b.removeClientSubscriptions(oldTopics, oldHandle)
+	}
 
 	if b.OnConnect != nil {
 		b.OnConnect(connect.ClientID)
@@ -640,10 +642,10 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 			})
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
-			if err := b.subscriptions.Insert(topic, handle); err != nil {
-				slog.Debug("mqtt0: subscribe failed", "error", err)
-				codes[i] = 0x80
-				continue
+		if err := b.subscriptions.Insert(topic, handle); err != nil {
+			slog.Debug("mqtt0: subscribe failed", "error", err)
+			codes[i] = 0x80
+			continue
 			}
 			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", topic)
 		}
@@ -694,10 +696,10 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 			})
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
-			if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
-				slog.Debug("mqtt0: subscribe failed", "error", err)
-				codes[i] = ReasonUnspecifiedError
-				continue
+		if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
+			slog.Debug("mqtt0: subscribe failed", "error", err)
+			codes[i] = ReasonUnspecifiedError
+			continue
 			}
 			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", filter.Topic)
 		}
@@ -736,10 +738,10 @@ func (b *Broker) handleUnsubscribe(clientID string, topics []string) {
 			})
 			slog.Debug("mqtt0: unsubscribed from shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
-			b.subscriptions.Remove(topic, func(h *clientHandle) bool {
-				return h.clientID == clientID
-			})
-			slog.Debug("mqtt0: unsubscribed", "clientID", clientID, "topic", topic)
+		b.subscriptions.Remove(topic, func(h *clientHandle) bool {
+			return h.clientID == clientID
+		})
+		slog.Debug("mqtt0: unsubscribed", "clientID", clientID, "topic", topic)
 		}
 	}
 
@@ -789,29 +791,10 @@ func (b *Broker) routeMessage(msg *Message) {
 	}
 }
 
-// cleanupClient removes a client and its subscriptions.
-// The handle parameter is used for pointer comparison to prevent race conditions
-// where a new client with the same clientID replaces an old one before cleanup.
-func (b *Broker) cleanupClient(clientID, username string, handle *clientHandle) {
-	b.mu.Lock()
-	// Only delete from clients map if the current handle matches (pointer comparison)
-	// This prevents removing a new client that connected with the same clientID
-	var topics []string
-	if current, exists := b.clients[clientID]; exists && current == handle {
-		delete(b.clients, clientID)
-		// Only remove subscriptions tracking if this is the correct client instance
-		// This prevents a stale cleanup from wiping a new client's subscription data
-		topics = b.clientSubscriptions[clientID]
-		delete(b.clientSubscriptions, clientID)
-	}
-	b.mu.Unlock()
-
-	// If topics is nil, this cleanup is for a stale client - skip subscription removal
-	if topics == nil {
-		return
-	}
-
-	// Remove all subscriptions
+// removeClientSubscriptions removes a client's subscriptions from both
+// normal subscriptions trie and shared subscriptions trie.
+// Uses pointer comparison to ensure only the correct client instance is removed.
+func (b *Broker) removeClientSubscriptions(topics []string, handle *clientHandle) {
 	for _, topic := range topics {
 		// Handle shared subscriptions
 		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
@@ -839,6 +822,32 @@ func (b *Broker) cleanupClient(clientID, username string, handle *clientHandle) 
 			})
 		}
 	}
+}
+
+// cleanupClient removes a client and its subscriptions.
+// The handle parameter is used for pointer comparison to prevent race conditions
+// where a new client with the same clientID replaces an old one before cleanup.
+func (b *Broker) cleanupClient(clientID, username string, handle *clientHandle) {
+	b.mu.Lock()
+	// Only delete from clients map if the current handle matches (pointer comparison)
+	// This prevents removing a new client that connected with the same clientID
+	var topics []string
+	if current, exists := b.clients[clientID]; exists && current == handle {
+	delete(b.clients, clientID)
+		// Only remove subscriptions tracking if this is the correct client instance
+		// This prevents a stale cleanup from wiping a new client's subscription data
+		topics = b.clientSubscriptions[clientID]
+	delete(b.clientSubscriptions, clientID)
+	}
+	b.mu.Unlock()
+
+	// If topics is nil, this cleanup is for a stale client - skip subscription removal
+	if topics == nil {
+		return
+	}
+
+	// Remove all subscriptions (both normal and shared)
+	b.removeClientSubscriptions(topics, handle)
 
 	// Publish $SYS disconnected event
 	b.publishSysDisconnected(clientID, username)

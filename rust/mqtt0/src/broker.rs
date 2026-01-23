@@ -497,9 +497,22 @@ impl BrokerContext {
         let (tx, rx) = mpsc::channel::<Message>(100);
         let tx = Arc::new(tx);
 
-        {
+        // Per MQTT spec: if a client connects with a clientID already in use,
+        // disconnect the old client first and clean up its subscriptions
+        let old_tx_and_topics = {
             let mut clients = self.clients.write();
-            clients.insert(client_id.to_string(), Arc::clone(&tx));
+            let old_tx = clients.insert(client_id.to_string(), Arc::clone(&tx));
+            if old_tx.is_some() {
+                let topics = self.client_subscriptions.write().remove(client_id);
+                old_tx.map(|t| (t, topics))
+            } else {
+                None
+            }
+        };
+
+        // Clean up old client's subscriptions outside the lock
+        if let Some((old_tx, Some(topics))) = old_tx_and_topics {
+            self.remove_client_subscriptions(&topics, &old_tx);
         }
 
         if let Some(ref on_connect) = self.on_connect {
@@ -545,9 +558,22 @@ impl BrokerContext {
         let (tx, rx) = mpsc::channel::<Message>(100);
         let tx = Arc::new(tx);
 
-        {
+        // Per MQTT spec: if a client connects with a clientID already in use,
+        // disconnect the old client first and clean up its subscriptions
+        let old_tx_and_topics = {
             let mut clients = self.clients.write();
-            clients.insert(client_id.to_string(), Arc::clone(&tx));
+            let old_tx = clients.insert(client_id.to_string(), Arc::clone(&tx));
+            if old_tx.is_some() {
+                let topics = self.client_subscriptions.write().remove(client_id);
+                old_tx.map(|t| (t, topics))
+            } else {
+                None
+            }
+        };
+
+        // Clean up old client's subscriptions outside the lock
+        if let Some((old_tx, Some(topics))) = old_tx_and_topics {
+            self.remove_client_subscriptions(&topics, &old_tx);
         }
 
         if let Some(ref on_connect) = self.on_connect {
@@ -1116,6 +1142,37 @@ impl BrokerContext {
     /// Cleanup client state on disconnect.
     /// The `tx` parameter is used for pointer comparison to prevent race conditions
     /// where a new client with the same client_id replaces an old one before cleanup.
+    /// Remove a client's subscriptions from both normal and shared subscription tries.
+    /// Uses pointer comparison to ensure only the correct client instance is removed.
+    fn remove_client_subscriptions(&self, topics: &[String], tx: &Arc<mpsc::Sender<Message>>) {
+            let subs = self.subscriptions.write();
+        let shared_trie = self.shared_trie.write();
+        
+        for topic in topics {
+            // Check if it's a shared subscription
+            if let Some((group, actual_topic)) = parse_shared_topic(topic) {
+                // Use Trie for cleanup - use pointer comparison
+                shared_trie.with_mut(|root| {
+                    let _ = root.set(actual_topic, |node| {
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            // Use pointer comparison via same_sender
+                            entry.group.subscribers.retain(|h| !h.same_sender(tx));
+                        }
+                        // Remove empty groups
+                        values.retain(|e| !e.group.is_empty());
+                    });
+                });
+            } else {
+                // Use pointer comparison for normal subscriptions
+                subs.with_mut(|root| {
+                    root.remove(topic, |h| h.same_sender(tx));
+                });
+            }
+        }
+        debug!("Cleaned up {} subscriptions", topics.len());
+    }
+
     async fn cleanup_client(&self, client_id: &str, username: &str, tx: &Arc<mpsc::Sender<Message>>) {
         // Remove from clients map only if the current sender matches (pointer comparison)
         // This prevents removing a new client that connected with the same client_id
@@ -1142,35 +1199,8 @@ impl BrokerContext {
             None => return,
         };
 
-        // Remove subscriptions - must complete before await to avoid holding locks across await
-        {
-            let topic_count = topics.len();
-            let subs = self.subscriptions.write();
-            for topic in &topics {
-                // Check if it's a shared subscription
-                if let Some((group, actual_topic)) = parse_shared_topic(topic) {
-                    // Use Trie for cleanup - use pointer comparison
-                    let shared_trie = self.shared_trie.write();
-                    shared_trie.with_mut(|root| {
-                        let _ = root.set(actual_topic, |node| {
-                            let values = node.values_mut();
-                            if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
-                                // Use pointer comparison via same_sender
-                                entry.group.subscribers.retain(|h| !h.same_sender(tx));
-                            }
-                            // Remove empty groups
-                            values.retain(|e| !e.group.is_empty());
-                        });
-                    });
-                } else {
-                    // Use pointer comparison for normal subscriptions
-                    subs.with_mut(|root| {
-                        root.remove(topic, |h| h.same_sender(tx));
-                    });
-                }
-            }
-            debug!("Cleaned up {} subscriptions for client {}", topic_count, client_id);
-        }
+        // Remove subscriptions (both normal and shared)
+        self.remove_client_subscriptions(&topics, tx);
 
         // Publish $SYS disconnected event
         self.publish_sys_disconnected(client_id, username).await;
