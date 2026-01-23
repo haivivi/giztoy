@@ -21,7 +21,12 @@ type Session interface {
 	// === Audio Input ===
 
 	// AppendAudio appends PCM audio data to the input audio buffer.
-	// Audio should be 24kHz, 16-bit, mono PCM (little-endian).
+	// Audio format requirements:
+	//   - Sample rate: 24kHz
+	//   - Bit depth: 16-bit signed integers
+	//   - Channels: Mono (1 channel)
+	//   - Encoding: Little-endian PCM
+	// The audio is automatically base64 encoded before sending.
 	AppendAudio(audio []byte) error
 
 	// AppendAudioBase64 appends base64-encoded audio data to the input buffer.

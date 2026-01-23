@@ -117,7 +117,10 @@ pub struct SessionConfig {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tools: Vec<Tool>,
 
-    /// Tool choice: "auto", "none", "required", or specific function.
+    /// Tool choice: "auto", "none", "required", or specific function object.
+    /// Can be a string ("auto", "none", "required") or an object:
+    ///   {"type": "function", "function": {"name": "my_function"}}
+    /// Use serde_json::Value to support both string and object forms.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<serde_json::Value>,
 
@@ -125,9 +128,9 @@ pub struct SessionConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f64>,
 
-    /// Max response output tokens. Use "inf" for unlimited.
+    /// Max response output tokens.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_response_output_tokens: Option<serde_json::Value>,
+    pub max_response_output_tokens: Option<i32>,
 }
 
 impl SessionConfig {
@@ -178,8 +181,8 @@ impl SessionConfig {
         if let Some(temperature) = self.temperature {
             map.insert("temperature".to_string(), serde_json::json!(temperature));
         }
-        if let Some(ref max_tokens) = self.max_response_output_tokens {
-            map.insert("max_response_output_tokens".to_string(), max_tokens.clone());
+        if let Some(max_tokens) = self.max_response_output_tokens {
+            map.insert("max_response_output_tokens".to_string(), serde_json::json!(max_tokens));
         }
 
         serde_json::Value::Object(map)
@@ -297,6 +300,8 @@ pub struct ResponseCreateOptions {
     pub tools: Vec<Tool>,
 
     /// Tool choice override.
+    /// Can be a string ("auto", "none", "required") or an object:
+    ///   {"type": "function", "function": {"name": "my_function"}}
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<serde_json::Value>,
 
@@ -306,7 +311,7 @@ pub struct ResponseCreateOptions {
 
     /// Max output tokens for this response.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub max_output_tokens: Option<serde_json::Value>,
+    pub max_output_tokens: Option<i32>,
 
     /// Conversation handling: "auto" (default) or "none".
     #[serde(default, skip_serializing_if = "Option::is_none")]

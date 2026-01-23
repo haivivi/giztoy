@@ -2,6 +2,7 @@ package openairealtime
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 )
 
@@ -35,9 +36,9 @@ type Option func(*clientConfig)
 //
 // The apiKey is required and can be obtained from:
 // https://platform.openai.com/api-keys
-func NewClient(apiKey string, opts ...Option) *Client {
+func NewClient(apiKey string, opts ...Option) (*Client, error) {
 	if apiKey == "" {
-		panic("openai-realtime: API key is required")
+		return nil, fmt.Errorf("openai-realtime: API key is required")
 	}
 
 	cfg := &clientConfig{
@@ -51,7 +52,7 @@ func NewClient(apiKey string, opts ...Option) *Client {
 		opt(cfg)
 	}
 
-	return &Client{config: cfg}
+	return &Client{config: cfg}, nil
 }
 
 // WithOrganization sets the organization ID for API requests.

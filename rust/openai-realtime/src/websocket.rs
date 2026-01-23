@@ -69,8 +69,8 @@ impl WebSocketSession {
         // Spawn write task
         let write_handle = tokio::spawn(write_loop(write, write_rx));
 
-        // Spawn read task
-        let read_handle = tokio::spawn(read_loop(read, event_tx));
+        // Spawn read task (pass write_tx clone for sending Pong responses)
+        let read_handle = tokio::spawn(read_loop(read, event_tx, write_tx.clone()));
 
         Ok(Self {
             write_tx,
@@ -268,8 +268,8 @@ impl Session for WebSocketSession {
             if let Some(temperature) = opts.temperature {
                 response.insert("temperature".to_string(), json!(temperature));
             }
-            if let Some(ref max_tokens) = opts.max_output_tokens {
-                response.insert("max_output_tokens".to_string(), max_tokens.clone());
+            if let Some(max_tokens) = opts.max_output_tokens {
+                response.insert("max_output_tokens".to_string(), json!(max_tokens));
             }
             if let Some(ref conversation) = opts.conversation {
                 response.insert("conversation".to_string(), json!(conversation));
@@ -346,6 +346,7 @@ async fn read_loop(
         >,
     >,
     tx: mpsc::Sender<Result<ServerEvent>>,
+    write_tx: mpsc::Sender<Message>,
 ) {
     while let Some(result) = read.next().await {
         match result {
@@ -361,7 +362,11 @@ async fn read_loop(
                 break;
             }
             Ok(Message::Ping(data)) => {
-                debug!("Received ping: {:?}", data);
+                debug!("Received ping, sending pong");
+                // Respond to ping with pong to keep connection alive
+                if write_tx.send(Message::Pong(data)).await.is_err() {
+                    break;
+                }
             }
             Ok(_) => {}
             Err(e) => {
@@ -404,20 +409,11 @@ fn generate_event_id() -> String {
 }
 
 fn generate_websocket_key() -> String {
-    let mut key = [0u8; 16];
-    for byte in &mut key {
-        *byte = rand_byte();
-    }
+    // Use a UUID v4 as a 16-byte random source for the WebSocket key.
+    // This relies on the underlying RNG used by the `uuid` crate, which
+    // is suitable for generating unpredictable values.
+    let key = uuid::Uuid::new_v4().into_bytes();
     base64::engine::general_purpose::STANDARD.encode(key)
-}
-
-fn rand_byte() -> u8 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .subsec_nanos();
-    (nanos % 256) as u8
 }
 
 fn extract_host(url: &str) -> Option<&str> {
@@ -428,8 +424,10 @@ fn extract_host(url: &str) -> Option<&str> {
 }
 
 fn truncate_for_log(s: &str, max_len: usize) -> String {
-    if s.len() > max_len {
-        format!("{}...", &s[..max_len])
+    let char_count = s.chars().count();
+    if char_count > max_len {
+        let truncated: String = s.chars().take(max_len).collect();
+        format!("{}...", truncated)
     } else {
         s.to_string()
     }

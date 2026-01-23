@@ -77,64 +77,64 @@ type ServerEvent struct {
 	Type string `json:"type"`
 
 	// EventID is the unique identifier for this event.
-	EventID string `json:"event_id,omitempty"`
+	EventID string `json:"event_id,omitzero"`
 
 	// === Session events ===
 
 	// Session contains session information (for session.created, session.updated).
-	Session *SessionResource `json:"session,omitempty"`
+	Session *SessionResource `json:"session,omitzero"`
 
 	// === Conversation events ===
 
 	// Conversation contains conversation information (for conversation.created).
-	Conversation *ConversationResource `json:"conversation,omitempty"`
+	Conversation *ConversationResource `json:"conversation,omitzero"`
 
 	// Item contains conversation item (for conversation.item.* events).
-	Item *ConversationItem `json:"item,omitempty"`
+	Item *ConversationItem `json:"item,omitzero"`
 
 	// === Input audio buffer events ===
 
 	// PreviousItemID is the ID of the previous item (for input_audio_buffer.committed).
-	PreviousItemID string `json:"previous_item_id,omitempty"`
+	PreviousItemID string `json:"previous_item_id,omitzero"`
 
 	// ItemID is the ID of the item (for various events).
-	ItemID string `json:"item_id,omitempty"`
+	ItemID string `json:"item_id,omitzero"`
 
 	// AudioStartMs is the start time in milliseconds (for speech_started).
-	AudioStartMs int `json:"audio_start_ms,omitempty"`
+	AudioStartMs int `json:"audio_start_ms,omitzero"`
 
 	// AudioEndMs is the end time in milliseconds (for speech_stopped, truncated).
-	AudioEndMs int `json:"audio_end_ms,omitempty"`
+	AudioEndMs int `json:"audio_end_ms,omitzero"`
 
 	// === Transcription events ===
 
 	// Transcript is the transcription text.
-	Transcript string `json:"transcript,omitempty"`
+	Transcript string `json:"transcript,omitzero"`
 
 	// ContentIndex is the index of the content part.
-	ContentIndex int `json:"content_index,omitempty"`
+	ContentIndex int `json:"content_index,omitzero"`
 
 	// TranscriptionError contains error info for transcription failure.
-	TranscriptionError *EventError `json:"error,omitempty"`
+	TranscriptionError *EventError `json:"error,omitzero"`
 
 	// === Response events ===
 
 	// Response contains response information (for response.* events).
-	Response *ResponseResource `json:"response,omitempty"`
+	Response *ResponseResource `json:"response,omitzero"`
 
 	// ResponseID is the response identifier.
-	ResponseID string `json:"response_id,omitempty"`
+	ResponseID string `json:"response_id,omitzero"`
 
 	// OutputIndex is the index of the output item.
-	OutputIndex int `json:"output_index,omitempty"`
+	OutputIndex int `json:"output_index,omitzero"`
 
 	// Part contains content part information.
-	Part *ContentPart `json:"part,omitempty"`
+	Part *ContentPart `json:"part,omitzero"`
 
 	// === Delta events ===
 
 	// Delta contains incremental text/arguments (for *.delta events).
-	Delta string `json:"delta,omitempty"`
+	Delta string `json:"delta,omitzero"`
 
 	// Audio contains decoded audio data (populated after parsing).
 	Audio []byte `json:"-"`
@@ -146,18 +146,18 @@ type ServerEvent struct {
 	// === Function call events ===
 
 	// CallID is the function call ID.
-	CallID string `json:"call_id,omitempty"`
+	CallID string `json:"call_id,omitzero"`
 
 	// Name is the function name.
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitzero"`
 
 	// Arguments is the function arguments (complete, for done event).
-	Arguments string `json:"arguments,omitempty"`
+	Arguments string `json:"arguments,omitzero"`
 
 	// === Rate limits event ===
 
 	// RateLimits contains rate limit information.
-	RateLimits []RateLimit `json:"rate_limits,omitempty"`
+	RateLimits []RateLimit `json:"rate_limits,omitzero"`
 
 	// === Raw data ===
 

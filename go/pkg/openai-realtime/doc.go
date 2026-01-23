@@ -54,9 +54,9 @@
 //	        return err
 //	    }
 //	    switch event.Type {
-//	    case openairealtime.EventResponseAudioDelta:
+//	    case openairealtime.EventTypeResponseAudioDelta:
 //	        playAudio(event.Audio)
-//	    case openairealtime.EventResponseTextDelta:
+//	    case openairealtime.EventTypeResponseTextDelta:
 //	        fmt.Print(event.Delta)
 //	    }
 //	}

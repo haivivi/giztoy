@@ -14,7 +14,7 @@ tokio = { workspace = true }
 reqwest = { workspace = true }
 
 # WebSocket
-tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
+tokio-tungstenite = { workspace = true }
 http = { workspace = true }
 
 # Serialization

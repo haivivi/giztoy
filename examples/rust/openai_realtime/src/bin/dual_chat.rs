@@ -112,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("");
 
     // Create client
-    let client = Client::new(&args.api_key);
+    let client = Client::new(&args.api_key)?;
 
     // Create Agent A
     info!("Creating Agent A...");
@@ -442,24 +442,6 @@ async fn send_audio_with_vad(
         debug!("[VAD] Reader thread finished");
     });
 
-    // Spawn async task to receive chunks and send to OpenAI
-    let session_for_send = unsafe {
-        // SAFETY: We ensure the session reference is valid during the task's lifetime
-        std::mem::transmute::<&mut openai::WebSocketSession, &'static mut openai::WebSocketSession>(
-            &mut agent.session,
-        )
-    };
-
-    let sender_task = tokio::spawn(async move {
-        while let Some(chunk) = chunk_rx.recv().await {
-            if let Err(e) = session_for_send.append_audio(&chunk).await {
-                warn!("[VAD] Append audio failed: {}", e);
-                break;
-            }
-        }
-        debug!("[VAD] Sender task finished");
-    });
-
     // Wait for leading silence (mixer outputs silence when no tracks)
     tokio::time::sleep(leading_silence).await;
 
@@ -467,34 +449,71 @@ async fn send_audio_with_vad(
     info!("  [VAD] Writing speech audio to track in real-time...");
     let (track, ctrl) = mixer.create_track(None)?;
 
+    // Interleave: write audio chunks to track while sending received chunks to OpenAI
     let mut offset = 0;
     let mut ticker = tokio::time::interval(chunk_duration);
-    while offset < audio_input.len() {
-        ticker.tick().await;
+    let mut send_errors = 0;
 
-        let end = (offset + chunk_size).min(audio_input.len());
-        let chunk_data = &audio_input[offset..end];
+    loop {
+        tokio::select! {
+            // Try to receive chunks from mixer and send to OpenAI
+            chunk = chunk_rx.recv() => {
+                match chunk {
+                    Some(data) => {
+                        if let Err(e) = agent.session.append_audio(&data).await {
+                            warn!("[VAD] Append audio failed: {}", e);
+                            send_errors += 1;
+                            if send_errors > 5 {
+                                break;
+                            }
+                        }
+                    }
+                    None => {
+                        // Channel closed, mixer finished
+                        debug!("[VAD] Chunk channel closed");
+                        break;
+                    }
+                }
+            }
+            // Write next chunk to track at regular intervals
+            _ = ticker.tick(), if offset < audio_input.len() => {
+                let end = (offset + chunk_size).min(audio_input.len());
+                let chunk_data = &audio_input[offset..end];
+                track.write_bytes(chunk_data)?;
+                offset = end;
 
-        // Write chunk to track
-        track.write_bytes(chunk_data)?;
-        offset = end;
+                // Check if we're done writing
+                if offset >= audio_input.len() {
+                    ctrl.close_write();
+                    info!("  [VAD] Speech written, waiting for trailing silence...");
+                }
+            }
+            // Continue receiving chunks even after writing is done
+            else => {
+                // Give the reader thread time to finish
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        }
+
+        // Check if we should stop (all writing done and reasonable time passed)
+        if offset >= audio_input.len() {
+            let elapsed_after_write = ticker.period() * ((offset / chunk_size) as u32);
+            if elapsed_after_write > trailing_silence {
+                break;
+            }
+        }
     }
-
-    // Close track writing - mixer will resume outputting silence
-    ctrl.close_write();
-    info!("  [VAD] Speech written, waiting for trailing silence...");
-
-    // Wait for trailing silence (VAD should detect end-of-speech during this time)
-    tokio::time::sleep(trailing_silence).await;
 
     // Close mixer to signal EOF to reader
     mixer.close()?;
 
+    // Drain any remaining chunks
+    while let Ok(chunk) = chunk_rx.try_recv() {
+        let _ = agent.session.append_audio(&chunk).await;
+    }
+
     // Wait for reader thread to finish
     let _ = reader_handle.join();
-
-    // Wait for sender task to finish
-    let _ = sender_task.await;
 
     // With VAD enabled, do NOT call commit_input() - VAD handles turn detection automatically
     // The server will auto-create a response when it detects end of speech

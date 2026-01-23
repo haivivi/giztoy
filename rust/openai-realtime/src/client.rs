@@ -32,13 +32,15 @@ impl Client {
     ///
     /// The api_key is required and can be obtained from:
     /// https://platform.openai.com/api-keys
-    pub fn new(api_key: impl Into<String>) -> Self {
+    ///
+    /// Returns an error if the API key is empty.
+    pub fn new(api_key: impl Into<String>) -> Result<Self> {
         let api_key = api_key.into();
         if api_key.is_empty() {
-            panic!("openai-realtime: API key is required");
+            return Err(Error::InvalidConfig("API key is required".to_string()));
         }
 
-        Self {
+        Ok(Self {
             config: Arc::new(ClientConfig {
                 api_key,
                 organization: None,
@@ -46,7 +48,7 @@ impl Client {
                 ws_url: DEFAULT_WEBSOCKET_URL.to_string(),
                 http_url: DEFAULT_HTTP_URL.to_string(),
             }),
-        }
+        })
     }
 
     /// Sets the organization ID for API requests.

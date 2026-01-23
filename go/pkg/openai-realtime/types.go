@@ -61,56 +61,62 @@ const (
 type ConnectConfig struct {
 	// Model is the model ID to use.
 	// Default: gpt-4o-realtime-preview
-	Model string `json:"model,omitempty"`
+	Model string `json:"model,omitzero"`
+
+	// Voice is the voice ID for audio output (WebRTC only).
+	// Used when creating the ephemeral token.
+	// Default: alloy
+	Voice string `json:"voice,omitzero"`
 }
 
 // SessionConfig contains configuration for updating session parameters.
 type SessionConfig struct {
 	// Modalities specifies the output modalities.
 	// Default: ["text", "audio"]
-	Modalities []string `json:"modalities,omitempty"`
+	Modalities []string `json:"modalities,omitzero"`
 
 	// Instructions is the system prompt.
-	Instructions string `json:"instructions,omitempty"`
+	Instructions string `json:"instructions,omitzero"`
 
 	// Voice is the voice ID for audio output.
-	Voice string `json:"voice,omitempty"`
+	Voice string `json:"voice,omitzero"`
 
 	// InputAudioFormat specifies the input audio format.
 	// Default: pcm16
-	InputAudioFormat string `json:"input_audio_format,omitempty"`
+	InputAudioFormat string `json:"input_audio_format,omitzero"`
 
 	// OutputAudioFormat specifies the output audio format.
 	// Default: pcm16
-	OutputAudioFormat string `json:"output_audio_format,omitempty"`
+	OutputAudioFormat string `json:"output_audio_format,omitzero"`
 
 	// InputAudioTranscription configures input audio transcription.
 	// Set to enable transcription of user audio.
-	InputAudioTranscription *TranscriptionConfig `json:"input_audio_transcription,omitempty"`
+	InputAudioTranscription *TranscriptionConfig `json:"input_audio_transcription,omitzero"`
 
 	// TurnDetection configures voice activity detection.
 	// Use TurnDetectionOff() to explicitly disable VAD (manual mode).
 	// Use nil to keep current setting.
-	TurnDetection *TurnDetection `json:"turn_detection,omitempty"`
+	TurnDetection *TurnDetection `json:"turn_detection,omitzero"`
 
 	// TurnDetectionDisabled when true, sends "turn_detection": null explicitly.
-	// This is needed because omitempty won't send null values.
+	// This is needed because omitzero won't send null values.
 	TurnDetectionDisabled bool `json:"-"`
 
 	// Tools defines the available functions for the model.
-	Tools []Tool `json:"tools,omitempty"`
+	Tools []Tool `json:"tools,omitzero"`
 
 	// ToolChoice specifies how the model should use tools.
-	// Options: "auto", "none", "required", or specific function.
-	ToolChoice interface{} `json:"tool_choice,omitempty"`
+	// Can be a string ("auto", "none", "required") or an object:
+	//   {"type": "function", "function": {"name": "my_function"}}
+	// Use interface{} to support both string and object forms.
+	ToolChoice interface{} `json:"tool_choice,omitzero"`
 
 	// Temperature controls randomness (0.6-1.2).
 	// Default: 0.8
-	Temperature *float64 `json:"temperature,omitempty"`
+	Temperature *float64 `json:"temperature,omitzero"`
 
 	// MaxResponseOutputTokens limits the output length.
-	// Use "inf" for unlimited.
-	MaxResponseOutputTokens interface{} `json:"max_response_output_tokens,omitempty"`
+	MaxResponseOutputTokens *int `json:"max_response_output_tokens,omitzero"`
 }
 
 // MarshalJSON implements custom JSON marshaling for SessionConfig.
@@ -118,7 +124,7 @@ type SessionConfig struct {
 func (s SessionConfig) MarshalJSON() ([]byte, error) {
 	type Alias SessionConfig
 	aux := &struct {
-		TurnDetection interface{} `json:"turn_detection,omitempty"`
+		TurnDetection interface{} `json:"turn_detection,omitzero"`
 		*Alias
 	}{
 		Alias: (*Alias)(&s),
@@ -171,40 +177,40 @@ func (s SessionConfig) MarshalJSON() ([]byte, error) {
 type TranscriptionConfig struct {
 	// Model is the transcription model to use.
 	// Default: whisper-1
-	Model string `json:"model,omitempty"`
+	Model string `json:"model,omitzero"`
 }
 
 // TurnDetection configures voice activity detection.
 type TurnDetection struct {
 	// Type is the VAD mode: "server_vad" or "semantic_vad".
-	Type string `json:"type,omitempty"`
+	Type string `json:"type,omitzero"`
 
 	// Threshold is the VAD sensitivity (0.0-1.0).
 	// Default: 0.5
-	Threshold float64 `json:"threshold,omitempty"`
+	Threshold float64 `json:"threshold,omitzero"`
 
 	// PrefixPaddingMs is the padding before speech start (ms).
 	// Default: 300
-	PrefixPaddingMs int `json:"prefix_padding_ms,omitempty"`
+	PrefixPaddingMs int `json:"prefix_padding_ms,omitzero"`
 
 	// SilenceDurationMs is the silence duration to detect end of speech (ms).
 	// Default: 500
-	SilenceDurationMs int `json:"silence_duration_ms,omitempty"`
+	SilenceDurationMs int `json:"silence_duration_ms,omitzero"`
 
 	// CreateResponse specifies whether to automatically create a response
 	// when VAD detects end of speech.
 	// Default: true
-	CreateResponse *bool `json:"create_response,omitempty"`
+	CreateResponse *bool `json:"create_response,omitzero"`
 
 	// InterruptResponse specifies whether to interrupt the current response
 	// when the user starts speaking.
 	// Default: true
-	InterruptResponse *bool `json:"interrupt_response,omitempty"`
+	InterruptResponse *bool `json:"interrupt_response,omitzero"`
 
 	// Eagerness controls how eagerly the model responds (semantic_vad only).
 	// Higher eagerness means faster responses but may interrupt the user.
 	// Values: "low", "medium", "high". Default: "medium"
-	Eagerness string `json:"eagerness,omitempty"`
+	Eagerness string `json:"eagerness,omitzero"`
 }
 
 // Tool defines a function tool available to the model.
@@ -216,132 +222,134 @@ type Tool struct {
 	Name string `json:"name"`
 
 	// Description describes what the function does.
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitzero"`
 
 	// Parameters is the JSON Schema for the function parameters.
-	Parameters map[string]interface{} `json:"parameters,omitempty"`
+	Parameters map[string]interface{} `json:"parameters,omitzero"`
 }
 
 // ResponseCreateOptions contains options for creating a response.
 type ResponseCreateOptions struct {
 	// Modalities specifies the output modalities for this response.
-	Modalities []string `json:"modalities,omitempty"`
+	Modalities []string `json:"modalities,omitzero"`
 
 	// Instructions override for this response.
-	Instructions string `json:"instructions,omitempty"`
+	Instructions string `json:"instructions,omitzero"`
 
 	// Voice override for this response.
-	Voice string `json:"voice,omitempty"`
+	Voice string `json:"voice,omitzero"`
 
 	// OutputAudioFormat override for this response.
-	OutputAudioFormat string `json:"output_audio_format,omitempty"`
+	OutputAudioFormat string `json:"output_audio_format,omitzero"`
 
 	// Tools override for this response.
-	Tools []Tool `json:"tools,omitempty"`
+	Tools []Tool `json:"tools,omitzero"`
 
 	// ToolChoice override for this response.
-	ToolChoice interface{} `json:"tool_choice,omitempty"`
+	// Can be a string ("auto", "none", "required") or an object:
+	//   {"type": "function", "function": {"name": "my_function"}}
+	ToolChoice interface{} `json:"tool_choice,omitzero"`
 
 	// Temperature override for this response.
-	Temperature *float64 `json:"temperature,omitempty"`
+	Temperature *float64 `json:"temperature,omitzero"`
 
 	// MaxOutputTokens limits the output length for this response.
-	MaxOutputTokens interface{} `json:"max_output_tokens,omitempty"`
+	MaxOutputTokens *int `json:"max_output_tokens,omitzero"`
 
 	// Conversation specifies conversation handling.
 	// "auto" (default) uses existing conversation.
 	// "none" creates response without conversation context.
-	Conversation string `json:"conversation,omitempty"`
+	Conversation string `json:"conversation,omitzero"`
 
 	// Input provides input items directly instead of using the buffer.
 	// Use this for text-only input or to inject conversation history.
-	Input []ConversationItem `json:"input,omitempty"`
+	Input []ConversationItem `json:"input,omitzero"`
 }
 
 // SessionResource represents the session state returned by the server.
 type SessionResource struct {
-	ID                        string               `json:"id,omitempty"`
-	Object                    string               `json:"object,omitempty"`
-	Model                     string               `json:"model,omitempty"`
-	ExpiresAt                 int64                `json:"expires_at,omitempty"`
-	Modalities                []string             `json:"modalities,omitempty"`
-	Instructions              string               `json:"instructions,omitempty"`
-	Voice                     string               `json:"voice,omitempty"`
-	InputAudioFormat          string               `json:"input_audio_format,omitempty"`
-	OutputAudioFormat         string               `json:"output_audio_format,omitempty"`
-	InputAudioTranscription   *TranscriptionConfig `json:"input_audio_transcription,omitempty"`
-	TurnDetection             *TurnDetection       `json:"turn_detection,omitempty"`
-	Tools                     []Tool               `json:"tools,omitempty"`
-	ToolChoice                interface{}          `json:"tool_choice,omitempty"`
-	Temperature               float64              `json:"temperature,omitempty"`
-	MaxResponseOutputTokens   interface{}          `json:"max_response_output_tokens,omitempty"`
+	ID                        string               `json:"id,omitzero"`
+	Object                    string               `json:"object,omitzero"`
+	Model                     string               `json:"model,omitzero"`
+	ExpiresAt                 int64                `json:"expires_at,omitzero"`
+	Modalities                []string             `json:"modalities,omitzero"`
+	Instructions              string               `json:"instructions,omitzero"`
+	Voice                     string               `json:"voice,omitzero"`
+	InputAudioFormat          string               `json:"input_audio_format,omitzero"`
+	OutputAudioFormat         string               `json:"output_audio_format,omitzero"`
+	InputAudioTranscription   *TranscriptionConfig `json:"input_audio_transcription,omitzero"`
+	TurnDetection             *TurnDetection       `json:"turn_detection,omitzero"`
+	Tools                     []Tool               `json:"tools,omitzero"`
+	ToolChoice                interface{}          `json:"tool_choice,omitzero"`
+	Temperature               float64              `json:"temperature,omitzero"`
+	MaxResponseOutputTokens   interface{}          `json:"max_response_output_tokens,omitzero"`
 }
 
 // ConversationResource represents a conversation.
 type ConversationResource struct {
-	ID     string `json:"id,omitempty"`
-	Object string `json:"object,omitempty"`
+	ID     string `json:"id,omitzero"`
+	Object string `json:"object,omitzero"`
 }
 
 // ConversationItem represents an item in the conversation.
 type ConversationItem struct {
-	ID       string        `json:"id,omitempty"`
-	Object   string        `json:"object,omitempty"`
-	Type     string        `json:"type,omitempty"` // "message", "function_call", "function_call_output"
-	Status   string        `json:"status,omitempty"`
-	Role     string        `json:"role,omitempty"` // "user", "assistant", "system"
-	Content  []ContentPart `json:"content,omitempty"`
-	CallID   string        `json:"call_id,omitempty"`   // for function_call_output
-	Name     string        `json:"name,omitempty"`      // for function_call
-	Arguments string       `json:"arguments,omitempty"` // for function_call
-	Output   string        `json:"output,omitempty"`    // for function_call_output
+	ID       string        `json:"id,omitzero"`
+	Object   string        `json:"object,omitzero"`
+	Type     string        `json:"type,omitzero"` // "message", "function_call", "function_call_output"
+	Status   string        `json:"status,omitzero"`
+	Role     string        `json:"role,omitzero"` // "user", "assistant", "system"
+	Content  []ContentPart `json:"content,omitzero"`
+	CallID   string        `json:"call_id,omitzero"`   // for function_call_output
+	Name     string        `json:"name,omitzero"`      // for function_call
+	Arguments string       `json:"arguments,omitzero"` // for function_call
+	Output   string        `json:"output,omitzero"`    // for function_call_output
 }
 
 // ContentPart represents a part of message content.
 type ContentPart struct {
-	Type       string `json:"type,omitempty"` // "input_text", "input_audio", "item_reference", "text", "audio"
-	Text       string `json:"text,omitempty"`
-	Audio      string `json:"audio,omitempty"`      // base64 encoded
-	Transcript string `json:"transcript,omitempty"` // for audio parts
-	ID         string `json:"id,omitempty"`         // for item_reference
+	Type       string `json:"type,omitzero"` // "input_text", "input_audio", "item_reference", "text", "audio"
+	Text       string `json:"text,omitzero"`
+	Audio      string `json:"audio,omitzero"`      // base64 encoded
+	Transcript string `json:"transcript,omitzero"` // for audio parts
+	ID         string `json:"id,omitzero"`         // for item_reference
 }
 
 // ResponseResource represents a response from the model.
 type ResponseResource struct {
-	ID                 string             `json:"id,omitempty"`
-	Object             string             `json:"object,omitempty"`
-	Status             string             `json:"status,omitempty"` // "in_progress", "completed", "cancelled", "incomplete", "failed"
-	StatusDetails      *StatusDetails     `json:"status_details,omitempty"`
-	Output             []ConversationItem `json:"output,omitempty"`
-	Usage              *Usage             `json:"usage,omitempty"`
+	ID                 string             `json:"id,omitzero"`
+	Object             string             `json:"object,omitzero"`
+	Status             string             `json:"status,omitzero"` // "in_progress", "completed", "cancelled", "incomplete", "failed"
+	StatusDetails      *StatusDetails     `json:"status_details,omitzero"`
+	Output             []ConversationItem `json:"output,omitzero"`
+	Usage              *Usage             `json:"usage,omitzero"`
 }
 
 // StatusDetails contains details about the response status.
 type StatusDetails struct {
-	Type   string `json:"type,omitempty"`
-	Reason string `json:"reason,omitempty"`
-	Error  *Error `json:"error,omitempty"`
+	Type   string `json:"type,omitzero"`
+	Reason string `json:"reason,omitzero"`
+	Error  *Error `json:"error,omitzero"`
 }
 
 // Usage contains token usage information.
 type Usage struct {
-	TotalTokens              int          `json:"total_tokens,omitempty"`
-	InputTokens              int          `json:"input_tokens,omitempty"`
-	OutputTokens             int          `json:"output_tokens,omitempty"`
-	InputTokenDetails        *TokenDetails `json:"input_token_details,omitempty"`
-	OutputTokenDetails       *TokenDetails `json:"output_token_details,omitempty"`
+	TotalTokens              int          `json:"total_tokens,omitzero"`
+	InputTokens              int          `json:"input_tokens,omitzero"`
+	OutputTokens             int          `json:"output_tokens,omitzero"`
+	InputTokenDetails        *TokenDetails `json:"input_token_details,omitzero"`
+	OutputTokenDetails       *TokenDetails `json:"output_token_details,omitzero"`
 }
 
 // TokenDetails contains detailed token breakdown.
 type TokenDetails struct {
-	CachedTokens     int `json:"cached_tokens,omitempty"`
-	TextTokens       int `json:"text_tokens,omitempty"`
-	AudioTokens      int `json:"audio_tokens,omitempty"`
-	CachedTokensDetails *CachedTokensDetails `json:"cached_tokens_details,omitempty"`
+	CachedTokens     int `json:"cached_tokens,omitzero"`
+	TextTokens       int `json:"text_tokens,omitzero"`
+	AudioTokens      int `json:"audio_tokens,omitzero"`
+	CachedTokensDetails *CachedTokensDetails `json:"cached_tokens_details,omitzero"`
 }
 
 // CachedTokensDetails contains details about cached tokens.
 type CachedTokensDetails struct {
-	TextTokens  int `json:"text_tokens,omitempty"`
-	AudioTokens int `json:"audio_tokens,omitempty"`
+	TextTokens  int `json:"text_tokens,omitzero"`
+	AudioTokens int `json:"audio_tokens,omitzero"`
 }

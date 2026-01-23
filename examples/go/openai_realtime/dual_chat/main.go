@@ -107,7 +107,10 @@ func main() {
 	log.Println()
 
 	ctx := context.Background()
-	client := openairealtime.NewClient(*apiKey)
+	client, err := openairealtime.NewClient(*apiKey)
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
 
 	// Parse transports
 	transports := strings.Split(*transport, ",")
@@ -311,7 +314,8 @@ func createAgent(ctx context.Context, client *openairealtime.Client, name, trans
 			select {
 			case eventCh <- event:
 			default:
-				// Drop event if channel is full
+				// Log warning when dropping events (channel buffer full)
+				log.Printf("  Warning: dropping event %s (channel full)", event.Type)
 			}
 		}
 		close(eventCh)

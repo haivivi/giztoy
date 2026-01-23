@@ -5,19 +5,19 @@ import "fmt"
 // Error represents an API error from OpenAI Realtime.
 type Error struct {
 	// Type is the error type (e.g., "invalid_request_error").
-	Type string `json:"type,omitempty"`
+	Type string `json:"type,omitzero"`
 
 	// Code is the error code (e.g., "invalid_value").
-	Code string `json:"code,omitempty"`
+	Code string `json:"code,omitzero"`
 
 	// Message is the human-readable error message.
-	Message string `json:"message,omitempty"`
+	Message string `json:"message,omitzero"`
 
 	// Param is the parameter that caused the error, if applicable.
-	Param string `json:"param,omitempty"`
+	Param string `json:"param,omitzero"`
 
 	// EventID is the ID of the event that caused the error.
-	EventID string `json:"event_id,omitempty"`
+	EventID string `json:"event_id,omitzero"`
 
 	// HTTPStatus is the HTTP status code, if applicable.
 	HTTPStatus int `json:"-"`
@@ -36,11 +36,11 @@ func (e *Error) Error() string {
 
 // EventError contains error information from error events.
 type EventError struct {
-	Type    string `json:"type,omitempty"`
-	Code    string `json:"code,omitempty"`
-	Message string `json:"message,omitempty"`
-	Param   string `json:"param,omitempty"`
-	EventID string `json:"event_id,omitempty"`
+	Type    string `json:"type,omitzero"`
+	Code    string `json:"code,omitzero"`
+	Message string `json:"message,omitzero"`
+	Param   string `json:"param,omitzero"`
+	EventID string `json:"event_id,omitzero"`
 }
 
 // ToError converts EventError to Error.

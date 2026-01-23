@@ -43,6 +43,34 @@ type ephemeralTokenResponse struct {
 	} `json:"client_secret"`
 }
 
+// apiErrorResponse is the error response from OpenAI API.
+type apiErrorResponse struct {
+	Error struct {
+		Message string `json:"message"`
+		Type    string `json:"type"`
+		Code    string `json:"code"`
+	} `json:"error"`
+}
+
+// parseAPIError attempts to parse a structured API error from the response body.
+func parseAPIError(body []byte, httpStatus int, fallbackCode string) *Error {
+	var apiErr apiErrorResponse
+	if err := json.Unmarshal(body, &apiErr); err == nil && apiErr.Error.Message != "" {
+		return &Error{
+			Code:       apiErr.Error.Code,
+			Message:    apiErr.Error.Message,
+			Type:       apiErr.Error.Type,
+			HTTPStatus: httpStatus,
+		}
+	}
+	// Fallback to raw body
+	return &Error{
+		Code:       fallbackCode,
+		Message:    string(body),
+		HTTPStatus: httpStatus,
+	}
+}
+
 // connectWebRTC establishes a WebRTC connection.
 func (c *Client) connectWebRTC(ctx context.Context, config *ConnectConfig) (*WebRTCSession, error) {
 	if config == nil {
@@ -53,7 +81,7 @@ func (c *Client) connectWebRTC(ctx context.Context, config *ConnectConfig) (*Web
 	}
 
 	// Step 1: Get ephemeral token from OpenAI API
-	token, err := c.getEphemeralToken(ctx, config.Model)
+	token, err := c.getEphemeralToken(ctx, config.Model, config.Voice)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ephemeral token: %w", err)
 	}
@@ -187,10 +215,13 @@ func (c *Client) connectWebRTC(ctx context.Context, config *ConnectConfig) (*Web
 }
 
 // getEphemeralToken gets an ephemeral token for WebRTC session.
-func (c *Client) getEphemeralToken(ctx context.Context, model string) (string, error) {
+func (c *Client) getEphemeralToken(ctx context.Context, model, voice string) (string, error) {
+	if voice == "" {
+		voice = VoiceAlloy // Default voice
+	}
 	reqBody := map[string]interface{}{
 		"model": model,
-		"voice": VoiceAlloy, // Default voice
+		"voice": voice,
 	}
 	jsonBody, err := json.Marshal(reqBody)
 	if err != nil {
@@ -219,11 +250,7 @@ func (c *Client) getEphemeralToken(ctx context.Context, model string) (string, e
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", &Error{
-			Code:       "session_creation_failed",
-			Message:    fmt.Sprintf("failed to create session: %s", string(body)),
-			HTTPStatus: resp.StatusCode,
-		}
+		return "", parseAPIError(body, resp.StatusCode, "session_creation_failed")
 	}
 
 	var tokenResp ephemeralTokenResponse
@@ -254,11 +281,7 @@ func (c *Client) sendOffer(ctx context.Context, token, model, sdp string) (strin
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", &Error{
-			Code:       "sdp_exchange_failed",
-			Message:    fmt.Sprintf("failed to exchange SDP: %s", string(body)),
-			HTTPStatus: resp.StatusCode,
-		}
+		return "", parseAPIError(body, resp.StatusCode, "sdp_exchange_failed")
 	}
 
 	answer, err := io.ReadAll(resp.Body)
@@ -516,6 +539,10 @@ func (s *WebRTCSession) AudioTrack() *webrtc.TrackRemote {
 
 // AddAudioTrack adds a local audio track for sending audio.
 // This is the preferred way to send audio in WebRTC mode.
+//
+// Note: Only one local audio track can be added per session.
+// This is a WebRTC limitation for the OpenAI Realtime API.
+// Calling this method multiple times will return an error.
 func (s *WebRTCSession) AddAudioTrack(track *webrtc.TrackLocalStaticSample) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
