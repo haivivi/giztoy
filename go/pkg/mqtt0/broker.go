@@ -791,12 +791,20 @@ func (b *Broker) cleanupClient(clientID, username string, handle *clientHandle) 
 	b.mu.Lock()
 	// Only delete from clients map if the current handle matches (pointer comparison)
 	// This prevents removing a new client that connected with the same clientID
+	var topics []string
 	if current, exists := b.clients[clientID]; exists && current == handle {
 		delete(b.clients, clientID)
+		// Only remove subscriptions tracking if this is the correct client instance
+		// This prevents a stale cleanup from wiping a new client's subscription data
+		topics = b.clientSubscriptions[clientID]
+		delete(b.clientSubscriptions, clientID)
 	}
-	topics := b.clientSubscriptions[clientID]
-	delete(b.clientSubscriptions, clientID)
 	b.mu.Unlock()
+
+	// If topics is nil, this cleanup is for a stale client - skip subscription removal
+	if topics == nil {
+		return
+	}
 
 	// Remove all subscriptions
 	for _, topic := range topics {
@@ -944,10 +952,13 @@ func (b *Broker) publishSysConnected(clientID, username string, addr net.Addr, p
 
 	ipAddr := ""
 	if addr != nil {
-		if tcpAddr, ok := addr.(*net.TCPAddr); ok {
-			ipAddr = tcpAddr.IP.String()
-		} else {
-			ipAddr = addr.String()
+		switch v := addr.(type) {
+		case *net.TCPAddr:
+			ipAddr = v.IP.String()
+		case *net.UDPAddr:
+			ipAddr = v.IP.String()
+		default:
+			ipAddr = addr.String() // Fallback for other address types
 		}
 	}
 

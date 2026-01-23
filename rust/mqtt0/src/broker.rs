@@ -1119,18 +1119,31 @@ impl BrokerContext {
     async fn cleanup_client(&self, client_id: &str, username: &str, tx: &Arc<mpsc::Sender<Message>>) {
         // Remove from clients map only if the current sender matches (pointer comparison)
         // This prevents removing a new client that connected with the same client_id
-        {
+        // Also remove subscription tracking only if this is the correct client instance
+        let topics = {
             let mut clients = self.clients.write();
             if let Some(current) = clients.get(client_id) {
                 if Arc::ptr_eq(current, tx) {
                     clients.remove(client_id);
+                    // Only remove subscriptions tracking if this is the correct client instance
+                    self.client_subscriptions.write().remove(client_id)
+                } else {
+                    // Stale cleanup - don't remove subscription tracking
+                    None
                 }
+            } else {
+                None
             }
-        }
+        };
 
-        // Remove all subscriptions for this client
-        let topics = self.client_subscriptions.write().remove(client_id);
-        if let Some(topics) = topics {
+        // If topics is None, this cleanup is for a stale client - skip subscription removal
+        let topics = match topics {
+            Some(t) => t,
+            None => return,
+        };
+
+        // Remove subscriptions - must complete before await to avoid holding locks across await
+        {
             let topic_count = topics.len();
             let subs = self.subscriptions.write();
             for topic in &topics {
@@ -1151,9 +1164,9 @@ impl BrokerContext {
                     });
                 } else {
                     // Use pointer comparison for normal subscriptions
-                subs.with_mut(|root| {
+                    subs.with_mut(|root| {
                         root.remove(topic, |h| h.same_sender(tx));
-                });
+                    });
                 }
             }
             debug!("Cleaned up {} subscriptions for client {}", topic_count, client_id);
