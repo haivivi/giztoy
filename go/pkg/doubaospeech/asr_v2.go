@@ -392,12 +392,13 @@ func (s *ASRV2Session) receiveLoop() {
 		// Byte 1: message_type (4 bits) + flags (4 bits) = e.g. 0x91 (type=9, flags=1)
 		// Byte 2: serialization (4 bits) + compression (4 bits) = e.g. 0x10 (JSON, no compression)
 		// Byte 3: reserved = 0x00
-		// Byte 4-7: sequence number (4 bytes, big-endian)
+		// Byte 4-7: sequence number (4 bytes, big-endian) - read but not used
 		// Byte 8-11: payload size (4 bytes, big-endian)
 		// Byte 12+: payload
 		messageType := (data[1] >> 4) & 0x0F
 		messageFlags := data[1] & 0x0F
 		compression := data[2] & 0x0F
+		_ = binary.BigEndian.Uint32(data[4:8]) // sequence number (unused)
 		payloadSize := binary.BigEndian.Uint32(data[8:12])
 
 		if int(payloadSize) > len(data)-12 {
@@ -412,7 +413,8 @@ func (s *ASRV2Session) receiveLoop() {
 			if err != nil {
 				continue
 			}
-			payload, err = io.ReadAll(reader)
+			// Limit decompression to 10MB to prevent Zip Bomb DoS attacks
+			payload, err = io.ReadAll(io.LimitReader(reader, 10*1024*1024))
 			reader.Close()
 			if err != nil {
 				continue

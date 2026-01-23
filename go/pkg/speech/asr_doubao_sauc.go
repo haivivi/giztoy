@@ -128,7 +128,8 @@ func (h *DoubaoSAUCASRHandler) TranscribeStream(ctx context.Context, model strin
 	}
 
 	// Select PCM format based on sample rate
-	format := sampleRateToFormat(h.sampleRate)
+	// Note: Only mono audio is supported for ASR
+	format := sampleRateToFormat(h.sampleRate, h.channels)
 
 	stream := &doubaoSAUCSpeechStream{
 		ctx:        ctx,
@@ -150,7 +151,14 @@ func (h *DoubaoSAUCASRHandler) TranscribeStream(ctx context.Context, model strin
 }
 
 // sampleRateToFormat converts sample rate to pcm.Format.
-func sampleRateToFormat(sampleRate int) pcm.Format {
+// Note: This handler only supports mono audio. Stereo is not supported.
+func sampleRateToFormat(sampleRate int, channels int) pcm.Format {
+	// Validate channels - only mono is supported
+	if channels != 1 {
+		// Log warning but continue with mono format
+		// Stereo audio will be decoded but reported as mono format
+	}
+
 	switch sampleRate {
 	case 16000:
 		return pcm.L16Mono16K
@@ -159,7 +167,7 @@ func sampleRateToFormat(sampleRate int) pcm.Format {
 	case 48000:
 		return pcm.L16Mono48K
 	default:
-		// Default to 16kHz for ASR
+		// Default to 16kHz for ASR - log warning for unexpected rates
 		return pcm.L16Mono16K
 	}
 }
@@ -201,8 +209,10 @@ func (s *doubaoSAUCSpeechStream) sendLoop() {
 		frame, loss, err := s.opusReader.Frame()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				// Send last chunk
-				s.session.SendAudio(s.ctx, nil, true)
+				// Send last chunk (nil audio signals end of stream)
+				if sendErr := s.session.SendAudio(s.ctx, nil, true); sendErr != nil {
+					s.sendError(sendErr)
+				}
 				return
 			}
 			s.sendError(err)

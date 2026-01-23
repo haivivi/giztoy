@@ -59,9 +59,17 @@ func main() {
 	}
 
 	fmt.Printf("📋 Doubao App ID: %s\n", doubaoAppID)
-	fmt.Printf("📋 Doubao Token: %s...%s\n", doubaoToken[:4], doubaoToken[len(doubaoToken)-4:])
+	if len(doubaoToken) >= 8 {
+		fmt.Printf("📋 Doubao Token: %s...%s\n", doubaoToken[:4], doubaoToken[len(doubaoToken)-4:])
+	} else {
+		fmt.Printf("📋 Doubao Token: %s\n", doubaoToken)
+	}
 	if minimaxAPIKey != "" {
-		fmt.Printf("📋 MiniMax API Key: %s...%s\n", minimaxAPIKey[:4], minimaxAPIKey[len(minimaxAPIKey)-4:])
+		if len(minimaxAPIKey) >= 8 {
+			fmt.Printf("📋 MiniMax API Key: %s...%s\n", minimaxAPIKey[:4], minimaxAPIKey[len(minimaxAPIKey)-4:])
+		} else {
+			fmt.Printf("📋 MiniMax API Key: %s\n", minimaxAPIKey)
+		}
 	}
 	fmt.Println()
 
@@ -339,14 +347,20 @@ func recognizeWithRegisteredASR(ctx context.Context, audioData []byte, format pc
 		// Collect all segments from this speech
 		for seg, err := range speech.Iter(sp) {
 			if err != nil {
-				break
+				sp.Close()
+				return "", fmt.Errorf("read segment: %w", err)
 			}
 
 			// Get transcript
 			transcript := seg.Transcribe()
-			text, _ := io.ReadAll(transcript)
+			text, err := io.ReadAll(transcript)
 			transcript.Close()
 			seg.Close()
+
+			if err != nil {
+				sp.Close()
+				return "", fmt.Errorf("read transcript: %w", err)
+			}
 
 			if len(text) > 0 {
 				if result.Len() > 0 {
@@ -361,82 +375,6 @@ func recognizeWithRegisteredASR(ctx context.Context, audioData []byte, format pc
 
 	fmt.Printf("   ✅ Collected %d speech segments\n", speechCount)
 	return result.String(), nil
-}
-
-// recognizeWithASR performs ASR recognition using Doubao SAUC client directly
-func recognizeWithASR(ctx context.Context, client *doubaospeech.Client, audioData []byte, sampleRate int) (string, error) {
-	config := &doubaospeech.ASRV2Config{
-		Format:     "pcm",
-		SampleRate: sampleRate,
-		Bits:       16,
-		Channels:   1,
-		Language:   "zh-CN",
-		EnableITN:  true,
-		EnablePunc: true,
-	}
-
-	fmt.Println("   📡 Connecting to Doubao ASR (SAUC BigModel)...")
-	session, err := client.ASRV2.OpenStreamSession(ctx, config)
-	if err != nil {
-		return "", fmt.Errorf("connect failed: %w", err)
-	}
-	defer session.Close()
-	fmt.Println("   ✅ Connected")
-
-	// Channel for collecting results
-	resultCh := make(chan string, 1)
-	errCh := make(chan error, 1)
-
-	// Start receiver goroutine
-	go func() {
-		var finalText strings.Builder
-		for result, err := range session.Recv() {
-			if err != nil {
-				errCh <- err
-				return
-			}
-			if result.IsFinal && result.Text != "" {
-				finalText.WriteString(result.Text)
-			}
-			fmt.Printf("\r   🔊 Recognizing: %s", truncateString(result.Text, 50))
-		}
-		fmt.Println()
-		resultCh <- finalText.String()
-	}()
-
-	// Send audio in chunks (blocking send)
-	fmt.Println("   📤 Sending audio data...")
-	chunkSize := sampleRate * 2 / 10 // 100ms chunks (16-bit = 2 bytes/sample)
-	totalSent := 0
-
-	for i := 0; i < len(audioData); i += chunkSize {
-		end := i + chunkSize
-		if end > len(audioData) {
-			end = len(audioData)
-		}
-		chunk := audioData[i:end]
-		isLast := end >= len(audioData)
-
-		if err := session.SendAudio(ctx, chunk, isLast); err != nil {
-			return "", fmt.Errorf("send audio failed: %w", err)
-		}
-		totalSent += len(chunk)
-
-		// Simulate real-time streaming
-		time.Sleep(50 * time.Millisecond)
-	}
-	fmt.Printf("\n   ✅ Sent %d bytes\n", totalSent)
-
-	// Wait for final result (blocking)
-	fmt.Println("   ⏳ Waiting for final result...")
-	select {
-	case result := <-resultCh:
-		return result, nil
-	case err := <-errCh:
-		return "", err
-	case <-ctx.Done():
-		return "", ctx.Err()
-	}
 }
 
 // recognizeWithOneSentenceASR uses the one-sentence ASR API (ASR 1.0)
