@@ -33,6 +33,9 @@ use crate::types::{AllowAll, Authenticator, Handler, Message, ProtocolVersion};
 /// Default maximum topic aliases per client (MQTT 5.0).
 pub const DEFAULT_MAX_TOPIC_ALIAS: u16 = 65535;
 
+/// Default maximum topic length in bytes.
+pub const DEFAULT_MAX_TOPIC_LENGTH: usize = 256;
+
 /// Callback type alias.
 type Callback = Arc<dyn Fn(&str) + Send + Sync>;
 
@@ -95,6 +98,10 @@ pub struct BrokerConfig {
     pub sys_events_enabled: bool,
     /// Maximum topic aliases per client (MQTT 5.0).
     pub max_topic_alias: u16,
+    /// Maximum topic length in bytes.
+    pub max_topic_length: usize,
+    /// Maximum subscriptions per client.
+    pub max_subscriptions_per_client: usize,
 }
 
 impl BrokerConfig {
@@ -105,6 +112,8 @@ impl BrokerConfig {
             max_packet_size: MAX_PACKET_SIZE,
             sys_events_enabled: true,
             max_topic_alias: DEFAULT_MAX_TOPIC_ALIAS,
+            max_topic_length: DEFAULT_MAX_TOPIC_LENGTH,
+            max_subscriptions_per_client: 100,
         }
     }
 
@@ -117,6 +126,18 @@ impl BrokerConfig {
     /// Set maximum topic aliases per client (MQTT 5.0).
     pub fn max_topic_alias(mut self, max: u16) -> Self {
         self.max_topic_alias = max;
+        self
+    }
+
+    /// Set maximum topic length in bytes.
+    pub fn max_topic_length(mut self, max: usize) -> Self {
+        self.max_topic_length = max;
+        self
+    }
+
+    /// Set maximum subscriptions per client (0 = unlimited).
+    pub fn max_subscriptions_per_client(mut self, max: usize) -> Self {
+        self.max_subscriptions_per_client = max;
         self
     }
 }
@@ -260,6 +281,8 @@ impl Broker {
                 max_packet_size: self.config.max_packet_size,
                 sys_events_enabled: self.config.sys_events_enabled,
                 max_topic_alias: self.config.max_topic_alias,
+                max_topic_length: self.config.max_topic_length,
+                max_subscriptions_per_client: self.config.max_subscriptions_per_client,
             };
 
             tokio::spawn(async move {
@@ -309,6 +332,10 @@ struct BrokerContext {
     sys_events_enabled: bool,
     /// Maximum topic aliases per client (MQTT 5.0).
     max_topic_alias: u16,
+    /// Maximum topic length in bytes.
+    max_topic_length: usize,
+    /// Maximum subscriptions per client.
+    max_subscriptions_per_client: usize,
 }
 
 impl BrokerContext {
@@ -787,6 +814,26 @@ impl BrokerContext {
     ) -> Result<()> {
         let topic = publish.topic.to_string();
 
+        // Enforce topic length limit
+        if topic.len() > self.max_topic_length {
+            warn!(
+                "Client {} topic too long: {} > {}",
+                client_id,
+                topic.len(),
+                self.max_topic_length
+            );
+            return Ok(());
+        }
+
+        // Prevent clients from publishing to $ topics (MQTT spec 3.3.1.3)
+        if topic.starts_with('$') {
+            warn!(
+                "Client {} cannot publish to $ topic: {}",
+                client_id, topic
+            );
+            return Ok(());
+        }
+
         if !self.authenticator.acl(client_id, &topic, true) {
             warn!("ACL denied publish from {} to {}", client_id, topic);
             return Ok(());
@@ -853,6 +900,16 @@ impl BrokerContext {
 
             if !topic_from_packet.is_empty() {
                 // Topic is provided with alias - update the mapping
+                // Enforce topic length limit before storing
+                if topic_from_packet.len() > self.max_topic_length {
+                    warn!(
+                        "Client {} topic too long for alias: {} > {}",
+                        client_id,
+                        topic_from_packet.len(),
+                        self.max_topic_length
+                    );
+                    return Ok(());
+                }
                 topic_aliases.insert(alias, topic_from_packet.clone());
                 trace!(
                     "Client {} set topic alias {} = '{}'",
@@ -886,6 +943,26 @@ impl BrokerContext {
             }
             topic_from_packet
         };
+
+        // Enforce topic length limit
+        if topic.len() > self.max_topic_length {
+            warn!(
+                "Client {} topic too long: {} > {}",
+                client_id,
+                topic.len(),
+                self.max_topic_length
+            );
+            return Ok(());
+        }
+
+        // Prevent clients from publishing to $ topics (MQTT spec 3.3.1.3)
+        if topic.starts_with('$') {
+            warn!(
+                "Client {} cannot publish to $ topic: {}",
+                client_id, topic
+            );
+            return Ok(());
+        }
 
         if !self.authenticator.acl(client_id, &topic, true) {
             warn!("ACL denied publish from {} to {}", client_id, topic);
@@ -955,6 +1032,22 @@ impl BrokerContext {
         let mut return_codes = Vec::with_capacity(filters.len());
 
         for filter in filters {
+            // Check subscription limit
+            let current_count = {
+                let subs = self.client_subscriptions.read();
+                subs.get(client_id).map(|v| v.len()).unwrap_or(0)
+            };
+            if self.max_subscriptions_per_client > 0
+                && current_count >= self.max_subscriptions_per_client
+            {
+                warn!(
+                    "Client {} subscription limit exceeded: {} >= {}",
+                    client_id, current_count, self.max_subscriptions_per_client
+                );
+                return_codes.push(SubscribeReasonCode::Failure);
+                continue;
+            }
+
             let topic = &filter.path;
 
             // For shared subscriptions, check ACL on the actual topic
@@ -1033,6 +1126,22 @@ impl BrokerContext {
         let mut return_codes = Vec::with_capacity(filters.len());
 
         for filter in filters {
+            // Check subscription limit
+            let current_count = {
+                let subs = self.client_subscriptions.read();
+                subs.get(client_id).map(|v| v.len()).unwrap_or(0)
+            };
+            if self.max_subscriptions_per_client > 0
+                && current_count >= self.max_subscriptions_per_client
+            {
+                warn!(
+                    "Client {} subscription limit exceeded: {} >= {}",
+                    client_id, current_count, self.max_subscriptions_per_client
+                );
+                return_codes.push(crate::protocol::v5::SubscribeReasonCode::QuotaExceeded);
+                continue;
+            }
+
             let topic = &filter.path;
 
             // For shared subscriptions, check ACL on the actual topic

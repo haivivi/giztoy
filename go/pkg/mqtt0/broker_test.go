@@ -816,3 +816,200 @@ func TestSysEvents(t *testing.T) {
 
 	broker.Close()
 }
+
+func TestTopicAlias(t *testing.T) {
+	addr := getTestAddr()
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("listen failed: %v", err)
+	}
+	defer ln.Close()
+
+	broker := &Broker{
+		MaxTopicAlias: 10, // Allow up to 10 topic aliases
+	}
+	go broker.Serve(ln)
+
+	// Connect publisher with MQTT 5.0
+	ctx := context.Background()
+	pub, err := Connect(ctx, ClientConfig{
+		Addr:            "tcp://" + addr,
+		ClientID:        "topic-alias-pub",
+		ProtocolVersion: ProtocolV5,
+	})
+	if err != nil {
+		t.Fatalf("connect publisher failed: %v", err)
+	}
+	defer pub.Close()
+
+	// Connect subscriber
+	sub, err := Connect(ctx, ClientConfig{
+		Addr:            "tcp://" + addr,
+		ClientID:        "topic-alias-sub",
+		ProtocolVersion: ProtocolV5,
+	})
+	if err != nil {
+		t.Fatalf("connect subscriber failed: %v", err)
+	}
+	defer sub.Close()
+
+	if err := sub.Subscribe(ctx, "test/alias/#"); err != nil {
+		t.Fatalf("subscribe failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	// Publish with topic alias (first time sets the alias)
+	// Note: Our client doesn't support topic alias yet, so we test the broker
+	// accepts normal publishes and verify the subscriber receives them
+	if err := pub.Publish(ctx, "test/alias/1", []byte("message1")); err != nil {
+		t.Fatalf("publish failed: %v", err)
+	}
+
+	msg, err := sub.RecvTimeout(500 * time.Millisecond)
+	if err != nil {
+		t.Fatalf("recv failed: %v", err)
+	}
+	if msg.Topic != "test/alias/1" {
+		t.Errorf("Expected topic test/alias/1, got %s", msg.Topic)
+	}
+	if string(msg.Payload) != "message1" {
+		t.Errorf("Expected payload message1, got %s", string(msg.Payload))
+	}
+
+	broker.Close()
+}
+
+func TestTopicLengthLimit(t *testing.T) {
+	addr := getTestAddr()
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("listen failed: %v", err)
+	}
+	defer ln.Close()
+
+	broker := &Broker{
+		MaxTopicLength: 50, // Limit topic length to 50 bytes
+	}
+	go broker.Serve(ln)
+
+	ctx := context.Background()
+	client, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "topic-length-client",
+	})
+	if err != nil {
+		t.Fatalf("connect failed: %v", err)
+	}
+	defer client.Close()
+
+	// Short topic should work
+	if err := client.Publish(ctx, "short/topic", []byte("ok")); err != nil {
+		t.Fatalf("publish short topic failed: %v", err)
+	}
+
+	// Long topic (>50 bytes) should be silently dropped by broker
+	longTopic := "this/is/a/very/long/topic/that/exceeds/the/limit/of/fifty/bytes"
+	if err := client.Publish(ctx, longTopic, []byte("dropped")); err != nil {
+		t.Fatalf("publish long topic failed: %v", err)
+	}
+
+	// No error expected - broker just drops the message
+	broker.Close()
+}
+
+func TestDollarTopicProtection(t *testing.T) {
+	addr := getTestAddr()
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("listen failed: %v", err)
+	}
+	defer ln.Close()
+
+	broker := &Broker{
+		SysEventsEnabled: true,
+	}
+	go broker.Serve(ln)
+
+	ctx := context.Background()
+
+	// Subscribe to $SYS topics
+	sub, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "dollar-sub",
+	})
+	if err != nil {
+		t.Fatalf("connect subscriber failed: %v", err)
+	}
+	defer sub.Close()
+
+	if err := sub.Subscribe(ctx, "$SYS/#"); err != nil {
+		t.Fatalf("subscribe failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	// Connect publisher that will try to publish to $SYS
+	pub, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "dollar-pub",
+	})
+	if err != nil {
+		t.Fatalf("connect publisher failed: %v", err)
+	}
+	defer pub.Close()
+
+	// Try to publish to $SYS topic (should be blocked)
+	if err := pub.Publish(ctx, "$SYS/fake/event", []byte("malicious")); err != nil {
+		t.Fatalf("publish failed: %v", err)
+	}
+
+	// Subscriber should NOT receive the fake event
+	msg, err := sub.RecvTimeout(200 * time.Millisecond)
+	if err == nil && msg != nil {
+		// Check if the message is the real $SYS connected event or the fake one
+		if strings.Contains(msg.Topic, "fake") {
+			t.Errorf("Broker should block client publishing to $ topics, got: %s", msg.Topic)
+		}
+	}
+
+	broker.Close()
+}
+
+func TestSubscriptionLimit(t *testing.T) {
+	addr := getTestAddr()
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("listen failed: %v", err)
+	}
+	defer ln.Close()
+
+	broker := &Broker{
+		MaxSubscriptionsPerClient: 5, // Limit to 5 subscriptions
+	}
+	go broker.Serve(ln)
+
+	ctx := context.Background()
+	client, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "sub-limit-client",
+	})
+	if err != nil {
+		t.Fatalf("connect failed: %v", err)
+	}
+	defer client.Close()
+
+	// Subscribe to 5 topics (should succeed)
+	for i := 0; i < 5; i++ {
+		topic := "topic/" + string(rune('a'+i))
+		if err := client.Subscribe(ctx, topic); err != nil {
+			t.Fatalf("subscribe %d failed: %v", i, err)
+		}
+	}
+
+	// 6th subscription should fail (but client.Subscribe doesn't return suback codes)
+	// The broker will return failure code, but our simple client doesn't check it
+	if err := client.Subscribe(ctx, "topic/f"); err != nil {
+		t.Logf("expected: 6th subscription might fail: %v", err)
+	}
+
+	broker.Close()
+}

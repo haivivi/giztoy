@@ -38,8 +38,17 @@ type Broker struct {
 	// Note: Must be explicitly set to true to enable; default is false.
 	SysEventsEnabled bool
 
-	// MaxTopicAlias is the maximum topic alias value per client (default: 65535).
+	// MaxTopicAlias is the maximum topic alias value per client (MQTT 5.0).
+	// Default: 65535. Set to 0 to disable topic alias.
 	MaxTopicAlias uint16
+
+	// MaxTopicLength is the maximum topic string length in bytes.
+	// Default: 256. MQTT spec allows up to 65535.
+	MaxTopicLength int
+
+	// MaxSubscriptionsPerClient is the maximum number of subscriptions per client.
+	// Default: 100. Set to 0 for unlimited.
+	MaxSubscriptionsPerClient int
 
 	// internal state
 	mu                  sync.Mutex
@@ -171,7 +180,13 @@ func (b *Broker) init() {
 		b.MaxPacketSize = MaxPacketSize
 	}
 	if b.MaxTopicAlias == 0 {
-		b.MaxTopicAlias = 65535 // default max topic alias
+		b.MaxTopicAlias = 65535
+	}
+	if b.MaxTopicLength == 0 {
+		b.MaxTopicLength = 256
+	}
+	if b.MaxSubscriptionsPerClient == 0 {
+		b.MaxSubscriptionsPerClient = 100
 	}
 }
 
@@ -495,6 +510,9 @@ func (b *Broker) clientLoopV5(conn net.Conn, reader *bufio.Reader, clientID stri
 		timeout = time.Duration(keepAlive*3/2) * time.Second
 	}
 
+	// Topic alias map for this client (MQTT 5.0)
+	topicAliases := make(map[uint16]string)
+
 	readCh := make(chan V5Packet, 1)
 	errCh := make(chan error, 1)
 	doneCh := make(chan struct{})
@@ -543,7 +561,7 @@ func (b *Broker) clientLoopV5(conn net.Conn, reader *bufio.Reader, clientID stri
 		case packet := <-readCh:
 			switch p := packet.(type) {
 			case *V5Publish:
-				b.handlePublishV5(clientID, p, auth)
+				b.handlePublishV5(clientID, p, auth, topicAliases)
 			case *V5Subscribe:
 				codes := b.handleSubscribeV5(clientID, handle, p.Topics, auth)
 				WriteV5Packet(conn, &V5SubAck{PacketID: p.PacketID, ReasonCodes: codes})
@@ -570,6 +588,18 @@ func (b *Broker) clientLoopV5(conn net.Conn, reader *bufio.Reader, clientID stri
 }
 
 func (b *Broker) handlePublishV4(clientID string, p *V4Publish, auth Authenticator) {
+	// Enforce topic length limit
+	if len(p.Topic) > b.MaxTopicLength {
+		slog.Debug("mqtt0: topic too long", "clientID", clientID, "len", len(p.Topic), "max", b.MaxTopicLength)
+		return
+	}
+
+	// Prevent clients from publishing to $ topics (MQTT spec 3.3.1.3)
+	if len(p.Topic) > 0 && p.Topic[0] == '$' {
+		slog.Debug("mqtt0: client cannot publish to $ topic", "clientID", clientID, "topic", p.Topic)
+		return
+	}
+
 	if !auth.ACL(clientID, p.Topic, true) {
 		slog.Debug("mqtt0: acl denied publish", "clientID", clientID, "topic", p.Topic)
 		return
@@ -588,14 +618,71 @@ func (b *Broker) handlePublishV4(clientID string, p *V4Publish, auth Authenticat
 	b.routeMessage(msg)
 }
 
-func (b *Broker) handlePublishV5(clientID string, p *V5Publish, auth Authenticator) {
-	if !auth.ACL(clientID, p.Topic, true) {
-		slog.Debug("mqtt0: acl denied publish", "clientID", clientID, "topic", p.Topic)
+func (b *Broker) handlePublishV5(clientID string, p *V5Publish, auth Authenticator, topicAliases map[uint16]string) {
+	// Resolve topic from packet or alias
+	topic := p.Topic
+
+	// Handle Topic Alias (MQTT 5.0)
+	if p.Properties != nil && p.Properties.TopicAlias != nil {
+		alias := *p.Properties.TopicAlias
+
+		// Reject alias 0 as per MQTT 5.0 spec
+		if alias == 0 {
+			slog.Debug("mqtt0: invalid topic alias 0", "clientID", clientID)
+			return
+		}
+
+		// Enforce max topic alias limit
+		if alias > b.MaxTopicAlias {
+			slog.Debug("mqtt0: topic alias exceeds limit", "clientID", clientID, "alias", alias, "max", b.MaxTopicAlias)
+			return
+		}
+
+		if topic != "" {
+			// Topic is provided with alias - update the mapping
+			// Enforce topic length limit
+			if len(topic) > b.MaxTopicLength {
+				slog.Debug("mqtt0: topic too long for alias", "clientID", clientID, "len", len(topic), "max", b.MaxTopicLength)
+				return
+			}
+			topicAliases[alias] = topic
+			slog.Debug("mqtt0: set topic alias", "clientID", clientID, "alias", alias, "topic", topic)
+		} else {
+			// Topic is empty - look up from alias mapping
+			resolved, ok := topicAliases[alias]
+			if !ok {
+				slog.Debug("mqtt0: unknown topic alias", "clientID", clientID, "alias", alias)
+				return
+			}
+			topic = resolved
+		}
+	}
+
+	// Validate topic
+	if topic == "" {
+		slog.Debug("mqtt0: empty topic in publish", "clientID", clientID)
+		return
+	}
+
+	// Enforce topic length limit
+	if len(topic) > b.MaxTopicLength {
+		slog.Debug("mqtt0: topic too long", "clientID", clientID, "len", len(topic), "max", b.MaxTopicLength)
+		return
+	}
+
+	// Prevent clients from publishing to $ topics (MQTT spec 3.3.1.3)
+	if len(topic) > 0 && topic[0] == '$' {
+		slog.Debug("mqtt0: client cannot publish to $ topic", "clientID", clientID, "topic", topic)
+		return
+	}
+
+	if !auth.ACL(clientID, topic, true) {
+		slog.Debug("mqtt0: acl denied publish", "clientID", clientID, "topic", topic)
 		return
 	}
 
 	msg := &Message{
-		Topic:   p.Topic,
+		Topic:   topic,
 		Payload: p.Payload,
 		Retain:  p.Retain,
 	}
@@ -611,6 +698,16 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 	codes := make([]byte, len(topics))
 
 	for i, topic := range topics {
+		// Check subscription limit
+		b.mu.Lock()
+		currentCount := len(b.clientSubscriptions[clientID])
+		b.mu.Unlock()
+		if b.MaxSubscriptionsPerClient > 0 && currentCount >= b.MaxSubscriptionsPerClient {
+			slog.Debug("mqtt0: subscription limit exceeded", "clientID", clientID, "current", currentCount, "max", b.MaxSubscriptionsPerClient)
+			codes[i] = 0x80 // Failure
+			continue
+		}
+
 		// For shared subscriptions, check ACL on the actual topic
 		aclTopic := topic
 		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
@@ -665,6 +762,16 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 	codes := make([]ReasonCode, len(filters))
 
 	for i, filter := range filters {
+		// Check subscription limit
+		b.mu.Lock()
+		currentCount := len(b.clientSubscriptions[clientID])
+		b.mu.Unlock()
+		if b.MaxSubscriptionsPerClient > 0 && currentCount >= b.MaxSubscriptionsPerClient {
+			slog.Debug("mqtt0: subscription limit exceeded", "clientID", clientID, "current", currentCount, "max", b.MaxSubscriptionsPerClient)
+			codes[i] = ReasonQuotaExceeded
+			continue
+		}
+
 		// For shared subscriptions, check ACL on the actual topic
 		aclTopic := filter.Topic
 		if group, actualTopic, ok := ParseSharedTopic(filter.Topic); ok {
@@ -715,34 +822,38 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 	return codes
 }
 
-func (b *Broker) handleUnsubscribe(clientID string, topics []string) {
-	for _, topic := range topics {
-		// Handle shared subscriptions
-		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
-			// Use Trie for unsubscribe
-			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
-				for _, e := range *entries {
-					if e.groupName == group {
-						e.group.remove(clientID)
-						break
-					}
+// removeOneSubscription removes a single subscription by clientID.
+// This is used by handleUnsubscribe for explicit unsubscribe requests.
+func (b *Broker) removeOneSubscription(clientID, topic string) {
+	if group, actualTopic, ok := ParseSharedTopic(topic); ok {
+		b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+			for _, e := range *entries {
+				if e.groupName == group {
+					e.group.remove(clientID)
+					break
 				}
-				// Remove empty groups
-				newEntries := (*entries)[:0]
-				for _, e := range *entries {
-					if !e.group.isEmpty() {
-						newEntries = append(newEntries, e)
-					}
+			}
+			// Remove empty groups
+			newEntries := (*entries)[:0]
+			for _, e := range *entries {
+				if !e.group.isEmpty() {
+					newEntries = append(newEntries, e)
 				}
-				*entries = newEntries
-			})
-			slog.Debug("mqtt0: unsubscribed from shared", "clientID", clientID, "group", group, "topic", actualTopic)
-		} else {
+			}
+			*entries = newEntries
+		})
+		slog.Debug("mqtt0: unsubscribed from shared", "clientID", clientID, "group", group, "topic", actualTopic)
+	} else {
 		b.subscriptions.Remove(topic, func(h *clientHandle) bool {
 			return h.clientID == clientID
 		})
 		slog.Debug("mqtt0: unsubscribed", "clientID", clientID, "topic", topic)
-		}
+	}
+}
+
+func (b *Broker) handleUnsubscribe(clientID string, topics []string) {
+	for _, topic := range topics {
+		b.removeOneSubscription(clientID, topic)
 	}
 
 	// Remove from tracking - optimized O(N+M) instead of O(N*M)

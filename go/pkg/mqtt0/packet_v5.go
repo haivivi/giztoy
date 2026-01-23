@@ -52,6 +52,7 @@ type V5Properties struct {
 	MaximumPacketSize   *uint32
 	AssignedClientID    string
 	TopicAliasMaximum   *uint16
+	TopicAlias          *uint16 // Topic Alias for PUBLISH packets
 	ReasonString        string
 	UserProperties      []UserProperty
 	WildcardSubAvail    *bool
@@ -787,6 +788,12 @@ func decodeV5Properties(r io.Reader) (*V5Properties, error) {
 				return nil, err
 			}
 			props.TopicAliasMaximum = &v
+		case propTopicAlias:
+			v, err := readUint16(pr)
+			if err != nil {
+				return nil, err
+			}
+			props.TopicAlias = &v
 		case propReasonString:
 			v, err := readString(pr)
 			if err != nil {
