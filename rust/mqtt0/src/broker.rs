@@ -77,8 +77,12 @@ impl SharedGroup {
     }
 }
 
-/// Key for shared subscriptions: (group_name, actual_topic)
-type SharedKey = (String, String);
+/// Entry in shared subscription trie: (group_name, SharedGroup).
+#[derive(Clone)]
+struct SharedEntry {
+    group_name: String,
+    group: SharedGroup,
+}
 
 /// Broker configuration.
 #[derive(Debug, Clone)]
@@ -173,7 +177,7 @@ impl BrokerBuilder {
             subscriptions: Arc::new(RwLock::new(Trie::new())),
             clients: Arc::new(RwLock::new(HashMap::new())),
             client_subscriptions: Arc::new(RwLock::new(HashMap::new())),
-            shared_subscriptions: Arc::new(RwLock::new(HashMap::new())),
+            shared_trie: Arc::new(RwLock::new(Trie::new())),
             running: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -204,8 +208,8 @@ pub struct Broker {
     clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
-    /// Shared subscriptions for load balancing ($share/group/topic).
-    shared_subscriptions: Arc<RwLock<HashMap<SharedKey, SharedGroup>>>,
+    /// Shared subscriptions trie for O(topic_length) lookup ($share/group/topic).
+    shared_trie: Arc<RwLock<Trie<SharedEntry>>>,
     running: Arc<AtomicBool>,
 }
 
@@ -241,7 +245,7 @@ impl Broker {
                 subscriptions: Arc::clone(&self.subscriptions),
                 clients: Arc::clone(&self.clients),
                 client_subscriptions: Arc::clone(&self.client_subscriptions),
-                shared_subscriptions: Arc::clone(&self.shared_subscriptions),
+                shared_trie: Arc::clone(&self.shared_trie),
                 max_packet_size: self.config.max_packet_size,
                 sys_events_enabled: self.config.sys_events_enabled,
                 max_topic_alias: self.config.max_topic_alias,
@@ -286,8 +290,8 @@ struct BrokerContext {
     clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
-    /// Shared subscriptions for load balancing: (group, pattern) -> SharedGroup
-    shared_subscriptions: Arc<RwLock<HashMap<SharedKey, SharedGroup>>>,
+    /// Shared subscriptions trie for O(topic_length) lookup.
+    shared_trie: Arc<RwLock<Trie<SharedEntry>>>,
     max_packet_size: usize,
     /// Enable $SYS event publishing.
     sys_events_enabled: bool,
@@ -866,22 +870,22 @@ impl BrokerContext {
             }
         }
 
-        // Route to shared subscription groups (round-robin)
-        let shared_groups: Vec<(SharedKey, Option<ClientHandle>)> = {
-            let shared_subs = self.shared_subscriptions.read();
-            shared_subs
-                .iter()
-                .filter(|((_, pattern), _)| topic_matches(pattern, topic))
-                .map(|(key, group)| (key.clone(), group.next_subscriber().cloned()))
+        // Route to shared subscription groups (round-robin) using Trie lookup - O(topic_length)
+        let shared_subscribers: Vec<(String, Option<ClientHandle>)> = {
+            let shared_trie = self.shared_trie.read();
+            shared_trie
+                .get(topic)
+                .into_iter()
+                .map(|entry| (entry.group_name.clone(), entry.group.next_subscriber().cloned()))
                 .collect()
         };
 
-        for (key, subscriber) in shared_groups {
+        for (group_name, subscriber) in shared_subscribers {
             if let Some(handle) = subscriber {
                 if let Err(e) = handle.tx.send(msg.clone()).await {
                     warn!(
                         "Failed to send to shared subscriber {} (group {}): {}",
-                        handle.client_id, key.0, e
+                        handle.client_id, group_name, e
                     );
                 }
             }
@@ -917,12 +921,24 @@ impl BrokerContext {
 
             // Handle shared subscriptions
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
-                let mut shared_subs = self.shared_subscriptions.write();
-                let key = (group.to_string(), actual_topic.to_string());
-                shared_subs
-                    .entry(key)
-                    .or_insert_with(SharedGroup::new)
-                    .add(client_handle.clone());
+                // Use Trie for O(topic_length) lookup
+                let shared_trie = self.shared_trie.write();
+                shared_trie.with_mut(|root| {
+                    let _ = root.set(actual_topic, |node| {
+                        // Find existing group or create new one
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            entry.group.add(client_handle.clone());
+                        } else {
+                            let mut new_group = SharedGroup::new();
+                            new_group.add(client_handle.clone());
+                            values.push(SharedEntry {
+                                group_name: group.to_string(),
+                                group: new_group,
+                            });
+                        }
+                    });
+                });
                 debug!(
                     "Client {} subscribed to shared group '{}' topic '{}' (v4)",
                     client_id, group, actual_topic
@@ -983,12 +999,24 @@ impl BrokerContext {
 
             // Handle shared subscriptions
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
-                let mut shared_subs = self.shared_subscriptions.write();
-                let key = (group.to_string(), actual_topic.to_string());
-                shared_subs
-                    .entry(key)
-                    .or_insert_with(SharedGroup::new)
-                    .add(client_handle.clone());
+                // Use Trie for O(topic_length) lookup
+                let shared_trie = self.shared_trie.write();
+                shared_trie.with_mut(|root| {
+                    let _ = root.set(actual_topic, |node| {
+                        // Find existing group or create new one
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            entry.group.add(client_handle.clone());
+                        } else {
+                            let mut new_group = SharedGroup::new();
+                            new_group.add(client_handle.clone());
+                            values.push(SharedEntry {
+                                group_name: group.to_string(),
+                                group: new_group,
+                            });
+                        }
+                    });
+                });
                 debug!(
                     "Client {} subscribed to shared group '{}' topic '{}' (v5)",
                     client_id, group, actual_topic
@@ -1027,14 +1055,18 @@ impl BrokerContext {
         for topic in topics {
             // Handle shared subscriptions
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
-                let mut shared_subs = self.shared_subscriptions.write();
-                let key = (group.to_string(), actual_topic.to_string());
-                if let Some(group_entry) = shared_subs.get_mut(&key) {
-                    group_entry.remove(client_id);
-                    if group_entry.is_empty() {
-                        shared_subs.remove(&key);
-                    }
-                }
+                // Use Trie for unsubscribe
+                let shared_trie = self.shared_trie.write();
+                shared_trie.with_mut(|root| {
+                    let _ = root.set(actual_topic, |node| {
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            entry.group.remove(client_id);
+                        }
+                        // Remove empty groups
+                        values.retain(|e| !e.group.is_empty());
+                    });
+                });
                 debug!(
                     "Client {} unsubscribed from shared group '{}' topic '{}'",
                     client_id, group, actual_topic
@@ -1068,14 +1100,18 @@ impl BrokerContext {
             for topic in &topics {
                 // Check if it's a shared subscription
                 if let Some((group, actual_topic)) = parse_shared_topic(topic) {
-                    let mut shared_subs = self.shared_subscriptions.write();
-                    let key = (group.to_string(), actual_topic.to_string());
-                    if let Some(group_entry) = shared_subs.get_mut(&key) {
-                        group_entry.remove(client_id);
-                        if group_entry.is_empty() {
-                            shared_subs.remove(&key);
-                        }
-                    }
+                    // Use Trie for cleanup
+                    let shared_trie = self.shared_trie.write();
+                    shared_trie.with_mut(|root| {
+                        let _ = root.set(actual_topic, |node| {
+                            let values = node.values_mut();
+                            if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                                entry.group.remove(client_id);
+                            }
+                            // Remove empty groups
+                            values.retain(|e| !e.group.is_empty());
+                        });
+                    });
                 } else {
                 subs.with_mut(|root| {
                     root.remove(topic, |h| h.client_id.as_ref() == client_id);

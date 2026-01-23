@@ -45,19 +45,19 @@ type Broker struct {
 	subscriptions       *Trie[*clientHandle]
 	clients             map[string]*clientHandle
 	clientSubscriptions map[string][]string // track subscriptions per client for cleanup
-	sharedSubscriptions map[sharedKey]*sharedGroup // $share/group/topic subscriptions
-}
-
-// sharedKey is the key for shared subscriptions.
-type sharedKey struct {
-	group string
-	topic string
+	sharedTrie          *Trie[*sharedEntry] // shared subscriptions trie for O(topic_length) lookup
 }
 
 // sharedGroup manages subscribers for a shared subscription.
 type sharedGroup struct {
 	subscribers []*clientHandle
 	nextIndex   atomic.Uint64
+}
+
+// sharedEntry is an entry in the shared subscription trie.
+type sharedEntry struct {
+	groupName string
+	group     *sharedGroup
 }
 
 func (g *sharedGroup) add(h *clientHandle) {
@@ -139,8 +139,8 @@ func (b *Broker) init() {
 	if b.clientSubscriptions == nil {
 		b.clientSubscriptions = make(map[string][]string)
 	}
-	if b.sharedSubscriptions == nil {
-		b.sharedSubscriptions = make(map[sharedKey]*sharedGroup)
+	if b.sharedTrie == nil {
+		b.sharedTrie = NewTrie[*sharedEntry]()
 	}
 	if b.MaxPacketSize == 0 {
 		b.MaxPacketSize = MaxPacketSize
@@ -595,13 +595,20 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 
 		// Handle shared subscriptions
 		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
-			b.mu.Lock()
-			key := sharedKey{group: group, topic: actualTopic}
-			if b.sharedSubscriptions[key] == nil {
-				b.sharedSubscriptions[key] = &sharedGroup{}
-			}
-			b.sharedSubscriptions[key].add(handle)
-			b.mu.Unlock()
+			// Use Trie for O(topic_length) lookup
+			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+				// Find existing group or create new one
+				for _, e := range *entries {
+					if e.groupName == group {
+						e.group.add(handle)
+						return
+					}
+				}
+				// Create new group
+				g := &sharedGroup{}
+				g.add(handle)
+				*entries = append(*entries, &sharedEntry{groupName: group, group: g})
+			})
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
 			if err := b.subscriptions.Insert(topic, handle); err != nil {
@@ -642,13 +649,20 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 
 		// Handle shared subscriptions
 		if group, actualTopic, ok := ParseSharedTopic(filter.Topic); ok {
-			b.mu.Lock()
-			key := sharedKey{group: group, topic: actualTopic}
-			if b.sharedSubscriptions[key] == nil {
-				b.sharedSubscriptions[key] = &sharedGroup{}
-			}
-			b.sharedSubscriptions[key].add(handle)
-			b.mu.Unlock()
+			// Use Trie for O(topic_length) lookup
+			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+				// Find existing group or create new one
+				for _, e := range *entries {
+					if e.groupName == group {
+						e.group.add(handle)
+						return
+					}
+				}
+				// Create new group
+				g := &sharedGroup{}
+				g.add(handle)
+				*entries = append(*entries, &sharedEntry{groupName: group, group: g})
+			})
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
 			if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
@@ -674,15 +688,23 @@ func (b *Broker) handleUnsubscribe(clientID string, topics []string) {
 	for _, topic := range topics {
 		// Handle shared subscriptions
 		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
-			b.mu.Lock()
-			key := sharedKey{group: group, topic: actualTopic}
-			if g := b.sharedSubscriptions[key]; g != nil {
-				g.remove(clientID)
-				if g.isEmpty() {
-					delete(b.sharedSubscriptions, key)
+			// Use Trie for unsubscribe
+			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+				for _, e := range *entries {
+					if e.groupName == group {
+						e.group.remove(clientID)
+						break
+					}
 				}
-			}
-			b.mu.Unlock()
+				// Remove empty groups
+				newEntries := (*entries)[:0]
+				for _, e := range *entries {
+					if !e.group.isEmpty() {
+						newEntries = append(newEntries, e)
+					}
+				}
+				*entries = newEntries
+			})
 			slog.Debug("mqtt0: unsubscribed from shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
 			b.subscriptions.Remove(topic, func(h *clientHandle) bool {
@@ -725,20 +747,17 @@ func (b *Broker) routeMessage(msg *Message) {
 		}
 	}
 
-	// Route to shared subscription groups (round-robin)
-	b.mu.Lock()
-	for key, group := range b.sharedSubscriptions {
-		if TopicMatches(key.topic, msg.Topic) {
-			if handle := group.nextSubscriber(); handle != nil {
-				select {
-				case handle.msgCh <- msg:
-				default:
-					slog.Debug("mqtt0: message dropped (channel full)", "clientID", handle.clientID, "group", key.group)
-				}
+	// Route to shared subscription groups (round-robin) using Trie lookup - O(topic_length)
+	entries := b.sharedTrie.Get(msg.Topic)
+	for _, entry := range entries {
+		if handle := entry.group.nextSubscriber(); handle != nil {
+			select {
+			case handle.msgCh <- msg:
+			default:
+				slog.Debug("mqtt0: message dropped (channel full)", "clientID", handle.clientID, "group", entry.groupName)
 			}
 		}
 	}
-	b.mu.Unlock()
 }
 
 func (b *Broker) cleanupClient(clientID, username string) {
@@ -752,15 +771,23 @@ func (b *Broker) cleanupClient(clientID, username string) {
 	for _, topic := range topics {
 		// Handle shared subscriptions
 		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
-			b.mu.Lock()
-			key := sharedKey{group: group, topic: actualTopic}
-			if g := b.sharedSubscriptions[key]; g != nil {
-				g.remove(clientID)
-				if g.isEmpty() {
-					delete(b.sharedSubscriptions, key)
+			// Use Trie for cleanup
+			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+				for _, e := range *entries {
+					if e.groupName == group {
+						e.group.remove(clientID)
+						break
+					}
 				}
-			}
-			b.mu.Unlock()
+				// Remove empty groups
+				newEntries := (*entries)[:0]
+				for _, e := range *entries {
+					if !e.group.isEmpty() {
+						newEntries = append(newEntries, e)
+					}
+				}
+				*entries = newEntries
+			})
 		} else {
 			b.subscriptions.Remove(topic, func(h *clientHandle) bool {
 				return h.clientID == clientID

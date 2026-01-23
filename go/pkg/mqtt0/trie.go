@@ -57,6 +57,59 @@ func (t *Trie[T]) Remove(pattern string, predicate func(T) bool) bool {
 	return t.root.remove(pattern, predicate)
 }
 
+// Update allows modifying values at the given pattern using a callback.
+// The callback receives a pointer to the values slice and can modify it.
+func (t *Trie[T]) Update(pattern string, f func(*[]T)) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.root.update(pattern, f)
+}
+
+func (n *trieNode[T]) update(pattern string, f func(*[]T)) {
+	if pattern == "" {
+		f(&n.values)
+		return
+	}
+
+	var first, rest string
+	idx := strings.Index(pattern, "/")
+	if idx == -1 {
+		first = pattern
+	} else {
+		first = pattern[:idx]
+		rest = pattern[idx+1:]
+	}
+
+	// Check existing children first
+	if n.children != nil {
+		if child, ok := n.children[first]; ok {
+			child.update(rest, f)
+			return
+		}
+	}
+
+	switch first {
+	case "+":
+		if n.matchAny == nil {
+			n.matchAny = &trieNode[T]{}
+		}
+		n.matchAny.update(rest, f)
+	case "#":
+		if n.matchAll == nil {
+			n.matchAll = &trieNode[T]{}
+		}
+		f(&n.matchAll.values)
+	default:
+		if n.children == nil {
+			n.children = make(map[string]*trieNode[T])
+		}
+		if n.children[first] == nil {
+			n.children[first] = &trieNode[T]{}
+		}
+		n.children[first].update(rest, f)
+	}
+}
+
 func (n *trieNode[T]) insert(pattern string, value T) error {
 	if pattern == "" {
 		n.values = append(n.values, value)

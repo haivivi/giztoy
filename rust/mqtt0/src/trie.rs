@@ -317,6 +317,11 @@ impl<T> TrieNode<T> {
     pub fn values(&self) -> &[T] {
         &self.values
     }
+
+    /// Get mutable access to all values at this node.
+    pub fn values_mut(&mut self) -> &mut Vec<T> {
+        &mut self.values
+    }
 }
 
 impl<T: fmt::Debug> fmt::Debug for TrieNode<T> {
