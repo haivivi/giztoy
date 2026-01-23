@@ -346,117 +346,79 @@ impl<T: DownlinkTx + 'static> ServerPortTx for ServerPort<T> {
     }
 }
 
+#[async_trait]
 impl<T: DownlinkTx + 'static> ServerPortRx for ServerPort<T> {
-    fn opus_frames(&self) -> &mpsc::Receiver<Vec<u8>> {
-        unimplemented!("use opus_frames_receiver() instead")
+    async fn recv_opus_frame(&self) -> Option<Vec<u8>> {
+        self.opus_frames_rx.lock().await.recv().await
     }
 
-    fn state_events(&self) -> &mpsc::Receiver<GearStateEvent> {
-        unimplemented!("use state_events_receiver() instead")
+    async fn recv_state_event(&self) -> Option<GearStateEvent> {
+        self.state_events_rx.lock().await.recv().await
     }
 
-    fn stats_changes(&self) -> &mpsc::Receiver<GearStatsChanges> {
-        unimplemented!("use stats_changes_receiver() instead")
+    async fn recv_stats_changes(&self) -> Option<GearStatsChanges> {
+        self.stats_changes_rx.lock().await.recv().await
     }
 
-    fn gear_state(&self) -> Option<GearStateEvent> {
-        // Blocking in async context - use gear_state_async in async code
-        None
-    }
-
-    fn gear_stats(&self) -> Option<GearStatsEvent> {
-        None
-    }
-
-    fn volume(&self) -> Option<i32> {
-        None
-    }
-
-    fn light_mode(&self) -> Option<String> {
-        None
-    }
-
-    fn brightness(&self) -> Option<i32> {
-        None
-    }
-
-    fn wifi_network(&self) -> Option<ConnectedWifi> {
-        None
-    }
-
-    fn wifi_store(&self) -> Option<StoredWifiList> {
-        None
-    }
-
-    fn battery(&self) -> Option<(i32, bool)> {
-        None
-    }
-
-    fn system_version(&self) -> Option<String> {
-        None
-    }
-
-    fn cellular(&self) -> Option<ConnectedCellular> {
-        None
-    }
-
-    fn pair_status(&self) -> Option<String> {
-        None
-    }
-
-    fn read_nfc_tag(&self) -> Option<ReadNFCTag> {
-        None
-    }
-
-    fn shaking(&self) -> Option<f64> {
-        None
-    }
-}
-
-// Async getters for ServerPort
-impl<T: DownlinkTx + 'static> ServerPort<T> {
-    /// Returns the current gear state (async version).
-    pub async fn gear_state_async(&self) -> Option<GearStateEvent> {
+    async fn gear_state(&self) -> Option<GearStateEvent> {
         self.gear_state.read().await.clone()
     }
 
-    /// Returns the current gear stats (async version).
-    pub async fn gear_stats_async(&self) -> Option<GearStatsEvent> {
+    async fn gear_stats(&self) -> Option<GearStatsEvent> {
         self.gear_stats.read().await.clone()
     }
 
-    /// Returns the current volume percentage.
-    pub async fn volume_async(&self) -> Option<i32> {
+    async fn volume(&self) -> Option<i32> {
         let stats = self.gear_stats.read().await;
         stats.as_ref()?.volume.as_ref().map(|v| v.percentage as i32)
     }
 
-    /// Returns the current light mode.
-    pub async fn light_mode_async(&self) -> Option<String> {
+    async fn light_mode(&self) -> Option<String> {
         let stats = self.gear_stats.read().await;
         stats.as_ref()?.light_mode.as_ref().map(|l| l.mode.clone())
     }
 
-    /// Returns the current brightness percentage.
-    pub async fn brightness_async(&self) -> Option<i32> {
+    async fn brightness(&self) -> Option<i32> {
         let stats = self.gear_stats.read().await;
         stats.as_ref()?.brightness.as_ref().map(|b| b.percentage as i32)
     }
 
-    /// Returns the current battery status (percentage, is_charging).
-    pub async fn battery_async(&self) -> Option<(i32, bool)> {
-        let stats = self.gear_stats.read().await;
-        stats.as_ref()?.battery.as_ref().map(|b| (b.percentage as i32, b.is_charging))
-    }
-
-    /// Returns the current WiFi network.
-    pub async fn wifi_network_async(&self) -> Option<ConnectedWifi> {
+    async fn wifi_network(&self) -> Option<ConnectedWifi> {
         let stats = self.gear_stats.read().await;
         stats.as_ref()?.wifi_network.clone()
     }
 
-    /// Returns the shaking level.
-    pub async fn shaking_async(&self) -> Option<f64> {
+    async fn wifi_store(&self) -> Option<StoredWifiList> {
+        let stats = self.gear_stats.read().await;
+        stats.as_ref()?.wifi_store.clone()
+    }
+
+    async fn battery(&self) -> Option<(i32, bool)> {
+        let stats = self.gear_stats.read().await;
+        stats.as_ref()?.battery.as_ref().map(|b| (b.percentage as i32, b.is_charging))
+    }
+
+    async fn system_version(&self) -> Option<String> {
+        let stats = self.gear_stats.read().await;
+        stats.as_ref()?.system_version.as_ref().map(|s| s.current_version.clone())
+    }
+
+    async fn cellular(&self) -> Option<ConnectedCellular> {
+        let stats = self.gear_stats.read().await;
+        stats.as_ref()?.cellular_network.clone()
+    }
+
+    async fn pair_status(&self) -> Option<String> {
+        let stats = self.gear_stats.read().await;
+        stats.as_ref()?.pair_status.as_ref().map(|p| p.pair_with.clone())
+    }
+
+    async fn read_nfc_tag(&self) -> Option<ReadNFCTag> {
+        let stats = self.gear_stats.read().await;
+        stats.as_ref()?.read_nfc_tag.clone()
+    }
+
+    async fn shaking(&self) -> Option<f64> {
         let stats = self.gear_stats.read().await;
         stats.as_ref()?.shaking.as_ref().map(|s| s.level)
     }
@@ -493,8 +455,8 @@ mod server_port_tests {
         // Use handle_state_event directly
         port.handle_state_event(state.clone()).await;
 
-        // Check state
-        let current = port.gear_state_async().await.unwrap();
+        // Check state (using async trait method)
+        let current = port.gear_state().await.unwrap();
         assert_eq!(current.state, GearState::Recording);
     }
 
@@ -512,8 +474,8 @@ mod server_port_tests {
 
         port.handle_stats_event(stats).await;
 
-        // Check volume
-        let vol = port.volume_async().await.unwrap();
+        // Check volume (using async trait method)
+        let vol = port.volume().await.unwrap();
         assert_eq!(vol, 80);
     }
 
@@ -539,10 +501,10 @@ mod server_port_tests {
         });
         port.handle_stats_event(stats2).await;
 
-        // Both should be present
-        let vol = port.volume_async().await.unwrap();
+        // Both should be present (using async trait methods)
+        let vol = port.volume().await.unwrap();
         assert_eq!(vol, 50);
-        let (bat, charging) = port.battery_async().await.unwrap();
+        let (bat, charging) = port.battery().await.unwrap();
         assert_eq!(bat, 90);
         assert!(charging);
     }

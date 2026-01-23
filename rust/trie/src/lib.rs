@@ -82,6 +82,7 @@ impl<T> Trie<T> {
     pub fn set<F, E>(&mut self, path: &str, setter: F) -> Result<(), E>
     where
         F: FnOnce(Option<&mut T>) -> Result<T, E>,
+        E: From<InvalidPatternError>,
     {
         self.set_internal(path, setter)
     }
@@ -89,6 +90,7 @@ impl<T> Trie<T> {
     fn set_internal<F, E>(&mut self, path: &str, setter: F) -> Result<(), E>
     where
         F: FnOnce(Option<&mut T>) -> Result<T, E>,
+        E: From<InvalidPatternError>,
     {
         if path.is_empty() {
             let new_value = setter(self.value.as_mut())?;
@@ -106,10 +108,9 @@ impl<T> Trie<T> {
                 self.match_any.as_mut().unwrap().set_internal(rest, setter)
             }
             "#" => {
+                // # wildcard must be at the end of path
                 if !rest.is_empty() {
-                    return Err(setter(None).err().unwrap_or_else(|| {
-                        panic!("# wildcard must be at the end of path")
-                    }));
+                    return Err(InvalidPatternError.into());
                 }
                 if self.match_all.is_none() {
                     self.match_all = Some(Box::new(Trie::new()));

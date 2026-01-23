@@ -21,8 +21,12 @@ func TestTrieBasic(t *testing.T) {
 func TestTrieWildcard(t *testing.T) {
 	tr := New[string]()
 
-	tr.SetValue("device/+/state", "single_wildcard")
-	tr.SetValue("logs/#", "multi_wildcard")
+	if err := tr.SetValue("device/+/state", "single_wildcard"); err != nil {
+		t.Fatalf("SetValue failed: %v", err)
+	}
+	if err := tr.SetValue("logs/#", "multi_wildcard"); err != nil {
+		t.Fatalf("SetValue failed: %v", err)
+	}
 	
 	val, ok := tr.GetValue("device/gear-001/state")
 	if !ok || val != "single_wildcard" {

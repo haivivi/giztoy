@@ -5,7 +5,6 @@ use crate::{
     ReadNFCTag, SessionCommandEvent, StoredWifiList, OTA,
 };
 use async_trait::async_trait;
-use tokio::sync::mpsc;
 
 /// Error type for port operations.
 #[derive(Debug, thiserror::Error)]
@@ -44,12 +43,13 @@ pub trait ClientPortTx: Send + Sync {
 
 /// Receive side of a client port (server to client).
 /// Receives audio frames and commands from the server.
+#[async_trait]
 pub trait ClientPortRx: Send + Sync {
-    /// Returns a receiver for opus frames from the server.
-    fn opus_frames(&self) -> &mpsc::Receiver<Vec<u8>>;
+    /// Receives the next opus frame from the server.
+    async fn recv_opus_frame(&self) -> Option<Vec<u8>>;
 
-    /// Returns a receiver for commands from the server.
-    fn commands(&self) -> &mpsc::Receiver<SessionCommandEvent>;
+    /// Receives the next command from the server.
+    async fn recv_command(&self) -> Option<SessionCommandEvent>;
 }
 
 // =============================================================================
@@ -148,65 +148,56 @@ pub trait ServerPortTx: Send + Sync {
 
 /// Receive side of a server port (client to server).
 /// Receives audio frames, state events, and stats changes from the client.
+#[async_trait]
 pub trait ServerPortRx: Send + Sync {
-    /// Returns a receiver for opus frames from the client.
-    fn opus_frames(&self) -> &mpsc::Receiver<Vec<u8>>;
+    /// Receives the next opus frame from the client.
+    async fn recv_opus_frame(&self) -> Option<Vec<u8>>;
 
-    /// Returns a receiver for state events from the client.
-    fn state_events(&self) -> &mpsc::Receiver<GearStateEvent>;
+    /// Receives the next state event from the client.
+    async fn recv_state_event(&self) -> Option<GearStateEvent>;
 
-    /// Returns a receiver for stats change events from the client.
-    fn stats_changes(&self) -> &mpsc::Receiver<GearStatsChanges>;
+    /// Receives the next stats change event from the client.
+    async fn recv_stats_changes(&self) -> Option<GearStatsChanges>;
 
     /// Returns the current gear state.
-    fn gear_state(&self) -> Option<GearStateEvent>;
+    async fn gear_state(&self) -> Option<GearStateEvent>;
 
     /// Returns the current gear stats.
-    fn gear_stats(&self) -> Option<GearStatsEvent>;
+    async fn gear_stats(&self) -> Option<GearStatsEvent>;
 
     /// Returns the current volume percentage.
-    fn volume(&self) -> Option<i32>;
+    async fn volume(&self) -> Option<i32>;
 
     /// Returns the current light mode.
-    fn light_mode(&self) -> Option<String>;
+    async fn light_mode(&self) -> Option<String>;
 
     /// Returns the current brightness percentage.
-    fn brightness(&self) -> Option<i32>;
+    async fn brightness(&self) -> Option<i32>;
 
     /// Returns the current connected WiFi network.
-    fn wifi_network(&self) -> Option<ConnectedWifi>;
+    async fn wifi_network(&self) -> Option<ConnectedWifi>;
 
     /// Returns the stored WiFi list.
-    fn wifi_store(&self) -> Option<StoredWifiList>;
+    async fn wifi_store(&self) -> Option<StoredWifiList>;
 
-    /// Returns the current battery status.
-    fn battery(&self) -> Option<(i32, bool)>; // (percentage, is_charging)
+    /// Returns the current battery status (percentage, is_charging).
+    async fn battery(&self) -> Option<(i32, bool)>;
 
     /// Returns the current system version.
-    fn system_version(&self) -> Option<String>;
+    async fn system_version(&self) -> Option<String>;
 
     /// Returns the current cellular network.
-    fn cellular(&self) -> Option<ConnectedCellular>;
+    async fn cellular(&self) -> Option<ConnectedCellular>;
 
     /// Returns the current pair status.
-    fn pair_status(&self) -> Option<String>;
+    async fn pair_status(&self) -> Option<String>;
 
     /// Returns the last read NFC tags.
-    fn read_nfc_tag(&self) -> Option<ReadNFCTag>;
+    async fn read_nfc_tag(&self) -> Option<ReadNFCTag>;
 
     /// Returns the current shaking level.
-    fn shaking(&self) -> Option<f64>;
+    async fn shaking(&self) -> Option<f64>;
 }
-
-// =============================================================================
-// Combined Port Traits
-// =============================================================================
-
-/// A complete client port (both tx and rx sides).
-pub trait ClientPort: ClientPortTx + ClientPortRx {}
-
-/// A complete server port (both tx and rx sides).
-pub trait ServerPort: ServerPortTx + ServerPortRx {}
 
 #[cfg(test)]
 mod port_tests {

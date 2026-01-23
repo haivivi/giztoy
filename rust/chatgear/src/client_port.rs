@@ -156,27 +156,14 @@ impl<T: UplinkTx + 'static> ClientPortTx for ClientPort<T> {
     }
 }
 
+#[async_trait]
 impl<T: UplinkTx + 'static> ClientPortRx for ClientPort<T> {
-    fn opus_frames(&self) -> &mpsc::Receiver<Vec<u8>> {
-        // This is a workaround - in real usage, use opus_frames_receiver()
-        unimplemented!("use opus_frames_receiver() instead")
+    async fn recv_opus_frame(&self) -> Option<Vec<u8>> {
+        self.opus_frames_rx.lock().await.recv().await
     }
 
-    fn commands(&self) -> &mpsc::Receiver<SessionCommandEvent> {
-        // This is a workaround - in real usage, use commands_receiver()
-        unimplemented!("use commands_receiver() instead")
-    }
-}
-
-impl<T: UplinkTx + 'static> ClientPort<T> {
-    /// Returns the opus frames receiver.
-    pub fn opus_frames_receiver(&self) -> Arc<Mutex<mpsc::Receiver<Vec<u8>>>> {
-        self.opus_frames_rx.clone()
-    }
-
-    /// Returns the commands receiver.
-    pub fn commands_receiver(&self) -> Arc<Mutex<mpsc::Receiver<SessionCommandEvent>>> {
-        self.commands_rx.clone()
+    async fn recv_command(&self) -> Option<SessionCommandEvent> {
+        self.commands_rx.lock().await.recv().await
     }
 }
 
@@ -235,9 +222,8 @@ mod client_port_tests {
         let event = crate::SessionCommandEvent::new(&cmd);
         port.handle_command(event.clone()).await;
 
-        // Get the commands receiver
-        let cmd_rx = port.commands_receiver();
-        let received = cmd_rx.lock().await.recv().await.unwrap();
+        // Use the async trait method
+        let received = port.recv_command().await.unwrap();
         assert_eq!(received.cmd_type, "set_volume");
 
         port.close().await.unwrap();
