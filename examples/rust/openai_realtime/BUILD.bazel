@@ -1,0 +1,20 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Common dependencies for openai-realtime examples
+DEPS = [
+    "//rust/openai-realtime",
+    "//rust/minimax:giztoy_minimax",
+    "//rust/audio:giztoy_audio",
+    "@crate_index//:tokio",
+    "@crate_index//:clap",
+    "@crate_index//:tracing",
+    "@crate_index//:tracing-subscriber",
+]
+
+rust_binary(
+    name = "dual_chat",
+    srcs = ["src/bin/dual_chat.rs"],
+    deps = DEPS,
+)
