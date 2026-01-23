@@ -208,6 +208,7 @@ func (c *Client) buildASRRequest(format string) *asrRequest {
 	return &asrRequest{
 		App: appInfo{
 			AppID:   c.config.appID,
+			Token:   c.config.accessToken, // Required in request body
 			Cluster: c.config.cluster,
 		},
 		User: userInfo{
