@@ -32,6 +32,15 @@ func TestClientServerPort_OpusFrames_ClientToServer(t *testing.T) {
 		serverPort.RecvFrom(serverConn)
 	}()
 
+	// Register cleanup to ensure resources are released even on test failure
+	t.Cleanup(func() {
+		clientConn.Close()
+		serverConn.Close()
+		wg.Wait()
+		clientPort.Close()
+		serverPort.Close()
+	})
+
 	// Client sends opus frame to server
 	frame := []byte{0xFC, 0x01, 0x02, 0x03} // CELT FB 20ms
 	stamp := opusrt.FromTime(time.Now())
@@ -49,14 +58,7 @@ func TestClientServerPort_OpusFrames_ClientToServer(t *testing.T) {
 	frameCh := make(chan opusrt.Frame, 1)
 	errCh := make(chan error, 1)
 	go func() {
-		timeout := time.After(2 * time.Second)
 		for {
-			select {
-			case <-timeout:
-				errCh <- context.DeadlineExceeded
-				return
-			default:
-			}
 			readFrame, loss, err := serverPort.Frame()
 			if err != nil {
 				errCh <- err
@@ -86,13 +88,6 @@ func TestClientServerPort_OpusFrames_ClientToServer(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("timeout waiting for frame")
 	}
-
-	// Cleanup: close connections first to unblock RecvFrom goroutines, then wait
-	clientConn.Close()
-	serverConn.Close()
-	wg.Wait()
-	clientPort.Close()
-	serverPort.Close()
 }
 
 func TestClientServerPort_StateEvents(t *testing.T) {
