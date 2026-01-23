@@ -36,8 +36,7 @@ impl WebSocketSession {
         // Build request with headers
         let mut request = http::Request::builder()
             .uri(&url)
-            .header("Authorization", format!("Bearer {}", config.api_key))
-            .header("OpenAI-Beta", "realtime=v1");
+            .header("Authorization", format!("Bearer {}", config.api_key));
 
         if let Some(ref org) = config.organization {
             request = request.header("OpenAI-Organization", org);

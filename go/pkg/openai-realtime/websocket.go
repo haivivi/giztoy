@@ -46,7 +46,6 @@ func (c *Client) connectWebSocket(ctx context.Context, config *ConnectConfig) (*
 	// Build headers
 	headers := http.Header{}
 	headers.Set("Authorization", "Bearer "+c.config.apiKey)
-	headers.Set("OpenAI-Beta", "realtime=v1")
 	if c.config.organization != "" {
 		headers.Set("OpenAI-Organization", c.config.organization)
 	}
