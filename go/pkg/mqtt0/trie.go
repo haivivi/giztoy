@@ -154,6 +154,10 @@ func (n *trieNode[T]) match(matched, topic string) (string, []T, bool) {
 		rest = topic[idx+1:]
 	}
 
+	// MQTT spec: $ topics should only match explicit $ patterns, not wildcards at root level
+	isDollarTopic := len(first) > 0 && first[0] == '$'
+	atRootLevel := matched == ""
+
 	// Try exact match first
 	if n.children != nil {
 		if child, ok := n.children[first]; ok {
@@ -165,7 +169,8 @@ func (n *trieNode[T]) match(matched, topic string) (string, []T, bool) {
 	}
 
 	// Try single-level wildcard (+)
-	if n.matchAny != nil {
+	// Skip if this is a $ topic at root level (MQTT spec compliance)
+	if n.matchAny != nil && !(isDollarTopic && atRootLevel) {
 		newMatched := joinPath(matched, "+")
 		if route, values, ok := n.matchAny.match(newMatched, rest); ok {
 			return route, values, true
@@ -173,7 +178,8 @@ func (n *trieNode[T]) match(matched, topic string) (string, []T, bool) {
 	}
 
 	// Try multi-level wildcard (#)
-	if n.matchAll != nil {
+	// Skip if this is a $ topic at root level (MQTT spec compliance)
+	if n.matchAll != nil && !(isDollarTopic && atRootLevel) {
 		newMatched := joinPath(matched, "#")
 		if len(n.matchAll.values) > 0 {
 			return newMatched, n.matchAll.values, true

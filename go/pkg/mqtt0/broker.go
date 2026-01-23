@@ -3,10 +3,12 @@ package mqtt0
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -31,12 +33,61 @@ type Broker struct {
 	// Default is MaxPacketSize (1MB).
 	MaxPacketSize int
 
+	// SysEventsEnabled enables $SYS event publishing (default: true).
+	SysEventsEnabled bool
+
+	// MaxTopicAlias is the maximum topic alias value per client (default: 65535).
+	MaxTopicAlias uint16
+
 	// internal state
 	mu                  sync.Mutex
 	running             atomic.Bool
 	subscriptions       *Trie[*clientHandle]
 	clients             map[string]*clientHandle
 	clientSubscriptions map[string][]string // track subscriptions per client for cleanup
+	sharedSubscriptions map[sharedKey]*sharedGroup // $share/group/topic subscriptions
+}
+
+// sharedKey is the key for shared subscriptions.
+type sharedKey struct {
+	group string
+	topic string
+}
+
+// sharedGroup manages subscribers for a shared subscription.
+type sharedGroup struct {
+	subscribers []*clientHandle
+	nextIndex   atomic.Uint64
+}
+
+func (g *sharedGroup) add(h *clientHandle) {
+	for _, s := range g.subscribers {
+		if s.clientID == h.clientID {
+			return // already subscribed
+		}
+	}
+	g.subscribers = append(g.subscribers, h)
+}
+
+func (g *sharedGroup) remove(clientID string) {
+	for i, s := range g.subscribers {
+		if s.clientID == clientID {
+			g.subscribers = append(g.subscribers[:i], g.subscribers[i+1:]...)
+			return
+		}
+	}
+}
+
+func (g *sharedGroup) isEmpty() bool {
+	return len(g.subscribers) == 0
+}
+
+func (g *sharedGroup) nextSubscriber() *clientHandle {
+	if len(g.subscribers) == 0 {
+		return nil
+	}
+	idx := g.nextIndex.Add(1) % uint64(len(g.subscribers))
+	return g.subscribers[idx]
 }
 
 // clientHandle represents a connected client.
@@ -87,8 +138,14 @@ func (b *Broker) init() {
 	if b.clientSubscriptions == nil {
 		b.clientSubscriptions = make(map[string][]string)
 	}
+	if b.sharedSubscriptions == nil {
+		b.sharedSubscriptions = make(map[sharedKey]*sharedGroup)
+	}
 	if b.MaxPacketSize == 0 {
 		b.MaxPacketSize = MaxPacketSize
+	}
+	if b.MaxTopicAlias == 0 {
+		b.MaxTopicAlias = 65535 // default max topic alias
 	}
 }
 
@@ -220,13 +277,16 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 		b.OnConnect(connect.ClientID)
 	}
 
+	// Publish $SYS connected event
+	b.publishSysConnected(connect.ClientID, connect.Username, conn.RemoteAddr(), ProtocolV4, connect.KeepAlive)
+
 	slog.Info("mqtt0: client connected", "clientID", connect.ClientID, "version", "v4")
 
 	// Run client loop
 	b.clientLoopV4(conn, reader, connect.ClientID, connect.KeepAlive, handle, auth)
 
 	// Cleanup
-	b.cleanupClient(connect.ClientID)
+	b.cleanupClient(connect.ClientID, connect.Username)
 
 	if b.OnDisconnect != nil {
 		b.OnDisconnect(connect.ClientID)
@@ -297,13 +357,16 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 		b.OnConnect(connect.ClientID)
 	}
 
+	// Publish $SYS connected event
+	b.publishSysConnected(connect.ClientID, connect.Username, conn.RemoteAddr(), ProtocolV5, connect.KeepAlive)
+
 	slog.Info("mqtt0: client connected", "clientID", connect.ClientID, "version", "v5")
 
 	// Run client loop
 	b.clientLoopV5(conn, reader, connect.ClientID, connect.KeepAlive, handle, auth)
 
 	// Cleanup
-	b.cleanupClient(connect.ClientID)
+	b.cleanupClient(connect.ClientID, connect.Username)
 
 	if b.OnDisconnect != nil {
 		b.OnDisconnect(connect.ClientID)
@@ -516,16 +579,36 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 	codes := make([]byte, len(topics))
 
 	for i, topic := range topics {
-		if !auth.ACL(clientID, topic, false) {
+		// For shared subscriptions, check ACL on the actual topic
+		aclTopic := topic
+		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
+			aclTopic = actualTopic
+			_ = group // used below
+		}
+
+		if !auth.ACL(clientID, aclTopic, false) {
 			slog.Debug("mqtt0: acl denied subscribe", "clientID", clientID, "topic", topic)
 			codes[i] = 0x80 // Failure
 			continue
 		}
 
-		if err := b.subscriptions.Insert(topic, handle); err != nil {
-			slog.Debug("mqtt0: subscribe failed", "error", err)
-			codes[i] = 0x80
-			continue
+		// Handle shared subscriptions
+		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
+			b.mu.Lock()
+			key := sharedKey{group: group, topic: actualTopic}
+			if b.sharedSubscriptions[key] == nil {
+				b.sharedSubscriptions[key] = &sharedGroup{}
+			}
+			b.sharedSubscriptions[key].add(handle)
+			b.mu.Unlock()
+			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
+		} else {
+			if err := b.subscriptions.Insert(topic, handle); err != nil {
+				slog.Debug("mqtt0: subscribe failed", "error", err)
+				codes[i] = 0x80
+				continue
+			}
+			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", topic)
 		}
 
 		// Track subscription for cleanup
@@ -534,7 +617,6 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 		b.mu.Unlock()
 
 		codes[i] = 0x00 // Success QoS 0
-		slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", topic)
 	}
 
 	return codes
@@ -544,16 +626,36 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 	codes := make([]ReasonCode, len(filters))
 
 	for i, filter := range filters {
-		if !auth.ACL(clientID, filter.Topic, false) {
+		// For shared subscriptions, check ACL on the actual topic
+		aclTopic := filter.Topic
+		if group, actualTopic, ok := ParseSharedTopic(filter.Topic); ok {
+			aclTopic = actualTopic
+			_ = group // used below
+		}
+
+		if !auth.ACL(clientID, aclTopic, false) {
 			slog.Debug("mqtt0: acl denied subscribe", "clientID", clientID, "topic", filter.Topic)
 			codes[i] = ReasonNotAuthorized
 			continue
 		}
 
-		if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
-			slog.Debug("mqtt0: subscribe failed", "error", err)
-			codes[i] = ReasonUnspecifiedError
-			continue
+		// Handle shared subscriptions
+		if group, actualTopic, ok := ParseSharedTopic(filter.Topic); ok {
+			b.mu.Lock()
+			key := sharedKey{group: group, topic: actualTopic}
+			if b.sharedSubscriptions[key] == nil {
+				b.sharedSubscriptions[key] = &sharedGroup{}
+			}
+			b.sharedSubscriptions[key].add(handle)
+			b.mu.Unlock()
+			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
+		} else {
+			if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
+				slog.Debug("mqtt0: subscribe failed", "error", err)
+				codes[i] = ReasonUnspecifiedError
+				continue
+			}
+			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", filter.Topic)
 		}
 
 		// Track subscription for cleanup
@@ -562,7 +664,6 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 		b.mu.Unlock()
 
 		codes[i] = ReasonGrantedQoS0
-		slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", filter.Topic)
 	}
 
 	return codes
@@ -570,10 +671,24 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 
 func (b *Broker) handleUnsubscribe(clientID string, topics []string) {
 	for _, topic := range topics {
-		b.subscriptions.Remove(topic, func(h *clientHandle) bool {
-			return h.clientID == clientID
-		})
-		slog.Debug("mqtt0: unsubscribed", "clientID", clientID, "topic", topic)
+		// Handle shared subscriptions
+		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
+			b.mu.Lock()
+			key := sharedKey{group: group, topic: actualTopic}
+			if g := b.sharedSubscriptions[key]; g != nil {
+				g.remove(clientID)
+				if g.isEmpty() {
+					delete(b.sharedSubscriptions, key)
+				}
+			}
+			b.mu.Unlock()
+			slog.Debug("mqtt0: unsubscribed from shared", "clientID", clientID, "group", group, "topic", actualTopic)
+		} else {
+			b.subscriptions.Remove(topic, func(h *clientHandle) bool {
+				return h.clientID == clientID
+			})
+			slog.Debug("mqtt0: unsubscribed", "clientID", clientID, "topic", topic)
+		}
 	}
 
 	// Remove from tracking - optimized O(N+M) instead of O(N*M)
@@ -599,6 +714,7 @@ func (b *Broker) handleUnsubscribeV5(clientID string, topics []string) {
 }
 
 func (b *Broker) routeMessage(msg *Message) {
+	// Route to normal subscribers
 	handles := b.subscriptions.Get(msg.Topic)
 	for _, handle := range handles {
 		select {
@@ -607,9 +723,24 @@ func (b *Broker) routeMessage(msg *Message) {
 			slog.Debug("mqtt0: message dropped (channel full)", "clientID", handle.clientID)
 		}
 	}
+
+	// Route to shared subscription groups (round-robin)
+	b.mu.Lock()
+	for key, group := range b.sharedSubscriptions {
+		if TopicMatches(key.topic, msg.Topic) {
+			if handle := group.nextSubscriber(); handle != nil {
+				select {
+				case handle.msgCh <- msg:
+				default:
+					slog.Debug("mqtt0: message dropped (channel full)", "clientID", handle.clientID, "group", key.group)
+				}
+			}
+		}
+	}
+	b.mu.Unlock()
 }
 
-func (b *Broker) cleanupClient(clientID string) {
+func (b *Broker) cleanupClient(clientID, username string) {
 	b.mu.Lock()
 	delete(b.clients, clientID)
 	topics := b.clientSubscriptions[clientID]
@@ -618,10 +749,26 @@ func (b *Broker) cleanupClient(clientID string) {
 
 	// Remove all subscriptions
 	for _, topic := range topics {
-		b.subscriptions.Remove(topic, func(h *clientHandle) bool {
-			return h.clientID == clientID
-		})
+		// Handle shared subscriptions
+		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
+			b.mu.Lock()
+			key := sharedKey{group: group, topic: actualTopic}
+			if g := b.sharedSubscriptions[key]; g != nil {
+				g.remove(clientID)
+				if g.isEmpty() {
+					delete(b.sharedSubscriptions, key)
+				}
+			}
+			b.mu.Unlock()
+		} else {
+			b.subscriptions.Remove(topic, func(h *clientHandle) bool {
+				return h.clientID == clientID
+			})
+		}
 	}
+
+	// Publish $SYS disconnected event
+	b.publishSysDisconnected(clientID, username)
 }
 
 // Publish sends a message from the broker to all matching subscribers.
@@ -638,4 +785,150 @@ func (b *Broker) Publish(ctx context.Context, topic string, payload []byte) erro
 func (b *Broker) Close() error {
 	b.running.Store(false)
 	return nil
+}
+
+// ParseSharedTopic parses a shared subscription topic.
+// Format: $share/{group}/{topic}
+// Returns group, actual topic, and ok=true if valid.
+func ParseSharedTopic(topic string) (group, actualTopic string, ok bool) {
+	if !strings.HasPrefix(topic, "$share/") {
+		return "", "", false
+	}
+	rest := topic[7:] // Skip "$share/"
+	idx := strings.Index(rest, "/")
+	if idx <= 0 {
+		return "", "", false
+	}
+	group = rest[:idx]
+	actualTopic = rest[idx+1:]
+	if group == "" || actualTopic == "" {
+		return "", "", false
+	}
+	return group, actualTopic, true
+}
+
+// TopicMatches checks if a subscription pattern matches a topic.
+// Supports MQTT wildcards: + (single level) and # (multi level).
+// MQTT spec: wildcards should not match $ topics unless pattern also starts with $.
+func TopicMatches(pattern, topic string) bool {
+	patternParts := strings.Split(pattern, "/")
+	topicParts := strings.Split(topic, "/")
+
+	// MQTT spec: wildcards should not match $ topics unless pattern also starts with $
+	if len(topicParts) > 0 && len(topicParts[0]) > 0 && topicParts[0][0] == '$' {
+		if len(patternParts) == 0 {
+			return false
+		}
+		firstPattern := patternParts[0]
+		if firstPattern == "#" || firstPattern == "+" {
+			return false
+		}
+	}
+
+	pIdx, tIdx := 0, 0
+
+	for pIdx < len(patternParts) {
+		p := patternParts[pIdx]
+
+		if p == "#" {
+			// # matches everything remaining
+			return true
+		}
+
+		if tIdx >= len(topicParts) {
+			return false
+		}
+
+		if p == "+" {
+			// + matches exactly one level
+			pIdx++
+			tIdx++
+		} else if p == topicParts[tIdx] {
+			// Exact match
+			pIdx++
+			tIdx++
+		} else {
+			return false
+		}
+	}
+
+	// Both should be exhausted for exact match
+	return pIdx == len(patternParts) && tIdx == len(topicParts)
+}
+
+// sysConnectedEvent is the JSON payload for $SYS connected events.
+type sysConnectedEvent struct {
+	ClientID    string `json:"clientid"`
+	Username    string `json:"username"`
+	IPAddress   string `json:"ipaddress"`
+	ProtoVer    int    `json:"proto_ver"`
+	KeepAlive   uint16 `json:"keepalive"`
+	ConnectedAt int64  `json:"connected_at"`
+}
+
+// sysDisconnectedEvent is the JSON payload for $SYS disconnected events.
+type sysDisconnectedEvent struct {
+	ClientID       string `json:"clientid"`
+	Username       string `json:"username"`
+	Reason         string `json:"reason"`
+	DisconnectedAt int64  `json:"disconnected_at"`
+}
+
+// publishSysConnected publishes a $SYS client connected event.
+func (b *Broker) publishSysConnected(clientID, username string, addr net.Addr, protoVer ProtocolVersion, keepAlive uint16) {
+	if !b.SysEventsEnabled {
+		return
+	}
+
+	topic := fmt.Sprintf("$SYS/brokers/%s/connected", clientID)
+
+	ipAddr := ""
+	if addr != nil {
+		if tcpAddr, ok := addr.(*net.TCPAddr); ok {
+			ipAddr = tcpAddr.IP.String()
+		} else {
+			ipAddr = addr.String()
+		}
+	}
+
+	event := sysConnectedEvent{
+		ClientID:    clientID,
+		Username:    username,
+		IPAddress:   ipAddr,
+		ProtoVer:    int(protoVer),
+		KeepAlive:   keepAlive,
+		ConnectedAt: time.Now().Unix(),
+	}
+
+	payload, err := json.Marshal(&event)
+	if err != nil {
+		slog.Debug("mqtt0: failed to marshal $SYS event", "error", err)
+		return
+	}
+
+	b.routeMessage(&Message{Topic: topic, Payload: payload})
+}
+
+// publishSysDisconnected publishes a $SYS client disconnected event.
+func (b *Broker) publishSysDisconnected(clientID, username string) {
+	if !b.SysEventsEnabled {
+		return
+	}
+
+	topic := fmt.Sprintf("$SYS/brokers/%s/disconnected", clientID)
+
+	event := sysDisconnectedEvent{
+		ClientID:       clientID,
+		Username:       username,
+		Reason:         "normal",
+		DisconnectedAt: time.Now().Unix(),
+	}
+
+	payload, err := json.Marshal(&event)
+	if err != nil {
+		slog.Debug("mqtt0: failed to marshal $SYS event", "error", err)
+		return
+	}
+
+	b.routeMessage(&Message{Topic: topic, Payload: payload})
 }

@@ -7,13 +7,14 @@
 //!
 //! ## Features
 //!
-//! - **$SYS Events**: Publishes client connect/disconnect events to `$SYS/brokers/{node}/clients/{clientid}/connected`
+//! - **$SYS Events**: Publishes client connect/disconnect events to `$SYS/brokers/{clientid}/connected`
 //! - **Shared Subscriptions**: Supports `$share/{group}/{topic}` for load balancing (MQTT 5.0 feature, also works with v4)
-//! - **Topic Alias**: MQTT 5.0 topic alias support for reduced bandwidth
+//! - **Topic Alias**: MQTT 5.0 topic alias support for reduced bandwidth (with configurable limit)
 
 use bytes::{Bytes, BytesMut};
 use parking_lot::RwLock;
 use rumqttc::mqttbytes::QoS;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -28,6 +29,9 @@ use crate::error::{Error, Result};
 use crate::protocol::{self, MAX_PACKET_SIZE};
 use crate::trie::Trie;
 use crate::types::{AllowAll, Authenticator, Handler, Message, ProtocolVersion};
+
+/// Default maximum topic aliases per client (MQTT 5.0).
+pub const DEFAULT_MAX_TOPIC_ALIAS: u16 = 65535;
 
 /// Callback type alias.
 type Callback = Arc<dyn Fn(&str) + Send + Sync>;
@@ -68,7 +72,7 @@ impl SharedGroup {
         if self.subscribers.is_empty() {
             return None;
         }
-        let idx = self.next_index.fetch_add(1, Ordering::Relaxed) % self.subscribers.len();
+        let idx = self.next_index.fetch_add(1, Ordering::Acquire) % self.subscribers.len();
         self.subscribers.get(idx)
     }
 }
@@ -83,10 +87,10 @@ pub struct BrokerConfig {
     pub addr: String,
     /// Maximum packet size.
     pub max_packet_size: usize,
-    /// Node identifier for $SYS topics (default: "mqtt0").
-    pub node_id: String,
     /// Enable $SYS event publishing.
     pub sys_events_enabled: bool,
+    /// Maximum topic aliases per client (MQTT 5.0).
+    pub max_topic_alias: u16,
 }
 
 impl BrokerConfig {
@@ -95,20 +99,20 @@ impl BrokerConfig {
         Self {
             addr: addr.into(),
             max_packet_size: MAX_PACKET_SIZE,
-            node_id: "mqtt0".to_string(),
             sys_events_enabled: true,
+            max_topic_alias: DEFAULT_MAX_TOPIC_ALIAS,
         }
-    }
-
-    /// Set the node identifier.
-    pub fn node_id(mut self, node_id: impl Into<String>) -> Self {
-        self.node_id = node_id.into();
-        self
     }
 
     /// Enable or disable $SYS events.
     pub fn sys_events(mut self, enabled: bool) -> Self {
         self.sys_events_enabled = enabled;
+        self
+    }
+
+    /// Set maximum topic aliases per client (MQTT 5.0).
+    pub fn max_topic_alias(mut self, max: u16) -> Self {
+        self.max_topic_alias = max;
         self
     }
 }
@@ -225,8 +229,6 @@ impl Broker {
         let listener = TcpListener::bind(&self.config.addr).await?;
         info!("Broker listening on {}", self.config.addr);
 
-        let node_id: Arc<str> = Arc::from(self.config.node_id.as_str());
-
         loop {
             let (stream, addr) = listener.accept().await?;
             debug!("Accepted connection from {}", addr);
@@ -241,8 +243,8 @@ impl Broker {
                 client_subscriptions: Arc::clone(&self.client_subscriptions),
                 shared_subscriptions: Arc::clone(&self.shared_subscriptions),
                 max_packet_size: self.config.max_packet_size,
-                node_id: Arc::clone(&node_id),
                 sys_events_enabled: self.config.sys_events_enabled,
+                max_topic_alias: self.config.max_topic_alias,
             };
 
             tokio::spawn(async move {
@@ -284,13 +286,13 @@ struct BrokerContext {
     clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
-    /// Shared subscriptions for load balancing.
+    /// Shared subscriptions for load balancing: (group, pattern) -> SharedGroup
     shared_subscriptions: Arc<RwLock<HashMap<SharedKey, SharedGroup>>>,
     max_packet_size: usize,
-    /// Node identifier for $SYS topics.
-    node_id: Arc<str>,
     /// Enable $SYS event publishing.
     sys_events_enabled: bool,
+    /// Maximum topic aliases per client (MQTT 5.0).
+    max_topic_alias: u16,
 }
 
 impl BrokerContext {
@@ -766,6 +768,9 @@ impl BrokerContext {
     /// - If topic is non-empty and alias is present: update alias mapping, use topic
     /// - If topic is empty and alias is present: use topic from alias mapping
     /// - If topic is non-empty and alias is absent: use topic directly
+    ///
+    /// DoS Protection:
+    /// - Enforces max_topic_alias limit to prevent memory exhaustion
     async fn handle_publish_v5_with_alias(
         &self,
         client_id: &str,
@@ -782,6 +787,15 @@ impl BrokerContext {
 
         // Resolve the actual topic
         let topic = if let Some(alias) = topic_alias {
+            // DoS protection: enforce alias limit
+            if alias > self.max_topic_alias {
+                warn!(
+                    "Client {} used topic alias {} exceeding limit {}, ignoring publish",
+                    client_id, alias, self.max_topic_alias
+                );
+                return Ok(());
+            }
+
             if !topic_from_packet.is_empty() {
                 // Topic is provided with alias - update the mapping
                 topic_aliases.insert(alias, topic_from_packet.clone());
@@ -857,7 +871,7 @@ impl BrokerContext {
             let shared_subs = self.shared_subscriptions.read();
             shared_subs
                 .iter()
-                .filter(|((_, actual_topic), _)| topic_matches(actual_topic, topic))
+                .filter(|((_, pattern), _)| topic_matches(pattern, topic))
                 .map(|(key, group)| (key.clone(), group.next_subscriber().cloned()))
                 .collect()
         };
@@ -915,15 +929,15 @@ impl BrokerContext {
                 );
             } else {
                 // Normal subscription - insert into trie
-                let insert_result = {
-                    let subs = self.subscriptions.read();
-                    subs.insert(topic, client_handle.clone())
-                };
+            let insert_result = {
+                let subs = self.subscriptions.read();
+                subs.insert(topic, client_handle.clone())
+            };
 
-                if let Err(e) = insert_result {
-                    warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
-                    return_codes.push(SubscribeReasonCode::Failure);
-                    continue;
+            if let Err(e) = insert_result {
+                warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
+                return_codes.push(SubscribeReasonCode::Failure);
+                continue;
                 }
                 debug!("Client {} subscribed to {} (v4)", client_id, topic);
             }
@@ -981,15 +995,15 @@ impl BrokerContext {
                 );
             } else {
                 // Normal subscription - insert into trie
-                let insert_result = {
-                    let subs = self.subscriptions.read();
-                    subs.insert(topic, client_handle.clone())
-                };
+            let insert_result = {
+                let subs = self.subscriptions.read();
+                subs.insert(topic, client_handle.clone())
+            };
 
-                if let Err(e) = insert_result {
-                    warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
-                    return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
-                    continue;
+            if let Err(e) = insert_result {
+                warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
+                return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
+                continue;
                 }
                 debug!("Client {} subscribed to {} (v5)", client_id, topic);
             }
@@ -1028,10 +1042,10 @@ impl BrokerContext {
             } else {
                 // Normal subscription
                 let subs = self.subscriptions.write();
-                subs.with_mut(|root| {
-                    root.remove(topic, |h| h.client_id.as_ref() == client_id);
-                });
-                debug!("Client {} unsubscribed from {}", client_id, topic);
+            subs.with_mut(|root| {
+                root.remove(topic, |h| h.client_id.as_ref() == client_id);
+            });
+            debug!("Client {} unsubscribed from {}", client_id, topic);
             }
         }
 
@@ -1063,9 +1077,9 @@ impl BrokerContext {
                         }
                     }
                 } else {
-                    subs.with_mut(|root| {
-                        root.remove(topic, |h| h.client_id.as_ref() == client_id);
-                    });
+                subs.with_mut(|root| {
+                    root.remove(topic, |h| h.client_id.as_ref() == client_id);
+                });
                 }
             }
             debug!("Cleaned up {} subscriptions for client {}", topic_count, client_id);
@@ -1097,22 +1111,21 @@ impl BrokerContext {
             .map(|d| d.as_secs())
             .unwrap_or(0);
 
-        let proto_ver_num = match proto_ver {
+        let proto_ver_num: u8 = match proto_ver {
             ProtocolVersion::V4 => 4,
             ProtocolVersion::V5 => 5,
         };
 
-        // JSON format compatible with EMQX
-        let payload = format!(
-            r#"{{"clientid":"{}","username":"{}","ipaddress":"{}","proto_ver":{},"keepalive":{},"connected_at":{},"node":"{}"}}"#,
-            client_id,
+        // Use serde_json for safe JSON serialization (prevents JSON injection)
+        let event = SysConnectedEvent {
+            clientid: client_id,
             username,
-            addr.ip(),
-            proto_ver_num,
+            ipaddress: addr.ip().to_string(),
+            proto_ver: proto_ver_num,
             keepalive,
             connected_at,
-            self.node_id
-        );
+        };
+        let payload = serde_json::to_string(&event).unwrap_or_default();
 
         let msg = Message::new(topic.clone(), Bytes::from(payload));
         self.route_to_subscribers(&topic, &msg).await;
@@ -1133,15 +1146,38 @@ impl BrokerContext {
             .map(|d| d.as_secs())
             .unwrap_or(0);
 
-        // JSON format compatible with EMQX
-        let payload = format!(
-            r#"{{"clientid":"{}","username":"{}","reason":"normal","disconnected_at":{},"node":"{}"}}"#,
-            client_id, username, disconnected_at, self.node_id
-        );
+        // Use serde_json for safe JSON serialization (prevents JSON injection)
+        let event = SysDisconnectedEvent {
+            clientid: client_id,
+            username,
+            reason: "normal",
+            disconnected_at,
+        };
+        let payload = serde_json::to_string(&event).unwrap_or_default();
 
         let msg = Message::new(topic.clone(), Bytes::from(payload));
         self.route_to_subscribers(&topic, &msg).await;
     }
+}
+
+/// $SYS client connected event payload.
+#[derive(Serialize)]
+struct SysConnectedEvent<'a> {
+    clientid: &'a str,
+    username: &'a str,
+    ipaddress: String,
+    proto_ver: u8,
+    keepalive: u16,
+    connected_at: u64,
+}
+
+/// $SYS client disconnected event payload.
+#[derive(Serialize)]
+struct SysDisconnectedEvent<'a> {
+    clientid: &'a str,
+    username: &'a str,
+    reason: &'a str,
+    disconnected_at: u64,
 }
 
 /// Parse shared subscription topic.
@@ -1163,9 +1199,26 @@ pub fn parse_shared_topic(topic: &str) -> Option<(&str, &str)> {
 
 /// Check if a subscription pattern matches a topic.
 /// Supports MQTT wildcards: + (single level) and # (multi level).
+///
+/// MQTT spec compliance (Section 4.7.2):
+/// - Wildcards (#, +) at the beginning of a pattern MUST NOT match topics starting with $
+/// - To receive $SYS messages, clients must explicitly subscribe to patterns starting with $SYS
 pub fn topic_matches(pattern: &str, topic: &str) -> bool {
     let pattern_parts: Vec<&str> = pattern.split('/').collect();
     let topic_parts: Vec<&str> = topic.split('/').collect();
+
+    // MQTT spec: wildcards should not match $ topics unless pattern also starts with $
+    // e.g., "#" should not match "$SYS/foo", but "$SYS/#" should match "$SYS/foo"
+    if !topic_parts.is_empty() && topic_parts[0].starts_with('$') {
+        if pattern_parts.is_empty() {
+            return false;
+        }
+        // If topic starts with $ but pattern's first part is a wildcard, no match
+        let first_pattern = pattern_parts[0];
+        if first_pattern == "#" || first_pattern == "+" {
+            return false;
+        }
+    }
 
     let mut p_idx = 0;
     let mut t_idx = 0;

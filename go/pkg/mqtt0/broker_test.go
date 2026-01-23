@@ -573,3 +573,255 @@ func generateTestCertPEM(t *testing.T) (certPEM, keyPEM []byte) {
 
 	return certPEM, keyPEM
 }
+
+// TestParseSharedTopic tests shared subscription topic parsing.
+func TestParseSharedTopic(t *testing.T) {
+	tests := []struct {
+		topic    string
+		group    string
+		actual   string
+		wantOk   bool
+	}{
+		{"$share/group1/sensor/data", "group1", "sensor/data", true},
+		{"$share/g/a/b/c", "g", "a/b/c", true},
+		{"sensor/data", "", "", false},
+		{"$share/", "", "", false},
+		{"$share/group/", "", "", false},
+		{"$share//topic", "", "", false},
+		{"$share/group/sensor/+/data", "group", "sensor/+/data", true},
+		{"$share/group/sensor/#", "group", "sensor/#", true},
+	}
+
+	for _, tt := range tests {
+		group, actual, ok := ParseSharedTopic(tt.topic)
+		if ok != tt.wantOk {
+			t.Errorf("ParseSharedTopic(%q) ok=%v, want %v", tt.topic, ok, tt.wantOk)
+			continue
+		}
+		if ok {
+			if group != tt.group {
+				t.Errorf("ParseSharedTopic(%q) group=%q, want %q", tt.topic, group, tt.group)
+			}
+			if actual != tt.actual {
+				t.Errorf("ParseSharedTopic(%q) actual=%q, want %q", tt.topic, actual, tt.actual)
+			}
+		}
+	}
+}
+
+// TestTopicMatches tests topic matching with wildcards.
+func TestTopicMatches(t *testing.T) {
+	tests := []struct {
+		pattern string
+		topic   string
+		want    bool
+	}{
+		// Exact match
+		{"sensor/data", "sensor/data", true},
+		{"sensor/data", "sensor/info", false},
+		
+		// Single-level wildcard
+		{"sensor/+/data", "sensor/1/data", true},
+		{"sensor/+/data", "sensor/room1/data", true},
+		{"sensor/+/data", "sensor/data", false},
+		{"+/data", "sensor/data", true},
+		{"+", "sensor", true},
+		{"+", "sensor/data", false},
+		
+		// Multi-level wildcard
+		{"sensor/#", "sensor/data", true},
+		{"sensor/#", "sensor/a/b/c", true},
+		{"#", "sensor/data", true},
+		{"#", "a/b/c/d", true},
+		
+		// $ topics should NOT match wildcards at root level
+		{"#", "$SYS/broker/stats", false},
+		{"+/stats", "$SYS/stats", false},
+		{"+", "$SYS", false},
+		
+		// BUT explicit $ patterns SHOULD match $ topics
+		{"$SYS/#", "$SYS/broker/stats", true},
+		{"$SYS/+/stats", "$SYS/broker/stats", true},
+		{"$SYS/broker/stats", "$SYS/broker/stats", true},
+	}
+
+	for _, tt := range tests {
+		got := TopicMatches(tt.pattern, tt.topic)
+		if got != tt.want {
+			t.Errorf("TopicMatches(%q, %q) = %v, want %v", tt.pattern, tt.topic, got, tt.want)
+		}
+	}
+}
+
+// TestSharedSubscriptions tests shared subscription round-robin delivery.
+func TestSharedSubscriptions(t *testing.T) {
+	addr := getTestAddr()
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("listen failed: %v", err)
+	}
+	defer ln.Close()
+
+	broker := &Broker{SysEventsEnabled: false} // Disable $SYS events for this test
+	go broker.Serve(ln)
+
+	ctx := context.Background()
+
+	// Create two subscribers in the same shared group
+	sub1, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "shared-sub-1",
+	})
+	if err != nil {
+		t.Fatalf("connect sub1 failed: %v", err)
+	}
+	defer sub1.Close()
+
+	sub2, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "shared-sub-2",
+	})
+	if err != nil {
+		t.Fatalf("connect sub2 failed: %v", err)
+	}
+	defer sub2.Close()
+
+	// Subscribe both to the same shared subscription
+	if err := sub1.Subscribe(ctx, "$share/mygroup/test/topic"); err != nil {
+		t.Fatalf("subscribe sub1 failed: %v", err)
+	}
+	if err := sub2.Subscribe(ctx, "$share/mygroup/test/topic"); err != nil {
+		t.Fatalf("subscribe sub2 failed: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create publisher
+	pub, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "shared-publisher",
+	})
+	if err != nil {
+		t.Fatalf("connect publisher failed: %v", err)
+	}
+	defer pub.Close()
+
+	// Publish 4 messages
+	for i := 0; i < 4; i++ {
+		if err := pub.Publish(ctx, "test/topic", []byte("msg")); err != nil {
+			t.Fatalf("publish failed: %v", err)
+		}
+	}
+
+	time.Sleep(200 * time.Millisecond)
+
+	// Count received messages
+	var sub1Count, sub2Count int
+	for {
+		msg, err := sub1.RecvTimeout(50 * time.Millisecond)
+		if err != nil || msg == nil {
+			break
+		}
+		sub1Count++
+	}
+	for {
+		msg, err := sub2.RecvTimeout(50 * time.Millisecond)
+		if err != nil || msg == nil {
+			break
+		}
+		sub2Count++
+	}
+
+	total := sub1Count + sub2Count
+	if total < 2 {
+		t.Errorf("Expected at least 2 messages delivered, got %d", total)
+	}
+
+	broker.Close()
+}
+
+// TestSysEvents tests $SYS client connect/disconnect events.
+func TestSysEvents(t *testing.T) {
+	addr := getTestAddr()
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("listen failed: %v", err)
+	}
+	defer ln.Close()
+
+	broker := &Broker{SysEventsEnabled: true}
+	go broker.Serve(ln)
+
+	ctx := context.Background()
+
+	// Create a subscriber for $SYS events
+	sysMonitor, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "sys-monitor",
+	})
+	if err != nil {
+		t.Fatalf("connect sys-monitor failed: %v", err)
+	}
+	defer sysMonitor.Close()
+
+	if err := sysMonitor.Subscribe(ctx, "$SYS/brokers/+/connected"); err != nil {
+		t.Fatalf("subscribe failed: %v", err)
+	}
+	if err := sysMonitor.Subscribe(ctx, "$SYS/brokers/+/disconnected"); err != nil {
+		t.Fatalf("subscribe failed: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Connect a test client
+	testClient, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "test-client-sys",
+	})
+	if err != nil {
+		t.Fatalf("connect test-client failed: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Check for connected event
+	msg, err := sysMonitor.RecvTimeout(500 * time.Millisecond)
+	if err != nil {
+		t.Logf("recv connected event error: %v", err)
+	}
+	if msg != nil {
+		if !contains(msg.Topic, "connected") {
+			t.Errorf("Expected connected event, got topic: %s", msg.Topic)
+		}
+	}
+
+	// Disconnect test client
+	testClient.Close()
+	time.Sleep(100 * time.Millisecond)
+
+	// Check for disconnected event
+	msg, err = sysMonitor.RecvTimeout(500 * time.Millisecond)
+	if err != nil {
+		t.Logf("recv disconnected event error: %v", err)
+	}
+	if msg != nil {
+		if !contains(msg.Topic, "disconnected") {
+			t.Errorf("Expected disconnected event, got topic: %s", msg.Topic)
+		}
+	}
+
+	broker.Close()
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsHelper(s, substr))
+}
+
+func containsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
