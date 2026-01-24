@@ -1,0 +1,322 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Go Implementation - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="trie-package---go-implementation"><a class="header" href="#trie-package---go-implementation">Trie Package - Go Implementation</a></h1>
+<p>Import: <code>github.com/haivivi/giztoy/pkg/trie</code></p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<h3 id="triet"><a class="header" href="#triet">Trie[T]</a></h3>
+<pre><code class="language-go">type Trie[T any] struct {
+    children map[string]*Trie[T] // exact path segment matches
+    matchAny *Trie[T]            // single-level wildcard (+)
+    matchAll *Trie[T]            // multi-level wildcard (#)
+    set      bool                // whether this node has a value
+    value    T                   // the value stored
+}
+</code></pre>
+<p><strong>Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>New</code></td><td><code>func New[T any]() *Trie[T]</code></td><td>Create empty trie</td></tr>
+<tr><td><code>Set</code></td><td><code>(t *Trie[T]) Set(path string, setFunc func(*T, bool) error) error</code></td><td>Set with custom setter</td></tr>
+<tr><td><code>SetValue</code></td><td><code>(t *Trie[T]) SetValue(path string, value T) error</code></td><td>Set value directly</td></tr>
+<tr><td><code>Get</code></td><td><code>(t *Trie[T]) Get(path string) (*T, bool)</code></td><td>Get value pointer</td></tr>
+<tr><td><code>GetValue</code></td><td><code>(t *Trie[T]) GetValue(path string) (T, bool)</code></td><td>Get value copy</td></tr>
+<tr><td><code>Match</code></td><td><code>(t *Trie[T]) Match(path string) (route string, value *T, ok bool)</code></td><td>Get with matched route</td></tr>
+<tr><td><code>Walk</code></td><td><code>(t *Trie[T]) Walk(f func(path string, value T, set bool))</code></td><td>Visit all nodes</td></tr>
+<tr><td><code>Len</code></td><td><code>(t *Trie[T]) Len() int</code></td><td>Count values</td></tr>
+<tr><td><code>String</code></td><td><code>(t *Trie[T]) String() string</code></td><td>Debug representation</td></tr>
+</tbody></table>
+</div>
+<h3 id="errinvalidpattern"><a class="header" href="#errinvalidpattern">ErrInvalidPattern</a></h3>
+<pre><code class="language-go">var ErrInvalidPattern = errors.New("invalid path pattern...")
+</code></pre>
+<p>Returned when <code>#</code> wildcard is not at the end of the path.</p>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<h3 id="basic-setget"><a class="header" href="#basic-setget">Basic Set/Get</a></h3>
+<pre><code class="language-go">tr := trie.New[string]()
+
+// Set exact path
+tr.SetValue("device/gear-001/state", "online")
+
+// Get value
+val, ok := tr.GetValue("device/gear-001/state")
+// val = "online", ok = true
+</code></pre>
+<h3 id="wildcard-patterns"><a class="header" href="#wildcard-patterns">Wildcard Patterns</a></h3>
+<pre><code class="language-go">tr := trie.New[string]()
+
+// Single-level wildcard
+tr.SetValue("device/+/state", "state_handler")
+
+// Multi-level wildcard
+tr.SetValue("logs/#", "log_handler")
+
+// Match against patterns
+val, _ := tr.GetValue("device/any-device/state")
+// val = "state_handler"
+
+val, _ = tr.GetValue("logs/app/debug/line1")
+// val = "log_handler"
+</code></pre>
+<h3 id="custom-set-function"><a class="header" href="#custom-set-function">Custom Set Function</a></h3>
+<pre><code class="language-go">tr := trie.New[[]string]()
+
+// Append to existing value
+tr.Set("handlers/events", func(ptr *[]string, existed bool) error {
+    if !existed {
+        *ptr = []string{"handler1"}
+    } else {
+        *ptr = append(*ptr, "handler2")
+    }
+    return nil
+})
+</code></pre>
+<h3 id="walk-all-nodes"><a class="header" href="#walk-all-nodes">Walk All Nodes</a></h3>
+<pre><code class="language-go">tr.Walk(func(path string, value string, set bool) {
+    if set {
+        fmt.Printf("%s: %s\n", path, value)
+    }
+})
+</code></pre>
+<h3 id="match-with-route"><a class="header" href="#match-with-route">Match with Route</a></h3>
+<pre><code class="language-go">tr := trie.New[string]()
+tr.SetValue("device/+/state", "handler")
+
+route, value, ok := tr.Match("device/gear-001/state")
+// route = "/+/state"
+// value = "handler"
+// ok = true
+</code></pre>
+<h2 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h2>
+<h3 id="path-splitting"><a class="header" href="#path-splitting">Path Splitting</a></h3>
+<p>Paths are split by <code>/</code> and processed segment by segment:</p>
+<pre><code class="language-go">// "device/gear-001/state" splits into:
+// first="device", subseq="gear-001/state"
+</code></pre>
+<h3 id="value-storage"><a class="header" href="#value-storage">Value Storage</a></h3>
+<p>Uses a <code>set</code> boolean flag to distinguish between:</p>
+<ul>
+<li>Value not set (default zero value)</li>
+<li>Value explicitly set to zero value</li>
+</ul>
+<h3 id="match-priority"><a class="header" href="#match-priority">Match Priority</a></h3>
+<ol>
+<li>Exact child match</li>
+<li>Single-level wildcard (<code>+</code>)</li>
+<li>Multi-level wildcard (<code>#</code>)</li>
+</ol>
+<h2 id="benchmarks"><a class="header" href="#benchmarks">Benchmarks</a></h2>
+<p>Typical performance (from benchmarks):</p>
+<div class="table-wrapper"><table><thead><tr><th>Operation</th><th>100 paths</th><th>1000 paths</th><th>10000 paths</th></tr></thead><tbody>
+<tr><td>Set all</td><td>~50µs</td><td>~500µs</td><td>~5ms</td></tr>
+<tr><td>Get (exact)</td><td>~10µs</td><td>~100µs</td><td>~1ms</td></tr>
+<tr><td>Walk</td><td>~5µs</td><td>~50µs</td><td>~500µs</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/trie/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/trie/rust.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/trie/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/trie/rust.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,286 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Trie - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="trie-package"><a class="header" href="#trie-package">Trie Package</a></h1>
+<p>Generic trie data structure for efficient path-based storage and retrieval with MQTT-style wildcard support.</p>
+<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+<ol>
+<li><strong>Efficient Path Matching</strong>: O(k) lookup where k is path depth</li>
+<li><strong>Wildcard Support</strong>: MQTT-style single (<code>+</code>) and multi-level (<code>#</code>) wildcards</li>
+<li><strong>Generic Storage</strong>: Store any value type at path nodes</li>
+<li><strong>Zero-Copy Lookups</strong>: Minimize allocations during get operations</li>
+</ol>
+<h2 id="wildcard-patterns"><a class="header" href="#wildcard-patterns">Wildcard Patterns</a></h2>
+<p>The trie supports MQTT-style topic patterns:</p>
+<div class="table-wrapper"><table><thead><tr><th>Pattern</th><th>Description</th><th>Example Match</th></tr></thead><tbody>
+<tr><td><code>a/b/c</code></td><td>Exact path</td><td><code>a/b/c</code> only</td></tr>
+<tr><td><code>a/+/c</code></td><td>Single-level wildcard</td><td><code>a/X/c</code>, <code>a/Y/c</code></td></tr>
+<tr><td><code>a/#</code></td><td>Multi-level wildcard</td><td><code>a/b</code>, <code>a/b/c/d</code></td></tr>
+</tbody></table>
+</div>
+<h3 id="pattern-rules"><a class="header" href="#pattern-rules">Pattern Rules</a></h3>
+<ol>
+<li>
+<p><strong><code>+</code> (Plus)</strong>: Matches exactly one path segment</p>
+<ul>
+<li><code>device/+/state</code> matches <code>device/gear-001/state</code></li>
+<li>Does NOT match <code>device/gear-001/sub/state</code></li>
+</ul>
+</li>
+<li>
+<p><strong><code>#</code> (Hash)</strong>: Matches zero or more path segments</p>
+<ul>
+<li>Must be the last segment in the pattern</li>
+<li><code>logs/#</code> matches <code>logs</code>, <code>logs/app</code>, <code>logs/app/debug/line1</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Priority</strong>: Exact matches take precedence over wildcards</p>
+<ul>
+<li>If both <code>device/gear-001/state</code> and <code>device/+/state</code> exist, exact wins</li>
+</ul>
+</li>
+</ol>
+<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
+<h3 id="mqtt-topic-routing"><a class="header" href="#mqtt-topic-routing">MQTT Topic Routing</a></h3>
+<pre><code>device/+/state     -&gt; state_handler
+device/+/command   -&gt; command_handler
+logs/#             -&gt; log_handler
+</code></pre>
+<h3 id="api-path-routing"><a class="header" href="#api-path-routing">API Path Routing</a></h3>
+<pre><code>/users/{id}/profile  -&gt; profile_handler
+/users/{id}/posts    -&gt; posts_handler
+/admin/#             -&gt; admin_handler
+</code></pre>
+<h3 id="hierarchical-configuration"><a class="header" href="#hierarchical-configuration">Hierarchical Configuration</a></h3>
+<pre><code>app/database/host    -&gt; "localhost"
+app/database/port    -&gt; 5432
+app/cache/#          -&gt; cache_config
+</code></pre>
+<h2 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Operation</th><th>Complexity</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Set</td><td>O(k)</td><td>k = path depth</td></tr>
+<tr><td>Get</td><td>O(k)</td><td>Zero allocation in Rust</td></tr>
+<tr><td>Walk</td><td>O(n)</td><td>n = total nodes</td></tr>
+<tr><td>Len</td><td>O(n)</td><td>Counts all values</td></tr>
+</tbody></table>
+</div>
+<h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
+<ul>
+<li><code>examples/go/trie/</code> - Go usage examples (if any)</li>
+<li><code>examples/rust/trie/</code> - Rust usage examples (if any)</li>
+</ul>
+<h2 id="related-packages"><a class="header" href="#related-packages">Related Packages</a></h2>
+<ul>
+<li><code>mqtt0</code> - Uses trie for topic subscription matching</li>
+<li><code>chatgear</code> - Uses trie for message routing</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/jsontime/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/trie/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/jsontime/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/trie/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

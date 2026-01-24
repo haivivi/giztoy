@@ -1,0 +1,544 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Introduction - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="giztoy-core-packages-documentation"><a class="header" href="#giztoy-core-packages-documentation">GizToy Core Packages Documentation</a></h1>
+<p>This directory contains design documents, implementation notes, and known issues for all GizToy core packages.
+Library docs live under <code>docs/lib/</code>.</p>
+<h2 id="documentation-structure"><a class="header" href="#documentation-structure">Documentation Structure</a></h2>
+<p>Each module has its own directory under <code>docs/lib/</code> with the following files:</p>
+<pre><code>lib/{mod}/
+├── doc.md      # Main doc: design goals, features, characteristics, examples
+├── go.md       # Go implementation: interface design, type definitions, usage
+├── rust.md     # Rust implementation: trait design, type definitions, progress
+├── issues.md   # Known issues: bugs, improvements needed, design flaws
+└── {submod}/   # Submodules (if any)
+    ├── doc.md
+    ├── go.md
+    ├── rust.md
+    └── issues.md
+</code></pre>
+<hr />
+<h2 id="package-list"><a class="header" href="#package-list">Package List</a></h2>
+<h3 id="foundation-layer"><a class="header" href="#foundation-layer">Foundation Layer</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
+<tr><td><a href="./lib/buffer/">buffer</a></td><td>Buffer utilities</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/encoding/">encoding</a></td><td>Encoding utilities (Base64, Hex)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/jsontime/">jsontime</a></td><td>JSON time type serialization</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/trie/">trie</a></td><td>Prefix tree data structure</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/cli/">cli</a></td><td>CLI utilities</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+</tbody></table>
+</div>
+<h3 id="audio-processing-layer"><a class="header" href="#audio-processing-layer">Audio Processing Layer</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
+<tr><td><a href="./lib/audio/">audio</a></td><td>Audio processing framework</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/codec/">audio/codec</a></td><td>Codecs (Opus, MP3, OGG)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/pcm/">audio/pcm</a></td><td>PCM processing, mixer</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/resampler/">audio/resampler</a></td><td>Sample rate conversion (soxr)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/opusrt/">audio/opusrt</a></td><td>Opus realtime streaming</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/audio/portaudio/">audio/portaudio</a></td><td>Audio I/O (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/audio/songs/">audio/songs</a></td><td>Built-in sound generation</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+</tbody></table>
+</div>
+<h3 id="api-client-layer"><a class="header" href="#api-client-layer">API Client Layer</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
+<tr><td><a href="./lib/minimax/">minimax</a></td><td>MiniMax API client</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/dashscope/">dashscope</a></td><td>DashScope Realtime API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/doubaospeech/">doubaospeech</a></td><td>Doubao Speech API client</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/jiutian/">jiutian</a></td><td>Jiutian API (docs only)</td><td style="text-align: center">❌</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/openai-realtime/">openai-realtime</a></td><td>OpenAI Realtime API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+</tbody></table>
+</div>
+<h3 id="communication-layer"><a class="header" href="#communication-layer">Communication Layer</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
+<tr><td><a href="./lib/mqtt0/">mqtt0</a></td><td>Lightweight MQTT client</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/">chatgear</a></td><td>Device communication framework</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/transport/">chatgear/transport</a></td><td>Transport layer abstraction</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/port/">chatgear/port</a></td><td>Media port</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+</tbody></table>
+</div>
+<h3 id="ai-application-layer"><a class="header" href="#ai-application-layer">AI Application Layer</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
+<tr><td><a href="./lib/speech/">speech</a></td><td>Unified speech interface</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/genx/">genx</a></td><td>LLM universal interface framework</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/genx/agent/">genx/agent</a></td><td>Agent framework (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/genx/agentcfg/">genx/agentcfg</a></td><td>Agent configuration system (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/genx/match/">genx/match</a></td><td>Pattern matching engine (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
+<ul>
+<li><a href="./examples/doc.html">examples</a>: Directory structure and how to run the samples</li>
+</ul>
+<hr />
+<h2 id="directory-structure"><a class="header" href="#directory-structure">Directory Structure</a></h2>
+<pre><code>docs/
+├── outline.md                  # This file
+├── packages-comparison.md      # Cross-language comparison notes
+├── examples/
+│   └── doc.md                   # Examples overview and how to run
+│
+├── lib/                        # Library docs (design + impl + issues)
+│   ├── buffer/                 # doc.md, go.md, rust.md, issues.md
+│   ├── encoding/               # doc.md, go.md, rust.md, issues.md
+│   ├── jsontime/               # doc.md, go.md, rust.md, issues.md
+│   ├── trie/                   # doc.md, go.md, rust.md, issues.md
+│   ├── cli/                    # doc.md, go.md, rust.md, issues.md
+│   ├── audio/
+│   │   ├── doc.md
+│   │   ├── go.md
+│   │   ├── rust.md
+│   │   ├── issues.md
+│   │   ├── codec/              # doc.md, go.md, rust.md, issues.md
+│   │   ├── pcm/                # doc.md, go.md, rust.md, issues.md
+│   │   ├── resampler/          # doc.md, go.md, rust.md, issues.md
+│   │   ├── opusrt/             # doc.md, go.md, rust.md, issues.md
+│   │   ├── portaudio/          # doc.md, go.md
+│   │   └── songs/              # doc.md, go.md, rust.md
+│   ├── minimax/
+│   │   ├── api/                # Official API docs
+│   │   ├── doc.md
+│   │   ├── go.md
+│   │   ├── rust.md
+│   │   └── issues.md
+│   ├── dashscope/
+│   │   ├── api/
+│   │   ├── doc.md
+│   │   ├── go.md
+│   │   ├── rust.md
+│   │   └── issues.md
+│   ├── doubaospeech/
+│   │   ├── api/
+│   │   ├── doc.md
+│   │   ├── go.md
+│   │   ├── rust.md
+│   │   └── issues.md
+│   ├── jiutian/
+│   │   ├── api/
+│   │   ├── doc.md
+│   │   ├── go.md
+│   │   ├── rust.md
+│   │   └── issues.md
+│   ├── openai-realtime/        # doc.md, go.md, rust.md, issues.md
+│   ├── mqtt0/                  # doc.md, go.md, rust.md, issues.md
+│   ├── chatgear/
+│   │   ├── doc.md
+│   │   ├── go.md
+│   │   ├── rust.md
+│   │   ├── issues.md
+│   │   ├── transport/          # doc.md, go.md, rust.md, issues.md
+│   │   └── port/               # doc.md, go.md, rust.md, issues.md
+│   ├── speech/                 # doc.md, go.md, rust.md, issues.md
+│   └── genx/
+│       ├── doc.md
+│       ├── go.md
+│       ├── rust.md
+│       ├── issues.md
+│       ├── agent/              # doc.md, go.md, issues.md
+│       ├── agentcfg/           # doc.md, go.md, issues.md
+│       └── match/              # doc.md, go.md, issues.md
+│
+├── esp/                         # ESP-related docs
+│   ├── esp32-dev-comparison.md
+│   └── esp-rs-migration.md
+│
+└── bazel/                        # Bazel-specific docs
+</code></pre>
+<hr />
+<h2 id="other-documentation"><a class="header" href="#other-documentation">Other Documentation</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Directory</th><th>Purpose</th></tr></thead><tbody>
+<tr><td><code>esp/</code></td><td>ESP32 and ESP-RS notes and comparisons</td></tr>
+<tr><td><code>bazel/</code></td><td>Bazel build rules and integration notes</td></tr>
+<tr><td><code>packages-comparison.md</code></td><td>Cross-language package comparison</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="implementation-progress-overview"><a class="header" href="#implementation-progress-overview">Implementation Progress Overview</a></h2>
+<h3 id="legend"><a class="header" href="#legend">Legend</a></h3>
+<ul>
+<li>✅ Fully implemented</li>
+<li>⚠️ Partially implemented</li>
+<li>❌ Not implemented</li>
+</ul>
+<h3 id="feature-comparison"><a class="header" href="#feature-comparison">Feature Comparison</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th><th>Notes</th></tr></thead><tbody>
+<tr><td><strong>Foundation</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>Block buffer</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Ring buffer</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Base64 encoding</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Hex encoding</td><td style="text-align: center">❌</td><td style="text-align: center">✅</td><td>Rust extra implementation</td></tr>
+<tr><td>JSON time types</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Prefix tree</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td><strong>Audio</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>Opus codec</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>MP3 codec</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>OGG container</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>PCM mixer</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Sample rate conversion</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Opus realtime stream</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td><td>Rust missing OGG Reader/Writer</td></tr>
+<tr><td>Audio I/O</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td>Go only (portaudio)</td></tr>
+<tr><td><strong>API Clients</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>MiniMax text/speech/video</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>DashScope Realtime</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Doubao Speech TTS/ASR</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Doubao Speech TTS v2</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+<tr><td>Doubao Speech ASR v2</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+<tr><td>OpenAI Realtime</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td><strong>Communication</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>MQTT 3.1.1</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>MQTT 5.0</td><td style="text-align: center">⚠️</td><td style="text-align: center">⚠️</td><td>Partial, see Issue #32</td></tr>
+<tr><td>ChatGear Transport</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>ChatGear MediaPort</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td><strong>AI Application</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>Unified speech interface</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>LLM Context</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td><td>Rust basic implementation</td></tr>
+<tr><td>LLM streaming</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td><td>Rust basic implementation</td></tr>
+<tr><td>Tool calling</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td><td>Rust basic implementation</td></tr>
+<tr><td>Agent framework</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+<tr><td>Agent configuration</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+<tr><td>Pattern matching</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="priority-recommendations"><a class="header" href="#priority-recommendations">Priority Recommendations</a></h2>
+<h3 id="p0---critical-missing"><a class="header" href="#p0---critical-missing">P0 - Critical Missing</a></h3>
+<ol>
+<li><strong>genx/agent</strong> (Rust): Agent framework is core functionality</li>
+<li><strong>audio/opusrt OGG R/W</strong> (Rust): Required for realtime audio streaming</li>
+</ol>
+<h3 id="p1---feature-parity"><a class="header" href="#p1---feature-parity">P1 - Feature Parity</a></h3>
+<ol>
+<li><strong>doubaospeech v2</strong> (Rust): New API version support</li>
+<li><strong>genx streaming/tools</strong> (Rust): Complete base functionality</li>
+</ol>
+<h3 id="p2---enhancements"><a class="header" href="#p2---enhancements">P2 - Enhancements</a></h3>
+<ol>
+<li><strong>audio/portaudio</strong> (Rust): Audio I/O support</li>
+<li><strong>mqtt0 MQTT 5.0</strong>: Complete protocol support</li>
+</ol>
+<hr />
+<h2 id="work-methodology"><a class="header" href="#work-methodology">Work Methodology</a></h2>
+<h3 id="file-by-file-review-process"><a class="header" href="#file-by-file-review-process">File-by-File Review Process</a></h3>
+<p>For each module, the documentation is generated through a rigorous file-by-file review process:</p>
+<pre><code>1. LIST all source files in the module
+   └─► Go: go/pkg/{mod}/*.go
+   └─► Rust: rust/{mod}/src/*.rs
+
+2. READ each file carefully
+   └─► Understand the purpose and design
+   └─► Identify public interfaces/traits
+   └─► Note internal implementation details
+
+3. ANALYZE for potential issues
+   └─► Race conditions (concurrent access)
+   └─► Resource leaks (unclosed handles, memory)
+   └─► Error handling gaps (ignored errors, panics)
+   └─► API inconsistencies (Go vs Rust parity)
+   └─► Performance concerns (allocations, copies)
+   └─► Security vulnerabilities (input validation, injection)
+
+4. DOCUMENT findings
+   └─► doc.md: Architecture and design
+   └─► go.md: Go-specific implementation
+   └─► rust.md: Rust-specific implementation
+   └─► issues.md: All discovered problems
+</code></pre>
+<h3 id="issue-classification"><a class="header" href="#issue-classification">Issue Classification</a></h3>
+<p>Issues discovered during review are classified by severity:</p>
+<div class="table-wrapper"><table><thead><tr><th>Severity</th><th>Description</th><th>Example</th></tr></thead><tbody>
+<tr><td>🔴 <strong>Critical</strong></td><td>Data loss, security vulnerability, crash</td><td>Buffer overflow, SQL injection</td></tr>
+<tr><td>🟠 <strong>Major</strong></td><td>Incorrect behavior, resource leak</td><td>Memory leak, race condition</td></tr>
+<tr><td>🟡 <strong>Minor</strong></td><td>Edge case bugs, poor error messages</td><td>Off-by-one, unclear panic message</td></tr>
+<tr><td>🔵 <strong>Enhancement</strong></td><td>Missing feature, performance improvement</td><td>Missing API, unnecessary allocation</td></tr>
+<tr><td>⚪ <strong>Note</strong></td><td>Design observation, tech debt</td><td>Code duplication, naming inconsistency</td></tr>
+</tbody></table>
+</div>
+<h3 id="review-checklist"><a class="header" href="#review-checklist">Review Checklist</a></h3>
+<p>For each source file, the following aspects are checked:</p>
+<p><strong>Correctness</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Logic errors and edge cases</li>
+<li><input disabled="" type="checkbox"/>
+Off-by-one errors in loops/slices</li>
+<li><input disabled="" type="checkbox"/>
+Nil/None handling</li>
+<li><input disabled="" type="checkbox"/>
+Integer overflow/underflow</li>
+</ul>
+<p><strong>Concurrency</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Data races (shared mutable state)</li>
+<li><input disabled="" type="checkbox"/>
+Deadlock potential</li>
+<li><input disabled="" type="checkbox"/>
+Channel/mutex usage correctness</li>
+<li><input disabled="" type="checkbox"/>
+Proper synchronization</li>
+</ul>
+<p><strong>Resource Management</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+File/socket handle leaks</li>
+<li><input disabled="" type="checkbox"/>
+Memory leaks (especially in FFI)</li>
+<li><input disabled="" type="checkbox"/>
+Goroutine/task leaks</li>
+<li><input disabled="" type="checkbox"/>
+Proper cleanup in error paths</li>
+</ul>
+<p><strong>Error Handling</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Ignored errors (Go: <code>_ = err</code>, Rust: <code>.unwrap()</code>)</li>
+<li><input disabled="" type="checkbox"/>
+Error propagation correctness</li>
+<li><input disabled="" type="checkbox"/>
+Panic vs error decision</li>
+<li><input disabled="" type="checkbox"/>
+Context/cause preservation</li>
+</ul>
+<p><strong>API Design</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Go/Rust parity</li>
+<li><input disabled="" type="checkbox"/>
+Consistent naming</li>
+<li><input disabled="" type="checkbox"/>
+Proper visibility (pub/private)</li>
+<li><input disabled="" type="checkbox"/>
+Documentation completeness</li>
+</ul>
+<p><strong>Performance</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Unnecessary allocations</li>
+<li><input disabled="" type="checkbox"/>
+Excessive copying</li>
+<li><input disabled="" type="checkbox"/>
+Algorithm complexity</li>
+<li><input disabled="" type="checkbox"/>
+Buffer sizing</li>
+</ul>
+<p><strong>Security</strong></p>
+<ul>
+<li><input disabled="" type="checkbox"/>
+Input validation</li>
+<li><input disabled="" type="checkbox"/>
+Injection vulnerabilities</li>
+<li><input disabled="" type="checkbox"/>
+Credential handling</li>
+<li><input disabled="" type="checkbox"/>
+Cryptographic correctness</li>
+</ul>
+<hr />
+<h2 id="related-resources"><a class="header" href="#related-resources">Related Resources</a></h2>
+<ul>
+<li>External API documentation: <code>lib/minimax/api/</code>, <code>lib/dashscope/api/</code>, <code>lib/doubaospeech/api/</code></li>
+<li>Issue tracking: <code>issues/</code></li>
+<li>Example code: <code>examples/go/</code>, <code>examples/rust/</code></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+                            <a rel="next prefetch" href="lib/buffer/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+                    <a rel="next prefetch" href="lib/buffer/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js"></script>
+        <script src="mark.min.js"></script>
+        <script src="searcher.js"></script>
+
+        <script src="clipboard.min.js"></script>
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid.min.js"></script>
+        <script src="mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

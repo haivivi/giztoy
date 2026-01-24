@@ -1,0 +1,306 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Known Issues - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="dashscope-sdk---known-issues"><a class="header" href="#dashscope-sdk---known-issues">DashScope SDK - Known Issues</a></h1>
+<h2 id="-minor-issues"><a class="header" href="#-minor-issues">🟡 Minor Issues</a></h2>
+<h3 id="ds-001-go-newclient-panics-on-empty-api-key"><a class="header" href="#ds-001-go-newclient-panics-on-empty-api-key">DS-001: Go NewClient panics on empty API key</a></h3>
+<p><strong>File:</strong> <code>go/pkg/dashscope/client.go:39-41</code></p>
+<p><strong>Description:</strong><br />
+NewClient panics instead of returning an error:</p>
+<pre><code class="language-go">func NewClient(apiKey string, opts ...Option) *Client {
+    if apiKey == "" {
+        panic("dashscope: API key is required")
+    }
+</code></pre>
+<p><strong>Impact:</strong> Unrecoverable error at construction time.</p>
+<p><strong>Suggestion:</strong> Return <code>(*Client, error)</code> like Rust version.</p>
+<hr />
+<h3 id="ds-002-limited-to-realtime-api-only"><a class="header" href="#ds-002-limited-to-realtime-api-only">DS-002: Limited to Realtime API only</a></h3>
+<p><strong>Description:</strong><br />
+SDK only implements Realtime API. Text/Chat APIs require separate OpenAI-compatible SDK.</p>
+<p><strong>Impact:</strong> Users need two SDKs for full DashScope usage.</p>
+<p><strong>Note:</strong> This is intentional design choice - text APIs are OpenAI-compatible.</p>
+<hr />
+<h3 id="ds-003-no-http-api-implementation"><a class="header" href="#ds-003-no-http-api-implementation">DS-003: No HTTP API implementation</a></h3>
+<p><strong>Description:</strong><br />
+No HTTP client for non-realtime operations (file upload, app calls, etc.).</p>
+<p><strong>Suggestion:</strong> Add HTTP service for app/agent API calls.</p>
+<hr />
+<h3 id="ds-004-video-input-support-limited"><a class="header" href="#ds-004-video-input-support-limited">DS-004: Video input support limited</a></h3>
+<p><strong>Description:</strong><br />
+Qwen3-Omni-Flash supports video input, but SDK support may be incomplete.</p>
+<p><strong>Status:</strong> ⚠️ Needs verification.</p>
+<hr />
+<h2 id="-enhancements"><a class="header" href="#-enhancements">🔵 Enhancements</a></h2>
+<h3 id="ds-005-no-automatic-reconnection"><a class="header" href="#ds-005-no-automatic-reconnection">DS-005: No automatic reconnection</a></h3>
+<p><strong>Description:</strong><br />
+WebSocket sessions don't auto-reconnect on disconnection.</p>
+<p><strong>Suggestion:</strong> Add reconnection with backoff for long-running sessions.</p>
+<hr />
+<h3 id="ds-006-no-audio-transcoding"><a class="header" href="#ds-006-no-audio-transcoding">DS-006: No audio transcoding</a></h3>
+<p><strong>Description:</strong><br />
+Audio must be in correct format (PCM16/PCM24). No built-in transcoding.</p>
+<p><strong>Suggestion:</strong> Add optional audio format conversion.</p>
+<hr />
+<h3 id="ds-007-no-vad-voice-activity-detection-integration"><a class="header" href="#ds-007-no-vad-voice-activity-detection-integration">DS-007: No VAD (Voice Activity Detection) integration</a></h3>
+<p><strong>Description:</strong><br />
+Manual audio buffer management. No built-in VAD for automatic speech detection.</p>
+<p><strong>Suggestion:</strong> Integrate with <code>audio/pcm</code> for silence detection.</p>
+<hr />
+<h3 id="ds-008-missing-tool-call-examples"><a class="header" href="#ds-008-missing-tool-call-examples">DS-008: Missing tool call examples</a></h3>
+<p><strong>Description:</strong><br />
+Function/tool calling is supported but not well documented with examples.</p>
+<hr />
+<h2 id="-notes"><a class="header" href="#-notes">⚪ Notes</a></h2>
+<h3 id="ds-009-clean-websocket-event-model"><a class="header" href="#ds-009-clean-websocket-event-model">DS-009: Clean WebSocket event model</a></h3>
+<p><strong>Description:</strong><br />
+Both Go and Rust implement clean event-based model matching OpenAI Realtime API patterns. This is well-designed.</p>
+<hr />
+<h3 id="ds-010-model-constants-provided"><a class="header" href="#ds-010-model-constants-provided">DS-010: Model constants provided</a></h3>
+<p><strong>Description:</strong><br />
+Both SDKs provide model name constants:</p>
+<pre><code class="language-go">const ModelQwenOmniTurboRealtimeLatest = "qwen-omni-turbo-realtime-latest"
+</code></pre>
+<p>Good for discoverability and avoiding typos.</p>
+<hr />
+<h3 id="ds-011-workspace-support"><a class="header" href="#ds-011-workspace-support">DS-011: Workspace support</a></h3>
+<p><strong>Description:</strong><br />
+Both SDKs support workspace isolation via <code>WithWorkspace()</code> option:</p>
+<pre><code class="language-go">client := dashscope.NewClient(apiKey, dashscope.WithWorkspace("ws-xxx"))
+</code></pre>
+<p>Useful for enterprise environments.</p>
+<hr />
+<h3 id="ds-012-international-endpoint-support"><a class="header" href="#ds-012-international-endpoint-support">DS-012: International endpoint support</a></h3>
+<p><strong>Description:</strong><br />
+SDKs support both China and international endpoints:</p>
+<ul>
+<li>China: <code>wss://dashscope.aliyuncs.com/...</code></li>
+<li>International: <code>wss://dashscope-intl.aliyuncs.com/...</code></li>
+</ul>
+<hr />
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>ID</th><th>Severity</th><th>Status</th><th>Component</th></tr></thead><tbody>
+<tr><td>DS-001</td><td>🟡 Minor</td><td>Open</td><td>Go Client</td></tr>
+<tr><td>DS-002</td><td>🟡 Minor</td><td>Note</td><td>Both</td></tr>
+<tr><td>DS-003</td><td>🟡 Minor</td><td>Open</td><td>Both</td></tr>
+<tr><td>DS-004</td><td>🟡 Minor</td><td>Open</td><td>Both</td></tr>
+<tr><td>DS-005</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>DS-006</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>DS-007</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>DS-008</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>DS-009</td><td>⚪ Note</td><td>N/A</td><td>Both</td></tr>
+<tr><td>DS-010</td><td>⚪ Note</td><td>N/A</td><td>Both</td></tr>
+<tr><td>DS-011</td><td>⚪ Note</td><td>N/A</td><td>Both</td></tr>
+<tr><td>DS-012</td><td>⚪ Note</td><td>N/A</td><td>Both</td></tr>
+</tbody></table>
+</div>
+<p><strong>Overall:</strong> Focused SDK for Realtime API with clean design. Main limitation is narrow scope (Realtime only), which is intentional since text APIs are OpenAI-compatible. Both Go and Rust implementations are feature-complete for their scope.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/dashscope/rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/dashscope/api/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/dashscope/rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/dashscope/api/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Rust Implementation - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="encoding-package---rust-implementation"><a class="header" href="#encoding-package---rust-implementation">Encoding Package - Rust Implementation</a></h1>
+<p>Crate: <code>giztoy-encoding</code></p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<h3 id="stdbase64data"><a class="header" href="#stdbase64data">StdBase64Data</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct StdBase64Data(Vec&lt;u8&gt;);
+<span class="boring">}</span></code></pre></pre>
+<p>A newtype wrapper around <code>Vec&lt;u8&gt;</code> that serializes to/from standard Base64.</p>
+<p><strong>Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>new</code></td><td><code>fn new(data: Vec&lt;u8&gt;) -&gt; Self</code></td><td>Create from Vec</td></tr>
+<tr><td><code>empty</code></td><td><code>fn empty() -&gt; Self</code></td><td>Create empty</td></tr>
+<tr><td><code>as_bytes</code></td><td><code>fn as_bytes(&amp;self) -&gt; &amp;[u8]</code></td><td>Get byte slice reference</td></tr>
+<tr><td><code>as_bytes_mut</code></td><td><code>fn as_bytes_mut(&amp;mut self) -&gt; &amp;mut Vec&lt;u8&gt;</code></td><td>Get mutable reference</td></tr>
+<tr><td><code>into_bytes</code></td><td><code>fn into_bytes(self) -&gt; Vec&lt;u8&gt;</code></td><td>Consume and return Vec</td></tr>
+<tr><td><code>is_empty</code></td><td><code>fn is_empty(&amp;self) -&gt; bool</code></td><td>Check if empty</td></tr>
+<tr><td><code>len</code></td><td><code>fn len(&amp;self) -&gt; usize</code></td><td>Get length</td></tr>
+<tr><td><code>encode</code></td><td><code>fn encode(&amp;self) -&gt; String</code></td><td>Encode to Base64 string</td></tr>
+<tr><td><code>decode</code></td><td><code>fn decode(s: &amp;str) -&gt; Result&lt;Self, DecodeError&gt;</code></td><td>Decode from Base64</td></tr>
+</tbody></table>
+</div>
+<p><strong>Trait Implementations:</strong></p>
+<ul>
+<li><code>Serialize</code> / <code>Deserialize</code> (serde)</li>
+<li><code>Display</code> (formats as Base64)</li>
+<li><code>Deref&lt;Target=[u8]&gt;</code> / <code>DerefMut</code></li>
+<li><code>From&lt;Vec&lt;u8&gt;&gt;</code>, <code>From&lt;&amp;[u8]&gt;</code>, <code>From&lt;[u8; N]&gt;</code></li>
+<li><code>AsRef&lt;[u8]&gt;</code></li>
+</ul>
+<h3 id="hexdata"><a class="header" href="#hexdata">HexData</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub struct HexData(Vec&lt;u8&gt;);
+<span class="boring">}</span></code></pre></pre>
+<p>A newtype wrapper around <code>Vec&lt;u8&gt;</code> that serializes to/from hexadecimal.</p>
+<p><strong>Methods:</strong></p>
+<p>Same API as <code>StdBase64Data</code>, but with hex encoding:</p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>encode</code></td><td><code>fn encode(&amp;self) -&gt; String</code></td><td>Encode to hex string</td></tr>
+<tr><td><code>decode</code></td><td><code>fn decode(s: &amp;str) -&gt; Result&lt;Self, FromHexError&gt;</code></td><td>Decode from hex</td></tr>
+</tbody></table>
+</div>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<h3 id="in-struct-fields"><a class="header" href="#in-struct-fields">In Struct Fields</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_encoding::{StdBase64Data, HexData};
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize)]
+struct Message {
+    id: String,
+    payload: StdBase64Data,
+    hash: HexData,
+}
+
+let msg = Message {
+    id: "msg-123".to_string(),
+    payload: StdBase64Data::from(b"hello world".as_slice()),
+    hash: HexData::from(vec![0xab, 0xcd, 0xef]),
+};
+
+// Serializes to:
+// {"id":"msg-123","payload":"aGVsbG8gd29ybGQ=","hash":"abcdef"}
+let json = serde_json::to_string(&amp;msg).unwrap();
+<span class="boring">}</span></code></pre></pre>
+<h3 id="standalone-encoding"><a class="header" href="#standalone-encoding">Standalone Encoding</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Base64
+let data = StdBase64Data::from(b"hello".as_slice());
+println!("{}", data);  // "aGVsbG8="
+println!("{}", data.encode());  // "aGVsbG8="
+
+// Hex
+let hash = HexData::from(vec![0xde, 0xad]);
+println!("{}", hash);  // "dead"
+<span class="boring">}</span></code></pre></pre>
+<h3 id="deref-coercion"><a class="header" href="#deref-coercion">Deref Coercion</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let data = StdBase64Data::from(vec![1, 2, 3]);
+
+// Can use as &amp;[u8] directly
+fn process(bytes: &amp;[u8]) { /* ... */ }
+process(&amp;data);  // Deref coercion
+
+// Access slice methods
+println!("len: {}", data.len());
+println!("first: {:?}", data.first());
+<span class="boring">}</span></code></pre></pre>
+<h3 id="null-handling"><a class="header" href="#null-handling">Null Handling</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Null deserializes to empty
+let data: StdBase64Data = serde_json::from_str("null").unwrap();
+assert!(data.is_empty());
+
+// Empty string also empty
+let data: StdBase64Data = serde_json::from_str(r#""""#).unwrap();
+assert!(data.is_empty());
+<span class="boring">}</span></code></pre></pre>
+<h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
+<ul>
+<li><code>base64</code> crate (for Base64 encoding)</li>
+<li><code>hex</code> crate (for hex encoding)</li>
+<li><code>serde</code> crate (for serialization)</li>
+</ul>
+<h2 id="differences-from-go"><a class="header" href="#differences-from-go">Differences from Go</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Aspect</th><th>Go</th><th>Rust</th></tr></thead><tbody>
+<tr><td>Type structure</td><td>Type alias <code>[]byte</code></td><td>Newtype <code>struct(Vec&lt;u8&gt;)</code></td></tr>
+<tr><td>Conversion to bytes</td><td>Direct cast</td><td><code>.as_bytes()</code> or <code>Deref</code></td></tr>
+<tr><td>Additional methods</td><td>None</td><td><code>is_empty()</code>, <code>len()</code>, <code>encode()</code>, <code>decode()</code></td></tr>
+<tr><td>Hash/Eq traits</td><td>N/A (slice)</td><td>Implemented</td></tr>
+<tr><td>Clone</td><td>Implicit</td><td>Explicit (implemented)</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/encoding/go.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/encoding/issues.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/encoding/go.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/encoding/issues.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,383 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Go Implementation - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="doubao-speech-sdk---go-implementation"><a class="header" href="#doubao-speech-sdk---go-implementation">Doubao Speech SDK - Go Implementation</a></h1>
+<p>Import: <code>github.com/haivivi/giztoy/pkg/doubaospeech</code></p>
+<h2 id="clients"><a class="header" href="#clients">Clients</a></h2>
+<h3 id="speech-api-client"><a class="header" href="#speech-api-client">Speech API Client</a></h3>
+<pre><code class="language-go">type Client struct {
+    // V1 Services (Classic)
+    TTS *TTSService
+    ASR *ASRService
+    
+    // V2 Services (BigModel)
+    TTSV2 *TTSServiceV2
+    ASRV2 *ASRServiceV2
+    
+    // Shared Services
+    VoiceClone  *VoiceCloneService
+    Realtime    *RealtimeService
+    Meeting     *MeetingService
+    Podcast     *PodcastService
+    Translation *TranslationService
+    Media       *MediaService
+}
+</code></pre>
+<p><strong>Constructor:</strong></p>
+<pre><code class="language-go">// With API Key (recommended)
+client := doubaospeech.NewClient("app-id",
+    doubaospeech.WithAPIKey("your-api-key"),
+    doubaospeech.WithCluster("volcano_tts"),
+)
+
+// With Bearer Token
+client := doubaospeech.NewClient("app-id",
+    doubaospeech.WithBearerToken("your-token"),
+)
+
+// With V2 API Key (for BigModel APIs)
+client := doubaospeech.NewClient("app-id",
+    doubaospeech.WithV2APIKey("access-key", "app-key"),
+    doubaospeech.WithResourceID("seed-tts-2.0"),
+)
+</code></pre>
+<h3 id="console-api-client"><a class="header" href="#console-api-client">Console API Client</a></h3>
+<pre><code class="language-go">console := doubaospeech.NewConsole("access-key", "secret-key")
+</code></pre>
+<h2 id="services"><a class="header" href="#services">Services</a></h2>
+<h3 id="tts-v1-classic"><a class="header" href="#tts-v1-classic">TTS V1 (Classic)</a></h3>
+<pre><code class="language-go">// Synchronous
+resp, err := client.TTS.Synthesize(ctx, &amp;doubaospeech.TTSRequest{
+    Text:      "你好，世界！",
+    VoiceType: "zh_female_cancan",
+})
+// resp.Audio contains audio bytes
+
+// Streaming (Go 1.23+ iter.Seq2)
+for chunk, err := range client.TTS.SynthesizeStream(ctx, req) {
+    if err != nil {
+        return err
+    }
+    buf.Write(chunk.Audio)
+}
+</code></pre>
+<h3 id="tts-v2-bigmodel"><a class="header" href="#tts-v2-bigmodel">TTS V2 (BigModel)</a></h3>
+<pre><code class="language-go">// Streaming HTTP
+for chunk, err := range client.TTSV2.SynthesizeStream(ctx, &amp;doubaospeech.TTSV2Request{
+    Text:       "你好，世界！",
+    VoiceType:  "zh_female_cancan",
+    ResourceID: "seed-tts-2.0",
+}) {
+    // Process chunk
+}
+
+// Async (long text)
+task, err := client.TTSV2.SubmitAsync(ctx, &amp;doubaospeech.AsyncTTSRequest{
+    Text: longText,
+})
+result, err := task.Wait(ctx)
+</code></pre>
+<h3 id="asr-speech-recognition"><a class="header" href="#asr-speech-recognition">ASR (Speech Recognition)</a></h3>
+<pre><code class="language-go">// One-sentence (V1)
+resp, err := client.ASR.Recognize(ctx, &amp;doubaospeech.ASRRequest{
+    Audio:    audioData,
+    Format:   "pcm",
+    Language: "zh-CN",
+})
+
+// Streaming (WebSocket)
+session, err := client.ASR.OpenStreamSession(ctx, &amp;doubaospeech.StreamASRConfig{
+    Format:     "pcm",
+    SampleRate: 16000,
+})
+defer session.Close()
+
+// Send audio chunks
+session.SendAudio(ctx, audioData, false)
+session.SendAudio(ctx, lastData, true)
+
+// Receive results
+for chunk, err := range session.Recv() {
+    if err != nil {
+        break
+    }
+    fmt.Println(chunk.Text)
+}
+</code></pre>
+<h3 id="voice-clone"><a class="header" href="#voice-clone">Voice Clone</a></h3>
+<pre><code class="language-go">// Upload audio for training
+result, err := client.VoiceClone.Upload(ctx, &amp;doubaospeech.VoiceCloneRequest{
+    AudioData: audioData,
+    VoiceID:   "my-custom-voice",
+})
+
+// Check status
+status, err := client.VoiceClone.GetStatus(ctx, "my-custom-voice")
+
+// Activate voice
+err := client.VoiceClone.Activate(ctx, "my-custom-voice")
+</code></pre>
+<h3 id="realtime-dialogue"><a class="header" href="#realtime-dialogue">Realtime Dialogue</a></h3>
+<pre><code class="language-go">session, err := client.Realtime.Connect(ctx, &amp;doubaospeech.RealtimeConfig{
+    Model: "speech-dialog-001",
+})
+defer session.Close()
+
+// Send audio
+session.SendAudio(audioData)
+
+// Receive events
+for event := range session.Events() {
+    switch event.Type {
+    case "asr_result":
+        fmt.Println("User:", event.AsrResult.Text)
+    case "tts_audio":
+        play(event.TtsAudio)
+    }
+}
+</code></pre>
+<h3 id="console-api"><a class="header" href="#console-api">Console API</a></h3>
+<pre><code class="language-go">// List available voices
+voices, err := console.ListSpeakers(ctx, &amp;doubaospeech.ListSpeakersRequest{})
+
+// List timbres
+timbres, err := console.ListTimbres(ctx, &amp;doubaospeech.ListTimbresRequest{})
+
+// Check voice clone status
+status, err := console.ListVoiceCloneStatus(ctx, &amp;doubaospeech.ListVoiceCloneStatusRequest{
+    VoiceID: "my-custom-voice",
+})
+</code></pre>
+<h2 id="options"><a class="header" href="#options">Options</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Option</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>WithAPIKey(key)</code></td><td>x-api-key authentication</td></tr>
+<tr><td><code>WithBearerToken(token)</code></td><td>Bearer token authentication</td></tr>
+<tr><td><code>WithV2APIKey(access, app)</code></td><td>V2/V3 API authentication</td></tr>
+<tr><td><code>WithCluster(cluster)</code></td><td>Set cluster name (V1)</td></tr>
+<tr><td><code>WithResourceID(id)</code></td><td>Set resource ID (V2)</td></tr>
+<tr><td><code>WithBaseURL(url)</code></td><td>Custom HTTP base URL</td></tr>
+<tr><td><code>WithWebSocketURL(url)</code></td><td>Custom WebSocket URL</td></tr>
+<tr><td><code>WithHTTPClient(client)</code></td><td>Custom HTTP client</td></tr>
+<tr><td><code>WithTimeout(duration)</code></td><td>Request timeout</td></tr>
+<tr><td><code>WithUserID(id)</code></td><td>User identifier</td></tr>
+</tbody></table>
+</div>
+<h2 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h2>
+<pre><code class="language-go">if err != nil {
+    if e, ok := doubaospeech.AsError(err); ok {
+        fmt.Printf("Error %d: %s\n", e.Code, e.Message)
+        if e.IsRateLimit() {
+            // Handle rate limiting
+        }
+    }
+}
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/doubaospeech/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/doubaospeech/rust.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/doubaospeech/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/doubaospeech/rust.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

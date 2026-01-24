@@ -1,0 +1,348 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Known Issues - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon.svg">
+        <link rel="shortcut icon" href="../../../favicon.png">
+        <link rel="stylesheet" href="../../../css/variables.css">
+        <link rel="stylesheet" href="../../../css/general.css">
+        <link rel="stylesheet" href="../../../css/chrome.css">
+        <link rel="stylesheet" href="../../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../../highlight.css">
+        <link rel="stylesheet" href="../../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="audio-pcm---known-issues"><a class="header" href="#audio-pcm---known-issues">Audio PCM - Known Issues</a></h1>
+<h2 id="-minor-issues"><a class="header" href="#-minor-issues">🟡 Minor Issues</a></h2>
+<h3 id="pcm-001-format-panics-on-invalid-values"><a class="header" href="#pcm-001-format-panics-on-invalid-values">PCM-001: Format panics on invalid values</a></h3>
+<p><strong>File:</strong> <code>go/pkg/audio/pcm/pcm.go:36-38</code></p>
+<p><strong>Description:</strong><br />
+All Format methods panic if the format value is invalid:</p>
+<pre><code class="language-go">func (f Format) SampleRate() int {
+    switch f {
+    case L16Mono16K:
+        return 16000
+    // ...
+    }
+    panic("pcm: invalid audio type")
+}
+</code></pre>
+<p><strong>Impact:</strong> Runtime panic if format is incorrectly initialized.</p>
+<p><strong>Suggestion:</strong> Return <code>(int, error)</code> or add validation method.</p>
+<hr />
+<h3 id="pcm-002-silencechunk-uses-global-buffer"><a class="header" href="#pcm-002-silencechunk-uses-global-buffer">PCM-002: SilenceChunk uses global buffer</a></h3>
+<p><strong>File:</strong> <code>go/pkg/audio/pcm/pcm.go:177</code></p>
+<p><strong>Description:</strong><br />
+SilenceChunk shares a global 32KB zero buffer:</p>
+<pre><code class="language-go">var emptyBytes [32000]byte
+</code></pre>
+<p><strong>Impact:</strong><br />
+No functional issue; <code>WriteTo</code> loops and handles any length. Shared buffer avoids allocations.</p>
+<hr />
+<h3 id="pcm-003-mixer-notifywrite-creates-goroutine-per-call"><a class="header" href="#pcm-003-mixer-notifywrite-creates-goroutine-per-call">PCM-003: Mixer notifyWrite creates goroutine per call</a></h3>
+<p><strong>File:</strong> <code>go/pkg/audio/pcm/mixer.go:391-405</code></p>
+<p><strong>Description:</strong><br />
+Each write notification spawns a goroutine:</p>
+<pre><code class="language-go">func (mx *Mixer) notifyWrite() {
+    go func() {
+        // ...
+    }()
+}
+</code></pre>
+<p><strong>Impact:</strong> Goroutine creation overhead for every track write.</p>
+<p><strong>Suggestion:</strong> Use dedicated notification channel without goroutine.</p>
+<hr />
+<h3 id="pcm-004-mixer-uses-unsafe-pointer-casting"><a class="header" href="#pcm-004-mixer-uses-unsafe-pointer-casting">PCM-004: Mixer uses unsafe pointer casting</a></h3>
+<p><strong>File:</strong> <code>go/pkg/audio/pcm/mixer.go:226</code></p>
+<p><strong>Description:</strong><br />
+Converts between byte slice and int16 slice using unsafe:</p>
+<pre><code class="language-go">i16 := unsafe.Slice((*int16)(unsafe.Pointer(&amp;p[0])), len(p)/2)
+</code></pre>
+<p><strong>Risk:</strong> Assumes little-endian, may have alignment issues.</p>
+<hr />
+<h3 id="pcm-005-track-buffer-allocation-per-read"><a class="header" href="#pcm-005-track-buffer-allocation-per-read">PCM-005: Track buffer allocation per read</a></h3>
+<p><strong>File:</strong> <code>go/pkg/audio/pcm/mixer.go:341</code></p>
+<p><strong>Description:</strong><br />
+Allocates temporary buffer for each track read:</p>
+<pre><code class="language-go">trackBuf := make([]byte, len(p))
+</code></pre>
+<p><strong>Impact:</strong> GC pressure during mixing.</p>
+<p><strong>Suggestion:</strong> Use per-track persistent buffer or sync.Pool.</p>
+<hr />
+<h3 id="pcm-006-rust-format-re-export-is-confusing"><a class="header" href="#pcm-006-rust-format-re-export-is-confusing">PCM-006: Rust Format re-export is confusing</a></h3>
+<p><strong>File:</strong> <code>rust/audio/src/pcm/format.rs:7</code></p>
+<p><strong>Description:</strong><br />
+Format is defined in <code>resampler</code> but re-exported by <code>pcm</code>:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub use crate::resampler::format::Format;
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Impact:</strong> Import path confusion.</p>
+<hr />
+<h2 id="-enhancements"><a class="header" href="#-enhancements">🔵 Enhancements</a></h2>
+<h3 id="pcm-007-no-stereo-format-support"><a class="header" href="#pcm-007-no-stereo-format-support">PCM-007: No stereo format support</a></h3>
+<p><strong>Description:</strong><br />
+Only mono formats are predefined. Stereo is common for music.</p>
+<p><strong>Suggestion:</strong> Add <code>L16Stereo16K</code>, etc.</p>
+<hr />
+<h3 id="pcm-008-no-24-bit-or-32-bit-pcm"><a class="header" href="#pcm-008-no-24-bit-or-32-bit-pcm">PCM-008: No 24-bit or 32-bit PCM</a></h3>
+<p><strong>Description:</strong><br />
+Only 16-bit depth supported. Professional audio uses 24/32-bit.</p>
+<p><strong>Suggestion:</strong> Add higher bit depth variants.</p>
+<hr />
+<h3 id="pcm-009-no-channel-downmix-in-mixer"><a class="header" href="#pcm-009-no-channel-downmix-in-mixer">PCM-009: No channel downmix in mixer</a></h3>
+<p><strong>Description:</strong><br />
+Mixer doesn't handle mixing stereo sources to mono output or vice versa.</p>
+<p><strong>Suggestion:</strong> Add automatic channel conversion.</p>
+<hr />
+<h3 id="pcm-010-no-mixer-input-resampling"><a class="header" href="#pcm-010-no-mixer-input-resampling">PCM-010: No mixer input resampling</a></h3>
+<p><strong>Description:</strong><br />
+All tracks must match mixer output sample rate. No automatic resampling.</p>
+<p><strong>Suggestion:</strong> Auto-resample tracks that don't match output format.</p>
+<hr />
+<h3 id="pcm-011-no-track-volume-ramping"><a class="header" href="#pcm-011-no-track-volume-ramping">PCM-011: No track volume ramping</a></h3>
+<p><strong>Description:</strong><br />
+Gain changes apply instantly, potentially causing clicks.</p>
+<p><strong>Suggestion:</strong> Add smooth gain transition over configurable duration.</p>
+<hr />
+<h2 id="-notes"><a class="header" href="#-notes">⚪ Notes</a></h2>
+<h3 id="pcm-012-float32-internal-mixing"><a class="header" href="#pcm-012-float32-internal-mixing">PCM-012: Float32 internal mixing</a></h3>
+<p><strong>Description:</strong><br />
+Mixer converts int16→float32→int16 internally for headroom during mixing. This is standard practice but involves precision loss.</p>
+<hr />
+<h3 id="pcm-013-mixer-silence-gap-behavior"><a class="header" href="#pcm-013-mixer-silence-gap-behavior">PCM-013: Mixer silence gap behavior</a></h3>
+<p><strong>Description:</strong><br />
+When <code>WithSilenceGap</code> is set:</p>
+<ul>
+<li>Mixer tracks continuous silence duration</li>
+<li>Closes after gap threshold</li>
+<li>Initial silence counts from gap to avoid leading silence</li>
+</ul>
+<p>Complex logic that could be confusing.</p>
+<hr />
+<h3 id="pcm-014-atomicfloat32-implementation"><a class="header" href="#pcm-014-atomicfloat32-implementation">PCM-014: AtomicFloat32 implementation</a></h3>
+<p><strong>Description:</strong><br />
+Both Go and Rust implement atomic float32 via bit reinterpretation:</p>
+<pre><code class="language-go">func (a *AtomicFloat32) Load() float32 {
+    return math.Float32frombits(a.v.Load())
+}
+</code></pre>
+<p>Standard technique, but worth documenting.</p>
+<hr />
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>ID</th><th>Severity</th><th>Status</th><th>Component</th></tr></thead><tbody>
+<tr><td>PCM-001</td><td>🟡 Minor</td><td>Open</td><td>Go Format</td></tr>
+<tr><td>PCM-002</td><td>⚪ Note</td><td>N/A</td><td>Go Silence</td></tr>
+<tr><td>PCM-003</td><td>🟡 Minor</td><td>Open</td><td>Go Mixer</td></tr>
+<tr><td>PCM-004</td><td>🟡 Minor</td><td>Open</td><td>Go Mixer</td></tr>
+<tr><td>PCM-005</td><td>🟡 Minor</td><td>Open</td><td>Go Mixer</td></tr>
+<tr><td>PCM-006</td><td>🟡 Minor</td><td>Open</td><td>Rust</td></tr>
+<tr><td>PCM-007</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>PCM-008</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>PCM-009</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>PCM-010</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>PCM-011</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>PCM-012</td><td>⚪ Note</td><td>N/A</td><td>Go</td></tr>
+<tr><td>PCM-013</td><td>⚪ Note</td><td>N/A</td><td>Go</td></tr>
+<tr><td>PCM-014</td><td>⚪ Note</td><td>N/A</td><td>Both</td></tr>
+</tbody></table>
+</div>
+<p><strong>Overall:</strong> Functional PCM handling and mixing. Main concerns are allocation patterns and missing format variants.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../lib/audio/pcm/rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../lib/audio/resampler/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../lib/audio/pcm/rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../lib/audio/resampler/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr.min.js"></script>
+        <script src="../../../mark.min.js"></script>
+        <script src="../../../searcher.js"></script>
+
+        <script src="../../../clipboard.min.js"></script>
+        <script src="../../../highlight.js"></script>
+        <script src="../../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../../mermaid.min.js"></script>
+        <script src="../../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

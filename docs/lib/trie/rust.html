@@ -1,0 +1,359 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Rust Implementation - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="trie-package---rust-implementation"><a class="header" href="#trie-package---rust-implementation">Trie Package - Rust Implementation</a></h1>
+<p>Crate: <code>giztoy-trie</code></p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<h3 id="trie"><a class="header" href="#trie">Trie<T></a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone)]
+pub struct Trie&lt;T&gt; {
+    children: HashMap&lt;String, Trie&lt;T&gt;&gt;,
+    match_any: Option&lt;Box&lt;Trie&lt;T&gt;&gt;&gt;,  // single-level wildcard (+)
+    match_all: Option&lt;Box&lt;Trie&lt;T&gt;&gt;&gt;,  // multi-level wildcard (#)
+    value: Option&lt;T&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>new</code></td><td><code>fn new() -&gt; Self</code></td><td>Create empty trie</td></tr>
+<tr><td><code>set</code></td><td><code>fn set&lt;F, E&gt;(&amp;mut self, path: &amp;str, setter: F) -&gt; Result&lt;(), E&gt;</code></td><td>Set with custom setter</td></tr>
+<tr><td><code>set_value</code></td><td><code>fn set_value(&amp;mut self, path: &amp;str, value: T) -&gt; Result&lt;(), InvalidPatternError&gt;</code></td><td>Set value directly</td></tr>
+<tr><td><code>get</code></td><td><code>fn get(&amp;self, path: &amp;str) -&gt; Option&lt;&amp;T&gt;</code></td><td>Get value reference (zero-alloc)</td></tr>
+<tr><td><code>get_value</code></td><td><code>fn get_value(&amp;self, path: &amp;str) -&gt; Option&lt;T&gt;</code></td><td>Get cloned value</td></tr>
+<tr><td><code>match_path</code></td><td><code>fn match_path(&amp;self, path: &amp;str) -&gt; (String, Option&lt;&amp;T&gt;)</code></td><td>Get with matched route</td></tr>
+<tr><td><code>walk</code></td><td><code>fn walk&lt;F&gt;(&amp;self, f: F)</code></td><td>Visit all nodes</td></tr>
+<tr><td><code>len</code></td><td><code>fn len(&amp;self) -&gt; usize</code></td><td>Count values</td></tr>
+<tr><td><code>is_empty</code></td><td><code>fn is_empty(&amp;self) -&gt; bool</code></td><td>Check if empty</td></tr>
+</tbody></table>
+</div>
+<p><strong>Trait Implementations:</strong></p>
+<ul>
+<li><code>Default</code></li>
+<li><code>Clone</code></li>
+<li><code>Debug</code></li>
+<li><code>Display</code> (when <code>T: Display</code>)</li>
+</ul>
+<h3 id="invalidpatternerror"><a class="header" href="#invalidpatternerror">InvalidPatternError</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("invalid path pattern: path should be /a/b/c or /a/+/c or /a/#")]
+pub struct InvalidPatternError;
+<span class="boring">}</span></code></pre></pre>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<h3 id="basic-setget"><a class="header" href="#basic-setget">Basic Set/Get</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_trie::Trie;
+
+let mut trie = Trie::&lt;String&gt;::new();
+
+// Set exact path
+trie.set_value("device/gear-001/state", "online".to_string()).unwrap();
+
+// Get value (zero allocation)
+let val: Option&lt;&amp;String&gt; = trie.get("device/gear-001/state");
+
+// Get cloned value
+let val: Option&lt;String&gt; = trie.get_value("device/gear-001/state");
+<span class="boring">}</span></code></pre></pre>
+<h3 id="wildcard-patterns"><a class="header" href="#wildcard-patterns">Wildcard Patterns</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let mut trie = Trie::&lt;String&gt;::new();
+
+// Single-level wildcard
+trie.set_value("device/+/state", "state_handler".to_string()).unwrap();
+
+// Multi-level wildcard
+trie.set_value("logs/#", "log_handler".to_string()).unwrap();
+
+// Match against patterns
+let val = trie.get("device/any-device/state");
+assert_eq!(val, Some(&amp;"state_handler".to_string()));
+
+let val = trie.get("logs/app/debug/line1");
+assert_eq!(val, Some(&amp;"log_handler".to_string()));
+<span class="boring">}</span></code></pre></pre>
+<h3 id="custom-set-function"><a class="header" href="#custom-set-function">Custom Set Function</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let mut trie = Trie::&lt;Vec&lt;String&gt;&gt;::new();
+
+// Set with custom logic
+trie.set("handlers/events", |existing| {
+    match existing {
+        Some(vec) =&gt; {
+            vec.push("handler2".to_string());
+            Ok(vec.clone())
+        }
+        None =&gt; Ok(vec!["handler1".to_string()]),
+    }
+}).unwrap();
+<span class="boring">}</span></code></pre></pre>
+<h3 id="walk-all-nodes"><a class="header" href="#walk-all-nodes">Walk All Nodes</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>trie.walk(|path, value| {
+    println!("{}: {}", path, value);
+});
+<span class="boring">}</span></code></pre></pre>
+<h3 id="match-with-route"><a class="header" href="#match-with-route">Match with Route</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let mut trie = Trie::&lt;String&gt;::new();
+trie.set_value("device/+/state", "handler".to_string()).unwrap();
+
+let (route, value) = trie.match_path("device/gear-001/state");
+// route = "/device/+/state"
+// value = Some(&amp;"handler")
+<span class="boring">}</span></code></pre></pre>
+<h2 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h2>
+<h3 id="zero-allocation-lookup"><a class="header" href="#zero-allocation-lookup">Zero-Allocation Lookup</a></h3>
+<p>The <code>get()</code> method performs zero allocations by:</p>
+<ul>
+<li>Using string slices for path splitting</li>
+<li>Returning references instead of cloned values</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[inline]
+fn split_path(path: &amp;str) -&gt; (&amp;str, &amp;str) {
+    match path.find('/') {
+        Some(idx) =&gt; (&amp;path[..idx], &amp;path[idx + 1..]),
+        None =&gt; (path, ""),
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="value-storage"><a class="header" href="#value-storage">Value Storage</a></h3>
+<p>Uses <code>Option&lt;T&gt;</code> instead of a separate flag:</p>
+<ul>
+<li><code>None</code> = value not set</li>
+<li><code>Some(T)</code> = value set</li>
+</ul>
+<h3 id="wildcard-storage"><a class="header" href="#wildcard-storage">Wildcard Storage</a></h3>
+<ul>
+<li><code>match_any</code>: <code>Option&lt;Box&lt;Trie&lt;T&gt;&gt;&gt;</code> for <code>+</code> wildcard</li>
+<li><code>match_all</code>: <code>Option&lt;Box&lt;Trie&lt;T&gt;&gt;&gt;</code> for <code>#</code> wildcard</li>
+</ul>
+<p>Boxed to avoid recursive type sizing issues.</p>
+<h2 id="differences-from-go"><a class="header" href="#differences-from-go">Differences from Go</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Aspect</th><th>Go</th><th>Rust</th></tr></thead><tbody>
+<tr><td>Value storage</td><td><code>set bool</code> + <code>value T</code></td><td><code>Option&lt;T&gt;</code></td></tr>
+<tr><td>Child storage</td><td><code>map[string]*Trie[T]</code></td><td><code>HashMap&lt;String, Trie&lt;T&gt;&gt;</code></td></tr>
+<tr><td>Wildcard storage</td><td><code>*Trie[T]</code> (pointer)</td><td><code>Option&lt;Box&lt;Trie&lt;T&gt;&gt;&gt;</code></td></tr>
+<tr><td>Get return</td><td><code>(*T, bool)</code></td><td><code>Option&lt;&amp;T&gt;</code></td></tr>
+<tr><td>Clone support</td><td>Implicit (pointer)</td><td>Explicit <code>Clone</code> derive</td></tr>
+<tr><td>Zero-alloc get</td><td>No (returns route string)</td><td>Yes (<code>get()</code> method)</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/trie/go.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/trie/issues.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/trie/go.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/trie/issues.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

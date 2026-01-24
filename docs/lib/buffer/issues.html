@@ -1,0 +1,311 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Known Issues - Giztoy Documentation</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="buffer-package---known-issues"><a class="header" href="#buffer-package---known-issues">Buffer Package - Known Issues</a></h1>
+<h2 id="-major-issues"><a class="header" href="#-major-issues">🟠 Major Issues</a></h2>
+<h3 id="buf-001-go-buffernext-uses-lifo-instead-of-fifo"><a class="header" href="#buf-001-go-buffernext-uses-lifo-instead-of-fifo">BUF-001: Go Buffer.Next() uses LIFO instead of FIFO</a></h3>
+<p><strong>File:</strong> <code>go/pkg/buffer/buffer.go:259-262</code></p>
+<p><strong>Description:</strong><br />
+The <code>Next()</code> method reads from the END of the buffer (LIFO behavior), while <code>Read()</code> reads from the front (FIFO). This inconsistency is confusing and likely unintentional.</p>
+<pre><code class="language-go">// Current implementation (LIFO)
+head := len(b.buf) - 1
+t = b.buf[head]
+b.buf = b.buf[:head]
+</code></pre>
+<p><strong>Expected:</strong> Should read from <code>b.buf[0]</code> for FIFO consistency with <code>Read()</code>.</p>
+<p><strong>Impact:</strong> Users expecting iterator-style sequential access get reversed order.</p>
+<p><strong>Status:</strong> ⚠️ Documented in code comment but should be fixed.</p>
+<hr />
+<h3 id="buf-002-go-bufferadd-missing-write-notification"><a class="header" href="#buf-002-go-bufferadd-missing-write-notification">BUF-002: Go Buffer.Add() missing write notification</a></h3>
+<p><strong>File:</strong> <code>go/pkg/buffer/buffer.go:280-291</code></p>
+<p><strong>Description:</strong><br />
+The <code>Add()</code> method appends an element but does NOT send a notification on <code>writeNotify</code>. If a reader is blocked waiting and only <code>Add()</code> is used for writing, the reader may block indefinitely.</p>
+<pre><code class="language-go">func (b *Buffer[T]) Add(t T) error {
+    // ... error checks ...
+    b.buf = append(b.buf, t)
+    return nil  // Missing: select { case b.writeNotify &lt;- struct{}{}: default: }
+}
+</code></pre>
+<p><strong>Impact:</strong> Potential deadlock when using <code>Add()</code> exclusively.</p>
+<p><strong>Status:</strong> 🔴 Bug - needs fix.</p>
+<hr />
+<h2 id="-minor-issues"><a class="header" href="#-minor-issues">🟡 Minor Issues</a></h2>
+<h3 id="buf-003-go-bufferbytes-returns-internal-slice-reference"><a class="header" href="#buf-003-go-bufferbytes-returns-internal-slice-reference">BUF-003: Go Buffer.Bytes() returns internal slice reference</a></h3>
+<p><strong>File:</strong> <code>go/pkg/buffer/buffer.go:335-339</code></p>
+<p><strong>Description:</strong><br />
+<code>Bytes()</code> returns the internal slice directly, not a copy. Modifications to the returned slice will corrupt the buffer state.</p>
+<pre><code class="language-go">func (b *Buffer[T]) Bytes() []T {
+    b.mu.Lock()
+    defer b.mu.Unlock()
+    return b.buf  // Returns internal reference!
+}
+</code></pre>
+<p><strong>Impact:</strong> Data corruption if caller modifies the returned slice.</p>
+<p><strong>Workaround:</strong> Document clearly or change to return a copy.</p>
+<hr />
+<h3 id="buf-004-go-blockbufferbytes-inconsistent-copy-behavior"><a class="header" href="#buf-004-go-blockbufferbytes-inconsistent-copy-behavior">BUF-004: Go BlockBuffer.Bytes() inconsistent copy behavior</a></h3>
+<p><strong>File:</strong> <code>go/pkg/buffer/block_buffer.go:356-365</code></p>
+<p><strong>Description:</strong><br />
+Documentation says "returned slice is a copy" but when <code>h &lt; t</code>, it returns a subslice of the internal buffer directly:</p>
+<pre><code class="language-go">if h &lt; t {
+    return bb.buf[h:t]  // Not a copy!
+}
+return slices.Concat(bb.buf[h:], bb.buf[:t])  // This is a copy
+</code></pre>
+<p><strong>Impact:</strong> Inconsistent behavior depending on buffer state.</p>
+<hr />
+<h3 id="buf-005-go-ringbufferbytes-same-issue-as-buf-004"><a class="header" href="#buf-005-go-ringbufferbytes-same-issue-as-buf-004">BUF-005: Go RingBuffer.Bytes() same issue as BUF-004</a></h3>
+<p><strong>File:</strong> <code>go/pkg/buffer/ring_buffer.go:306-315</code></p>
+<p><strong>Description:</strong><br />
+Same inconsistent copy behavior as BlockBuffer.</p>
+<hr />
+<h2 id="-enhancements"><a class="header" href="#-enhancements">🔵 Enhancements</a></h2>
+<h3 id="buf-006-rust-blockbuffer-uses-vecoption-overhead"><a class="header" href="#buf-006-rust-blockbuffer-uses-vecoption-overhead">BUF-006: Rust BlockBuffer uses Vec&lt;Option<T>&gt; overhead</a></h3>
+<p><strong>File:</strong> <code>rust/buffer/src/block_buffer.rs:82</code></p>
+<p><strong>Description:</strong><br />
+Rust implementation uses <code>Vec&lt;Option&lt;T&gt;&gt;</code> which adds memory overhead (size of discriminant per element) compared to Go's direct slice approach.</p>
+<p><strong>Suggestion:</strong> Consider using <code>MaybeUninit&lt;T&gt;</code> with careful initialization tracking for zero-cost abstraction.</p>
+<hr />
+<h3 id="buf-007-gorust-buffernext-semantic-difference"><a class="header" href="#buf-007-gorust-buffernext-semantic-difference">BUF-007: Go/Rust Buffer.Next() semantic difference</a></h3>
+<p><strong>Description:</strong></p>
+<ul>
+<li>Go: <code>Next()</code> is LIFO (pops from end)</li>
+<li>Rust: <code>next()</code> is FIFO (pops from front via VecDeque)</li>
+</ul>
+<p>This API inconsistency could cause bugs when porting code between languages.</p>
+<p><strong>Suggestion:</strong> Align Go implementation to match Rust (FIFO).</p>
+<hr />
+<h2 id="-notes"><a class="header" href="#-notes">⚪ Notes</a></h2>
+<h3 id="buf-008-no-ioreaderiowriter-implementation-in-rust"><a class="header" href="#buf-008-no-ioreaderiowriter-implementation-in-rust">BUF-008: No io.Reader/io.Writer implementation in Rust</a></h3>
+<p><strong>Description:</strong><br />
+Go buffers implement <code>io.Reader</code> and <code>io.Writer</code> interfaces. Rust buffers don't implement <code>std::io::Read</code> and <code>std::io::Write</code> traits.</p>
+<p><strong>Reason:</strong> Rust buffers are generic over <code>T: Clone</code>, not just bytes.</p>
+<p><strong>Suggestion:</strong> Add byte-specific wrapper types that implement std::io traits.</p>
+<hr />
+<h3 id="buf-009-missing-bytes-equivalent-in-go-bytesbuffer-interface"><a class="header" href="#buf-009-missing-bytes-equivalent-in-go-bytesbuffer-interface">BUF-009: Missing Bytes() equivalent in Go BytesBuffer interface</a></h3>
+<p><strong>File:</strong> <code>go/pkg/buffer/bytes.go:12-23</code></p>
+<p><strong>Description:</strong><br />
+The <code>BytesBuffer</code> interface includes <code>Bytes() []byte</code> but this is dangerous given BUF-003/004/005.</p>
+<p><strong>Suggestion:</strong> Consider removing from interface or ensuring all implementations return copies.</p>
+<hr />
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>ID</th><th>Severity</th><th>Status</th><th>Component</th></tr></thead><tbody>
+<tr><td>BUF-001</td><td>🟠 Major</td><td>Open</td><td>Go Buffer</td></tr>
+<tr><td>BUF-002</td><td>🟠 Major</td><td>Open</td><td>Go Buffer</td></tr>
+<tr><td>BUF-003</td><td>🟡 Minor</td><td>Open</td><td>Go Buffer</td></tr>
+<tr><td>BUF-004</td><td>🟡 Minor</td><td>Open</td><td>Go BlockBuffer</td></tr>
+<tr><td>BUF-005</td><td>🟡 Minor</td><td>Open</td><td>Go RingBuffer</td></tr>
+<tr><td>BUF-006</td><td>🔵 Enhancement</td><td>Open</td><td>Rust BlockBuffer</td></tr>
+<tr><td>BUF-007</td><td>🔵 Enhancement</td><td>Open</td><td>Go/Rust parity</td></tr>
+<tr><td>BUF-008</td><td>⚪ Note</td><td>N/A</td><td>Rust</td></tr>
+<tr><td>BUF-009</td><td>⚪ Note</td><td>N/A</td><td>Go Interface</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/buffer/rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/encoding/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/buffer/rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/encoding/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>
