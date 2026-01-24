@@ -40,7 +40,7 @@ genrule(
         ar rcs $@ $$OUTDIR/*.o
         rm -rf $$OUTDIR $$CONFIG_DIR
     """,
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
 )
 
 genrule(
@@ -60,7 +60,7 @@ genrule(
             cp $$f $(@D)/include/
         done
     """,
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
 )
 
 cc_import(

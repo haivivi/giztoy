@@ -1,0 +1,48 @@
+# HarmonyOS Bazel Rules
+#
+# 这个包提供了用于构建 HarmonyOS 应用的 Bazel rules
+#
+# 配置方式:
+# 1. 在 .bazelrc 中设置: build --action_env=DEVECO_HOME=/path/to/deveco
+# 2. 或导出环境变量: export DEVECO_HOME=/Applications/DevEco-Studio.app/Contents
+
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "defs.bzl",
+    "rules.bzl",
+    "providers.bzl",
+    "toolchain.bzl",
+    "settings.bzl",
+])
+
+# ============================================================================
+# Build Settings - 通过 .bazelrc 或命令行配置
+# ============================================================================
+
+# DevEco Studio 安装路径
+# 使用方式: --//bazel/harmonyos:deveco_home=/path/to/deveco
+string_flag(
+    name = "deveco_home",
+    build_setting_default = "",
+)
+
+# SDK 路径（可选，默认使用 DevEco 内置）
+string_flag(
+    name = "sdk_home",
+    build_setting_default = "",
+)
+
+# Java Home 路径（可选，默认使用 DevEco 内置）
+string_flag(
+    name = "java_home",
+    build_setting_default = "",
+)
+
+# ============================================================================
+# Toolchain Type
+# ============================================================================
+
+toolchain_type(name = "toolchain_type")

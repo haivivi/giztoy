@@ -57,7 +57,7 @@ genrule(
         # Create static library
         ar rcs $@ $$WORK/obj/*.o
     """,
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
 )
 
 genrule(
@@ -82,7 +82,7 @@ genrule(
         done
         cp $(location config_types.h) $(location include/ogg/config_types.h)
     """,
-    visibility = ["//visibility:private"],
+    visibility = ["//visibility:public"],
 )
 
 cc_import(

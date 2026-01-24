@@ -25,6 +25,7 @@ go_library(
 go_test(
     name = "mqtt0_test",
     srcs = [
+        "benchmark_test.go",
         "broker_test.go",
         "client_test.go",
         "packet_test.go",

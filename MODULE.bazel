@@ -15,14 +15,46 @@ bazel_dep(name = "gazelle", version = "0.47.0")
 # Platform rules for platform detection
 bazel_dep(name = "platforms", version = "1.0.0")
 
+# ============================================================================
+# Apple platform rules (MUST be before rules_cc!)
+# ============================================================================
+
+# Apple support - provides Apple CC toolchain (must be before rules_cc)
+bazel_dep(name = "apple_support", version = "1.24.1")
+
+# Apple platform rules (iOS, macOS, tvOS, watchOS)
+bazel_dep(name = "rules_apple", version = "3.16.1")
+
+# Swift language rules (required by rules_apple)
+bazel_dep(name = "rules_swift", version = "2.8.1")
+
+# ============================================================================
+# Core rules
+# ============================================================================
+
 # Rust rules
 bazel_dep(name = "rules_rust", version = "0.68.1")
 
-# C/C++ rules
-bazel_dep(name = "rules_cc", version = "0.1.1")
+# C/C++ rules (after apple_support for correct toolchain resolution)
+bazel_dep(name = "rules_cc", version = "0.2.14")
 
 # Shell rules (required for sh_binary/sh_test in Bazel 8+)
 bazel_dep(name = "rules_shell", version = "0.6.1")
+
+# ============================================================================
+# Android platform rules
+# ============================================================================
+
+# Android platform rules
+bazel_dep(name = "rules_android", version = "0.7.1")
+
+# Kotlin language rules (for Kotlin Android apps)
+bazel_dep(name = "rules_kotlin", version = "2.2.2")
+
+# Android SDK configuration
+# 使用环境变量 ANDROID_HOME 自动检测 SDK 位置
+android_sdk_repository_extension = use_extension("@rules_android//rules/android_sdk_repository:rule.bzl", "android_sdk_repository_extension")
+android_sdk_repository_extension.configure()
 
 # Go SDK
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
@@ -59,6 +91,14 @@ use_repo(
 yq = use_extension("//:extensions.bzl", "yq")
 use_repo(yq, "yq")
 
+# mdbook tool for documentation
+mdbook_ext = use_extension("//:extensions.bzl", "mdbook")
+use_repo(mdbook_ext, "mdbook")
+
+# mermaid.js for documentation diagrams
+mermaid_ext = use_extension("//:extensions.bzl", "mermaid")
+use_repo(mermaid_ext, "mermaid")
+
 # Rust toolchain
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(edition = "2024")
@@ -92,3 +132,12 @@ use_repo(crate, "crate_index")
 # Audio libraries (soxr, portaudio, opus, lame, ogg)
 audio_libs = use_extension("//:extensions.bzl", "audio_libs")
 use_repo(audio_libs, "lame", "ogg", "opus", "portaudio", "soxr")
+
+# ============================================================================
+# HarmonyOS SDK (自动下载，无需安装 DevEco Studio)
+# ============================================================================
+hos_sdk = use_extension("//bazel/harmonyos:extensions.bzl", "hos_sdk_extension")
+hos_sdk.sdk(
+    install_components = ["OpenHarmony/toolchains:9"],
+)
+use_repo(hos_sdk, "hos_sdk")

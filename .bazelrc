@@ -14,3 +14,7 @@ build --incompatible_enable_cc_toolchain_resolution
 # PATH needed for C compiler (Rust ring crate, Go CGO, etc.)
 build --action_env=PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin
 build --host_action_env=PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin
+
+
+# 加载用户本地配置（如果存在）
+try-import %workspace%/.bazelrc.user

@@ -4,6 +4,122 @@ load("@gazelle//:deps.bzl", "go_repository")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+# =============================================================================
+# mdBook Extension (for documentation)
+# =============================================================================
+
+_MDBOOK_VERSION = "0.4.44"
+
+# mdBook checksums for different platforms
+# Get latest from: https://github.com/rust-lang/mdBook/releases
+# To update: shasum -a 256 mdbook-v<version>-<platform>.tar.gz
+_MDBOOK_SHA256 = {
+    "darwin_amd64": "",
+    "darwin_arm64": "a7e203a9b131ba045d6e4aff27f1a817059af9fe8174d86d78f79153da2e2b61",
+    "linux_amd64": "",
+    "linux_arm64": "",
+}
+
+def _mdbook_repo_impl(ctx):
+    """Implementation of mdbook repository rule."""
+    os = ctx.os.name
+    arch = ctx.os.arch
+
+    # Map OS names
+    if os == "mac os x" or os.startswith("darwin"):
+        os_name = "apple-darwin"
+        os_key = "darwin"
+    elif os.startswith("linux"):
+        os_name = "unknown-linux-gnu"
+        os_key = "linux"
+    else:
+        fail("Unsupported OS: " + os)
+
+    # Map architecture
+    if arch == "amd64" or arch == "x86_64":
+        arch_name = "x86_64"
+        arch_key = "amd64"
+    elif arch == "aarch64" or arch == "arm64":
+        arch_name = "aarch64"
+        arch_key = "arm64"
+    else:
+        fail("Unsupported architecture: " + arch)
+
+    platform_key = "{}_{}".format(os_key, arch_key)
+    platform = "{}-{}".format(arch_name, os_name)
+
+    # Download mdbook
+    url = "https://github.com/rust-lang/mdBook/releases/download/v{}/mdbook-v{}-{}.tar.gz".format(
+        _MDBOOK_VERSION,
+        _MDBOOK_VERSION,
+        platform,
+    )
+
+    ctx.download_and_extract(
+        url = url,
+        sha256 = _MDBOOK_SHA256.get(platform_key, ""),
+        stripPrefix = "",
+    )
+
+    # Create BUILD file
+    ctx.file("BUILD.bazel", """
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["mdbook"])
+
+sh_binary(
+    name = "mdbook_bin",
+    srcs = ["mdbook"],
+)
+""")
+
+_mdbook_repo = repository_rule(
+    implementation = _mdbook_repo_impl,
+    attrs = {},
+)
+
+def _mdbook_extension_impl(module_ctx):
+    _mdbook_repo(name = "mdbook")
+
+mdbook = module_extension(
+    implementation = _mdbook_extension_impl,
+)
+
+# =============================================================================
+# Mermaid.js Extension (for documentation diagrams)
+# =============================================================================
+
+_MERMAID_VERSION = "11.4.1"
+
+def _mermaid_repo_impl(ctx):
+    """Download mermaid.min.js from CDN."""
+    ctx.download(
+        url = "https://cdn.jsdelivr.net/npm/mermaid@{}/dist/mermaid.min.js".format(_MERMAID_VERSION),
+        output = "mermaid.min.js",
+    )
+
+    ctx.file("BUILD.bazel", """
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["mermaid.min.js"])
+""")
+
+_mermaid_repo = repository_rule(
+    implementation = _mermaid_repo_impl,
+    attrs = {},
+)
+
+def _mermaid_extension_impl(module_ctx):
+    _mermaid_repo(name = "mermaid")
+
+mermaid = module_extension(
+    implementation = _mermaid_extension_impl,
+)
+
+# =============================================================================
+# yq Extension
+# =============================================================================
+
 # yq version
 _YQ_VERSION = "4.44.3"
 

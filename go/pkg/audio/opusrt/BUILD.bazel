@@ -16,7 +16,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/audio/codec/ogg",
-        "//go/pkg/audio/codec/opus",
         "//go/pkg/buffer",
     ],
 )

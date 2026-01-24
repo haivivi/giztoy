@@ -77,6 +77,17 @@ captures/
 !debug.keystore
 google-services.json
 
+# HarmonyOS
+*.hap
+*.app
+.hvigor/
+oh_modules/
+node_modules/
+local.properties
+*.iml
+entry/build/
+!examples/bazel/harmonyos/**/*.app
+
 # Build artifacts
 /dist/
 /out/

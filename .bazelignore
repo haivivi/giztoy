@@ -1,1 +1,15 @@
+# Temp files
 tmp
+
+# ESP-IDF / ESP-RS embedded projects
+esp
+
+# HarmonyOS build cache (root level)
+.hvigor
+
+# IDE directories
+.idea
+.vscode
+
+# Node.js
+node_modules
