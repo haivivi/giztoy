@@ -302,17 +302,18 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 	var oldHandle *clientHandle
 	var oldTopics []string
 	if old, exists := b.clients[connect.ClientID]; exists {
-		close(old.msgCh) // Signal old client to disconnect
 		oldHandle = old
 		oldTopics = b.clientSubscriptions[connect.ClientID]
-			delete(b.clientSubscriptions, connect.ClientID)
+		delete(b.clientSubscriptions, connect.ClientID)
 	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
 
-	// Clean up old client's subscriptions (both normal and shared) outside the lock
+	// Clean up old client's subscriptions BEFORE closing channel to prevent
+	// send-on-closed-channel panic in routeMessage
 	if oldHandle != nil {
 		b.removeClientSubscriptions(oldTopics, oldHandle)
+		close(oldHandle.msgCh) // Signal old client to disconnect
 	}
 
 	if b.OnConnect != nil {
@@ -385,17 +386,18 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 	var oldHandle *clientHandle
 	var oldTopics []string
 	if old, exists := b.clients[connect.ClientID]; exists {
-		close(old.msgCh) // Signal old client to disconnect
 		oldHandle = old
 		oldTopics = b.clientSubscriptions[connect.ClientID]
-			delete(b.clientSubscriptions, connect.ClientID)
+		delete(b.clientSubscriptions, connect.ClientID)
 	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
 
-	// Clean up old client's subscriptions (both normal and shared) outside the lock
+	// Clean up old client's subscriptions BEFORE closing channel to prevent
+	// send-on-closed-channel panic in routeMessage
 	if oldHandle != nil {
 		b.removeClientSubscriptions(oldTopics, oldHandle)
+		close(oldHandle.msgCh) // Signal old client to disconnect
 	}
 
 	if b.OnConnect != nil {
@@ -771,14 +773,14 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 			}
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
-		if err := b.subscriptions.Insert(topic, handle); err != nil {
-			slog.Debug("mqtt0: subscribe failed", "error", err)
+			if err := b.subscriptions.Insert(topic, handle); err != nil {
+				slog.Debug("mqtt0: subscribe failed", "error", err)
 				// Rollback the reserved slot
 				b.mu.Lock()
 				b.removeLastSubscription(clientID, topic)
 				b.mu.Unlock()
-			codes[i] = 0x80
-			continue
+				codes[i] = 0x80
+				continue
 			}
 			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", topic)
 		}
@@ -856,14 +858,14 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 			}
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
-		if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
-			slog.Debug("mqtt0: subscribe failed", "error", err)
+			if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
+				slog.Debug("mqtt0: subscribe failed", "error", err)
 				// Rollback the reserved slot
 				b.mu.Lock()
 				b.removeLastSubscription(clientID, filter.Topic)
 				b.mu.Unlock()
-			codes[i] = ReasonUnspecifiedError
-			continue
+				codes[i] = ReasonUnspecifiedError
+				continue
 			}
 			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", filter.Topic)
 		}
@@ -1011,11 +1013,11 @@ func (b *Broker) cleanupClient(clientID, username string, handle *clientHandle) 
 	// This prevents removing a new client that connected with the same clientID
 	var topics []string
 	if current, exists := b.clients[clientID]; exists && current == handle {
-	delete(b.clients, clientID)
+		delete(b.clients, clientID)
 		// Only remove subscriptions tracking if this is the correct client instance
 		// This prevents a stale cleanup from wiping a new client's subscription data
 		topics = b.clientSubscriptions[clientID]
-	delete(b.clientSubscriptions, clientID)
+		delete(b.clientSubscriptions, clientID)
 	}
 	b.mu.Unlock()
 
