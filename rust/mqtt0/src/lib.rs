@@ -38,7 +38,7 @@
 //! }
 //! ```
 
-mod broker;
+pub mod broker;
 mod client;
 mod error;
 mod protocol;
@@ -46,7 +46,7 @@ pub mod transport;
 pub mod trie;
 mod types;
 
-pub use broker::{Broker, BrokerConfig, BrokerBuilder};
+pub use broker::{Broker, BrokerConfig, BrokerBuilder, parse_shared_topic, topic_matches};
 pub use client::{Client, ClientConfig};
 pub use error::{Error, Result};
 pub use transport::TransportType;

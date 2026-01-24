@@ -57,6 +57,64 @@ func (t *Trie[T]) Remove(pattern string, predicate func(T) bool) bool {
 	return t.root.remove(pattern, predicate)
 }
 
+// Update allows modifying values at the given pattern using a callback.
+// The callback receives a pointer to the values slice and can modify it.
+// Returns an error if the pattern is invalid (e.g., # not at end).
+func (t *Trie[T]) Update(pattern string, f func(*[]T)) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.root.update(pattern, f)
+}
+
+func (n *trieNode[T]) update(pattern string, f func(*[]T)) error {
+	if pattern == "" {
+		f(&n.values)
+		return nil
+	}
+
+	var first, rest string
+	idx := strings.Index(pattern, "/")
+	if idx == -1 {
+		first = pattern
+	} else {
+		first = pattern[:idx]
+		rest = pattern[idx+1:]
+	}
+
+	// Check existing children first
+	if n.children != nil {
+		if child, ok := n.children[first]; ok {
+			return child.update(rest, f)
+		}
+	}
+
+	switch first {
+	case "+":
+		if n.matchAny == nil {
+			n.matchAny = &trieNode[T]{}
+		}
+		return n.matchAny.update(rest, f)
+	case "#":
+		// # must be the last segment
+		if rest != "" {
+			return ErrInvalidTopic
+		}
+		if n.matchAll == nil {
+			n.matchAll = &trieNode[T]{}
+		}
+		f(&n.matchAll.values)
+		return nil
+	default:
+		if n.children == nil {
+			n.children = make(map[string]*trieNode[T])
+		}
+		if n.children[first] == nil {
+			n.children[first] = &trieNode[T]{}
+		}
+		return n.children[first].update(rest, f)
+	}
+}
+
 func (n *trieNode[T]) insert(pattern string, value T) error {
 	if pattern == "" {
 		n.values = append(n.values, value)
@@ -154,6 +212,10 @@ func (n *trieNode[T]) match(matched, topic string) (string, []T, bool) {
 		rest = topic[idx+1:]
 	}
 
+	// MQTT spec: $ topics should only match explicit $ patterns, not wildcards at root level
+	isDollarTopic := len(first) > 0 && first[0] == '$'
+	atRootLevel := matched == ""
+
 	// Try exact match first
 	if n.children != nil {
 		if child, ok := n.children[first]; ok {
@@ -165,7 +227,8 @@ func (n *trieNode[T]) match(matched, topic string) (string, []T, bool) {
 	}
 
 	// Try single-level wildcard (+)
-	if n.matchAny != nil {
+	// Skip if this is a $ topic at root level (MQTT spec compliance)
+	if n.matchAny != nil && !(isDollarTopic && atRootLevel) {
 		newMatched := joinPath(matched, "+")
 		if route, values, ok := n.matchAny.match(newMatched, rest); ok {
 			return route, values, true
@@ -173,7 +236,8 @@ func (n *trieNode[T]) match(matched, topic string) (string, []T, bool) {
 	}
 
 	// Try multi-level wildcard (#)
-	if n.matchAll != nil {
+	// Skip if this is a $ topic at root level (MQTT spec compliance)
+	if n.matchAll != nil && !(isDollarTopic && atRootLevel) {
 		newMatched := joinPath(matched, "#")
 		if len(n.matchAll.values) > 0 {
 			return newMatched, n.matchAll.values, true

@@ -29,6 +29,10 @@ thiserror = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
+# JSON serialization (for $SYS events)
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
 # TLS support (optional)
 tokio-rustls = { version = "0.26", optional = true }
 rustls-pemfile = { version = "2", optional = true }

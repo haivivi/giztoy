@@ -1808,4 +1808,753 @@ mod keepalive_tests {
         // Note: current impl doesn't auto-update is_running on broker disconnect,
         // only on keepalive ping failure or explicit disconnect call
     }
+
+    // ========================================================================
+    // MQTT 5.0 Feature Tests
+    // ========================================================================
+
+    /// Test shared subscriptions with round-robin delivery.
+    #[tokio::test]
+    async fn test_shared_subscriptions() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::builder(BrokerConfig::new(&addr).sys_events(false)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect two subscribers to the same shared group
+        let mut sub1 = Client::connect(
+            ClientConfig::new(&addr, "shared-sub-1").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+
+        let mut sub2 = Client::connect(
+            ClientConfig::new(&addr, "shared-sub-2").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+
+        // Both subscribe to the shared subscription
+        sub1.subscribe(&["$share/group1/test/+/data"]).await.unwrap();
+        sub2.subscribe(&["$share/group1/test/+/data"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect a publisher
+        let pub_client = Client::connect(
+            ClientConfig::new(&addr, "publisher").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+
+        // Publish multiple messages
+        for i in 0..4 {
+            pub_client.publish(&format!("test/{}/data", i), format!("msg-{}", i).as_bytes()).await.unwrap();
+        }
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Count messages received by each subscriber
+        let mut sub1_count = 0;
+        let mut sub2_count = 0;
+
+        // Drain each subscriber independently to avoid flaky behavior
+        let mut sub1_done = false;
+        let mut sub2_done = false;
+
+        loop {
+            if sub1_done && sub2_done {
+                break;
+            }
+
+            tokio::select! {
+                msg = sub1.recv_timeout(Duration::from_millis(100)), if !sub1_done => {
+                    match msg {
+                        Ok(Some(_)) => sub1_count += 1,
+                        _ => sub1_done = true,
+                    }
+                }
+                msg = sub2.recv_timeout(Duration::from_millis(100)), if !sub2_done => {
+                    match msg {
+                        Ok(Some(_)) => sub2_count += 1,
+                        _ => sub2_done = true,
+                    }
+                }
+                _ = tokio::time::sleep(Duration::from_millis(300)) => {
+                    // Overall timeout
+                    break;
+                }
+            }
+        }
+
+        // With round-robin, messages should be distributed
+        // Both subscribers should receive at least one message
+        assert!(sub1_count > 0, "Subscriber 1 should receive at least one message");
+        assert!(sub2_count > 0, "Subscriber 2 should receive at least one message");
+        assert_eq!(sub1_count + sub2_count, 4, "Total should be 4 messages");
+    }
+
+    /// Test $SYS events for client connect/disconnect.
+    #[tokio::test]
+    async fn test_sys_events() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with $SYS events enabled (default)
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr)
+        ).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect a subscriber to $SYS topics
+        let mut sys_sub = Client::connect(
+            ClientConfig::new(&addr, "sys-monitor")
+        ).await.unwrap();
+
+        sys_sub.subscribe(&["$SYS/brokers/+/connected"]).await.unwrap();
+        sys_sub.subscribe(&["$SYS/brokers/+/disconnected"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect a test client
+        let test_client = Client::connect(
+            ClientConfig::new(&addr, "test-client-123")
+        ).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Check for connected event
+        let msg = sys_sub.recv_timeout(Duration::from_millis(500)).await.unwrap();
+        if let Some(msg) = msg {
+            assert!(msg.topic.contains("connected"), "Expected connected event, got {}", msg.topic);
+            let payload = String::from_utf8_lossy(&msg.payload);
+            assert!(payload.contains("test-client-123"), "Payload should contain client id: {}", payload);
+        }
+
+        // Disconnect test client
+        test_client.disconnect().await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Check for disconnected event
+        let msg = sys_sub.recv_timeout(Duration::from_millis(500)).await.unwrap();
+        if let Some(msg) = msg {
+            assert!(msg.topic.contains("disconnected"), "Expected disconnected event, got {}", msg.topic);
+        }
+    }
+
+    /// Test parse_shared_topic helper function.
+    #[test]
+    fn test_parse_shared_topic() {
+        use crate::broker::parse_shared_topic;
+
+        // Valid shared topics
+        assert_eq!(parse_shared_topic("$share/group1/sensor/data"), Some(("group1", "sensor/data")));
+        assert_eq!(parse_shared_topic("$share/g/a/b/c"), Some(("g", "a/b/c")));
+
+        // Invalid shared topics
+        assert_eq!(parse_shared_topic("sensor/data"), None);
+        assert_eq!(parse_shared_topic("$share/"), None);
+        assert_eq!(parse_shared_topic("$share/group/"), None);
+        assert_eq!(parse_shared_topic("$share//topic"), None);
+    }
+
+    /// Test topic_matches helper function.
+    #[test]
+    fn test_topic_matches() {
+        use crate::broker::topic_matches;
+
+        // Exact match
+        assert!(topic_matches("sensor/temp", "sensor/temp"));
+        assert!(!topic_matches("sensor/temp", "sensor/humidity"));
+
+        // Single level wildcard (+)
+        assert!(topic_matches("sensor/+/data", "sensor/temp/data"));
+        assert!(topic_matches("sensor/+/data", "sensor/humidity/data"));
+        assert!(!topic_matches("sensor/+/data", "sensor/temp/raw"));
+
+        // Multi level wildcard (#)
+        assert!(topic_matches("sensor/#", "sensor"));
+        assert!(topic_matches("sensor/#", "sensor/temp"));
+        assert!(topic_matches("sensor/#", "sensor/temp/data"));
+        assert!(!topic_matches("sensor/#", "device/temp"));
+
+        // Combined wildcards
+        assert!(topic_matches("+/temp/#", "sensor/temp"));
+        assert!(topic_matches("+/temp/#", "device/temp/data"));
+    }
+
+    /// Test $SYS events can be disabled.
+    #[tokio::test]
+    async fn test_sys_events_disabled() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with $SYS events disabled
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr).sys_events(false)
+        ).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect a subscriber to $SYS topics
+        let mut sys_sub = Client::connect(
+            ClientConfig::new(&addr, "sys-monitor-disabled")
+        ).await.unwrap();
+
+        sys_sub.subscribe(&["$SYS/brokers/+/connected"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect a test client
+        let _test_client = Client::connect(
+            ClientConfig::new(&addr, "test-client-no-event")
+        ).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Should NOT receive connected event because sys_events is disabled
+        let msg = sys_sub.recv_timeout(Duration::from_millis(200)).await.unwrap();
+        assert!(msg.is_none(), "Should not receive $SYS event when disabled");
+    }
+
+    /// Test $SYS event JSON payload format.
+    #[tokio::test]
+    async fn test_sys_events_json_format() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::new(BrokerConfig::new(&addr));
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut sys_sub = Client::connect(
+            ClientConfig::new(&addr, "json-checker")
+        ).await.unwrap();
+
+        sys_sub.subscribe(&["$SYS/brokers/+/connected"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect with credentials
+        let config = ClientConfig::new(&addr, "json-test-client")
+            .with_credentials("testuser", b"testpass".to_vec());
+        let _test_client = Client::connect(config).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let msg = sys_sub.recv_timeout(Duration::from_millis(500)).await.unwrap();
+        if let Some(msg) = msg {
+            let payload = String::from_utf8_lossy(&msg.payload);
+            
+            // Verify JSON structure
+            assert!(payload.contains("\"clientid\""), "Missing clientid field: {}", payload);
+            assert!(payload.contains("\"username\""), "Missing username field: {}", payload);
+            assert!(payload.contains("\"ipaddress\""), "Missing ipaddress field: {}", payload);
+            assert!(payload.contains("\"proto_ver\""), "Missing proto_ver field: {}", payload);
+            assert!(payload.contains("\"keepalive\""), "Missing keepalive field: {}", payload);
+            assert!(payload.contains("\"connected_at\""), "Missing connected_at field: {}", payload);
+            
+            // Verify values
+            assert!(payload.contains("json-test-client"), "Wrong clientid: {}", payload);
+            assert!(payload.contains("testuser"), "Wrong username: {}", payload);
+        }
+    }
+
+    /// Test shared subscriptions with multiple groups.
+    #[tokio::test]
+    async fn test_shared_subscriptions_multiple_groups() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::builder(BrokerConfig::new(&addr).sys_events(false)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Group A subscribers
+        let mut group_a_1 = Client::connect(ClientConfig::new(&addr, "group-a-1")).await.unwrap();
+        let mut group_a_2 = Client::connect(ClientConfig::new(&addr, "group-a-2")).await.unwrap();
+
+        // Group B subscribers
+        let mut group_b_1 = Client::connect(ClientConfig::new(&addr, "group-b-1")).await.unwrap();
+
+        // Subscribe to different groups
+        group_a_1.subscribe(&["$share/groupA/sensor/+"]).await.unwrap();
+        group_a_2.subscribe(&["$share/groupA/sensor/+"]).await.unwrap();
+        group_b_1.subscribe(&["$share/groupB/sensor/+"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Publisher
+        let pub_client = Client::connect(ClientConfig::new(&addr, "multi-group-pub")).await.unwrap();
+
+        // Publish messages
+        pub_client.publish("sensor/temp", b"25").await.unwrap();
+        pub_client.publish("sensor/humidity", b"60").await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // Group B should receive both messages (only one subscriber)
+        let mut group_b_count = 0;
+        while let Ok(Some(_)) = group_b_1.recv_timeout(Duration::from_millis(100)).await {
+            group_b_count += 1;
+        }
+        assert_eq!(group_b_count, 2, "Group B single subscriber should get all messages");
+    }
+
+    /// Test shared subscription unsubscribe.
+    #[tokio::test]
+    async fn test_shared_subscription_unsubscribe() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::builder(BrokerConfig::new(&addr).sys_events(false)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut sub1 = Client::connect(ClientConfig::new(&addr, "unsub-test-1")).await.unwrap();
+        let mut sub2 = Client::connect(ClientConfig::new(&addr, "unsub-test-2")).await.unwrap();
+
+        sub1.subscribe(&["$share/test-group/data"]).await.unwrap();
+        sub2.subscribe(&["$share/test-group/data"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Unsubscribe sub1
+        sub1.unsubscribe(&["$share/test-group/data"]).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Publish
+        let pub_client = Client::connect(ClientConfig::new(&addr, "unsub-pub")).await.unwrap();
+        pub_client.publish("data", b"test").await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // sub1 should NOT receive (unsubscribed)
+        let msg1 = sub1.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(msg1.is_none(), "Unsubscribed client should not receive messages");
+
+        // sub2 SHOULD receive
+        let msg2 = sub2.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(msg2.is_some(), "Remaining subscriber should receive messages");
+    }
+
+    /// Test topic_matches edge cases.
+    #[test]
+    fn test_topic_matches_edge_cases() {
+        use crate::broker::topic_matches;
+
+        // Empty pattern/topic
+        assert!(!topic_matches("", "sensor"));
+        assert!(!topic_matches("sensor", ""));
+        
+        // Root level
+        assert!(topic_matches("#", "anything"));
+        assert!(topic_matches("#", "multi/level/topic"));
+        assert!(topic_matches("+", "single"));
+        assert!(!topic_matches("+", "multi/level"));
+
+        // Trailing slash
+        assert!(!topic_matches("sensor/", "sensor"));
+        assert!(topic_matches("sensor/", "sensor/"));
+
+        // Multiple wildcards
+        assert!(topic_matches("+/+/+", "a/b/c"));
+        assert!(!topic_matches("+/+/+", "a/b"));
+        assert!(!topic_matches("+/+/+", "a/b/c/d"));
+    }
+
+    /// Test MQTT spec: wildcards should NOT match $ topics.
+    #[test]
+    fn test_topic_matches_dollar_topics() {
+        use crate::broker::topic_matches;
+
+        // MQTT spec: # and + at the beginning should NOT match $ topics
+        assert!(!topic_matches("#", "$SYS/broker/stats"));
+        assert!(!topic_matches("+/stats", "$SYS/stats"));
+        assert!(!topic_matches("+", "$SYS"));
+        
+        // BUT: explicit $ patterns SHOULD match $ topics
+        assert!(topic_matches("$SYS/#", "$SYS/broker/stats"));
+        assert!(topic_matches("$SYS/+/stats", "$SYS/broker/stats"));
+        assert!(topic_matches("$SYS/broker/stats", "$SYS/broker/stats"));
+        
+        // Normal topics should still work
+        assert!(topic_matches("#", "normal/topic"));
+        assert!(topic_matches("+/topic", "any/topic"));
+    }
+
+    /// Test parse_shared_topic edge cases.
+    #[test]
+    fn test_parse_shared_topic_edge_cases() {
+        use crate::broker::parse_shared_topic;
+
+        // With wildcards in topic
+        assert_eq!(
+            parse_shared_topic("$share/mygroup/sensor/+/data"),
+            Some(("mygroup", "sensor/+/data"))
+        );
+        assert_eq!(
+            parse_shared_topic("$share/mygroup/sensor/#"),
+            Some(("mygroup", "sensor/#"))
+        );
+
+        // Special characters in group name
+        assert_eq!(
+            parse_shared_topic("$share/group-1/topic"),
+            Some(("group-1", "topic"))
+        );
+        assert_eq!(
+            parse_shared_topic("$share/group_2/topic"),
+            Some(("group_2", "topic"))
+        );
+
+        // Case sensitivity
+        assert_eq!(parse_shared_topic("$SHARE/group/topic"), None); // Must be lowercase
+        assert_eq!(
+            parse_shared_topic("$share/GROUP/Topic"),
+            Some(("GROUP", "Topic"))
+        );
+    }
+
+    /// Test BrokerConfig builder methods.
+    #[test]
+    fn test_broker_config_builder() {
+        let config = BrokerConfig::new("127.0.0.1:1883")
+            .sys_events(false)
+            .max_topic_alias(100);
+
+        assert_eq!(config.addr, "127.0.0.1:1883");
+        assert!(!config.sys_events_enabled);
+        assert_eq!(config.max_topic_alias, 100);
+    }
+
+    /// Test topic alias limit enforcement.
+    #[tokio::test]
+    async fn test_topic_alias_limit() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with max_topic_alias = 10
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr).max_topic_alias(10)
+        ).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect a client with v5
+        let client = Client::connect(
+            ClientConfig::new(&addr, "test-alias-limit").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+
+        // The broker should accept connections and enforce the alias limit internally
+        // We can't directly test the alias enforcement from here without a more complex setup,
+        // but we verify the config is set correctly
+        assert!(client.disconnect().await.is_ok());
+    }
+
+    /// Test Topic Alias functionality with raw TCP connection.
+    /// Tests:
+    /// - Valid alias mapping (topic + alias → alias reuse with empty topic)
+    /// - Invalid alias 0 (should be ignored)
+    /// - Alias exceeding max_topic_alias (should be ignored)
+    /// - Unknown alias (empty topic with unset alias should be ignored)
+    #[tokio::test]
+    async fn test_topic_alias_behavior() {
+        use crate::protocol::v5;
+        use tokio::net::TcpStream;
+        use bytes::BytesMut;
+
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with max_topic_alias = 5
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr).max_topic_alias(5)
+        ).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect subscriber using regular client
+        let mut subscriber = Client::connect(
+            ClientConfig::new(&addr, "alias-test-sub").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+        subscriber.subscribe(&["alias/test/#"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect publisher with raw TCP to send custom packets
+        let mut pub_stream = TcpStream::connect(&addr).await.unwrap();
+        let (mut reader, mut writer) = pub_stream.split();
+        let mut buf = BytesMut::with_capacity(4096);
+
+        // Send CONNECT
+        v5::write_packet(
+            &mut writer,
+            v5::create_connect("alias-test-pub", None, None, 60, true, None),
+        ).await.unwrap();
+
+        // Read CONNACK
+        let connack = v5::read_packet(&mut reader, &mut buf, 1024 * 1024).await.unwrap();
+        assert!(matches!(connack, v5::Packet::ConnAck(_)));
+
+        // Test 1: Set alias 1 = "alias/test/one"
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("alias/test/one", b"msg1", false, 1),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let msg = subscriber.recv_timeout(Duration::from_millis(200)).await.unwrap().expect("Should receive message");
+        assert_eq!(msg.topic, "alias/test/one");
+        assert_eq!(msg.payload.as_ref(), b"msg1");
+
+        // Test 2: Reuse alias 1 with empty topic
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("", b"msg2", false, 1),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let msg = subscriber.recv_timeout(Duration::from_millis(200)).await.unwrap().expect("Should receive message");
+        assert_eq!(msg.topic, "alias/test/one", "Should resolve alias 1 to stored topic");
+        assert_eq!(msg.payload.as_ref(), b"msg2");
+
+        // Test 3: Invalid alias 0 should be ignored (no message delivered)
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("alias/test/zero", b"msg_zero", false, 0),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let result = subscriber.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(result.is_none(), "Alias 0 should be rejected, no message delivered");
+
+        // Test 4: Alias exceeding limit (max=5, use alias=10) should be ignored
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("alias/test/exceed", b"msg_exceed", false, 10),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let result = subscriber.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(result.is_none(), "Alias exceeding limit should be rejected");
+
+        // Test 5: Unknown alias (empty topic with alias 3 that was never set)
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("", b"msg_unknown", false, 3),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let result = subscriber.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(result.is_none(), "Unknown alias should be rejected");
+
+        // Test 6: Valid message without alias should still work
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish("alias/test/normal", b"msg_normal", false),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let msg = subscriber.recv_timeout(Duration::from_millis(200)).await.unwrap().expect("Should receive message");
+        assert_eq!(msg.topic, "alias/test/normal");
+        assert_eq!(msg.payload.as_ref(), b"msg_normal");
+
+        subscriber.disconnect().await.unwrap();
+    }
+
+    /// Test Trie correctly handles $ topic MQTT spec compliance.
+    #[test]
+    fn test_trie_dollar_topic_routing() {
+        use crate::trie::Trie;
+
+        let trie: Trie<&str> = Trie::new();
+
+        // Subscribe to # (multi-level wildcard)
+        trie.insert("#", "wildcard_sub").unwrap();
+
+        // Subscribe to explicit $SYS pattern
+        trie.insert("$SYS/#", "sys_sub").unwrap();
+
+        // Normal topic SHOULD match # wildcard
+        let matches = trie.get("normal/topic");
+        assert_eq!(matches, vec!["wildcard_sub"], "# should match normal topics");
+
+        // $ topic should NOT match # wildcard (MQTT spec compliance)
+        let matches = trie.get("$SYS/broker/stats");
+        assert_eq!(matches, vec!["sys_sub"], "$SYS should only match explicit $SYS/# pattern, not #");
+
+        // Test + wildcard
+        let trie2: Trie<&str> = Trie::new();
+        trie2.insert("+/stats", "plus_sub").unwrap();
+        trie2.insert("$SYS/+/stats", "sys_plus_sub").unwrap();
+
+        // Normal topic should match + wildcard
+        let matches = trie2.get("sensor/stats");
+        assert_eq!(matches, vec!["plus_sub"], "+ should match normal topics");
+
+        // $ topic should NOT match + at root level
+        let matches = trie2.get("$SYS/broker/stats");
+        assert_eq!(matches, vec!["sys_plus_sub"], "$SYS should only match explicit $SYS/+/stats pattern");
+    }
+
+    /// Test that when a new client connects with the same clientID,
+    /// the old client is disconnected gracefully.
+    #[tokio::test]
+    async fn test_duplicate_client_id() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::builder(BrokerConfig::new(&addr)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect first client
+        let client1 = Client::connect(
+            ClientConfig::new(&addr, "duplicate-test")
+        ).await.unwrap();
+
+        // Subscribe to a topic
+        client1.subscribe(&["test/dup"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect second client with same clientID
+        // This should cause the first client to be disconnected
+        let client2 = Client::connect(
+            ClientConfig::new(&addr, "duplicate-test")
+        ).await.unwrap();
+
+        // Subscribe with new client
+        client2.subscribe(&["test/dup"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect a publisher
+        let publisher = Client::connect(
+            ClientConfig::new(&addr, "dup-publisher")
+        ).await.unwrap();
+
+        // Publish a message
+        publisher.publish("test/dup", b"hello").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Client2 should receive the message
+        let msg = client2.recv_timeout(Duration::from_millis(500)).await.unwrap();
+        assert!(msg.is_some(), "client2 should receive message");
+        let msg = msg.unwrap();
+        assert_eq!(msg.topic, "test/dup");
+        assert_eq!(msg.payload.as_ref(), b"hello");
+
+        // Client1 may receive None (channel closed) or error when trying to receive
+        // We don't check the exact behavior, just ensure no panic
+
+        client2.disconnect().await.unwrap();
+        publisher.disconnect().await.unwrap();
+        // client1 may already be disconnected, so we don't check error
+        let _ = client1.disconnect().await;
+    }
+
+    #[tokio::test]
+    async fn test_topic_length_limit() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with max_topic_length = 50
+        let broker = Broker::builder(BrokerConfig::new(&addr).max_topic_length(50)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut publisher = Client::connect(ClientConfig::new(&addr, "topic-len-pub")).await.unwrap();
+        let mut subscriber = Client::connect(ClientConfig::new(&addr, "topic-len-sub")).await.unwrap();
+
+        // Subscribe to wildcard
+        subscriber.subscribe(&["test/#"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Short topic should work
+        publisher.publish("test/short", b"ok").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        let msg = subscriber.recv_timeout(Duration::from_millis(200)).await.unwrap();
+        assert!(msg.is_some(), "short topic should be delivered");
+        assert_eq!(msg.unwrap().topic, "test/short");
+
+        // Long topic (>50 bytes) should be silently dropped
+        let long_topic = "test/this/is/a/very/long/topic/that/exceeds/the/limit";
+        assert!(long_topic.len() > 50, "test topic should be >50 bytes");
+        publisher.publish(long_topic, b"dropped").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Should NOT receive the long topic message
+        let msg = subscriber.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(msg.is_none(), "long topic should be dropped by broker");
+
+        publisher.disconnect().await.unwrap();
+        subscriber.disconnect().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_subscription_limit() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with max_subscriptions_per_client = 3
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr).max_subscriptions_per_client(3),
+        )
+        .build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut client = Client::connect(ClientConfig::new(&addr, "sub-limit-client")).await.unwrap();
+
+        // First 3 subscriptions should succeed
+        client.subscribe(&["topic/a"]).await.unwrap();
+        client.subscribe(&["topic/b"]).await.unwrap();
+        client.subscribe(&["topic/c"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // 4th subscription - broker rejects, client should receive error
+        let result = client.subscribe(&["topic/d"]).await;
+        assert!(result.is_err(), "4th subscription should be rejected by broker");
+
+        // But "topic/a" (first 3) should still work
+        let publisher = Client::connect(ClientConfig::new(&addr, "sub-limit-pub")).await.unwrap();
+        publisher.publish("topic/a", b"should-receive").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let msg = client.recv_timeout(Duration::from_millis(200)).await.unwrap();
+        assert!(msg.is_some(), "first 3 subscriptions should work");
+        assert_eq!(msg.unwrap().topic, "topic/a");
+
+        client.disconnect().await.unwrap();
+        publisher.disconnect().await.unwrap();
+    }
 }

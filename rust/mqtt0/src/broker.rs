@@ -4,13 +4,22 @@
 //! with full control over authentication and ACL.
 //!
 //! The broker automatically detects the protocol version from the CONNECT packet.
+//!
+//! ## Features
+//!
+//! - **$SYS Events**: Publishes client connect/disconnect events to `$SYS/brokers/{clientid}/connected`
+//! - **Shared Subscriptions**: Supports `$share/{group}/{topic}` for load balancing (MQTT 5.0 feature, also works with v4)
+//! - **Topic Alias**: MQTT 5.0 topic alias support for reduced bandwidth (with configurable limit)
 
 use bytes::{Bytes, BytesMut};
 use parking_lot::RwLock;
 use rumqttc::mqttbytes::QoS;
+use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::net::SocketAddr;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, ReadHalf, WriteHalf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
@@ -21,8 +30,62 @@ use crate::protocol::{self, MAX_PACKET_SIZE};
 use crate::trie::Trie;
 use crate::types::{AllowAll, Authenticator, Handler, Message, ProtocolVersion};
 
+/// Default maximum topic aliases per client (MQTT 5.0).
+pub const DEFAULT_MAX_TOPIC_ALIAS: u16 = 65535;
+
+/// Default maximum topic length in bytes.
+pub const DEFAULT_MAX_TOPIC_LENGTH: usize = 256;
+
 /// Callback type alias.
 type Callback = Arc<dyn Fn(&str) + Send + Sync>;
+
+/// Shared subscription group for load balancing.
+#[derive(Clone)]
+struct SharedGroup {
+    /// Subscribers in this group.
+    subscribers: Vec<ClientHandle>,
+    /// Round-robin index.
+    next_index: Arc<AtomicUsize>,
+}
+
+impl SharedGroup {
+    fn new() -> Self {
+        Self {
+            subscribers: Vec::new(),
+            next_index: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    fn add(&mut self, handle: ClientHandle) {
+        if !self.subscribers.iter().any(|h| h.client_id == handle.client_id) {
+            self.subscribers.push(handle);
+        }
+    }
+
+    fn remove(&mut self, client_id: &str) {
+        self.subscribers.retain(|h| h.client_id.as_ref() != client_id);
+    }
+
+    fn is_empty(&self) -> bool {
+        self.subscribers.is_empty()
+    }
+
+    /// Get next subscriber using round-robin.
+    fn next_subscriber(&self) -> Option<&ClientHandle> {
+        if self.subscribers.is_empty() {
+            return None;
+        }
+        let idx = self.next_index.fetch_add(1, Ordering::Acquire) % self.subscribers.len();
+        self.subscribers.get(idx)
+    }
+}
+
+/// Entry in shared subscription trie: (group_name, SharedGroup).
+#[derive(Clone)]
+struct SharedEntry {
+    group_name: String,
+    group: SharedGroup,
+}
 
 /// Broker configuration.
 #[derive(Debug, Clone)]
@@ -31,6 +94,14 @@ pub struct BrokerConfig {
     pub addr: String,
     /// Maximum packet size.
     pub max_packet_size: usize,
+    /// Enable $SYS event publishing.
+    pub sys_events_enabled: bool,
+    /// Maximum topic aliases per client (MQTT 5.0).
+    pub max_topic_alias: u16,
+    /// Maximum topic length in bytes.
+    pub max_topic_length: usize,
+    /// Maximum subscriptions per client.
+    pub max_subscriptions_per_client: usize,
 }
 
 impl BrokerConfig {
@@ -39,7 +110,35 @@ impl BrokerConfig {
         Self {
             addr: addr.into(),
             max_packet_size: MAX_PACKET_SIZE,
+            sys_events_enabled: true,
+            max_topic_alias: DEFAULT_MAX_TOPIC_ALIAS,
+            max_topic_length: DEFAULT_MAX_TOPIC_LENGTH,
+            max_subscriptions_per_client: 100,
         }
+    }
+
+    /// Enable or disable $SYS events.
+    pub fn sys_events(mut self, enabled: bool) -> Self {
+        self.sys_events_enabled = enabled;
+        self
+    }
+
+    /// Set maximum topic aliases per client (MQTT 5.0).
+    pub fn max_topic_alias(mut self, max: u16) -> Self {
+        self.max_topic_alias = max;
+        self
+    }
+
+    /// Set maximum topic length in bytes.
+    pub fn max_topic_length(mut self, max: usize) -> Self {
+        self.max_topic_length = max;
+        self
+    }
+
+    /// Set maximum subscriptions per client (0 = unlimited).
+    pub fn max_subscriptions_per_client(mut self, max: usize) -> Self {
+        self.max_subscriptions_per_client = max;
+        self
     }
 }
 
@@ -96,25 +195,36 @@ impl BrokerBuilder {
             handler: self.handler,
             on_connect: self.on_connect,
             on_disconnect: self.on_disconnect,
-            subscriptions: Arc::new(RwLock::new(Trie::new())),
+            subscriptions: Arc::new(Trie::new()),
             clients: Arc::new(RwLock::new(HashMap::new())),
             client_subscriptions: Arc::new(RwLock::new(HashMap::new())),
+            shared_trie: Arc::new(Trie::new()),
             running: Arc::new(AtomicBool::new(false)),
         }
     }
 }
 
 /// Client handle for message delivery.
-/// Uses Arc<str> for client_id to make Clone cheap (O(1) ref count increment).
+/// Uses Arc<str> for client_id and Arc<Sender> for tx to enable:
+/// - Cheap cloning (O(1) ref count increment)
+/// - Pointer comparison for race condition prevention in cleanup
 #[derive(Clone)]
 struct ClientHandle {
     client_id: Arc<str>,
-    tx: mpsc::Sender<Message>,
+    tx: Arc<mpsc::Sender<Message>>,
 }
 
 impl PartialEq for ClientHandle {
     fn eq(&self, other: &Self) -> bool {
         self.client_id == other.client_id
+    }
+}
+
+impl ClientHandle {
+    /// Check if this handle's sender is the same instance as another.
+    /// Used for race condition prevention during cleanup.
+    fn same_sender(&self, other: &Arc<mpsc::Sender<Message>>) -> bool {
+        Arc::ptr_eq(&self.tx, other)
     }
 }
 
@@ -125,10 +235,13 @@ pub struct Broker {
     handler: Option<Arc<dyn Handler>>,
     on_connect: Option<Callback>,
     on_disconnect: Option<Callback>,
-    subscriptions: Arc<RwLock<Trie<ClientHandle>>>,
-    clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
+    subscriptions: Arc<Trie<ClientHandle>>,
+    /// Maps client_id -> Arc<Sender> for pointer comparison during cleanup.
+    clients: Arc<RwLock<HashMap<String, Arc<mpsc::Sender<Message>>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
+    /// Shared subscriptions trie for O(topic_length) lookup ($share/group/topic).
+    shared_trie: Arc<Trie<SharedEntry>>,
     running: Arc<AtomicBool>,
 }
 
@@ -164,11 +277,16 @@ impl Broker {
                 subscriptions: Arc::clone(&self.subscriptions),
                 clients: Arc::clone(&self.clients),
                 client_subscriptions: Arc::clone(&self.client_subscriptions),
+                shared_trie: Arc::clone(&self.shared_trie),
                 max_packet_size: self.config.max_packet_size,
+                sys_events_enabled: self.config.sys_events_enabled,
+                max_topic_alias: self.config.max_topic_alias,
+                max_topic_length: self.config.max_topic_length,
+                max_subscriptions_per_client: self.config.max_subscriptions_per_client,
             };
 
             tokio::spawn(async move {
-                if let Err(e) = broker.handle_connection(stream).await {
+                if let Err(e) = broker.handle_connection(stream, addr).await {
                     debug!("Connection error: {}", e);
                 }
             });
@@ -176,21 +294,39 @@ impl Broker {
     }
 
     /// Publish a message from the broker.
-    pub async fn publish(&self, topic: &str, payload: &[u8]) -> Result<()> {
+    pub fn publish(&self, topic: &str, payload: &[u8]) -> Result<()> {
         let msg = Message::new(topic, Bytes::copy_from_slice(payload));
-        self.route_message(&msg).await;
+        self.route_message(&msg);
         Ok(())
     }
 
-    async fn route_message(&self, msg: &Message) {
-        let subscribers = {
-            let subs = self.subscriptions.read();
-            subs.get(&msg.topic)
-        };
+    fn route_message(&self, msg: &Message) {
+        // Route to normal subscribers - Trie is internally thread-safe
+        let subscribers = self.subscriptions.get(&msg.topic);
 
         for handle in subscribers {
-            if let Err(e) = handle.tx.send(msg.clone()).await {
-                warn!("Failed to send to {}: {}", handle.client_id, e);
+            // Use try_send for non-blocking delivery (drop message if channel full)
+            if let Err(e) = handle.tx.try_send(msg.clone()) {
+                warn!("Message dropped for {} (channel full): {}", handle.client_id, e);
+            }
+        }
+
+        // Route to shared subscription groups (round-robin) using Trie lookup
+        let shared_subscribers: Vec<(String, Option<ClientHandle>)> = self
+            .shared_trie
+            .get(&msg.topic)
+            .into_iter()
+            .map(|entry| (entry.group_name.clone(), entry.group.next_subscriber().cloned()))
+            .collect();
+
+        for (group_name, subscriber) in shared_subscribers {
+            if let Some(handle) = subscriber {
+                if let Err(e) = handle.tx.try_send(msg.clone()) {
+                    warn!(
+                        "Message dropped for shared subscriber {} (group {}, channel full): {}",
+                        handle.client_id, group_name, e
+                    );
+                }
             }
         }
     }
@@ -202,15 +338,26 @@ struct BrokerContext {
     handler: Option<Arc<dyn Handler>>,
     on_connect: Option<Callback>,
     on_disconnect: Option<Callback>,
-    subscriptions: Arc<RwLock<Trie<ClientHandle>>>,
-    clients: Arc<RwLock<HashMap<String, mpsc::Sender<Message>>>>,
+    subscriptions: Arc<Trie<ClientHandle>>,
+    /// Maps client_id -> Arc<Sender> for pointer comparison during cleanup.
+    clients: Arc<RwLock<HashMap<String, Arc<mpsc::Sender<Message>>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
+    /// Shared subscriptions trie for O(topic_length) lookup.
+    shared_trie: Arc<Trie<SharedEntry>>,
     max_packet_size: usize,
+    /// Enable $SYS event publishing.
+    sys_events_enabled: bool,
+    /// Maximum topic aliases per client (MQTT 5.0).
+    max_topic_alias: u16,
+    /// Maximum topic length in bytes.
+    max_topic_length: usize,
+    /// Maximum subscriptions per client.
+    max_subscriptions_per_client: usize,
 }
 
 impl BrokerContext {
-    async fn handle_connection(&self, stream: TcpStream) -> Result<()> {
+    async fn handle_connection(&self, stream: TcpStream, addr: SocketAddr) -> Result<()> {
         let (mut reader, writer) = tokio::io::split(stream);
         let mut read_buf = BytesMut::with_capacity(4096);
 
@@ -227,8 +374,8 @@ impl BrokerContext {
         debug!("Detected protocol version: {}", protocol_version);
 
         match protocol_version {
-            ProtocolVersion::V4 => self.handle_connection_v4(reader, writer, read_buf).await,
-            ProtocolVersion::V5 => self.handle_connection_v5(reader, writer, read_buf).await,
+            ProtocolVersion::V4 => self.handle_connection_v4(reader, writer, read_buf, addr).await,
+            ProtocolVersion::V5 => self.handle_connection_v5(reader, writer, read_buf, addr).await,
         }
     }
 
@@ -288,20 +435,21 @@ impl BrokerContext {
         mut reader: ReadHalf<TcpStream>,
         mut writer: WriteHalf<TcpStream>,
         mut read_buf: BytesMut,
+        addr: SocketAddr,
     ) -> Result<()> {
         use crate::protocol::v4::{ConnectReturnCode, Packet};
 
         // Read CONNECT packet
         let packet = protocol::v4::read_packet(&mut reader, &mut read_buf, self.max_packet_size).await?;
 
-        let (client_id, keep_alive) = match packet {
+        let (client_id, keep_alive, username) = match packet {
             Packet::Connect(connect) => {
                 let client_id = connect.client_id.clone();
                 let keep_alive = connect.keep_alive;
-                let username = connect.login.as_ref().map(|l| l.username.as_str()).unwrap_or("");
+                let username = connect.login.as_ref().map(|l| l.username.clone()).unwrap_or_default();
                 let password = connect.login.as_ref().map(|l| l.password.as_bytes()).unwrap_or(&[]);
 
-                if !self.authenticator.authenticate(&client_id, username, password) {
+                if !self.authenticator.authenticate(&client_id, &username, password) {
                     warn!("Authentication failed for {} (v4)", client_id);
                     let connack = protocol::v4::create_connack(false, ConnectReturnCode::NotAuthorized);
                     protocol::v4::write_packet(&mut writer, connack).await?;
@@ -313,7 +461,7 @@ impl BrokerContext {
                 let connack = protocol::v4::create_connack(false, ConnectReturnCode::Success);
                 protocol::v4::write_packet(&mut writer, connack).await?;
 
-                (client_id, keep_alive)
+                (client_id, keep_alive, username)
             }
             other => {
                 return Err(Error::UnexpectedPacket {
@@ -323,7 +471,7 @@ impl BrokerContext {
             }
         };
 
-        self.run_client_v4(&client_id, keep_alive, reader, writer, read_buf).await
+        self.run_client_v4(&client_id, &username, keep_alive, addr, ProtocolVersion::V4, reader, writer, read_buf).await
     }
 
     async fn handle_connection_v5(
@@ -331,17 +479,18 @@ impl BrokerContext {
         mut reader: ReadHalf<TcpStream>,
         mut writer: WriteHalf<TcpStream>,
         mut read_buf: BytesMut,
+        addr: SocketAddr,
     ) -> Result<()> {
         use crate::protocol::v5::{ConnectReturnCode, Packet};
 
         // Read CONNECT packet
         let packet = protocol::v5::read_packet(&mut reader, &mut read_buf, self.max_packet_size).await?;
 
-        let (client_id, keep_alive) = match packet {
+        let (client_id, keep_alive, username) = match packet {
             Packet::Connect(connect, _, login) => {
                 let client_id = connect.client_id.clone();
                 let keep_alive = connect.keep_alive;
-                let username = login.as_ref().map(|l| l.username.as_str()).unwrap_or("");
+                let username = login.as_ref().map(|l| l.username.clone()).unwrap_or_default();
                 let password = login.as_ref().map(|l| l.password.as_bytes()).unwrap_or(&[]);
 
                 // Log session expiry if present
@@ -354,7 +503,7 @@ impl BrokerContext {
                     }
                 }
 
-                if !self.authenticator.authenticate(&client_id, username, password) {
+                if !self.authenticator.authenticate(&client_id, &username, password) {
                     warn!("Authentication failed for {} (v5)", client_id);
                     let connack = protocol::v5::create_connack(false, ConnectReturnCode::NotAuthorized);
                     protocol::v5::write_packet(&mut writer, connack).await?;
@@ -366,7 +515,7 @@ impl BrokerContext {
                 let connack = protocol::v5::create_connack(false, ConnectReturnCode::Success);
                 protocol::v5::write_packet(&mut writer, connack).await?;
 
-                (client_id, keep_alive)
+                (client_id, keep_alive, username)
             }
             other => {
                 return Err(Error::UnexpectedPacket {
@@ -376,40 +525,61 @@ impl BrokerContext {
             }
         };
 
-        self.run_client_v5(&client_id, keep_alive, reader, writer, read_buf).await
+        self.run_client_v5(&client_id, &username, keep_alive, addr, ProtocolVersion::V5, reader, writer, read_buf).await
     }
 
     async fn run_client_v4(
         &self,
         client_id: &str,
+        username: &str,
         keep_alive: u16,
+        addr: SocketAddr,
+        proto_ver: ProtocolVersion,
         reader: ReadHalf<TcpStream>,
         writer: WriteHalf<TcpStream>,
         read_buf: BytesMut,
     ) -> Result<()> {
         let (tx, rx) = mpsc::channel::<Message>(100);
+        let tx = Arc::new(tx);
 
-        {
+        // Per MQTT spec: if a client connects with a clientID already in use,
+        // disconnect the old client first and clean up its subscriptions
+        let old_tx_and_topics = {
             let mut clients = self.clients.write();
-            clients.insert(client_id.to_string(), tx.clone());
+            let old_tx = clients.insert(client_id.to_string(), Arc::clone(&tx));
+            if old_tx.is_some() {
+                let topics = self.client_subscriptions.write().remove(client_id);
+                old_tx.map(|t| (t, topics))
+            } else {
+                None
+            }
+        };
+
+        // Clean up old client's subscriptions outside the lock
+        if let Some((old_tx, Some(topics))) = old_tx_and_topics {
+            self.remove_client_subscriptions(&topics, &old_tx);
         }
 
         if let Some(ref on_connect) = self.on_connect {
             on_connect(client_id);
         }
 
+        // Publish $SYS connected event
+        self.publish_sys_connected(client_id, username, addr, proto_ver, keep_alive).await;
+
         info!("Client {} connected (MQTT 3.1.1)", client_id);
 
         let client_handle = ClientHandle {
             client_id: Arc::from(client_id),
-            tx,
+            tx: Arc::clone(&tx),
         };
 
         let result = self
             .client_loop_v4(client_id, keep_alive, &client_handle, reader, writer, read_buf, rx)
             .await;
 
-        self.cleanup_client(client_id);
+        // Pass tx for pointer comparison to prevent race conditions
+        self.cleanup_client(client_id, username, &tx).await;
 
         if let Some(ref on_disconnect) = self.on_disconnect {
             on_disconnect(client_id);
@@ -422,34 +592,55 @@ impl BrokerContext {
     async fn run_client_v5(
         &self,
         client_id: &str,
+        username: &str,
         keep_alive: u16,
+        addr: SocketAddr,
+        proto_ver: ProtocolVersion,
         reader: ReadHalf<TcpStream>,
         writer: WriteHalf<TcpStream>,
         read_buf: BytesMut,
     ) -> Result<()> {
         let (tx, rx) = mpsc::channel::<Message>(100);
+        let tx = Arc::new(tx);
 
-        {
+        // Per MQTT spec: if a client connects with a clientID already in use,
+        // disconnect the old client first and clean up its subscriptions
+        let old_tx_and_topics = {
             let mut clients = self.clients.write();
-            clients.insert(client_id.to_string(), tx.clone());
+            let old_tx = clients.insert(client_id.to_string(), Arc::clone(&tx));
+            if old_tx.is_some() {
+                let topics = self.client_subscriptions.write().remove(client_id);
+                old_tx.map(|t| (t, topics))
+            } else {
+                None
+            }
+        };
+
+        // Clean up old client's subscriptions outside the lock
+        if let Some((old_tx, Some(topics))) = old_tx_and_topics {
+            self.remove_client_subscriptions(&topics, &old_tx);
         }
 
         if let Some(ref on_connect) = self.on_connect {
             on_connect(client_id);
         }
 
+        // Publish $SYS connected event
+        self.publish_sys_connected(client_id, username, addr, proto_ver, keep_alive).await;
+
         info!("Client {} connected (MQTT 5.0)", client_id);
 
         let client_handle = ClientHandle {
             client_id: Arc::from(client_id),
-            tx,
+            tx: Arc::clone(&tx),
         };
 
         let result = self
             .client_loop_v5(client_id, keep_alive, &client_handle, reader, writer, read_buf, rx)
             .await;
 
-        self.cleanup_client(client_id);
+        // Pass tx for pointer comparison to prevent race conditions
+        self.cleanup_client(client_id, username, &tx).await;
 
         if let Some(ref on_disconnect) = self.on_disconnect {
             on_disconnect(client_id);
@@ -565,6 +756,10 @@ impl BrokerContext {
             None
         };
 
+        // Topic Alias mapping for this client (MQTT 5.0 feature)
+        // Maps alias (u16) -> topic name (String)
+        let mut topic_aliases: HashMap<u16, String> = HashMap::new();
+
         loop {
             let select_future = async {
                 tokio::select! {
@@ -584,7 +779,7 @@ impl BrokerContext {
 
                         match packet {
                             Packet::Publish(publish) => {
-                                self.handle_publish_v5(client_id, publish).await?;
+                                self.handle_publish_v5_with_alias(client_id, publish, &mut topic_aliases).await?;
                             }
                             Packet::Subscribe(subscribe) => {
                                 let return_codes = self.handle_subscribe_v5(client_id, client_handle, &subscribe.filters).await;
@@ -637,6 +832,26 @@ impl BrokerContext {
     ) -> Result<()> {
         let topic = publish.topic.to_string();
 
+        // Enforce topic length limit (0 = no limit)
+        if self.max_topic_length > 0 && topic.len() > self.max_topic_length {
+            warn!(
+                "Client {} topic too long: {} > {}",
+                client_id,
+                topic.len(),
+                self.max_topic_length
+            );
+            return Ok(());
+        }
+
+        // Prevent clients from publishing to $ topics (MQTT spec 3.3.1.3)
+        if topic.starts_with('$') {
+            warn!(
+                "Client {} cannot publish to $ topic: {}",
+                client_id, topic
+            );
+            return Ok(());
+        }
+
         if !self.authenticator.acl(client_id, &topic, true) {
             warn!("ACL denied publish from {} to {}", client_id, topic);
             return Ok(());
@@ -654,23 +869,116 @@ impl BrokerContext {
             handler.handle(client_id, &msg);
         }
 
-        self.route_to_subscribers(&topic, &msg).await;
+        self.route_to_subscribers(&topic, &msg);
         Ok(())
     }
 
-    async fn handle_publish_v5(
+    /// Handle MQTT v5 PUBLISH with Topic Alias support.
+    ///
+    /// Topic Alias (MQTT 5.0 feature):
+    /// - If topic is non-empty and alias is present: update alias mapping, use topic
+    /// - If topic is empty and alias is present: use topic from alias mapping
+    /// - If topic is non-empty and alias is absent: use topic directly
+    ///
+    /// DoS Protection:
+    /// - Enforces max_topic_alias limit to prevent memory exhaustion
+    async fn handle_publish_v5_with_alias(
         &self,
         client_id: &str,
         publish: crate::protocol::v5::Publish,
+        topic_aliases: &mut HashMap<u16, String>,
     ) -> Result<()> {
-        let topic = String::from_utf8_lossy(&publish.topic).to_string();
+        let topic_from_packet = String::from_utf8_lossy(&publish.topic).to_string();
+
+        // Extract topic alias from properties
+        let topic_alias = publish
+            .properties
+            .as_ref()
+            .and_then(|p| p.topic_alias);
+
+        // Resolve the actual topic
+        let topic = if let Some(alias) = topic_alias {
+            // MQTT 5.0 spec: Topic Alias value 0 is invalid
+            if alias == 0 {
+                warn!(
+                    "Client {} used invalid topic alias 0, ignoring publish",
+                    client_id
+                );
+                return Ok(());
+            }
+
+            // DoS protection: enforce alias limit
+            if alias > self.max_topic_alias {
+                warn!(
+                    "Client {} used topic alias {} exceeding limit {}, ignoring publish",
+                    client_id, alias, self.max_topic_alias
+                );
+                return Ok(());
+            }
+
+            if !topic_from_packet.is_empty() {
+                // Topic is provided with alias - update the mapping
+                // Note: topic length is checked after alias resolution (below)
+                topic_aliases.insert(alias, topic_from_packet.clone());
+                trace!(
+                    "Client {} set topic alias {} = '{}'",
+                    client_id, alias, topic_from_packet
+                );
+                topic_from_packet
+            } else {
+                // Topic is empty - look up from alias mapping
+                match topic_aliases.get(&alias) {
+                    Some(resolved) => {
+                        trace!(
+                            "Client {} resolved topic alias {} to '{}'",
+                            client_id, alias, resolved
+                        );
+                        resolved.clone()
+                    }
+                    None => {
+                        warn!(
+                            "Client {} used unknown topic alias {}, ignoring publish",
+                            client_id, alias
+                        );
+                        return Ok(());
+                    }
+                }
+            }
+        } else {
+            // No alias - use topic directly
+            if topic_from_packet.is_empty() {
+                warn!("Client {} sent PUBLISH with empty topic and no alias", client_id);
+                return Ok(());
+            }
+            topic_from_packet
+        };
+
+        // Enforce topic length limit (0 = no limit)
+        if self.max_topic_length > 0 && topic.len() > self.max_topic_length {
+            warn!(
+                "Client {} topic too long: {} > {}",
+                client_id,
+                topic.len(),
+                self.max_topic_length
+            );
+            return Ok(());
+        }
+
+        // Prevent clients from publishing to $ topics (MQTT spec 3.3.1.3)
+        if topic.starts_with('$') {
+            warn!(
+                "Client {} cannot publish to $ topic: {}",
+                client_id, topic
+            );
+            return Ok(());
+        }
 
         if !self.authenticator.acl(client_id, &topic, true) {
             warn!("ACL denied publish from {} to {}", client_id, topic);
             return Ok(());
         }
 
-        trace!("Client {} published to {} (v5)", client_id, topic);
+        trace!("Client {} published to {} (v5, alias={:?})", client_id, topic, topic_alias);
 
         let msg = Message {
             topic: topic.clone(),
@@ -682,22 +990,42 @@ impl BrokerContext {
             handler.handle(client_id, &msg);
         }
 
-        self.route_to_subscribers(&topic, &msg).await;
+        self.route_to_subscribers(&topic, &msg);
         Ok(())
     }
 
-    async fn route_to_subscribers(&self, topic: &str, msg: &Message) {
-        let subscribers = {
-            let subs = self.subscriptions.read();
-            subs.get(topic)
-        };
+    fn route_to_subscribers(&self, topic: &str, msg: &Message) {
+        // Route to normal subscribers - Trie is internally thread-safe
+        let subscribers = self.subscriptions.get(topic);
 
         for handle in subscribers {
-            if let Err(e) = handle.tx.send(msg.clone()).await {
-                warn!("Failed to send to {}: {}", handle.client_id, e);
+            // Use try_send for non-blocking delivery (drop message if channel full)
+            if let Err(e) = handle.tx.try_send(msg.clone()) {
+                warn!("Message dropped for {} (channel full): {}", handle.client_id, e);
+            }
+        }
+
+        // Route to shared subscription groups (round-robin) using Trie lookup - O(topic_length)
+        let shared_subscribers: Vec<(String, Option<ClientHandle>)> = self
+            .shared_trie
+            .get(topic)
+            .into_iter()
+            .map(|entry| (entry.group_name.clone(), entry.group.next_subscriber().cloned()))
+            .collect();
+
+        for (group_name, subscriber) in shared_subscribers {
+            if let Some(handle) = subscriber {
+                // Use try_send for non-blocking delivery (drop message if channel full)
+                if let Err(e) = handle.tx.try_send(msg.clone()) {
+                    warn!(
+                        "Message dropped for shared subscriber {} (group {}, channel full): {}",
+                        handle.client_id, group_name, e
+                    );
+                }
             }
         }
     }
+
 
     async fn handle_subscribe_v4(
         &self,
@@ -712,34 +1040,99 @@ impl BrokerContext {
         for filter in filters {
             let topic = &filter.path;
 
-            if !self.authenticator.acl(client_id, topic, false) {
-                warn!("ACL denied subscribe from {} to {}", client_id, topic);
+            // Check topic length limit
+            if self.max_topic_length > 0 && topic.len() > self.max_topic_length {
+                warn!(
+                    "Client {} topic too long: {} > {}",
+                    client_id,
+                    topic.len(),
+                    self.max_topic_length
+                );
                 return_codes.push(SubscribeReasonCode::Failure);
                 continue;
             }
 
-            // Insert into trie and handle errors
-            let insert_result = {
-                let subs = self.subscriptions.read();
-                subs.insert(topic, client_handle.clone())
-            };
-
-            if let Err(e) = insert_result {
-                warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
-                return_codes.push(SubscribeReasonCode::Failure);
-                continue;
-            }
-
-            // Track subscription for cleanup on disconnect
+            // Atomically check subscription limit and reserve slot
             {
                 let mut client_subs = self.client_subscriptions.write();
+                let current_count = client_subs.get(client_id).map(|v| v.len()).unwrap_or(0);
+                if self.max_subscriptions_per_client > 0
+                    && current_count >= self.max_subscriptions_per_client
+                {
+                    warn!(
+                        "Client {} subscription limit exceeded: {} >= {}",
+                        client_id, current_count, self.max_subscriptions_per_client
+                    );
+                return_codes.push(SubscribeReasonCode::Failure);
+                continue;
+            }
+                // Reserve the slot atomically with the check
                 client_subs
                     .entry(client_id.to_string())
                     .or_default()
                     .push(topic.to_string());
             }
 
+            // For shared subscriptions, check ACL on the actual topic
+            let acl_topic = if let Some((_, actual_topic)) = parse_shared_topic(topic) {
+                actual_topic
+            } else {
+                topic.as_str()
+            };
+
+            if !self.authenticator.acl(client_id, acl_topic, false) {
+                warn!("ACL denied subscribe from {} to {}", client_id, topic);
+                // Rollback the reserved slot
+                self.remove_last_subscription(client_id, topic);
+                return_codes.push(SubscribeReasonCode::Failure);
+                continue;
+            }
+
+            // Handle shared subscriptions
+            if let Some((group, actual_topic)) = parse_shared_topic(topic) {
+                // Use Trie for O(topic_length) lookup - Trie is internally thread-safe
+                let insert_result = self.shared_trie.with_mut(|root| {
+                    root.set(actual_topic, |node| {
+                        // Find existing group or create new one
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            entry.group.add(client_handle.clone());
+                        } else {
+                            let mut new_group = SharedGroup::new();
+                            new_group.add(client_handle.clone());
+                            values.push(SharedEntry {
+                                group_name: group.to_string(),
+                                group: new_group,
+                            });
+                        }
+                    })
+                });
+                if let Err(e) = insert_result {
+                    warn!(
+                        "Failed to insert shared subscription {} for {}: {}",
+                        topic, client_id, e
+                    );
+                    // Rollback the reserved slot
+                    self.remove_last_subscription(client_id, topic);
+                    return_codes.push(SubscribeReasonCode::Failure);
+                    continue;
+                }
+                debug!(
+                    "Client {} subscribed to shared group '{}' topic '{}' (v4)",
+                    client_id, group, actual_topic
+                );
+            } else {
+                // Normal subscription - insert into trie (Trie is internally thread-safe)
+                if let Err(e) = self.subscriptions.insert(topic, client_handle.clone()) {
+                    warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
+                    // Rollback the reserved slot
+                    self.remove_last_subscription(client_id, topic);
+                    return_codes.push(SubscribeReasonCode::Failure);
+                    continue;
+                }
             debug!("Client {} subscribed to {} (v4)", client_id, topic);
+            }
+
             return_codes.push(SubscribeReasonCode::Success(QoS::AtMostOnce));
         }
 
@@ -757,48 +1150,143 @@ impl BrokerContext {
         for filter in filters {
             let topic = &filter.path;
 
-            if !self.authenticator.acl(client_id, topic, false) {
-                warn!("ACL denied subscribe from {} to {}", client_id, topic);
-                return_codes.push(crate::protocol::v5::SubscribeReasonCode::NotAuthorized);
+            // Check topic length limit
+            if self.max_topic_length > 0 && topic.len() > self.max_topic_length {
+                warn!(
+                    "Client {} topic too long: {} > {}",
+                    client_id,
+                    topic.len(),
+                    self.max_topic_length
+                );
+                return_codes.push(crate::protocol::v5::SubscribeReasonCode::TopicFilterInvalid);
                 continue;
             }
 
-            // Insert into trie and handle errors
-            let insert_result = {
-                let subs = self.subscriptions.read();
-                subs.insert(topic, client_handle.clone())
-            };
-
-            if let Err(e) = insert_result {
-                warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
-                return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
-                continue;
-            }
-
-            // Track subscription for cleanup on disconnect
+            // Atomically check subscription limit and reserve slot
             {
                 let mut client_subs = self.client_subscriptions.write();
+                let current_count = client_subs.get(client_id).map(|v| v.len()).unwrap_or(0);
+                if self.max_subscriptions_per_client > 0
+                    && current_count >= self.max_subscriptions_per_client
+                {
+                    warn!(
+                        "Client {} subscription limit exceeded: {} >= {}",
+                        client_id, current_count, self.max_subscriptions_per_client
+                    );
+                    return_codes.push(crate::protocol::v5::SubscribeReasonCode::QuotaExceeded);
+                    continue;
+                }
+                // Reserve the slot atomically with the check
                 client_subs
                     .entry(client_id.to_string())
                     .or_default()
                     .push(topic.to_string());
             }
 
+            // For shared subscriptions, check ACL on the actual topic
+            let acl_topic = if let Some((_, actual_topic)) = parse_shared_topic(topic) {
+                actual_topic
+            } else {
+                topic.as_str()
+            };
+
+            if !self.authenticator.acl(client_id, acl_topic, false) {
+                warn!("ACL denied subscribe from {} to {}", client_id, topic);
+                // Rollback the reserved slot
+                self.remove_last_subscription(client_id, topic);
+                return_codes.push(crate::protocol::v5::SubscribeReasonCode::NotAuthorized);
+                continue;
+            }
+
+            // Handle shared subscriptions
+            if let Some((group, actual_topic)) = parse_shared_topic(topic) {
+                // Use Trie for O(topic_length) lookup - Trie is internally thread-safe
+                let insert_result = self.shared_trie.with_mut(|root| {
+                    root.set(actual_topic, |node| {
+                        // Find existing group or create new one
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            entry.group.add(client_handle.clone());
+                        } else {
+                            let mut new_group = SharedGroup::new();
+                            new_group.add(client_handle.clone());
+                            values.push(SharedEntry {
+                                group_name: group.to_string(),
+                                group: new_group,
+                            });
+                        }
+                    })
+                });
+                if let Err(e) = insert_result {
+                    warn!(
+                        "Failed to insert shared subscription {} for {}: {}",
+                        topic, client_id, e
+                    );
+                    // Rollback the reserved slot
+                    self.remove_last_subscription(client_id, topic);
+                    return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
+                    continue;
+                }
+                debug!(
+                    "Client {} subscribed to shared group '{}' topic '{}' (v5)",
+                    client_id, group, actual_topic
+                );
+            } else {
+                // Normal subscription - insert into trie (Trie is internally thread-safe)
+                if let Err(e) = self.subscriptions.insert(topic, client_handle.clone()) {
+                    warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
+                    // Rollback the reserved slot
+                    self.remove_last_subscription(client_id, topic);
+                    return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
+                    continue;
+                }
             debug!("Client {} subscribed to {} (v5)", client_id, topic);
+            }
+
             return_codes.push(crate::protocol::v5::SubscribeReasonCode::Success(crate::protocol::v5::QoS::AtMostOnce));
         }
 
         return_codes
     }
 
-    fn handle_unsubscribe(&self, client_id: &str, topics: &[String]) {
-        let subs = self.subscriptions.write();
+    /// Remove a topic from client's subscription list.
+    /// Used for rollback when subscription fails after the slot was reserved.
+    fn remove_last_subscription(&self, client_id: &str, topic: &str) {
+        let mut client_subs = self.client_subscriptions.write();
+        if let Some(subs) = client_subs.get_mut(client_id) {
+            if let Some(pos) = subs.iter().rposition(|t| t == topic) {
+                subs.remove(pos);
+            }
+        }
+    }
 
+    fn handle_unsubscribe(&self, client_id: &str, topics: &[String]) {
         for topic in topics {
-            subs.with_mut(|root| {
+            // Handle shared subscriptions
+            if let Some((group, actual_topic)) = parse_shared_topic(topic) {
+                // Use Trie for unsubscribe
+                // Trie is internally thread-safe
+                self.shared_trie.with_mut(|root| {
+                    let _ = root.set(actual_topic, |node| {
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            entry.group.remove(client_id);
+                        }
+                        // Remove empty groups
+                        values.retain(|e| !e.group.is_empty());
+                    });
+                });
+                debug!(
+                    "Client {} unsubscribed from shared group '{}' topic '{}'",
+                    client_id, group, actual_topic
+                );
+            } else {
+                // Normal subscription - Trie is internally thread-safe
+                self.subscriptions.with_mut(|root| {
                 root.remove(topic, |h| h.client_id.as_ref() == client_id);
             });
             debug!("Client {} unsubscribed from {}", client_id, topic);
+            }
         }
 
         // Remove from tracking
@@ -808,23 +1296,255 @@ impl BrokerContext {
         }
     }
 
-    fn cleanup_client(&self, client_id: &str) {
-        // Remove from clients map
-        self.clients.write().remove(client_id);
-
-        // Remove all subscriptions for this client
-        let topics = self.client_subscriptions.write().remove(client_id);
-        if let Some(topics) = topics {
-            let topic_count = topics.len();
-            let subs = self.subscriptions.write();
-            for topic in &topics {
-                subs.with_mut(|root| {
-                    root.remove(topic, |h| h.client_id.as_ref() == client_id);
+    /// Cleanup client state on disconnect.
+    /// The `tx` parameter is used for pointer comparison to prevent race conditions
+    /// where a new client with the same client_id replaces an old one before cleanup.
+    /// Remove a client's subscriptions from both normal and shared subscription tries.
+    /// Uses pointer comparison to ensure only the correct client instance is removed.
+    fn remove_client_subscriptions(&self, topics: &[String], tx: &Arc<mpsc::Sender<Message>>) {
+        // Trie is internally thread-safe, no need for external lock
+        for topic in topics {
+            // Check if it's a shared subscription
+            if let Some((group, actual_topic)) = parse_shared_topic(topic) {
+                // Use Trie for cleanup - use pointer comparison
+                self.shared_trie.with_mut(|root| {
+                    let _ = root.set(actual_topic, |node| {
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            // Use pointer comparison via same_sender
+                            entry.group.subscribers.retain(|h| !h.same_sender(tx));
+                        }
+                        // Remove empty groups
+                        values.retain(|e| !e.group.is_empty());
+                    });
+                });
+            } else {
+                // Use pointer comparison for normal subscriptions
+                self.subscriptions.with_mut(|root| {
+                    root.remove(topic, |h| h.same_sender(tx));
                 });
             }
-            debug!("Cleaned up {} subscriptions for client {}", topic_count, client_id);
+        }
+        debug!("Cleaned up {} subscriptions", topics.len());
+    }
+
+    async fn cleanup_client(&self, client_id: &str, username: &str, tx: &Arc<mpsc::Sender<Message>>) {
+        // Remove from clients map only if the current sender matches (pointer comparison)
+        // This prevents removing a new client that connected with the same client_id
+        // Also remove subscription tracking only if this is the correct client instance
+        let topics = {
+            let mut clients = self.clients.write();
+            if let Some(current) = clients.get(client_id) {
+                if Arc::ptr_eq(current, tx) {
+                    clients.remove(client_id);
+                    // Only remove subscriptions tracking if this is the correct client instance
+                    self.client_subscriptions.write().remove(client_id)
+                } else {
+                    // Stale cleanup - don't remove subscription tracking
+                    None
+                }
+            } else {
+                None
+            }
+        };
+
+        // If topics is None, this cleanup is for a stale client - skip subscription removal
+        let topics = match topics {
+            Some(t) => t,
+            None => return,
+        };
+
+        // Remove subscriptions (both normal and shared)
+        self.remove_client_subscriptions(&topics, tx);
+
+        // Publish $SYS disconnected event
+        self.publish_sys_disconnected(client_id, username).await;
+    }
+
+    /// Sanitize client_id for use in MQTT topic names.
+    /// Replaces /, +, # with _ to prevent topic injection attacks.
+    fn sanitize_client_id_for_topic(client_id: &str) -> String {
+        client_id
+            .replace('/', "_")
+            .replace('+', "_")
+            .replace('#', "_")
+    }
+
+    /// Publish $SYS client connected event.
+    /// Topic: $SYS/brokers/{clientid}/connected
+    /// Format compatible with EMQX: https://docs.emqx.com/en/emqx/latest/observability/mqtt-system-topics.html
+    async fn publish_sys_connected(
+        &self,
+        client_id: &str,
+        username: &str,
+        addr: SocketAddr,
+        proto_ver: ProtocolVersion,
+        keepalive: u16,
+    ) {
+        if !self.sys_events_enabled {
+            return;
+        }
+
+        let safe_client_id = Self::sanitize_client_id_for_topic(client_id);
+        let topic = format!("$SYS/brokers/{}/connected", safe_client_id);
+
+        let connected_at = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        let proto_ver_num: u8 = match proto_ver {
+            ProtocolVersion::V4 => 4,
+            ProtocolVersion::V5 => 5,
+        };
+
+        // Use serde_json for safe JSON serialization (prevents JSON injection)
+        let event = SysConnectedEvent {
+            clientid: client_id,
+            username,
+            ipaddress: addr.ip().to_string(),
+            proto_ver: proto_ver_num,
+            keepalive,
+            connected_at,
+        };
+        let payload = match serde_json::to_string(&event) {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("Failed to serialize $SYS connected event for {}: {}", client_id, e);
+                return;
+            }
+        };
+
+        let msg = Message::new(topic.clone(), Bytes::from(payload));
+        self.route_to_subscribers(&topic, &msg);
+    }
+
+    /// Publish $SYS client disconnected event.
+    /// Topic: $SYS/brokers/{clientid}/disconnected
+    /// Format compatible with EMQX: https://docs.emqx.com/en/emqx/latest/observability/mqtt-system-topics.html
+    async fn publish_sys_disconnected(&self, client_id: &str, username: &str) {
+        if !self.sys_events_enabled {
+            return;
+        }
+
+        let safe_client_id = Self::sanitize_client_id_for_topic(client_id);
+        let topic = format!("$SYS/brokers/{}/disconnected", safe_client_id);
+
+        let disconnected_at = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+
+        // Use serde_json for safe JSON serialization (prevents JSON injection)
+        let event = SysDisconnectedEvent {
+            clientid: client_id,
+            username,
+            reason: "normal",
+            disconnected_at,
+        };
+        let payload = match serde_json::to_string(&event) {
+            Ok(s) => s,
+            Err(e) => {
+                warn!("Failed to serialize $SYS disconnected event for {}: {}", client_id, e);
+                return;
+            }
+        };
+
+        let msg = Message::new(topic.clone(), Bytes::from(payload));
+        self.route_to_subscribers(&topic, &msg);
+    }
+}
+
+/// $SYS client connected event payload.
+#[derive(Serialize)]
+struct SysConnectedEvent<'a> {
+    clientid: &'a str,
+    username: &'a str,
+    ipaddress: String,
+    proto_ver: u8,
+    keepalive: u16,
+    connected_at: u64,
+}
+
+/// $SYS client disconnected event payload.
+#[derive(Serialize)]
+struct SysDisconnectedEvent<'a> {
+    clientid: &'a str,
+    username: &'a str,
+    reason: &'a str,
+    disconnected_at: u64,
+}
+
+/// Parse shared subscription topic.
+/// Format: $share/{group}/{topic}
+/// Returns: Some((group, actual_topic)) or None
+pub fn parse_shared_topic(topic: &str) -> Option<(&str, &str)> {
+    if !topic.starts_with("$share/") {
+        return None;
+    }
+    let rest = &topic[7..]; // Skip "$share/"
+    let slash_pos = rest.find('/')?;
+    let group = &rest[..slash_pos];
+    let actual_topic = &rest[slash_pos + 1..];
+    if group.is_empty() || actual_topic.is_empty() {
+        return None;
+    }
+    Some((group, actual_topic))
+}
+
+/// Check if a subscription pattern matches a topic.
+/// Supports MQTT wildcards: + (single level) and # (multi level).
+///
+/// MQTT spec compliance (Section 4.7.2):
+/// - Wildcards (#, +) at the beginning of a pattern MUST NOT match topics starting with $
+/// - To receive $SYS messages, clients must explicitly subscribe to patterns starting with $SYS
+pub fn topic_matches(pattern: &str, topic: &str) -> bool {
+    let pattern_parts: Vec<&str> = pattern.split('/').collect();
+    let topic_parts: Vec<&str> = topic.split('/').collect();
+
+    // MQTT spec: wildcards should not match $ topics unless pattern also starts with $
+    // e.g., "#" should not match "$SYS/foo", but "$SYS/#" should match "$SYS/foo"
+    if !topic_parts.is_empty() && topic_parts[0].starts_with('$') {
+        if pattern_parts.is_empty() {
+            return false;
+        }
+        // If topic starts with $ but pattern's first part is a wildcard, no match
+        let first_pattern = pattern_parts[0];
+        if first_pattern == "#" || first_pattern == "+" {
+            return false;
         }
     }
+
+    let mut p_idx = 0;
+    let mut t_idx = 0;
+
+    while p_idx < pattern_parts.len() {
+        let p = pattern_parts[p_idx];
+
+        if p == "#" {
+            // # matches everything remaining
+            return true;
+        }
+
+        if t_idx >= topic_parts.len() {
+            return false;
+        }
+
+        if p == "+" {
+            // + matches exactly one level
+            p_idx += 1;
+            t_idx += 1;
+        } else if p == topic_parts[t_idx] {
+            // Exact match
+            p_idx += 1;
+            t_idx += 1;
+        } else {
+            return false;
+        }
+    }
+
+    // Both should be exhausted for exact match
+    p_idx == pattern_parts.len() && t_idx == topic_parts.len()
 }
 
 #[cfg(test)]
