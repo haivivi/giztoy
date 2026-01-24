@@ -1,0 +1,608 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>ESP32 开发方案对比 - Giztoy 文档</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy 文档</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="esp32-开发方案对比分析"><a class="header" href="#esp32-开发方案对比分析">ESP32 开发方案对比分析</a></h1>
+<p>本文档对比了 ESP32 嵌入式开发的五种技术方案，帮助选择最适合项目需求的开发方式。</p>
+<h2 id="目录"><a class="header" href="#目录">目录</a></h2>
+<ul>
+<li><a href="#%E6%96%B9%E6%A1%88%E6%A6%82%E8%A7%88">方案概览</a></li>
+<li><a href="#%E6%80%BB%E4%BD%93%E5%AF%B9%E6%AF%94%E8%A1%A8">总体对比表</a></li>
+<li><a href="#%E8%AF%A6%E7%BB%86%E5%AF%B9%E6%AF%94">详细对比</a>
+<ul>
+<li><a href="#1-%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94">性能对比</a></li>
+<li><a href="#2-%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8%E5%AF%B9%E6%AF%94">内存占用对比</a></li>
+<li><a href="#3-%E4%BA%8C%E8%BF%9B%E5%88%B6%E4%BD%93%E7%A7%AF%E5%AF%B9%E6%AF%94">二进制体积对比</a></li>
+<li><a href="#4-%E5%8A%9F%E8%80%97%E5%AF%B9%E6%AF%94">功耗对比</a></li>
+<li><a href="#5-%E5%AE%89%E5%85%A8%E6%80%A7%E5%AF%B9%E6%AF%94">安全性对比</a></li>
+<li><a href="#6-c-%E4%BA%92%E6%93%8D%E4%BD%9C%E6%80%A7%E5%AF%B9%E6%AF%94">C 互操作性对比</a></li>
+<li><a href="#7-%E5%BC%80%E5%8F%91%E4%BD%93%E9%AA%8C%E5%AF%B9%E6%AF%94">开发体验对比</a></li>
+</ul>
+</li>
+<li><a href="#%E5%90%84%E6%96%B9%E6%A1%88%E8%AF%A6%E8%A7%A3">各方案详解</a>
+<ul>
+<li><a href="#esp-rs--freertos-std">esp-rs + FreeRTOS</a></li>
+<li><a href="#embassy-no_std-async">Embassy</a></li>
+<li><a href="#c--esp-idf">C + ESP-IDF</a></li>
+<li><a href="#c--esp-idf-1">C++ + ESP-IDF</a></li>
+<li><a href="#zig--freertos">Zig + FreeRTOS</a></li>
+</ul>
+</li>
+<li><a href="#%E5%86%B3%E7%AD%96%E5%BB%BA%E8%AE%AE">决策建议</a></li>
+<li><a href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%BA%90">参考资源</a></li>
+</ul>
+<hr />
+<h2 id="方案概览"><a class="header" href="#方案概览">方案概览</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>方案</th><th>技术栈</th><th>核心特点</th></tr></thead><tbody>
+<tr><td><strong>esp-rs + FreeRTOS</strong></td><td>Rust + ESP-IDF + FreeRTOS</td><td>内存安全 + 双核 + 生态完整</td></tr>
+<tr><td><strong>Embassy</strong></td><td>Rust + embassy-executor</td><td>极致功耗 + 单核异步</td></tr>
+<tr><td><strong>C + ESP-IDF</strong></td><td>C + FreeRTOS</td><td>原生性能 + 最成熟</td></tr>
+<tr><td><strong>C++ + ESP-IDF</strong></td><td>C++ + FreeRTOS</td><td>面向对象 + RAII + 性能</td></tr>
+<tr><td><strong>Zig + FreeRTOS</strong></td><td>Zig + ESP-IDF</td><td>C 级性能 + 更安全 + 编译快</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="总体对比表"><a class="header" href="#总体对比表">总体对比表</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>指标</th><th>esp-rs + FreeRTOS</th><th>Embassy</th><th>C</th><th>C++</th><th>Zig</th></tr></thead><tbody>
+<tr><td><strong>相对 C 性能</strong></td><td>93%</td><td>82%</td><td>100%</td><td>97%</td><td>98%</td></tr>
+<tr><td><strong>Binary 体积</strong></td><td>🔴 大 (~1.8MB)</td><td>🟢 小 (~1.1MB)</td><td>🟢 小 (~1.0MB)</td><td>🟡 中 (~1.1MB)</td><td>🟢 小 (~1.0MB)</td></tr>
+<tr><td><strong>内存占用</strong></td><td>🔴 高 (~180KB)</td><td>🟢 低 (~100KB)</td><td>🟢 低 (~120KB)</td><td>🟡 中 (~140KB)</td><td>🟢 低 (~120KB)</td></tr>
+<tr><td><strong>功耗</strong></td><td>🟡 一般</td><td>🟢 最优</td><td>🟡 一般</td><td>🟡 一般</td><td>🟡 一般</td></tr>
+<tr><td><strong>双核 SMP</strong></td><td>✅</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><strong>内存安全</strong></td><td>🟢 编译时</td><td>🟢 编译时</td><td>🔴 无</td><td>🟡 部分</td><td>🟡 运行时</td></tr>
+<tr><td><strong>C 互操作</strong></td><td>🟡 FFI</td><td>🔴 困难</td><td>✅ 原生</td><td>✅ 原生</td><td>✅ 原生</td></tr>
+<tr><td><strong>编译速度</strong></td><td>🔴 慢</td><td>🔴 慢</td><td>🟢 快</td><td>🟢 快</td><td>🟢 快</td></tr>
+<tr><td><strong>生态成熟度</strong></td><td>🟢 完整</td><td>🟡 成长中</td><td>🟢 最完整</td><td>🟢 完整</td><td>🔴 需自建</td></tr>
+<tr><td><strong>学习曲线</strong></td><td>🟡 陡峭</td><td>🟡 陡峭</td><td>🟢 平缓</td><td>🟡 中等</td><td>🟡 中等</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="详细对比"><a class="header" href="#详细对比">详细对比</a></h2>
+<h3 id="1-性能对比"><a class="header" href="#1-性能对比">1. 性能对比</a></h3>
+<pre><code>性能基准 (相对 C = 100):
+┌────────────────────────────────────────────────┐
+│ C           ████████████████████ 100%          │
+│ Zig         ███████████████████▌ 98%           │
+│ C++         ███████████████████▌ 97%           │
+│ esp-rs      █████████████████▌   93%           │
+│ Embassy     ████████████████     82%           │
+└────────────────────────────────────────────────┘
+</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>指标</th><th>esp-rs</th><th>Embassy</th><th>C</th><th>C++</th><th>Zig</th></tr></thead><tbody>
+<tr><td><strong>CPU 利用率</strong></td><td>双核 100%</td><td>单核 100%</td><td>双核 100%</td><td>双核 100%</td><td>双核 100%</td></tr>
+<tr><td><strong>任务切换</strong></td><td>~1-5 μs</td><td>~0.1-0.5 μs</td><td>~1-5 μs</td><td>~1-5 μs</td><td>~1-5 μs</td></tr>
+<tr><td><strong>中断延迟</strong></td><td>~2-10 μs</td><td>~0.5-2 μs</td><td>~2-10 μs</td><td>~2-10 μs</td><td>~2-10 μs</td></tr>
+<tr><td><strong>网络吞吐</strong></td><td>15-20 Mbps</td><td>8-12 Mbps</td><td>20 Mbps</td><td>18-20 Mbps</td><td>18-20 Mbps</td></tr>
+<tr><td><strong>函数调用开销</strong></td><td>~5-10%</td><td>零</td><td>零</td><td>~2-3%</td><td>零</td></tr>
+</tbody></table>
+</div>
+<h3 id="2-内存占用对比"><a class="header" href="#2-内存占用对比">2. 内存占用对比</a></h3>
+<pre><code>ESP32-S3 内存使用 (Hello World + WiFi):
+┌─────────────────────────────────────────────────────────────┐
+│ 方案          │ 静态内存  │ 堆使用   │ 栈/任务  │ 总计      │
+├─────────────────────────────────────────────────────────────┤
+│ Embassy       │ 10 KB    │ 50 KB   │ 30 KB   │ ~90 KB    │
+│ C             │ 35 KB    │ 80 KB   │ 50 KB   │ ~165 KB   │
+│ Zig           │ 25 KB    │ 75 KB   │ 55 KB   │ ~155 KB   │
+│ C++           │ 45 KB    │ 90 KB   │ 55 KB   │ ~190 KB   │
+│ esp-rs        │ 60 KB    │ 120 KB  │ 60 KB   │ ~240 KB   │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="3-二进制体积对比"><a class="header" href="#3-二进制体积对比">3. 二进制体积对比</a></h3>
+<pre><code>Binary 大小 (完整音频应用):
+┌────────────────────────────────────────────────────────────┐
+│ C                  ████████████████ ~1.0 MB               │
+│ Zig                ████████████████ ~1.0 MB               │
+│ Embassy            ██████████████████ ~1.1 MB             │
+│ C++                ██████████████████ ~1.1 MB             │
+│ esp-rs + FreeRTOS  ████████████████████████████ ~1.8 MB   │
+└────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="4-功耗对比"><a class="header" href="#4-功耗对比">4. 功耗对比</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>模式</th><th>esp-rs</th><th>Embassy</th><th>C</th><th>C++</th><th>Zig</th></tr></thead><tbody>
+<tr><td><strong>Active 240MHz</strong></td><td>~100 mA</td><td>~90 mA</td><td>~95 mA</td><td>~95 mA</td><td>~95 mA</td></tr>
+<tr><td><strong>Active 80MHz</strong></td><td>~45 mA</td><td>~40 mA</td><td>~43 mA</td><td>~43 mA</td><td>~43 mA</td></tr>
+<tr><td><strong>Light Sleep</strong></td><td>~0.8 mA</td><td>~0.4 mA</td><td>~0.8 mA</td><td>~0.8 mA</td><td>~0.8 mA</td></tr>
+<tr><td><strong>Deep Sleep</strong></td><td>~15 μA</td><td>~10 μA</td><td>~15 μA</td><td>~15 μA</td><td>~15 μA</td></tr>
+<tr><td><strong>唤醒延迟</strong></td><td>~3-5 ms</td><td>~0.5-1 ms</td><td>~3-5 ms</td><td>~3-5 ms</td><td>~3-5 ms</td></tr>
+</tbody></table>
+</div>
+<p>Embassy 功耗最优的原因：</p>
+<ul>
+<li>无 FreeRTOS tick 中断</li>
+<li>异步执行器天然支持 idle = sleep</li>
+<li>无任务栈开销</li>
+</ul>
+<h3 id="5-安全性对比"><a class="header" href="#5-安全性对比">5. 安全性对比</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>问题类型</th><th>C</th><th>C++</th><th>Zig</th><th>Rust (esp-rs/Embassy)</th></tr></thead><tbody>
+<tr><td><strong>缓冲区溢出</strong></td><td>❌</td><td>⚠️</td><td>🟢 运行时</td><td>✅ 编译时</td></tr>
+<tr><td><strong>数组越界</strong></td><td>❌</td><td>⚠️</td><td>🟢 运行时</td><td>✅ 编译时</td></tr>
+<tr><td><strong>空指针解引用</strong></td><td>❌</td><td>⚠️</td><td>🟢 编译时</td><td>✅ 编译时</td></tr>
+<tr><td><strong>Use-after-free</strong></td><td>❌</td><td>⚠️</td><td>⚠️ 部分</td><td>✅ 编译时</td></tr>
+<tr><td><strong>双重释放</strong></td><td>❌</td><td>🟢</td><td>🟢 运行时</td><td>✅ 编译时</td></tr>
+<tr><td><strong>内存泄漏</strong></td><td>❌</td><td>🟢</td><td>🟢 检测</td><td>✅ 编译时</td></tr>
+<tr><td><strong>数据竞争</strong></td><td>❌</td><td>❌</td><td>❌</td><td>✅ 编译时</td></tr>
+<tr><td><strong>整数溢出</strong></td><td>❌</td><td>❌</td><td>🟢 运行时</td><td>⚠️ Debug</td></tr>
+<tr><td><strong>未初始化内存</strong></td><td>❌</td><td>❌</td><td>🟢 强制</td><td>✅ 编译时</td></tr>
+</tbody></table>
+</div>
+<pre><code>图例:
+❌ = 不防护
+⚠️ = 部分防护 (需正确使用)
+🟢 = 运行时防护 (可检测/可关闭)
+✅ = 编译时防护 (无法绕过)
+</code></pre>
+<h4 id="zig-安全性详解"><a class="header" href="#zig-安全性详解">Zig 安全性详解</a></h4>
+<p>Zig 提供了可配置的安全检查：</p>
+<div class="table-wrapper"><table><thead><tr><th>编译模式</th><th>边界检查</th><th>溢出检查</th><th>性能影响</th></tr></thead><tbody>
+<tr><td>Debug</td><td>✅</td><td>✅</td><td>~20%</td></tr>
+<tr><td>ReleaseSafe</td><td>✅</td><td>✅</td><td>~5-10%</td></tr>
+<tr><td>ReleaseFast</td><td>❌</td><td>❌</td><td>0%</td></tr>
+<tr><td>ReleaseSmall</td><td>❌</td><td>❌</td><td>0%</td></tr>
+</tbody></table>
+</div>
+<h3 id="6-c-互操作性对比"><a class="header" href="#6-c-互操作性对比">6. C 互操作性对比</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>维度</th><th>esp-rs</th><th>Embassy</th><th>C</th><th>C++</th><th>Zig</th></tr></thead><tbody>
+<tr><td><strong>调用 ESP-IDF</strong></td><td>FFI</td><td>困难</td><td>原生</td><td>原生</td><td><strong>原生</strong></td></tr>
+<tr><td><strong>调用 esp_afe</strong></td><td>⚠️ bindgen</td><td>❌</td><td>✅</td><td>✅</td><td><strong>✅</strong></td></tr>
+<tr><td><strong>调用 LVGL</strong></td><td>lvgl-rs</td><td>❌</td><td>✅</td><td>✅</td><td><strong>✅</strong></td></tr>
+<tr><td><strong>头文件导入</strong></td><td>bindgen</td><td>❌</td><td>原生</td><td>原生</td><td><strong>@cImport</strong></td></tr>
+</tbody></table>
+</div>
+<h4 id="代码示例对比"><a class="header" href="#代码示例对比">代码示例对比</a></h4>
+<p><strong>esp-rs 调用 C 库：</strong></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use esp_idf_sys::*;
+
+unsafe {
+    let config = afe_config_t { ..Default::default() };
+    let afe = esp_afe_create(&amp;config as *const _);
+    esp_afe_process(afe, buffer.as_mut_ptr());
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Zig 调用 C 库：</strong></p>
+<pre><code class="language-zig">const c = @cImport({
+    @cInclude("esp_afe_sr_iface.h");
+});
+
+var config = c.afe_config_t{};
+const afe = c.esp_afe_create(&amp;config);
+c.esp_afe_process(afe, &amp;buffer);  // 零开销，与 C 完全相同
+</code></pre>
+<h3 id="7-开发体验对比"><a class="header" href="#7-开发体验对比">7. 开发体验对比</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>维度</th><th>esp-rs</th><th>Embassy</th><th>C</th><th>C++</th><th>Zig</th></tr></thead><tbody>
+<tr><td><strong>编译速度</strong></td><td>🔴 2-3 min</td><td>🔴 1-2 min</td><td>🟢 30s</td><td>🟢 30s</td><td>🟢 20-40s</td></tr>
+<tr><td><strong>错误提示</strong></td><td>🟢 优秀</td><td>🟢 优秀</td><td>🔴 差</td><td>🟡 中等</td><td>🟢 良好</td></tr>
+<tr><td><strong>IDE 支持</strong></td><td>🟢 优秀</td><td>🟢 优秀</td><td>🟢 好</td><td>🟢 好</td><td>🟡 一般</td></tr>
+<tr><td><strong>调试</strong></td><td>🟢 GDB</td><td>🟡 probe-rs</td><td>🟢 GDB</td><td>🟢 GDB</td><td>🟡 GDB</td></tr>
+<tr><td><strong>文档</strong></td><td>🟢 丰富</td><td>🟡 成长中</td><td>🟢 最完整</td><td>🟢 丰富</td><td>🔴 稀缺</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="各方案详解"><a class="header" href="#各方案详解">各方案详解</a></h2>
+<h3 id="esp-rs--freertos-std"><a class="header" href="#esp-rs--freertos-std">esp-rs + FreeRTOS (std)</a></h3>
+<p><strong>技术栈：</strong> Rust + ESP-IDF + FreeRTOS</p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>✅ 内存安全（编译时检查）</li>
+<li>✅ 完整的生态系统</li>
+<li>✅ 双核 SMP 支持</li>
+<li>✅ 活跃的社区支持</li>
+<li>✅ 丰富的文档</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>❌ Binary 体积大（~1.8 MB）</li>
+<li>❌ 内存占用高（~180 KB）</li>
+<li>❌ 编译速度慢</li>
+<li>❌ FFI 调用有开销</li>
+</ul>
+<p><strong>适用场景：</strong></p>
+<ul>
+<li>内存/Flash 充足的项目</li>
+<li>需要最高安全性保证</li>
+<li>团队熟悉 Rust</li>
+</ul>
+<h3 id="embassy-no_std-async"><a class="header" href="#embassy-no_std-async">Embassy (no_std async)</a></h3>
+<p><strong>技术栈：</strong> Rust + embassy-executor</p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>✅ Binary 最小</li>
+<li>✅ 内存占用最低</li>
+<li>✅ 功耗最优</li>
+<li>✅ 异步编程模型</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>❌ <strong>不支持双核</strong></li>
+<li>❌ C 互操作困难</li>
+<li>❌ 无法调用 esp_afe 等闭源库</li>
+<li>❌ 生态仍在成长</li>
+</ul>
+<p><strong>适用场景：</strong></p>
+<ul>
+<li>简单传感器节点</li>
+<li>极致功耗敏感的电池设备</li>
+<li>不需要双核计算</li>
+</ul>
+<h3 id="c--esp-idf"><a class="header" href="#c--esp-idf">C + ESP-IDF</a></h3>
+<p><strong>技术栈：</strong> C + FreeRTOS</p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>✅ 性能最优（baseline）</li>
+<li>✅ 生态最完整</li>
+<li>✅ 文档最丰富</li>
+<li>✅ 所有库原生支持</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>❌ 无内存安全保护</li>
+<li>❌ 开发效率较低</li>
+<li>❌ 容易出现内存 bug</li>
+</ul>
+<p><strong>适用场景：</strong></p>
+<ul>
+<li>性能极致要求</li>
+<li>团队熟悉 C</li>
+<li>需要使用所有 ESP-IDF 功能</li>
+</ul>
+<h3 id="c--esp-idf-1"><a class="header" href="#c--esp-idf-1">C++ + ESP-IDF</a></h3>
+<p><strong>技术栈：</strong> C++ (17/20) + FreeRTOS</p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>✅ 性能接近 C（97%）</li>
+<li>✅ RAII 防止资源泄漏</li>
+<li>✅ 面向对象设计</li>
+<li>✅ 与 ESP-IDF 完美兼容</li>
+<li>✅ 学习成本适中</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>❌ 无借用检查（数据竞争不防护）</li>
+<li>❌ 模板膨胀可能增加体积</li>
+<li>❌ 异常/RTTI 默认禁用</li>
+</ul>
+<p><strong>适用场景：</strong></p>
+<ul>
+<li>需要 OOP 设计模式</li>
+<li>团队熟悉 C++</li>
+<li>想要比 C 更好的安全性</li>
+</ul>
+<h3 id="zig--freertos"><a class="header" href="#zig--freertos">Zig + FreeRTOS</a></h3>
+<p><strong>技术栈：</strong> Zig + ESP-IDF + FreeRTOS</p>
+<p><strong>前提条件：</strong> 需要使用 <a href="https://github.com/haivivi/zig-bootstrap">haivivi/zig-bootstrap</a> 构建支持 Xtensa 的 Zig 编译器。</p>
+<p><strong>优点：</strong></p>
+<ul>
+<li>✅ 性能接近 C（98%）</li>
+<li>✅ Binary 体积小（~1.0 MB）</li>
+<li>✅ 内存占用低（~120 KB）</li>
+<li>✅ C 互操作最佳（@cImport 零开销）</li>
+<li>✅ 编译速度快</li>
+<li>✅ 双核支持</li>
+<li>✅ 运行时安全检查（可配置）</li>
+</ul>
+<p><strong>缺点：</strong></p>
+<ul>
+<li>❌ 生态需要自建</li>
+<li>❌ 社区支持几乎没有</li>
+<li>❌ 文档稀缺</li>
+<li>❌ 无编译时借用检查</li>
+<li>❌ 需要维护 zig-bootstrap</li>
+</ul>
+<p><strong>适用场景：</strong></p>
+<ul>
+<li>Flash/内存紧张的项目</li>
+<li>需要双核 + 高性能</li>
+<li>大量调用 C 库（esp_afe 等）</li>
+<li>愿意做 DIY 开发</li>
+</ul>
+<hr />
+<h2 id="决策建议"><a class="header" href="#决策建议">决策建议</a></h2>
+<h3 id="决策流程图"><a class="header" href="#决策流程图">决策流程图</a></h3>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                      选择决策树                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Flash/内存紧张? ───────Yes────&gt; 继续下面                   │
+│        │                                                    │
+│       No ──────────────────────&gt; esp-rs + FreeRTOS          │
+│                                                             │
+│  需要双核? ─────────────Yes────&gt; 继续下面                   │
+│        │                                                    │
+│       No ──────────────────────&gt; Embassy                    │
+│                                                             │
+│  大量调用 C 库? ────────Yes────&gt; Zig + FreeRTOS 或 C/C++   │
+│        │                                                    │
+│       No                                                    │
+│        │                                                    │
+│  团队熟悉 Rust? ────────Yes────&gt; esp-rs (想办法优化体积)    │
+│        │                                                    │
+│       No                                                    │
+│        │                                                    │
+│  愿意 DIY 探险? ────────Yes────&gt; Zig + FreeRTOS             │
+│        │                                                    │
+│       No ──────────────────────&gt; C++ + ESP-IDF              │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="场景推荐"><a class="header" href="#场景推荐">场景推荐</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>场景</th><th>推荐方案</th><th>原因</th></tr></thead><tbody>
+<tr><td><strong>通用 IoT 设备</strong></td><td>esp-rs + FreeRTOS</td><td>安全 + 生态完整</td></tr>
+<tr><td><strong>电池供电传感器</strong></td><td>Embassy</td><td>功耗最优</td></tr>
+<tr><td><strong>音频处理设备</strong></td><td>Zig 或 C</td><td>需要双核 + 低延迟</td></tr>
+<tr><td><strong>资源紧张设备</strong></td><td>Zig 或 C</td><td>体积小 + 内存低</td></tr>
+<tr><td><strong>快速原型开发</strong></td><td>C++</td><td>开发效率 + 性能平衡</td></tr>
+<tr><td><strong>调用闭源 C 库</strong></td><td>Zig 或 C/C++</td><td>C 互操作最佳</td></tr>
+</tbody></table>
+</div>
+<h3 id="语音-iot-设备推荐"><a class="header" href="#语音-iot-设备推荐">语音 IoT 设备推荐</a></h3>
+<p>针对需要以下功能的语音设备：</p>
+<ul>
+<li>I2S 音频输入输出</li>
+<li>Opus 编解码</li>
+<li>AEC 回声消除（esp_afe）</li>
+<li>BLE 通信</li>
+<li>LVGL GUI</li>
+<li>双核处理</li>
+</ul>
+<p><strong>约束条件分析：</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>约束</th><th>esp-rs</th><th>Embassy</th><th>C</th><th>C++</th><th>Zig</th></tr></thead><tbody>
+<tr><td>Flash 紧张</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td>内存紧张</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td>需要双核</td><td>✅</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td>esp_afe 调用</td><td>⚠️</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td>LVGL GUI</td><td>✅</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td></tr>
+</tbody></table>
+</div>
+<p><strong>推荐排序：</strong></p>
+<ol>
+<li>🥇 <strong>Zig + FreeRTOS</strong> - 体积小、性能高、C 互操作最佳</li>
+<li>🥈 <strong>C++ + ESP-IDF</strong> - 成熟稳定、RAII 安全</li>
+<li>🥉 <strong>C + ESP-IDF</strong> - 性能最优、但开发效率低</li>
+</ol>
+<hr />
+<h2 id="rust-rtos-生态调研"><a class="header" href="#rust-rtos-生态调研">Rust RTOS 生态调研</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>RTOS</th><th>类型</th><th>ESP32 支持</th><th>双核支持</th><th>状态</th></tr></thead><tbody>
+<tr><td><strong>RTIC</strong></td><td>中断驱动框架</td><td>❌ 仅 ARM</td><td>❌</td><td>活跃</td></tr>
+<tr><td><strong>Embassy</strong></td><td>async 执行器</td><td>✅</td><td>❌ 实验性</td><td>活跃</td></tr>
+<tr><td><strong>Drone OS</strong></td><td>实时 OS</td><td>❌ 仅 ARM</td><td>❌</td><td>半活跃</td></tr>
+<tr><td><strong>Tock OS</strong></td><td>安全 OS</td><td>❌ 仅 ARM</td><td>❌</td><td>活跃</td></tr>
+<tr><td><strong>Hubris</strong></td><td>微内核</td><td>❌ 特定硬件</td><td>❌</td><td>Oxide 内部</td></tr>
+</tbody></table>
+</div>
+<p><strong>结论：</strong> 目前没有纯 Rust RTOS 支持 ESP32 (Xtensa) 双核。</p>
+<hr />
+<h2 id="参考资源"><a class="header" href="#参考资源">参考资源</a></h2>
+<h3 id="官方文档"><a class="header" href="#官方文档">官方文档</a></h3>
+<ul>
+<li><a href="https://esp-rs.github.io/book/">esp-rs Book</a></li>
+<li><a href="https://embassy.dev/">Embassy Documentation</a></li>
+<li><a href="https://docs.espressif.com/projects/esp-idf/en/latest/">ESP-IDF Programming Guide</a></li>
+<li><a href="https://ziglang.org/documentation/master/">Zig Language Reference</a></li>
+</ul>
+<h3 id="工具链"><a class="header" href="#工具链">工具链</a></h3>
+<ul>
+<li><a href="https://github.com/esp-rs/espup">espup</a> - Rust ESP32 工具链安装器</li>
+<li><a href="https://github.com/esp-rs/espflash">espflash</a> - 烧录工具</li>
+<li><a href="https://github.com/haivivi/zig-bootstrap">haivivi/zig-bootstrap</a> - Zig Xtensa 编译器</li>
+</ul>
+<h3 id="社区资源"><a class="header" href="#社区资源">社区资源</a></h3>
+<ul>
+<li><a href="https://matrix.to/#/#esp-rs:matrix.org">esp-rs Matrix Chat</a></li>
+<li><a href="https://esp32.com/">ESP32 Forum</a></li>
+<li><a href="https://discord.gg/zig">Zig Discord</a></li>
+</ul>
+<hr />
+<h2 id="更新记录"><a class="header" href="#更新记录">更新记录</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>日期</th><th>内容</th></tr></thead><tbody>
+<tr><td>2026-01-23</td><td>初始版本，对比五种开发方案</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../lib/genx/match/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../esp/esp-rs-migration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../lib/genx/match/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../esp/esp-rs-migration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

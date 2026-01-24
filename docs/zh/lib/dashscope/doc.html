@@ -1,0 +1,313 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>DashScope - Giztoy 文档</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy 文档</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="dashscope-sdk"><a class="header" href="#dashscope-sdk">DashScope SDK</a></h1>
+<p>Go and Rust SDK for Aliyun DashScope (百炼 Model Studio) APIs.</p>
+<blockquote>
+<p><strong>Official API Documentation</strong>: <a href="./api/README.html">api/README.md</a></p>
+</blockquote>
+<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+<ol>
+<li><strong>Realtime Focus</strong>: Primarily implement Qwen-Omni-Realtime WebSocket API</li>
+<li><strong>OpenAI Compatibility</strong>: Text/chat APIs use OpenAI-compatible SDK</li>
+<li><strong>Native WebSocket</strong>: Direct WebSocket implementation, not polling</li>
+</ol>
+<h2 id="scope"><a class="header" href="#scope">Scope</a></h2>
+<p>This SDK focuses on <strong>Qwen-Omni-Realtime</strong> API for real-time multimodal conversation. For standard text APIs, use OpenAI-compatible SDKs.</p>
+<div class="table-wrapper"><table><thead><tr><th>API</th><th style="text-align: center">SDK Coverage</th><th>Alternative</th></tr></thead><tbody>
+<tr><td>Text Chat</td><td style="text-align: center">❌</td><td>OpenAI SDK with custom base URL</td></tr>
+<tr><td>App/Agent</td><td style="text-align: center">❌</td><td>Direct HTTP calls</td></tr>
+<tr><td>Realtime</td><td style="text-align: center">✅</td><td><strong>This SDK</strong></td></tr>
+</tbody></table>
+</div>
+<h2 id="api-coverage"><a class="header" href="#api-coverage">API Coverage</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th><th>Official Doc</th></tr></thead><tbody>
+<tr><td>Realtime Session</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/realtime/">api/realtime/</a></td></tr>
+<tr><td>Audio Input/Output</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Function Calls</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Text Input</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Video Input</td><td style="text-align: center">⚠️</td><td style="text-align: center">⚠️</td><td>Limited support</td></tr>
+</tbody></table>
+</div>
+<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
+<pre><code>┌─────────────────────────────────────────┐
+│              Client                      │
+├─────────────────────────────────────────┤
+│          RealtimeService                 │
+│   ┌─────────────────────────────────┐   │
+│   │       RealtimeSession           │   │
+│   │  ┌───────────┐ ┌───────────┐    │   │
+│   │  │   Send    │ │  Receive  │    │   │
+│   │  │  Events   │ │  Events   │    │   │
+│   │  └───────────┘ └───────────┘    │   │
+│   └─────────────────────────────────┘   │
+└─────────────────────────────────────────┘
+                    │
+                    ▼
+       wss://dashscope.aliyuncs.com/api-ws/v1/realtime
+</code></pre>
+<h2 id="authentication"><a class="header" href="#authentication">Authentication</a></h2>
+<pre><code>Authorization: Bearer &lt;api_key&gt;
+</code></pre>
+<p>Optional workspace isolation:</p>
+<pre><code>X-DashScope-WorkSpace: &lt;workspace_id&gt;
+</code></pre>
+<h2 id="base-urls"><a class="header" href="#base-urls">Base URLs</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Region</th><th>WebSocket URL</th></tr></thead><tbody>
+<tr><td>China (Beijing)</td><td><code>wss://dashscope.aliyuncs.com/api-ws/v1/realtime</code></td></tr>
+<tr><td>International (Singapore)</td><td><code>wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime</code></td></tr>
+</tbody></table>
+</div>
+<h2 id="models"><a class="header" href="#models">Models</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Model</th><th>Input</th><th>Output</th><th>Sample Rate</th></tr></thead><tbody>
+<tr><td><code>qwen-omni-turbo-realtime</code></td><td>audio/text</td><td>audio/text</td><td>16kHz</td></tr>
+<tr><td><code>qwen3-omni-flash-realtime</code></td><td>audio/text/video</td><td>audio/text</td><td>24kHz</td></tr>
+</tbody></table>
+</div>
+<h2 id="event-flow"><a class="header" href="#event-flow">Event Flow</a></h2>
+<pre><code>Client                                     Server
+   |                                         |
+   |------ session.update ------------------&gt;|
+   |                                         |
+   |------ input_audio_buffer.append -------&gt;|
+   |                                         |
+   |------ response.create -----------------&gt;|
+   |                                         |
+   |&lt;----- response.audio.delta -------------|
+   |&lt;----- response.audio.delta -------------|
+   |&lt;----- response.done --------------------|
+   |                                         |
+</code></pre>
+<h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
+<ul>
+<li><code>examples/go/dashscope/</code> - Go SDK examples</li>
+<li><code>examples/cmd/dashscope/</code> - CLI test scripts</li>
+</ul>
+<h2 id="for-textchat-apis"><a class="header" href="#for-textchat-apis">For Text/Chat APIs</a></h2>
+<p>Use OpenAI-compatible SDK:</p>
+<p><strong>Go:</strong></p>
+<pre><code class="language-go">import "github.com/sashabaranov/go-openai"
+
+config := openai.DefaultConfig(apiKey)
+config.BaseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+client := openai.NewClientWithConfig(config)
+</code></pre>
+<p><strong>Rust:</strong></p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Use async-openai with custom base URL
+<span class="boring">}</span></code></pre></pre>
+<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<ul>
+<li>CLI tool: <code>go/cmd/dashscope/</code></li>
+<li>CLI tests: <code>examples/cmd/dashscope/</code></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/minimax/api/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/dashscope/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/minimax/api/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/dashscope/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

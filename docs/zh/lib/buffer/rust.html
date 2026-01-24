@@ -1,0 +1,430 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Rust 实现 - Giztoy 文档</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy 文档</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="buffer-package---rust-implementation"><a class="header" href="#buffer-package---rust-implementation">Buffer Package - Rust Implementation</a></h1>
+<p>Crate: <code>giztoy-buffer</code></p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<h3 id="buffer"><a class="header" href="#buffer">Buffer<T></a></h3>
+<p>Growable buffer using <code>VecDeque&lt;T&gt;</code> for O(1) front operations.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Buffer&lt;T&gt; {
+    inner: Arc&lt;BufferInner&lt;T&gt;&gt;,
+}
+
+struct BufferInner&lt;T&gt; {
+    state: Mutex&lt;BufferState&lt;T&gt;&gt;,
+    write_notify: Condvar,
+}
+
+struct BufferState&lt;T&gt; {
+    buf: VecDeque&lt;T&gt;,
+    close_write: bool,
+    close_err: Option&lt;Arc&lt;dyn Error + Send + Sync&gt;&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Key Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>new</code></td><td><code>fn new() -&gt; Self</code></td><td>Create empty buffer</td></tr>
+<tr><td><code>with_capacity</code></td><td><code>fn with_capacity(capacity: usize) -&gt; Self</code></td><td>Create with capacity hint</td></tr>
+<tr><td><code>write</code></td><td><code>fn write(&amp;self, data: &amp;[T]) -&gt; Result&lt;usize, BufferError&gt;</code></td><td>Append elements</td></tr>
+<tr><td><code>read</code></td><td><code>fn read(&amp;self, buf: &amp;mut [T]) -&gt; Result&lt;usize, BufferError&gt;</code></td><td>Read elements (blocks)</td></tr>
+<tr><td><code>add</code></td><td><code>fn add(&amp;self, item: T) -&gt; Result&lt;(), BufferError&gt;</code></td><td>Add single element</td></tr>
+<tr><td><code>next</code></td><td><code>fn next(&amp;self) -&gt; Result&lt;T, Done&gt;</code></td><td>Pop from front (FIFO)</td></tr>
+<tr><td><code>to_vec</code></td><td><code>fn to_vec(&amp;self) -&gt; Vec&lt;T&gt;</code></td><td>Copy to Vec</td></tr>
+</tbody></table>
+</div>
+<h3 id="blockbuffer"><a class="header" href="#blockbuffer">BlockBuffer<T></a></h3>
+<p>Fixed-size circular buffer with blocking semantics.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct BlockBuffer&lt;T&gt; {
+    inner: Arc&lt;BlockBufferInner&lt;T&gt;&gt;,
+}
+
+struct BlockBufferInner&lt;T&gt; {
+    state: Mutex&lt;BlockBufferState&lt;T&gt;&gt;,
+    not_full: Condvar,
+    not_empty: Condvar,
+}
+
+struct BlockBufferState&lt;T&gt; {
+    buf: Vec&lt;Option&lt;T&gt;&gt;,
+    head: usize,
+    tail: usize,
+    count: usize,
+    close_write: bool,
+    close_err: Option&lt;Arc&lt;dyn Error + Send + Sync&gt;&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Key Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>new</code></td><td><code>fn new(capacity: usize) -&gt; Self</code></td><td>Create with capacity</td></tr>
+<tr><td><code>from_vec</code></td><td><code>fn from_vec(data: Vec&lt;T&gt;) -&gt; Self</code></td><td>Create from Vec (full)</td></tr>
+<tr><td><code>write</code></td><td><code>fn write(&amp;self, data: &amp;[T]) -&gt; Result&lt;usize, BufferError&gt;</code></td><td>Write (blocks when full)</td></tr>
+<tr><td><code>read</code></td><td><code>fn read(&amp;self, buf: &amp;mut [T]) -&gt; Result&lt;usize, BufferError&gt;</code></td><td>Read (blocks when empty)</td></tr>
+<tr><td><code>capacity</code></td><td><code>fn capacity(&amp;self) -&gt; usize</code></td><td>Get capacity</td></tr>
+<tr><td><code>is_full</code></td><td><code>fn is_full(&amp;self) -&gt; bool</code></td><td>Check if full</td></tr>
+</tbody></table>
+</div>
+<h3 id="ringbuffer"><a class="header" href="#ringbuffer">RingBuffer<T></a></h3>
+<p>Fixed-size circular buffer with overwrite semantics.</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct RingBuffer&lt;T&gt; {
+    inner: Arc&lt;RingBufferInner&lt;T&gt;&gt;,
+}
+
+struct RingBufferInner&lt;T&gt; {
+    state: Mutex&lt;RingBufferState&lt;T&gt;&gt;,
+    write_notify: Condvar,
+}
+
+struct RingBufferState&lt;T&gt; {
+    buf: Vec&lt;Option&lt;T&gt;&gt;,
+    head: usize,  // virtual counter (wraps)
+    tail: usize,  // virtual counter (wraps)
+    close_write: bool,
+    close_err: Option&lt;Arc&lt;dyn Error + Send + Sync&gt;&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Key Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>new</code></td><td><code>fn new(capacity: usize) -&gt; Self</code></td><td>Create with capacity</td></tr>
+<tr><td><code>write</code></td><td><code>fn write(&amp;self, data: &amp;[T]) -&gt; Result&lt;usize, BufferError&gt;</code></td><td>Write (overwrites oldest)</td></tr>
+<tr><td><code>add</code></td><td><code>fn add(&amp;self, item: T) -&gt; Result&lt;(), BufferError&gt;</code></td><td>Add single (overwrites)</td></tr>
+</tbody></table>
+</div>
+<h2 id="error-types"><a class="header" href="#error-types">Error Types</a></h2>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone)]
+pub enum BufferError {
+    Closed,
+    ClosedWithError(Arc&lt;dyn Error + Send + Sync&gt;),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Done;
+<span class="boring">}</span></code></pre></pre>
+<h2 id="convenience-functions"><a class="header" href="#convenience-functions">Convenience Functions</a></h2>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Growable buffers
+pub fn bytes() -&gt; Buffer&lt;u8&gt;         // 1KB
+pub fn bytes_1kb() -&gt; Buffer&lt;u8&gt;     // 1KB
+pub fn bytes_4kb() -&gt; Buffer&lt;u8&gt;     // 4KB
+pub fn bytes_16kb() -&gt; Buffer&lt;u8&gt;    // 16KB
+pub fn bytes_64kb() -&gt; Buffer&lt;u8&gt;    // 64KB
+pub fn bytes_256b() -&gt; Buffer&lt;u8&gt;    // 256B
+
+// Blocking buffers
+pub fn block_bytes() -&gt; BlockBuffer&lt;u8&gt;      // 1KB
+pub fn block_bytes_1kb() -&gt; BlockBuffer&lt;u8&gt;  // 1KB
+pub fn block_bytes_4kb() -&gt; BlockBuffer&lt;u8&gt;  // 4KB
+pub fn block_bytes_16kb() -&gt; BlockBuffer&lt;u8&gt; // 16KB
+pub fn block_bytes_64kb() -&gt; BlockBuffer&lt;u8&gt; // 64KB
+
+// Ring buffers
+pub fn ring_bytes(size: usize) -&gt; RingBuffer&lt;u8&gt;
+pub fn ring_bytes_1kb() -&gt; RingBuffer&lt;u8&gt;    // 1KB
+pub fn ring_bytes_4kb() -&gt; RingBuffer&lt;u8&gt;    // 4KB
+pub fn ring_bytes_16kb() -&gt; RingBuffer&lt;u8&gt;   // 16KB
+pub fn ring_bytes_64kb() -&gt; RingBuffer&lt;u8&gt;   // 64KB
+<span class="boring">}</span></code></pre></pre>
+<h2 id="thread-safety"><a class="header" href="#thread-safety">Thread Safety</a></h2>
+<p>All types implement <code>Send + Sync</code> and support <code>Clone</code>:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// Clone shares the underlying buffer via Arc
+let buf = Buffer::&lt;i32&gt;::new();
+let buf_clone = buf.clone();  // Same underlying buffer
+
+// Safe to send to other threads
+std::thread::spawn(move || {
+    buf_clone.add(42).unwrap();
+});
+<span class="boring">}</span></code></pre></pre>
+<h2 id="usage-patterns"><a class="header" href="#usage-patterns">Usage Patterns</a></h2>
+<h3 id="producer-consumer"><a class="header" href="#producer-consumer">Producer-Consumer</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_buffer::{BlockBuffer, Done};
+use std::thread;
+
+let buf = BlockBuffer::&lt;i32&gt;::new(4);
+let producer_buf = buf.clone();
+
+let producer = thread::spawn(move || {
+    for i in 0..100 {
+        producer_buf.add(i).unwrap();
+    }
+    producer_buf.close_write().unwrap();
+});
+
+let mut collected = Vec::new();
+loop {
+    match buf.next() {
+        Ok(item) =&gt; collected.push(item),
+        Err(Done) =&gt; break,
+    }
+}
+
+producer.join().unwrap();
+<span class="boring">}</span></code></pre></pre>
+<h3 id="sliding-window"><a class="header" href="#sliding-window">Sliding Window</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_buffer::RingBuffer;
+
+let buf = RingBuffer::&lt;f32&gt;::new(100);
+
+// Write more than capacity - old data overwritten
+for i in 0..200 {
+    buf.add(i as f32).unwrap();
+}
+
+// Buffer contains only last 100 values
+assert_eq!(buf.len(), 100);
+let window = buf.to_vec();  // [100.0, 101.0, ..., 199.0]
+<span class="boring">}</span></code></pre></pre>
+<h2 id="implementation-details"><a class="header" href="#implementation-details">Implementation Details</a></h2>
+<h3 id="vecdeque-vs-vec"><a class="header" href="#vecdeque-vs-vec">VecDeque vs Vec</a></h3>
+<ul>
+<li><strong>Buffer</strong>: Uses <code>VecDeque&lt;T&gt;</code> for O(1) <code>pop_front()</code></li>
+<li><strong>BlockBuffer/RingBuffer</strong>: Use <code>Vec&lt;Option&lt;T&gt;&gt;</code> for circular buffer</li>
+</ul>
+<h3 id="wrapping-arithmetic"><a class="header" href="#wrapping-arithmetic">Wrapping Arithmetic</a></h3>
+<p>RingBuffer uses <code>wrapping_add</code> for counters to handle overflow:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>state.tail = state.tail.wrapping_add(1);
+if state.tail.wrapping_sub(state.head) &gt; capacity {
+    state.head = state.head.wrapping_add(1);
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="dual-condvar-pattern-blockbuffer"><a class="header" href="#dual-condvar-pattern-blockbuffer">Dual Condvar Pattern (BlockBuffer)</a></h3>
+<p>BlockBuffer uses two Condvars for precise signaling:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>not_full: Condvar,   // Signals writers when space available
+not_empty: Condvar,  // Signals readers when data available
+<span class="boring">}</span></code></pre></pre>
+<h2 id="differences-from-go-implementation"><a class="header" href="#differences-from-go-implementation">Differences from Go Implementation</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Aspect</th><th>Go</th><th>Rust</th></tr></thead><tbody>
+<tr><td>Internal storage</td><td><code>[]T</code> slice</td><td><code>Vec&lt;Option&lt;T&gt;&gt;</code> or <code>VecDeque&lt;T&gt;</code></td></tr>
+<tr><td><code>Buffer.Next()</code></td><td>LIFO (pops from end)</td><td>FIFO (pops from front)</td></tr>
+<tr><td><code>Bytes()</code> / <code>to_vec()</code></td><td>Returns internal slice</td><td>Returns copy</td></tr>
+<tr><td>Cloning</td><td>Not supported</td><td>Via <code>Arc</code> (shared)</td></tr>
+<tr><td>Error type</td><td><code>error</code> interface</td><td><code>BufferError</code> enum</td></tr>
+<tr><td>Default impl</td><td>Via interface</td><td>Via <code>Default</code> trait</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/buffer/go.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/buffer/issues.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/buffer/go.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/buffer/issues.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

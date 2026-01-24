@@ -1,0 +1,346 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Rust 实现 - Giztoy 文档</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../../favicon.svg">
+        <link rel="shortcut icon" href="../../../favicon.png">
+        <link rel="stylesheet" href="../../../css/variables.css">
+        <link rel="stylesheet" href="../../../css/general.css">
+        <link rel="stylesheet" href="../../../css/chrome.css">
+        <link rel="stylesheet" href="../../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../../highlight.css">
+        <link rel="stylesheet" href="../../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy 文档</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="audio-opusrt---rust-implementation"><a class="header" href="#audio-opusrt---rust-implementation">Audio OpusRT - Rust Implementation</a></h1>
+<p>Crate: <code>giztoy-audio</code> (module <code>opusrt</code>)</p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<h3 id="epochmillis"><a class="header" href="#epochmillis">EpochMillis</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub type EpochMillis = i64;
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Functions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>now</code></td><td><code>fn now() -&gt; EpochMillis</code></td><td>Current time as epoch millis</td></tr>
+<tr><td><code>from_duration</code></td><td><code>fn from_duration(d: Duration) -&gt; EpochMillis</code></td><td>Duration to millis</td></tr>
+<tr><td><code>to_duration</code></td><td><code>fn to_duration(e: EpochMillis) -&gt; Duration</code></td><td>Millis to Duration</td></tr>
+</tbody></table>
+</div>
+<h3 id="frame"><a class="header" href="#frame">Frame</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub type Frame = Vec&lt;u8&gt;;
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Extension Functions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>frame_duration</code></td><td><code>fn frame_duration(frame: &amp;Frame) -&gt; Duration</code></td><td>Frame duration from TOC</td></tr>
+</tbody></table>
+</div>
+<h3 id="stampedframe"><a class="header" href="#stampedframe">StampedFrame</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct StampedFrame {
+    pub frame: Frame,
+    pub timestamp: EpochMillis,
+}
+
+impl StampedFrame {
+    pub fn from_bytes(data: &amp;[u8]) -&gt; Option&lt;Self&gt;;
+    pub fn to_bytes(&amp;self) -&gt; Vec&lt;u8&gt;;
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="buffer"><a class="header" href="#buffer">Buffer</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub struct Buffer {
+    duration: EpochMillis,
+    // ... internal fields
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>new</code></td><td><code>fn new(duration: Duration) -&gt; Self</code></td><td>Create buffer</td></tr>
+<tr><td><code>append</code></td><td><code>fn append(&amp;mut self, frame: Frame, stamp: EpochMillis) -&gt; Result&lt;()&gt;</code></td><td>Add frame</td></tr>
+<tr><td><code>frame</code></td><td><code>fn frame(&amp;mut self) -&gt; Result&lt;(Option&lt;Frame&gt;, Duration)&gt;</code></td><td>Get next frame</td></tr>
+<tr><td><code>len</code></td><td><code>fn len(&amp;self) -&gt; usize</code></td><td>Frame count</td></tr>
+<tr><td><code>buffered</code></td><td><code>fn buffered(&amp;self) -&gt; Duration</code></td><td>Buffered duration</td></tr>
+<tr><td><code>reset</code></td><td><code>fn reset(&amp;mut self)</code></td><td>Clear buffer</td></tr>
+</tbody></table>
+</div>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<h3 id="basic-jitter-buffer"><a class="header" href="#basic-jitter-buffer">Basic Jitter Buffer</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_audio::opusrt::{Buffer, Frame, EpochMillis};
+use std::time::Duration;
+
+// Create buffer (2 minute capacity)
+let mut buffer = Buffer::new(Duration::from_secs(120));
+
+// Append frames
+buffer.append(frame1, timestamp1)?;
+buffer.append(frame2, timestamp2)?;
+
+// Read in order
+loop {
+    match buffer.frame() {
+        Ok((Some(frame), Duration::ZERO)) =&gt; {
+            // Got a valid frame
+            let pcm = decoder.decode(&amp;frame)?;
+            play(&amp;pcm);
+        }
+        Ok((None, loss)) if loss &gt; Duration::ZERO =&gt; {
+            // Packet loss detected
+            let plc_pcm = decoder.decode_plc(loss_to_samples(loss))?;
+            play(&amp;plc_pcm);
+        }
+        Err(_) =&gt; break, // Buffer empty
+        _ =&gt; {}
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="stamped-frame-handling"><a class="header" href="#stamped-frame-handling">Stamped Frame Handling</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_audio::opusrt::StampedFrame;
+
+// Parse stamped frame
+let stamped = StampedFrame::from_bytes(&amp;network_data)?;
+buffer.append(stamped.frame, stamped.timestamp)?;
+
+// Create stamped frame
+let stamped = StampedFrame {
+    frame: opus_frame,
+    timestamp: now(),
+};
+let bytes = stamped.to_bytes();
+<span class="boring">}</span></code></pre></pre>
+<h2 id="missing-features-vs-go"><a class="header" href="#missing-features-vs-go">Missing Features vs Go</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Buffer</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td>Basic jitter buffer</td></tr>
+<tr><td>RealtimeBuffer</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td>Real-time playback simulation</td></tr>
+<tr><td>OggWriter</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td>Write Opus to OGG</td></tr>
+<tr><td>OggReader</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td>Read Opus from OGG</td></tr>
+<tr><td>RealtimeReader</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td>Generic frame reader with pacing</td></tr>
+</tbody></table>
+</div>
+<h2 id="implementation-status"><a class="header" href="#implementation-status">Implementation Status</a></h2>
+<p>The Rust implementation provides:</p>
+<ul>
+<li>Basic jitter buffer with heap-based ordering</li>
+<li>Stamped frame parsing</li>
+<li>Timestamp utilities</li>
+</ul>
+<p><strong>Missing:</strong></p>
+<ul>
+<li>RealtimeBuffer (background thread with real-time pacing)</li>
+<li>OGG container integration</li>
+<li>RealtimeReader wrapper</li>
+</ul>
+<h2 id="differences-from-go"><a class="header" href="#differences-from-go">Differences from Go</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Aspect</th><th>Go</th><th>Rust</th></tr></thead><tbody>
+<tr><td>EpochMillis</td><td>Custom type with methods</td><td>Type alias <code>i64</code></td></tr>
+<tr><td>Frame</td><td><code>[]byte</code> with methods</td><td><code>Vec&lt;u8&gt;</code> (no methods)</td></tr>
+<tr><td>Error handling</td><td>Multiple error vars</td><td>Result with error types</td></tr>
+<tr><td>Thread safety</td><td>Mutex-protected</td><td>TBD</td></tr>
+<tr><td>OGG support</td><td>✅ Full</td><td>❌ Missing</td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../../lib/audio/opusrt/go.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../../lib/audio/opusrt/issues.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../../lib/audio/opusrt/go.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../../lib/audio/opusrt/issues.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../../elasticlunr.min.js"></script>
+        <script src="../../../mark.min.js"></script>
+        <script src="../../../searcher.js"></script>
+
+        <script src="../../../clipboard.min.js"></script>
+        <script src="../../../highlight.js"></script>
+        <script src="../../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../../mermaid.min.js"></script>
+        <script src="../../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

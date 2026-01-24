@@ -1,0 +1,391 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Rust 实现 - Giztoy 文档</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy 文档</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="cli-package---rust-implementation"><a class="header" href="#cli-package---rust-implementation">CLI Package - Rust Implementation</a></h1>
+<p>Crate: <code>giztoy-cli</code></p>
+<h2 id="types"><a class="header" href="#types">Types</a></h2>
+<h3 id="config"><a class="header" href="#config">Config</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Config {
+    #[serde(skip)]
+    pub app_name: String,
+    
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub current_context: String,
+    
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub contexts: HashMap&lt;String, Context&gt;,
+    
+    #[serde(skip)]
+    config_path: PathBuf,
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>default_config_dir</code></td><td><code>fn default_config_dir(app_name: &amp;str) -&gt; Option&lt;PathBuf&gt;</code></td><td>Get default config dir</td></tr>
+<tr><td><code>default_config_path</code></td><td><code>fn default_config_path(app_name: &amp;str) -&gt; Option&lt;PathBuf&gt;</code></td><td>Get default config path</td></tr>
+<tr><td><code>path</code></td><td><code>fn path(&amp;self) -&gt; &amp;PathBuf</code></td><td>Get config file path</td></tr>
+<tr><td><code>dir</code></td><td><code>fn dir(&amp;self) -&gt; Option&lt;&amp;Path&gt;</code></td><td>Get config directory</td></tr>
+<tr><td><code>save</code></td><td><code>fn save(&amp;self) -&gt; Result&lt;()&gt;</code></td><td>Save to disk</td></tr>
+<tr><td><code>add_context</code></td><td><code>fn add_context(&amp;mut self, name: &amp;str, ctx: Context) -&gt; Result&lt;()&gt;</code></td><td>Add context</td></tr>
+<tr><td><code>delete_context</code></td><td><code>fn delete_context(&amp;mut self, name: &amp;str) -&gt; Result&lt;()&gt;</code></td><td>Delete context</td></tr>
+<tr><td><code>use_context</code></td><td><code>fn use_context(&amp;mut self, name: &amp;str) -&gt; Result&lt;()&gt;</code></td><td>Set current context</td></tr>
+<tr><td><code>get_context</code></td><td><code>fn get_context(&amp;self, name: &amp;str) -&gt; Option&lt;&amp;Context&gt;</code></td><td>Get specific context</td></tr>
+<tr><td><code>get_current_context</code></td><td><code>fn get_current_context(&amp;self) -&gt; Option&lt;&amp;Context&gt;</code></td><td>Get current context</td></tr>
+<tr><td><code>resolve_context</code></td><td><code>fn resolve_context(&amp;self, name: Option&lt;&amp;str&gt;) -&gt; Option&lt;&amp;Context&gt;</code></td><td>Resolve by name or current</td></tr>
+<tr><td><code>list_contexts</code></td><td><code>fn list_contexts(&amp;self) -&gt; Vec&lt;&amp;str&gt;</code></td><td>List all context names</td></tr>
+</tbody></table>
+</div>
+<p><strong>Free Functions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>load_config</code></td><td><code>fn load_config(app_name: &amp;str, custom_path: Option&lt;&amp;str&gt;) -&gt; Result&lt;Config&gt;</code></td><td>Load config</td></tr>
+<tr><td><code>save_config</code></td><td><code>fn save_config(app_name: &amp;str, config: &amp;Config, custom_path: Option&lt;&amp;str&gt;) -&gt; Result&lt;()&gt;</code></td><td>Save config</td></tr>
+<tr><td><code>mask_api_key</code></td><td><code>fn mask_api_key(key: &amp;str) -&gt; String</code></td><td>Mask API key</td></tr>
+</tbody></table>
+</div>
+<h3 id="context"><a class="header" href="#context">Context</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Context {
+    pub name: String,
+    pub client: Option&lt;ClientCredentials&gt;,
+    pub console: Option&lt;ConsoleCredentials&gt;,
+    pub api_key: String,
+    pub base_url: String,
+    pub timeout: i32,
+    pub max_retries: i32,
+    pub default_voice: String,
+    pub extra: HashMap&lt;String, String&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="output"><a class="header" href="#output">Output</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OutputFormat {
+    #[default]
+    Yaml,
+    Json,
+}
+
+pub struct Output {
+    pub format: OutputFormat,
+    pub file: Option&lt;String&gt;,
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>new</code></td><td><code>fn new(format: OutputFormat, file: Option&lt;String&gt;) -&gt; Self</code></td><td>Create output config</td></tr>
+<tr><td><code>write</code></td><td><code>fn write&lt;T: Serialize&gt;(&amp;self, value: &amp;T) -&gt; Result&lt;()&gt;</code></td><td>Write formatted output</td></tr>
+<tr><td><code>write_binary</code></td><td><code>fn write_binary(&amp;self, data: &amp;[u8], path: &amp;str) -&gt; Result&lt;()&gt;</code></td><td>Write binary data</td></tr>
+</tbody></table>
+</div>
+<p><strong>Free Functions:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Function</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>print_verbose</code></td><td><code>fn print_verbose(enabled: bool, message: &amp;str)</code></td><td>Print verbose message</td></tr>
+<tr><td><code>guess_extension</code></td><td><code>fn guess_extension(format: &amp;str) -&gt; &amp;str</code></td><td>Guess file extension</td></tr>
+</tbody></table>
+</div>
+<h3 id="paths"><a class="header" href="#paths">Paths</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[derive(Debug, Clone)]
+pub struct Paths {
+    pub app_name: String,
+    pub home_dir: PathBuf,
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Methods:</strong></p>
+<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
+<tr><td><code>new</code></td><td><code>fn new(app_name: impl Into&lt;String&gt;) -&gt; io::Result&lt;Self&gt;</code></td><td>Create paths instance</td></tr>
+<tr><td><code>base_dir</code></td><td><code>fn base_dir(&amp;self) -&gt; PathBuf</code></td><td>~/.giztoy</td></tr>
+<tr><td><code>app_dir</code></td><td><code>fn app_dir(&amp;self) -&gt; PathBuf</code></td><td>~/.giztoy/<app></td></tr>
+<tr><td><code>config_file</code></td><td><code>fn config_file(&amp;self) -&gt; PathBuf</code></td><td>~/.giztoy/<app>/config.yaml</td></tr>
+<tr><td><code>cache_dir</code></td><td><code>fn cache_dir(&amp;self) -&gt; PathBuf</code></td><td>~/.giztoy/<app>/cache</td></tr>
+<tr><td><code>log_dir</code></td><td><code>fn log_dir(&amp;self) -&gt; PathBuf</code></td><td>~/.giztoy/<app>/logs</td></tr>
+<tr><td><code>data_dir</code></td><td><code>fn data_dir(&amp;self) -&gt; PathBuf</code></td><td>~/.giztoy/<app>/data</td></tr>
+<tr><td><code>ensure_app_dir</code></td><td><code>fn ensure_app_dir(&amp;self) -&gt; io::Result&lt;()&gt;</code></td><td>Create app dir</td></tr>
+<tr><td><code>ensure_cache_dir</code></td><td><code>fn ensure_cache_dir(&amp;self) -&gt; io::Result&lt;()&gt;</code></td><td>Create cache dir</td></tr>
+<tr><td><code>cache_path</code></td><td><code>fn cache_path(&amp;self, name: &amp;str) -&gt; PathBuf</code></td><td>Path in cache</td></tr>
+<tr><td><code>log_path</code></td><td><code>fn log_path(&amp;self, name: &amp;str) -&gt; PathBuf</code></td><td>Path in logs</td></tr>
+<tr><td><code>data_path</code></td><td><code>fn data_path(&amp;self, name: &amp;str) -&gt; PathBuf</code></td><td>Path in data</td></tr>
+</tbody></table>
+</div>
+<h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
+<h3 id="load-configuration"><a class="header" href="#load-configuration">Load Configuration</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_cli::{load_config, mask_api_key};
+
+let cfg = load_config("minimax", None)?;
+
+if let Some(ctx) = cfg.get_current_context() {
+    println!("API Key: {}", mask_api_key(&amp;ctx.api_key));
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="output-results"><a class="header" href="#output-results">Output Results</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_cli::{Output, OutputFormat};
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct Result {
+    status: String,
+    message: String,
+}
+
+let result = Result {
+    status: "ok".to_string(),
+    message: "done".to_string(),
+};
+
+// Output as JSON to stdout
+let output = Output::new(OutputFormat::Json, None);
+output.write(&amp;result)?;
+
+// Output to file
+let output = Output::new(OutputFormat::Yaml, Some("output.yaml".to_string()));
+output.write(&amp;result)?;
+<span class="boring">}</span></code></pre></pre>
+<h3 id="path-management"><a class="header" href="#path-management">Path Management</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_cli::Paths;
+
+let paths = Paths::new("minimax")?;
+
+// Ensure directories exist
+paths.ensure_cache_dir()?;
+paths.ensure_log_dir()?;
+
+// Get paths
+let cache_path = paths.cache_path("response.json");
+let log_path = paths.log_path("2024-01-15.log");
+<span class="boring">}</span></code></pre></pre>
+<h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
+<ul>
+<li><code>serde</code> + <code>serde_yaml</code> + <code>serde_json</code> - Serialization</li>
+<li><code>dirs</code> - Home directory detection</li>
+<li><code>anyhow</code> - Error handling</li>
+</ul>
+<h2 id="differences-from-go"><a class="header" href="#differences-from-go">Differences from Go</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Aspect</th><th>Go</th><th>Rust</th></tr></thead><tbody>
+<tr><td>Error handling</td><td><code>error</code> return</td><td><code>anyhow::Result</code></td></tr>
+<tr><td>Config loading</td><td><code>LoadConfig(app)</code></td><td><code>load_config(app, None)</code></td></tr>
+<tr><td>Output formats</td><td>yaml, json, table, raw</td><td>yaml, json only</td></tr>
+<tr><td>Print helpers</td><td><code>PrintSuccess</code>, <code>PrintError</code>, etc.</td><td><code>print_verbose</code> only</td></tr>
+<tr><td>Path returns</td><td><code>string</code></td><td><code>PathBuf</code></td></tr>
+</tbody></table>
+</div>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/cli/go.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/cli/issues.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/cli/go.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/cli/issues.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

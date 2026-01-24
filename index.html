@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="assets/homepage.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Stars Background Canvas (hidden until ready) -->
@@ -23,8 +23,12 @@
             <span class="brand-text">Giztoy</span>
         </div>
         <div class="nav-links">
-            <a href="docs/" class="nav-link">Documentation</a>
+            <a href="docs/" class="nav-link" data-i18n="nav.docs">Documentation</a>
             <a href="https://github.com/haivivi/giztoy" class="nav-link" target="_blank">GitHub</a>
+            <button class="lang-switch" id="lang-switch" title="Switch Language">
+                <span class="lang-icon">🌐</span>
+                <span class="lang-text" id="lang-text">EN</span>
+            </button>
         </div>
     </nav>
 
@@ -32,35 +36,36 @@
     <section class="hero">
         <div class="hero-content">
             <h1 class="hero-title">
-                <span class="title-line">GIZTOY</span>
+                <span class="title-line">
+                    <span class="letter" style="--i:0">G</span><span class="letter" style="--i:1">I</span><span class="letter" style="--i:2">Z</span><span class="letter" style="--i:3">T</span><span class="letter" style="--i:4">O</span><span class="letter" style="--i:5">Y</span>
+                </span>
             </h1>
-            <p class="hero-tagline">A toy framework for building AI-powered applications</p>
-            <p class="hero-subtitle">across all dimensions</p>
+            <p class="hero-tagline" data-i18n="hero.tagline">An AI toy framework prepared for humanity</p>
+            <p class="hero-subtitle" data-i18n="hero.subtitle">by an intelligence beyond the stars</p>
             
             <div class="hero-quote">
                 <span class="quote-mark">"</span>
-                From embedded devices to cloud agents, from audio streams to video feeds,<br>
-                connecting every Large Language Model the universe has to offer.
+                <span data-i18n="hero.quote">From MCU firmware to cloud agents, from real-time audio to video streams,<br>one framework to connect all LLMs across every dimension.</span>
                 <span class="quote-mark">"</span>
             </div>
 
             <div class="hero-actions">
                 <a href="docs/" class="btn btn-primary">
-                    <span class="btn-text">Enter Documentation</span>
+                    <span class="btn-text" data-i18n="hero.btn.docs">Enter Documentation</span>
                     <span class="btn-arrow">→</span>
                 </a>
                 <a href="https://github.com/haivivi/giztoy" class="btn btn-secondary" target="_blank">
-                    <span class="btn-text">View on GitHub</span>
+                    <span class="btn-text" data-i18n="hero.btn.github">View on GitHub</span>
                 </a>
                 <a href="https://github.com/haivivi/giztoy" class="btn btn-star" target="_blank">
                     <span class="btn-icon">⭐</span>
-                    <span class="btn-text">Star on GitHub</span>
+                    <span class="btn-text" data-i18n="hero.btn.star">Star on GitHub</span>
                 </a>
             </div>
         </div>
 
         <div class="scroll-hint">
-            <span class="scroll-text">Click & hold anywhere to fly through the stars</span>
+            <span class="scroll-text" data-i18n="hero.hint">Click anywhere to fly through the stars</span>
             <div class="scroll-icon">
                 <div class="mouse">
                     <div class="mouse-dot"></div>
@@ -72,45 +77,45 @@
     <!-- Features Section -->
     <section class="features" id="features">
         <div class="section-header">
-            <h2 class="section-title">Core Capabilities</h2>
-            <p class="section-subtitle">Everything you need, from edge to cloud</p>
+            <h2 class="section-title" data-i18n="features.title">Core Capabilities</h2>
+            <p class="section-subtitle" data-i18n="features.subtitle">Everything you need, from edge to cloud</p>
         </div>
 
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🔮</div>
-                <h3 class="feature-title">Full Dimension Coverage</h3>
-                <p class="feature-desc">From ESP32 chips to cloud agents. Android, iOS, HarmonyOS — your code runs everywhere.</p>
+                <h3 class="feature-title" data-i18n="features.dimension.title">Full Dimension Coverage</h3>
+                <p class="feature-desc" data-i18n="features.dimension.desc">From ESP32 chips to cloud agents. Android, iOS, HarmonyOS — your code runs everywhere.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🏗️</div>
-                <h3 class="feature-title">Unified Build System</h3>
-                <p class="feature-desc">Bazel compiles everything: mobile apps, MCU firmware, Linux services. One system to rule them all.</p>
+                <h3 class="feature-title" data-i18n="features.build.title">Unified Build System</h3>
+                <p class="feature-desc" data-i18n="features.build.desc">Bazel compiles everything: mobile apps, MCU firmware, Linux services. One system to rule them all.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🎭</div>
-                <h3 class="feature-title">Universal LLM Support</h3>
-                <p class="feature-desc">OpenAI, Gemini, Claude, MiniMax, DashScope, Doubao — switch AI brains like swapping toys.</p>
+                <h3 class="feature-title" data-i18n="features.llm.title">Universal LLM Support</h3>
+                <p class="feature-desc" data-i18n="features.llm.desc">OpenAI, Gemini, Claude, MiniMax, DashScope, Doubao — switch AI brains like swapping toys.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🔐</div>
-                <h3 class="feature-title">Secure Transport</h3>
-                <p class="feature-desc">MQTT for IoT, Noise Protocol + KCP for real-time encrypted audio/video transmission.</p>
+                <h3 class="feature-title" data-i18n="features.secure.title">Secure Transport</h3>
+                <p class="feature-desc" data-i18n="features.secure.desc">MQTT for IoT, Noise Protocol + KCP for real-time encrypted audio/video transmission.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🎵</div>
-                <h3 class="feature-title">Real-time Audio/Video</h3>
-                <p class="feature-desc">Opus, MP3, PCM encoding/decoding with millisecond-level streaming latency.</p>
+                <h3 class="feature-title" data-i18n="features.audio.title">Real-time Audio/Video</h3>
+                <p class="feature-desc" data-i18n="features.audio.desc">Opus, MP3, PCM encoding/decoding with millisecond-level streaming latency.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🔧</div>
-                <h3 class="feature-title">Multi-Language</h3>
-                <p class="feature-desc">Go for simplicity, Rust for performance, Zig for the edge. Choose your weapon.</p>
+                <h3 class="feature-title" data-i18n="features.lang.title">Multi-Language</h3>
+                <p class="feature-desc" data-i18n="features.lang.desc">Go for simplicity, Rust for performance, Zig for the edge. Choose your weapon.</p>
             </div>
         </div>
     </section>
@@ -118,29 +123,29 @@
     <!-- Architecture Section -->
     <section class="architecture">
         <div class="section-header">
-            <h2 class="section-title">Architecture</h2>
-            <p class="section-subtitle">Layered design for maximum flexibility</p>
+            <h2 class="section-title" data-i18n="arch.title">Architecture</h2>
+            <p class="section-subtitle" data-i18n="arch.subtitle">Layered design for maximum flexibility</p>
         </div>
 
         <div class="arch-diagram">
             <div class="arch-layer arch-layer-1">
-                <span class="layer-name">AI Application Layer</span>
+                <span class="layer-name" data-i18n="arch.layer1">AI Application Layer</span>
                 <span class="layer-modules">GenX · Speech · ChatGear</span>
             </div>
             <div class="arch-layer arch-layer-2">
-                <span class="layer-name">API Client Layer</span>
+                <span class="layer-name" data-i18n="arch.layer2">API Client Layer</span>
                 <span class="layer-modules">OpenAI · Gemini · Claude · MiniMax · DashScope</span>
             </div>
             <div class="arch-layer arch-layer-3">
-                <span class="layer-name">Communication Layer</span>
+                <span class="layer-name" data-i18n="arch.layer3">Communication Layer</span>
                 <span class="layer-modules">MQTT0 · WebSocket · Noise Protocol + KCP</span>
             </div>
             <div class="arch-layer arch-layer-4">
-                <span class="layer-name">Audio Processing Layer</span>
+                <span class="layer-name" data-i18n="arch.layer4">Audio Processing Layer</span>
                 <span class="layer-modules">Opus · MP3 · PCM · Resampler</span>
             </div>
             <div class="arch-layer arch-layer-5">
-                <span class="layer-name">Foundation Layer</span>
+                <span class="layer-name" data-i18n="arch.layer5">Foundation Layer</span>
                 <span class="layer-modules">Buffer · Encoding · Trie · CLI</span>
             </div>
         </div>
@@ -149,8 +154,8 @@
     <!-- Platforms Section -->
     <section class="platforms">
         <div class="section-header">
-            <h2 class="section-title">Supported Platforms</h2>
-            <p class="section-subtitle">Built with Bazel — one build system for all</p>
+            <h2 class="section-title" data-i18n="platforms.title">Supported Platforms</h2>
+            <p class="section-subtitle" data-i18n="platforms.subtitle">Built with Bazel — one build system for all</p>
         </div>
 
         <div class="platforms-grid">
@@ -176,18 +181,18 @@
             </div>
             <div class="platform-item">
                 <span class="platform-icon">🔷</span>
-                <span class="platform-name">HarmonyOS</span>
+                <span class="platform-name" data-i18n="platforms.harmonyos">HarmonyOS</span>
                 <span class="platform-status status-ready">✓</span>
             </div>
             <div class="platform-item">
                 <span class="platform-icon">⚡</span>
                 <span class="platform-name">ESP32</span>
-                <span class="platform-status status-wip">WIP</span>
+                <span class="platform-status status-wip" data-i18n="platforms.wip">WIP</span>
             </div>
             <div class="platform-item">
                 <span class="platform-icon">📡</span>
                 <span class="platform-name">nRF / BLE</span>
-                <span class="platform-status status-wip">Soon</span>
+                <span class="platform-status status-wip" data-i18n="platforms.soon">Soon</span>
             </div>
             <div class="platform-item">
                 <span class="platform-icon">🌐</span>
@@ -200,11 +205,11 @@
     <!-- CTA Section -->
     <section class="cta">
         <div class="cta-content">
-            <h2 class="cta-title">Ready to Play?</h2>
-            <p class="cta-subtitle">Start building AI-powered applications today.</p>
+            <h2 class="cta-title" data-i18n="cta.title">Ready to Play?</h2>
+            <p class="cta-subtitle" data-i18n="cta.subtitle">Start building AI-powered applications today.</p>
             <div class="cta-actions">
                 <a href="docs/" class="btn btn-primary btn-large">
-                    <span class="btn-text">Get Started</span>
+                    <span class="btn-text" data-i18n="cta.btn">Get Started</span>
                     <span class="btn-arrow">→</span>
                 </a>
             </div>
@@ -218,16 +223,18 @@
                 <span class="brand-icon">◈</span>
                 <span class="brand-text">Giztoy</span>
             </div>
-            <p class="footer-quote">"I'm just a toymaker."</p>
+            <p class="footer-quote" data-i18n="footer.quote">"I'm just a toymaker."</p>
             <div class="footer-links">
-                <a href="docs/">Documentation</a>
+                <a href="docs/" data-i18n="nav.docs">Documentation</a>
                 <a href="https://github.com/haivivi/giztoy">GitHub</a>
-                <a href="https://github.com/haivivi/giztoy/blob/main/LICENSE">MIT License</a>
+                <a href="https://github.com/haivivi/giztoy/blob/main/LICENSE" data-i18n="footer.license">MIT License</a>
             </div>
             <p class="footer-copyright">© 2024-2026 Haivivi. All rights reserved.</p>
         </div>
     </footer>
 
+    <script src="assets/sounds.js"></script>
     <script src="assets/homepage.js"></script>
+    <script src="assets/i18n.js"></script>
 </body>
 </html>

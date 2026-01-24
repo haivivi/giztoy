@@ -21,7 +21,8 @@
     --glow-purple: rgba(168, 85, 247, 0.3);
     
     --font-display: 'Orbitron', sans-serif;
-    --font-body: 'Rajdhani', sans-serif;
+    --font-body: 'Rajdhani', 'Noto Sans SC', sans-serif;
+    --font-zh: 'Noto Sans SC', sans-serif;
     
     --transition-fast: 0.2s ease;
     --transition-medium: 0.4s ease;
@@ -143,6 +144,7 @@ body {
 
 .nav-links {
     display: flex;
+    align-items: center;
     gap: 2rem;
 }
 
@@ -157,6 +159,41 @@ body {
 }
 
 .nav-link:hover {
+    color: var(--accent-cyan);
+}
+
+/* Language Switch */
+.lang-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: var(--font-body);
+}
+
+.lang-switch:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-cyan);
+}
+
+.lang-icon {
+    font-size: 1rem;
+}
+
+.lang-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+.lang-switch:hover .lang-text {
     color: var(--accent-cyan);
 }
 
@@ -187,21 +224,36 @@ body {
     font-size: clamp(3rem, 10vw, 7rem);
     font-weight: 900;
     letter-spacing: 0.2em;
+}
+
+.title-line .letter {
+    display: inline-block;
     background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple), var(--accent-pink));
+    background-size: 200% 200%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: none;
-    filter: drop-shadow(0 0 30px var(--glow-cyan));
-    animation: titleGlow 3s ease-in-out infinite alternate;
+    animation: letterShimmer 3s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.15s);
+    filter: drop-shadow(0 0 20px var(--glow-cyan));
 }
 
-@keyframes titleGlow {
-    from {
-        filter: drop-shadow(0 0 30px var(--glow-cyan));
+@keyframes letterShimmer {
+    0%, 100% {
+        background-position: 0% 50%;
+        filter: drop-shadow(0 0 20px var(--glow-cyan));
     }
-    to {
-        filter: drop-shadow(0 0 50px var(--glow-purple));
+    25% {
+        background-position: 100% 50%;
+        filter: drop-shadow(0 0 35px var(--glow-purple));
+    }
+    50% {
+        background-position: 100% 100%;
+        filter: drop-shadow(0 0 25px var(--accent-pink));
+    }
+    75% {
+        background-position: 0% 100%;
+        filter: drop-shadow(0 0 30px var(--accent-blue));
     }
 }
 

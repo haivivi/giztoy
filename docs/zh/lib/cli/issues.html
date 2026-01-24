@@ -1,0 +1,327 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>已知问题 - Giztoy 文档</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy 文档</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="cli-package---known-issues"><a class="header" href="#cli-package---known-issues">CLI Package - Known Issues</a></h1>
+<h2 id="-minor-issues"><a class="header" href="#-minor-issues">🟡 Minor Issues</a></h2>
+<h3 id="cli-001-rust-missing-output-formats"><a class="header" href="#cli-001-rust-missing-output-formats">CLI-001: Rust missing output formats</a></h3>
+<p><strong>Description:</strong><br />
+Go supports 4 output formats: <code>yaml</code>, <code>json</code>, <code>table</code>, <code>raw</code>.
+Rust only supports: <code>yaml</code>, <code>json</code>.</p>
+<p><strong>Impact:</strong> Rust CLI tools cannot output raw binary to stdout or table format.</p>
+<p><strong>Suggestion:</strong> Add <code>Raw</code> and <code>Table</code> format support to Rust.</p>
+<hr />
+<h3 id="cli-002-rust-missing-print-helpers"><a class="header" href="#cli-002-rust-missing-print-helpers">CLI-002: Rust missing print helpers</a></h3>
+<p><strong>Description:</strong><br />
+Go has multiple print helpers with icons:</p>
+<ul>
+<li><code>PrintSuccess</code> (✓)</li>
+<li><code>PrintError</code></li>
+<li><code>PrintInfo</code> (ℹ)</li>
+<li><code>PrintWarning</code> (⚠)</li>
+<li><code>PrintVerbose</code></li>
+</ul>
+<p>Rust only has <code>print_verbose</code>.</p>
+<p><strong>Impact:</strong> Inconsistent user experience between Go and Rust CLIs.</p>
+<p><strong>Suggestion:</strong> Add print helper functions to Rust.</p>
+<hr />
+<h3 id="cli-003-config-file-permissions"><a class="header" href="#cli-003-config-file-permissions">CLI-003: Config file permissions</a></h3>
+<p><strong>File:</strong> <code>go/pkg/cli/config.go:143</code></p>
+<p><strong>Description:</strong><br />
+Config file is created with <code>0600</code> permissions (owner read/write only), which is good. But the config directory is created with <code>0755</code> (world-readable).</p>
+<pre><code class="language-go">os.MkdirAll(dir, 0755)  // Directory readable by others
+os.WriteFile(c.configPath, data, 0600)  // File only owner
+</code></pre>
+<p><strong>Impact:</strong> Directory structure is visible to other users, though file content is protected.</p>
+<p><strong>Suggestion:</strong> Consider <code>0700</code> for the config directory.</p>
+<hr />
+<h3 id="cli-004-go-contextextra-returns-empty-string-for-missing-keys"><a class="header" href="#cli-004-go-contextextra-returns-empty-string-for-missing-keys">CLI-004: Go Context.Extra returns empty string for missing keys</a></h3>
+<p><strong>File:</strong> <code>go/pkg/cli/config.go:224-228</code></p>
+<p><strong>Description:</strong><br />
+<code>GetExtra</code> returns empty string <code>""</code> for missing keys, making it impossible to distinguish between "key exists with empty value" and "key doesn't exist".</p>
+<pre><code class="language-go">func (ctx *Context) GetExtra(key string) string {
+    if ctx.Extra == nil {
+        return ""
+    }
+    return ctx.Extra[key]  // Returns "" for missing key
+}
+</code></pre>
+<p><strong>Impact:</strong> Cannot differentiate missing vs empty extra values.</p>
+<p><strong>Suggestion:</strong> Add <code>HasExtra(key string) bool</code> or return <code>(string, bool)</code>.</p>
+<hr />
+<h2 id="-enhancements"><a class="header" href="#-enhancements">🔵 Enhancements</a></h2>
+<h3 id="cli-005-no-config-file-locking"><a class="header" href="#cli-005-no-config-file-locking">CLI-005: No config file locking</a></h3>
+<p><strong>Description:</strong><br />
+Neither Go nor Rust implementation locks the config file during read/write operations. Concurrent CLI processes could corrupt the config.</p>
+<p><strong>Suggestion:</strong> Implement file locking for Save operations.</p>
+<hr />
+<h3 id="cli-006-no-config-validation"><a class="header" href="#cli-006-no-config-validation">CLI-006: No config validation</a></h3>
+<p><strong>Description:</strong><br />
+Config is loaded without validation. Invalid URLs, negative timeouts, etc. are not detected until runtime errors occur.</p>
+<p><strong>Suggestion:</strong> Add <code>Validate() error</code> method to Config/Context.</p>
+<hr />
+<h3 id="cli-007-missing-config-migration"><a class="header" href="#cli-007-missing-config-migration">CLI-007: Missing config migration</a></h3>
+<p><strong>Description:</strong><br />
+No mechanism to handle config format changes between versions. If schema changes, old configs may fail to load.</p>
+<p><strong>Suggestion:</strong> Add version field and migration support.</p>
+<hr />
+<h3 id="cli-008-no-environment-variable-support"><a class="header" href="#cli-008-no-environment-variable-support">CLI-008: No environment variable support</a></h3>
+<p><strong>Description:</strong><br />
+API keys and other credentials must be stored in config file. No support for environment variable overrides.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-bash"># Desired behavior
+export MINIMAX_API_KEY="sk-..."
+minimax chat "Hello"  # Uses env var instead of config
+</code></pre>
+<p><strong>Suggestion:</strong> Add env var lookup with config fallback.</p>
+<hr />
+<h2 id="-notes"><a class="header" href="#-notes">⚪ Notes</a></h2>
+<h3 id="cli-009-different-yaml-libraries"><a class="header" href="#cli-009-different-yaml-libraries">CLI-009: Different YAML libraries</a></h3>
+<p><strong>Description:</strong></p>
+<ul>
+<li>Go: Uses <code>github.com/goccy/go-yaml</code></li>
+<li>Rust: Uses <code>serde_yaml</code></li>
+</ul>
+<p>Both produce compatible output but may have minor formatting differences.</p>
+<hr />
+<h3 id="cli-010-maskapikey-behavior-for-short-keys"><a class="header" href="#cli-010-maskapikey-behavior-for-short-keys">CLI-010: MaskAPIKey behavior for short keys</a></h3>
+<p><strong>Description:</strong><br />
+Both implementations mask entire key if length &lt;= 8:</p>
+<pre><code class="language-go">if len(key) &lt;= 8 {
+    return strings.Repeat("*", len(key))
+}
+</code></pre>
+<p>This means very short keys (e.g., "test") show as "****" with no visible characters.</p>
+<hr />
+<h3 id="cli-011-paths-use-dirs-crate-in-rust"><a class="header" href="#cli-011-paths-use-dirs-crate-in-rust">CLI-011: Paths use dirs crate in Rust</a></h3>
+<p><strong>Description:</strong></p>
+<ul>
+<li>Go: Uses <code>os.UserHomeDir()</code> (stdlib)</li>
+<li>Rust: Uses <code>dirs::home_dir()</code> (external crate)</li>
+</ul>
+<p>Both handle cross-platform home directory detection correctly.</p>
+<hr />
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>ID</th><th>Severity</th><th>Status</th><th>Component</th></tr></thead><tbody>
+<tr><td>CLI-001</td><td>🟡 Minor</td><td>Open</td><td>Rust Output</td></tr>
+<tr><td>CLI-002</td><td>🟡 Minor</td><td>Open</td><td>Rust Print</td></tr>
+<tr><td>CLI-003</td><td>🟡 Minor</td><td>Open</td><td>Go Config</td></tr>
+<tr><td>CLI-004</td><td>🟡 Minor</td><td>Open</td><td>Go Context</td></tr>
+<tr><td>CLI-005</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>CLI-006</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>CLI-007</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>CLI-008</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>CLI-009</td><td>⚪ Note</td><td>N/A</td><td>Both</td></tr>
+<tr><td>CLI-010</td><td>⚪ Note</td><td>N/A</td><td>Both</td></tr>
+<tr><td>CLI-011</td><td>⚪ Note</td><td>N/A</td><td>Rust</td></tr>
+</tbody></table>
+</div>
+<p><strong>Overall:</strong> Functional CLI utilities. Main gaps are feature parity between Go and Rust implementations.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/cli/rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/audio/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/cli/rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/audio/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

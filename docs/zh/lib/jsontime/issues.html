@@ -1,0 +1,318 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>已知问题 - Giztoy 文档</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy 文档</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="jsontime-package---known-issues"><a class="header" href="#jsontime-package---known-issues">JsonTime Package - Known Issues</a></h1>
+<h2 id="-minor-issues"><a class="header" href="#-minor-issues">🟡 Minor Issues</a></h2>
+<h3 id="jt-001-rust-millisub-loses-sign-information"><a class="header" href="#jt-001-rust-millisub-loses-sign-information">JT-001: Rust Milli.sub() loses sign information</a></h3>
+<p><strong>File:</strong> <code>rust/jsontime/src/milli.rs:54-57</code></p>
+<p><strong>Description:</strong><br />
+The <code>sub()</code> method returns an unsigned <code>Duration</code>, losing the sign when the result would be negative:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub fn sub(&amp;self, other: &amp;Self) -&gt; Duration {
+    let diff = self.0.signed_duration_since(other.0);
+    Duration::from_millis(diff.num_milliseconds().unsigned_abs())
+}
+<span class="boring">}</span></code></pre></pre>
+<p><strong>Impact:</strong> Cannot determine if <code>self</code> is before or after <code>other</code> from the result alone.</p>
+<p><strong>Workaround:</strong> Use <code>before()</code> or <code>after()</code> methods to check ordering first.</p>
+<hr />
+<h3 id="jt-002-rust-unixsub-same-issue"><a class="header" href="#jt-002-rust-unixsub-same-issue">JT-002: Rust Unix.sub() same issue</a></h3>
+<p><strong>File:</strong> <code>rust/jsontime/src/unix.rs:54-57</code></p>
+<p><strong>Description:</strong><br />
+Same issue as JT-001 - loses sign information.</p>
+<hr />
+<h3 id="jt-003-rust-duration-parsing-more-restrictive-than-go"><a class="header" href="#jt-003-rust-duration-parsing-more-restrictive-than-go">JT-003: Rust Duration parsing more restrictive than Go</a></h3>
+<p><strong>File:</strong> <code>rust/jsontime/src/duration.rs:123-158</code></p>
+<p><strong>Description:</strong><br />
+Go's <code>time.ParseDuration</code> supports more units:</p>
+<ul>
+<li><code>ns</code> (nanoseconds)</li>
+<li><code>us</code>/<code>µs</code> (microseconds)</li>
+<li><code>ms</code> (milliseconds)</li>
+</ul>
+<p>Rust implementation only supports <code>h</code>, <code>m</code>, <code>s</code>.</p>
+<p><strong>Impact:</strong> Duration strings with sub-second units fail to parse in Rust.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="language-go">// Go - works
+d, _ := time.ParseDuration("100ms")
+
+// Rust - fails
+let d: Duration = serde_json::from_str(r#""100ms""#)?;  // Error!
+</code></pre>
+<hr />
+<h3 id="jt-004-rust-duration-cannot-be-negative"><a class="header" href="#jt-004-rust-duration-cannot-be-negative">JT-004: Rust Duration cannot be negative</a></h3>
+<p><strong>Description:</strong><br />
+Go's <code>time.Duration</code> is signed (int64), Rust's <code>std::time::Duration</code> is unsigned.</p>
+<p><strong>Impact:</strong> Cannot represent negative durations in Rust.</p>
+<p><strong>Status:</strong> By design (Rust stdlib limitation).</p>
+<hr />
+<h2 id="-enhancements"><a class="header" href="#-enhancements">🔵 Enhancements</a></h2>
+<h3 id="jt-005-missing-microsecond-timestamp-type"><a class="header" href="#jt-005-missing-microsecond-timestamp-type">JT-005: Missing microsecond timestamp type</a></h3>
+<p><strong>Description:</strong><br />
+Some APIs (particularly high-frequency systems) use microsecond timestamps. Neither Go nor Rust implementation provides a <code>Micro</code> type.</p>
+<p><strong>Suggestion:</strong> Add <code>Micro</code> type for microsecond precision.</p>
+<hr />
+<h3 id="jt-006-missing-nanosecond-timestamp-type"><a class="header" href="#jt-006-missing-nanosecond-timestamp-type">JT-006: Missing nanosecond timestamp type</a></h3>
+<p><strong>Description:</strong><br />
+Some APIs use nanosecond timestamps. No <code>Nano</code> type provided.</p>
+<p><strong>Suggestion:</strong> Add <code>Nano</code> type for nanosecond precision.</p>
+<hr />
+<h3 id="jt-007-go-duration-lacks-explicit-constructors"><a class="header" href="#jt-007-go-duration-lacks-explicit-constructors">JT-007: Go Duration lacks explicit constructors</a></h3>
+<p><strong>Description:</strong><br />
+Go implementation lacks explicit constructors like Rust has:</p>
+<ul>
+<li><code>from_secs()</code></li>
+<li><code>from_millis()</code></li>
+</ul>
+<p><strong>Current Go usage:</strong></p>
+<pre><code class="language-go">d := Duration(30 * time.Second)
+</code></pre>
+<p><strong>Suggested addition:</strong></p>
+<pre><code class="language-go">func DurationFromSeconds(s int64) Duration
+func DurationFromMillis(ms int64) Duration
+</code></pre>
+<hr />
+<h2 id="-notes"><a class="header" href="#-notes">⚪ Notes</a></h2>
+<h3 id="jt-008-different-underlying-time-libraries"><a class="header" href="#jt-008-different-underlying-time-libraries">JT-008: Different underlying time libraries</a></h3>
+<p><strong>Description:</strong></p>
+<ul>
+<li>Go: Uses stdlib <code>time.Time</code></li>
+<li>Rust: Uses <code>chrono::DateTime&lt;Utc&gt;</code></li>
+</ul>
+<p><strong>Impact:</strong> Rust has hard dependency on <code>chrono</code> crate.</p>
+<hr />
+<h3 id="jt-009-rust-types-implement-more-traits"><a class="header" href="#jt-009-rust-types-implement-more-traits">JT-009: Rust types implement more traits</a></h3>
+<p><strong>Description:</strong><br />
+Rust types implement <code>PartialOrd</code>, <code>Ord</code>, <code>Hash</code> which enables use in collections:</p>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use std::collections::HashSet;
+let mut times: HashSet&lt;Unix&gt; = HashSet::new();
+times.insert(Unix::now());
+<span class="boring">}</span></code></pre></pre>
+<p>Go types don't have equivalent functionality.</p>
+<hr />
+<h2 id="summary"><a class="header" href="#summary">Summary</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>ID</th><th>Severity</th><th>Status</th><th>Component</th></tr></thead><tbody>
+<tr><td>JT-001</td><td>🟡 Minor</td><td>Open</td><td>Rust Milli</td></tr>
+<tr><td>JT-002</td><td>🟡 Minor</td><td>Open</td><td>Rust Unix</td></tr>
+<tr><td>JT-003</td><td>🟡 Minor</td><td>Open</td><td>Rust Duration</td></tr>
+<tr><td>JT-004</td><td>🟡 Minor</td><td>By design</td><td>Rust Duration</td></tr>
+<tr><td>JT-005</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>JT-006</td><td>🔵 Enhancement</td><td>Open</td><td>Both</td></tr>
+<tr><td>JT-007</td><td>🔵 Enhancement</td><td>Open</td><td>Go</td></tr>
+<tr><td>JT-008</td><td>⚪ Note</td><td>N/A</td><td>Rust</td></tr>
+<tr><td>JT-009</td><td>⚪ Note</td><td>N/A</td><td>Rust</td></tr>
+</tbody></table>
+</div>
+<p><strong>Overall:</strong> Functional implementation. Main concern is duration parsing parity between Go and Rust.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/jsontime/rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/trie/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/jsontime/rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/trie/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>

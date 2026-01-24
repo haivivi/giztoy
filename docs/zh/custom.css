@@ -1,0 +1,116 @@
+/* Giztoy Documentation - Light Theme Customization */
+
+/* Light theme with off-white/cream background */
+.light {
+    --bg: #fafaf8;
+    --fg: #333333;
+    --sidebar-bg: #f5f5f2;
+    --sidebar-fg: #333333;
+    --sidebar-non-existant: #aaaaaa;
+    --sidebar-active: #1a73e8;
+    --sidebar-spacer: #e0e0dc;
+    --scrollbar: #cccccc;
+    --icons: #666666;
+    --icons-hover: #333333;
+    --links: #1a73e8;
+    --inline-code-color: #c7254e;
+    --theme-popup-bg: #fafaf8;
+    --theme-popup-border: #e0e0dc;
+    --theme-hover: #f0f0ec;
+    --quote-bg: #f0f0ec;
+    --quote-border: #d0d0cc;
+    --table-border-color: #e0e0dc;
+    --table-header-bg: #f0f0ec;
+    --table-alternate-bg: #f8f8f6;
+    --searchbar-border-color: #e0e0dc;
+    --searchbar-bg: #ffffff;
+    --searchbar-fg: #333333;
+    --searchbar-shadow-color: #d0d0cc;
+    --searchresults-header-fg: #666666;
+    --searchresults-border-color: #e0e0dc;
+    --searchresults-li-bg: #f8f8f6;
+    --search-mark-bg: #fff3cd;
+}
+
+/* Content area styling */
+.content {
+    max-width: 900px;
+}
+
+/* Code block styling */
+pre {
+    border-radius: 6px;
+    border: 1px solid #e0e0dc;
+}
+
+code {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+    font-size: 0.9em;
+}
+
+/* Table styling */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+}
+
+th, td {
+    padding: 0.6em 1em;
+    border: 1px solid var(--table-border-color);
+}
+
+th {
+    background-color: var(--table-header-bg);
+    font-weight: 600;
+}
+
+tr:nth-child(even) {
+    background-color: var(--table-alternate-bg);
+}
+
+/* Heading styling */
+h1, h2, h3, h4, h5, h6 {
+    color: #222222;
+    font-weight: 600;
+}
+
+h1 {
+    border-bottom: 2px solid #e0e0dc;
+    padding-bottom: 0.3em;
+}
+
+/* Blockquote styling */
+blockquote {
+    border-left: 4px solid #1a73e8;
+    padding-left: 1em;
+    margin-left: 0;
+    color: #555555;
+    background-color: var(--quote-bg);
+    padding: 0.5em 1em;
+    border-radius: 0 6px 6px 0;
+}
+
+/* Sidebar improvements */
+.sidebar .sidebar-scrollbox {
+    padding: 10px 15px;
+}
+
+.sidebar .chapter li a {
+    padding: 5px 0;
+}
+
+/* Search improvements */
+#searchbar {
+    border-radius: 6px;
+}
+
+/* Print-friendly adjustments */
+@media print {
+    .sidebar {
+        display: none;
+    }
+    .content {
+        max-width: 100%;
+    }
+}

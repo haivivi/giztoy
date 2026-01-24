@@ -1,0 +1,431 @@
+<!DOCTYPE HTML>
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Rust 实现 - Giztoy 文档</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../../favicon.svg">
+        <link rel="shortcut icon" href="../../favicon.png">
+        <link rel="stylesheet" href="../../css/variables.css">
+        <link rel="stylesheet" href="../../css/general.css">
+        <link rel="stylesheet" href="../../css/chrome.css">
+        <link rel="stylesheet" href="../../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../../highlight.css">
+        <link rel="stylesheet" href="../../tomorrow-night.css">
+        <link rel="stylesheet" href="../../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../../custom.css">
+
+
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../../toc.js"></script>
+    </head>
+    <body>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+            }
+            sidebar_toggle.checked = sidebar === 'visible';
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Giztoy 文档</h1>
+
+                    <div class="right-buttons">
+                        <a href="../../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="genx---rust-implementation"><a class="header" href="#genx---rust-implementation">GenX - Rust Implementation</a></h1>
+<p>Crate: <code>giztoy-genx</code></p>
+<h2 id="status"><a class="header" href="#status">Status</a></h2>
+<p>The Rust implementation provides core abstractions but lacks the full agent framework available in Go.</p>
+<div class="table-wrapper"><table><thead><tr><th>Feature</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
+<tr><td>ModelContext</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>Generator trait</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>Streaming</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>FuncTool</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>OpenAI adapter</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>Gemini adapter</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>Agent framework</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td>Configuration parser</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td>Match patterns</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+</tbody></table>
+</div>
+<h2 id="core-types"><a class="header" href="#core-types">Core Types</a></h2>
+<h3 id="generator-trait"><a class="header" href="#generator-trait">Generator Trait</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>#[async_trait]
+pub trait Generator: Send + Sync {
+    async fn generate_stream(
+        &amp;self,
+        model: &amp;str,
+        ctx: &amp;dyn ModelContext,
+    ) -&gt; Result&lt;Box&lt;dyn Stream&gt;, GenxError&gt;;
+
+    async fn invoke(
+        &amp;self,
+        model: &amp;str,
+        ctx: &amp;dyn ModelContext,
+        tool: &amp;FuncTool,
+    ) -&gt; Result&lt;(Usage, FuncCall), GenxError&gt;;
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="modelcontext-trait"><a class="header" href="#modelcontext-trait">ModelContext Trait</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait ModelContext: Send + Sync {
+    fn prompts(&amp;self) -&gt; Box&lt;dyn Iterator&lt;Item = &amp;Prompt&gt; + '_&gt;;
+    fn messages(&amp;self) -&gt; Box&lt;dyn Iterator&lt;Item = &amp;Message&gt; + '_&gt;;
+    fn cots(&amp;self) -&gt; Box&lt;dyn Iterator&lt;Item = &amp;str&gt; + '_&gt;;
+    fn tools(&amp;self) -&gt; Box&lt;dyn Iterator&lt;Item = &amp;dyn Tool&gt; + '_&gt;;
+    fn params(&amp;self) -&gt; Option&lt;&amp;ModelParams&gt;;
+}
+<span class="boring">}</span></code></pre></pre>
+<h3 id="stream-trait"><a class="header" href="#stream-trait">Stream Trait</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait Stream: Send {
+    fn next(&amp;mut self) -&gt; StreamResult;
+    fn close(&amp;mut self) -&gt; Result&lt;(), GenxError&gt;;
+    fn close_with_error(&amp;mut self, err: GenxError) -&gt; Result&lt;(), GenxError&gt;;
+}
+<span class="boring">}</span></code></pre></pre>
+<h2 id="modelcontextbuilder"><a class="header" href="#modelcontextbuilder">ModelContextBuilder</a></h2>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_genx::{ModelContextBuilder, FuncTool};
+use schemars::JsonSchema;
+
+#[derive(JsonSchema, serde::Deserialize)]
+struct SearchArgs {
+    query: String,
+}
+
+let mut builder = ModelContextBuilder::new();
+
+// Add prompts
+builder.prompt_text("system", "You are a helpful assistant.");
+
+// Add messages
+builder.user_text("user", "Hello!");
+builder.assistant_text("assistant", "Hi there!");
+
+// Add tools
+builder.add_tool(FuncTool::new::&lt;SearchArgs&gt;("search", "Search the web"));
+
+// Set parameters
+builder.params(ModelParams {
+    temperature: Some(0.7),
+    max_tokens: Some(1000),
+    ..Default::default()
+});
+
+let ctx = builder.build();
+<span class="boring">}</span></code></pre></pre>
+<h2 id="functool"><a class="header" href="#functool">FuncTool</a></h2>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_genx::FuncTool;
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+#[derive(JsonSchema, Deserialize)]
+struct WeatherArgs {
+    city: String,
+    #[serde(default)]
+    units: Option&lt;String&gt;,
+}
+
+// Create tool with schema derived from type
+let tool = FuncTool::new::&lt;WeatherArgs&gt;(
+    "get_weather",
+    "Get weather for a city"
+);
+
+// Access schema
+println!("{}", tool.schema());
+<span class="boring">}</span></code></pre></pre>
+<h2 id="streaming"><a class="header" href="#streaming">Streaming</a></h2>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let mut stream = generator.generate_stream("gpt-4", &amp;ctx).await?;
+
+loop {
+    match stream.next() {
+        StreamResult::Chunk(chunk) =&gt; {
+            if let Some(text) = chunk.text() {
+                print!("{}", text);
+            }
+        }
+        StreamResult::Done =&gt; break,
+        StreamResult::Error(e) =&gt; return Err(e),
+    }
+}
+<span class="boring">}</span></code></pre></pre>
+<h2 id="message-types"><a class="header" href="#message-types">Message Types</a></h2>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_genx::{Message, Contents, Part, Role};
+
+// User text message
+let msg = Message::user_text("Hello!");
+
+// Assistant message with content
+let msg = Message {
+    role: Role::Assistant,
+    name: None,
+    payload: Payload::Contents(vec![
+        Part::Text("Here's what I found:".to_string()),
+    ]),
+};
+
+// Tool call
+let msg = Message::tool_call(ToolCall {
+    id: "call_123".to_string(),
+    func_call: FuncCall {
+        name: "search".to_string(),
+        arguments: r#"{"query":"rust"}"#.to_string(),
+    },
+});
+
+// Tool result
+let msg = Message::tool_result(ToolResult {
+    id: "call_123".to_string(),
+    result: "Found 10 results".to_string(),
+});
+<span class="boring">}</span></code></pre></pre>
+<h2 id="provider-adapters"><a class="header" href="#provider-adapters">Provider Adapters</a></h2>
+<h3 id="openai"><a class="header" href="#openai">OpenAI</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_genx::openai::OpenAIGenerator;
+
+let generator = OpenAIGenerator::new(api_key)
+    .with_base_url("https://api.openai.com/v1");
+<span class="boring">}</span></code></pre></pre>
+<h3 id="gemini"><a class="header" href="#gemini">Gemini</a></h3>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_genx::gemini::GeminiGenerator;
+
+let generator = GeminiGenerator::new(api_key);
+<span class="boring">}</span></code></pre></pre>
+<h2 id="inspection"><a class="header" href="#inspection">Inspection</a></h2>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_genx::{inspect_model_context, inspect_message, inspect_tool};
+
+// Inspect context
+println!("{}", inspect_model_context(&amp;ctx));
+
+// Inspect message
+println!("{}", inspect_message(&amp;msg));
+
+// Inspect tool
+println!("{}", inspect_tool(&amp;tool));
+<span class="boring">}</span></code></pre></pre>
+<h2 id="error-types"><a class="header" href="#error-types">Error Types</a></h2>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>use giztoy_genx::{GenxError, State, Status};
+
+match result {
+    Err(GenxError::Api { status, message }) =&gt; {
+        eprintln!("API error: {} - {}", status, message);
+    }
+    Err(GenxError::Network(e)) =&gt; {
+        eprintln!("Network error: {}", e);
+    }
+    Err(GenxError::Json(e)) =&gt; {
+        eprintln!("JSON error: {}", e);
+    }
+    _ =&gt; {}
+}
+<span class="boring">}</span></code></pre></pre>
+<h2 id="missing-features-vs-go"><a class="header" href="#missing-features-vs-go">Missing Features (vs Go)</a></h2>
+<p>The Rust implementation is missing:</p>
+<ol>
+<li><strong>Agent Framework</strong>: No ReActAgent, MatchAgent</li>
+<li><strong>Configuration Parser</strong>: No YAML/JSON config loading</li>
+<li><strong>Match Patterns</strong>: No intent matching system</li>
+<li><strong>Tool Variants</strong>: No GeneratorTool, HTTPTool, CompositeTool</li>
+<li><strong>Runtime Interface</strong>: No dependency injection system</li>
+<li><strong>State Management</strong>: No memory/state persistence</li>
+</ol>
+<p>These would need to be implemented to reach feature parity with Go.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../../lib/genx/go.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../../lib/genx/issues.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../../lib/genx/go.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../../lib/genx/issues.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../../elasticlunr.min.js"></script>
+        <script src="../../mark.min.js"></script>
+        <script src="../../searcher.js"></script>
+
+        <script src="../../clipboard.min.js"></script>
+        <script src="../../highlight.js"></script>
+        <script src="../../book.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../../mermaid.min.js"></script>
+        <script src="../../mermaid-init.js"></script>
+
+
+    </div>
+    </body>
+</html>
