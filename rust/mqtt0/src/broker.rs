@@ -195,10 +195,10 @@ impl BrokerBuilder {
             handler: self.handler,
             on_connect: self.on_connect,
             on_disconnect: self.on_disconnect,
-            subscriptions: Arc::new(RwLock::new(Trie::new())),
+            subscriptions: Arc::new(Trie::new()),
             clients: Arc::new(RwLock::new(HashMap::new())),
             client_subscriptions: Arc::new(RwLock::new(HashMap::new())),
-            shared_trie: Arc::new(RwLock::new(Trie::new())),
+            shared_trie: Arc::new(Trie::new()),
             running: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -235,13 +235,13 @@ pub struct Broker {
     handler: Option<Arc<dyn Handler>>,
     on_connect: Option<Callback>,
     on_disconnect: Option<Callback>,
-    subscriptions: Arc<RwLock<Trie<ClientHandle>>>,
+    subscriptions: Arc<Trie<ClientHandle>>,
     /// Maps client_id -> Arc<Sender> for pointer comparison during cleanup.
     clients: Arc<RwLock<HashMap<String, Arc<mpsc::Sender<Message>>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
     /// Shared subscriptions trie for O(topic_length) lookup ($share/group/topic).
-    shared_trie: Arc<RwLock<Trie<SharedEntry>>>,
+    shared_trie: Arc<Trie<SharedEntry>>,
     running: Arc<AtomicBool>,
 }
 
@@ -301,10 +301,8 @@ impl Broker {
     }
 
     async fn route_message(&self, msg: &Message) {
-        let subscribers = {
-            let subs = self.subscriptions.read();
-            subs.get(&msg.topic)
-        };
+        // Trie is internally thread-safe, no need for external lock
+        let subscribers = self.subscriptions.get(&msg.topic);
 
         for handle in subscribers {
             if let Err(e) = handle.tx.send(msg.clone()).await {
@@ -320,13 +318,13 @@ struct BrokerContext {
     handler: Option<Arc<dyn Handler>>,
     on_connect: Option<Callback>,
     on_disconnect: Option<Callback>,
-    subscriptions: Arc<RwLock<Trie<ClientHandle>>>,
+    subscriptions: Arc<Trie<ClientHandle>>,
     /// Maps client_id -> Arc<Sender> for pointer comparison during cleanup.
     clients: Arc<RwLock<HashMap<String, Arc<mpsc::Sender<Message>>>>>,
     /// Track subscriptions per client for efficient cleanup on disconnect.
     client_subscriptions: Arc<RwLock<HashMap<String, Vec<String>>>>,
     /// Shared subscriptions trie for O(topic_length) lookup.
-    shared_trie: Arc<RwLock<Trie<SharedEntry>>>,
+    shared_trie: Arc<Trie<SharedEntry>>,
     max_packet_size: usize,
     /// Enable $SYS event publishing.
     sys_events_enabled: bool,
@@ -986,11 +984,8 @@ impl BrokerContext {
     }
 
     async fn route_to_subscribers(&self, topic: &str, msg: &Message) {
-        // Route to normal subscribers
-        let subscribers = {
-            let subs = self.subscriptions.read();
-            subs.get(topic)
-        };
+        // Route to normal subscribers - Trie is internally thread-safe
+        let subscribers = self.subscriptions.get(topic);
 
         for handle in subscribers {
             if let Err(e) = handle.tx.send(msg.clone()).await {
@@ -999,14 +994,12 @@ impl BrokerContext {
         }
 
         // Route to shared subscription groups (round-robin) using Trie lookup - O(topic_length)
-        let shared_subscribers: Vec<(String, Option<ClientHandle>)> = {
-            let shared_trie = self.shared_trie.read();
-            shared_trie
-                .get(topic)
-                .into_iter()
-                .map(|entry| (entry.group_name.clone(), entry.group.next_subscriber().cloned()))
-                .collect()
-        };
+        let shared_subscribers: Vec<(String, Option<ClientHandle>)> = self
+            .shared_trie
+            .get(topic)
+            .into_iter()
+            .map(|entry| (entry.group_name.clone(), entry.group.next_subscriber().cloned()))
+            .collect();
 
         for (group_name, subscriber) in shared_subscribers {
             if let Some(handle) = subscriber {
@@ -1057,9 +1050,9 @@ impl BrokerContext {
                         "Client {} subscription limit exceeded: {} >= {}",
                         client_id, current_count, self.max_subscriptions_per_client
                     );
-                    return_codes.push(SubscribeReasonCode::Failure);
-                    continue;
-                }
+                return_codes.push(SubscribeReasonCode::Failure);
+                continue;
+            }
                 // Reserve the slot atomically with the check
                 client_subs
                     .entry(client_id.to_string())
@@ -1084,26 +1077,23 @@ impl BrokerContext {
 
             // Handle shared subscriptions
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
-                // Use Trie for O(topic_length) lookup
-                let insert_result = {
-                    let shared_trie = self.shared_trie.write();
-                    shared_trie.with_mut(|root| {
-                        root.set(actual_topic, |node| {
-                            // Find existing group or create new one
-                            let values = node.values_mut();
-                            if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
-                                entry.group.add(client_handle.clone());
-                            } else {
-                                let mut new_group = SharedGroup::new();
-                                new_group.add(client_handle.clone());
-                                values.push(SharedEntry {
-                                    group_name: group.to_string(),
-                                    group: new_group,
-                                });
-                            }
-                        })
+                // Use Trie for O(topic_length) lookup - Trie is internally thread-safe
+                let insert_result = self.shared_trie.with_mut(|root| {
+                    root.set(actual_topic, |node| {
+                        // Find existing group or create new one
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            entry.group.add(client_handle.clone());
+                        } else {
+                            let mut new_group = SharedGroup::new();
+                            new_group.add(client_handle.clone());
+                            values.push(SharedEntry {
+                                group_name: group.to_string(),
+                                group: new_group,
+                            });
+                        }
                     })
-                };
+                });
                 if let Err(e) = insert_result {
                     warn!(
                         "Failed to insert shared subscription {} for {}: {}",
@@ -1119,20 +1109,15 @@ impl BrokerContext {
                     client_id, group, actual_topic
                 );
             } else {
-                // Normal subscription - insert into trie
-                let insert_result = {
-                    let subs = self.subscriptions.read();
-                    subs.insert(topic, client_handle.clone())
-                };
-
-                if let Err(e) = insert_result {
+                // Normal subscription - insert into trie (Trie is internally thread-safe)
+                if let Err(e) = self.subscriptions.insert(topic, client_handle.clone()) {
                     warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
                     // Rollback the reserved slot
                     self.remove_last_subscription(client_id, topic);
                     return_codes.push(SubscribeReasonCode::Failure);
                     continue;
                 }
-                debug!("Client {} subscribed to {} (v4)", client_id, topic);
+            debug!("Client {} subscribed to {} (v4)", client_id, topic);
             }
 
             return_codes.push(SubscribeReasonCode::Success(QoS::AtMostOnce));
@@ -1202,26 +1187,23 @@ impl BrokerContext {
 
             // Handle shared subscriptions
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
-                // Use Trie for O(topic_length) lookup
-                let insert_result = {
-                    let shared_trie = self.shared_trie.write();
-                    shared_trie.with_mut(|root| {
-                        root.set(actual_topic, |node| {
-                            // Find existing group or create new one
-                            let values = node.values_mut();
-                            if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
-                                entry.group.add(client_handle.clone());
-                            } else {
-                                let mut new_group = SharedGroup::new();
-                                new_group.add(client_handle.clone());
-                                values.push(SharedEntry {
-                                    group_name: group.to_string(),
-                                    group: new_group,
-                                });
-                            }
-                        })
+                // Use Trie for O(topic_length) lookup - Trie is internally thread-safe
+                let insert_result = self.shared_trie.with_mut(|root| {
+                    root.set(actual_topic, |node| {
+                        // Find existing group or create new one
+                        let values = node.values_mut();
+                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                            entry.group.add(client_handle.clone());
+                        } else {
+                            let mut new_group = SharedGroup::new();
+                            new_group.add(client_handle.clone());
+                            values.push(SharedEntry {
+                                group_name: group.to_string(),
+                                group: new_group,
+                            });
+                        }
                     })
-                };
+                });
                 if let Err(e) = insert_result {
                     warn!(
                         "Failed to insert shared subscription {} for {}: {}",
@@ -1237,20 +1219,15 @@ impl BrokerContext {
                     client_id, group, actual_topic
                 );
             } else {
-                // Normal subscription - insert into trie
-                let insert_result = {
-                    let subs = self.subscriptions.read();
-                    subs.insert(topic, client_handle.clone())
-                };
-
-                if let Err(e) = insert_result {
+                // Normal subscription - insert into trie (Trie is internally thread-safe)
+                if let Err(e) = self.subscriptions.insert(topic, client_handle.clone()) {
                     warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
                     // Rollback the reserved slot
                     self.remove_last_subscription(client_id, topic);
                     return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
                     continue;
                 }
-                debug!("Client {} subscribed to {} (v5)", client_id, topic);
+            debug!("Client {} subscribed to {} (v5)", client_id, topic);
             }
 
             return_codes.push(crate::protocol::v5::SubscribeReasonCode::Success(crate::protocol::v5::QoS::AtMostOnce));
@@ -1275,8 +1252,8 @@ impl BrokerContext {
             // Handle shared subscriptions
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
                 // Use Trie for unsubscribe
-                let shared_trie = self.shared_trie.write();
-                shared_trie.with_mut(|root| {
+                // Trie is internally thread-safe
+                self.shared_trie.with_mut(|root| {
                     let _ = root.set(actual_topic, |node| {
                         let values = node.values_mut();
                         if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
@@ -1291,9 +1268,8 @@ impl BrokerContext {
                     client_id, group, actual_topic
                 );
             } else {
-                // Normal subscription
-                let subs = self.subscriptions.write();
-            subs.with_mut(|root| {
+                // Normal subscription - Trie is internally thread-safe
+                self.subscriptions.with_mut(|root| {
                 root.remove(topic, |h| h.client_id.as_ref() == client_id);
             });
             debug!("Client {} unsubscribed from {}", client_id, topic);
@@ -1313,14 +1289,12 @@ impl BrokerContext {
     /// Remove a client's subscriptions from both normal and shared subscription tries.
     /// Uses pointer comparison to ensure only the correct client instance is removed.
     fn remove_client_subscriptions(&self, topics: &[String], tx: &Arc<mpsc::Sender<Message>>) {
-            let subs = self.subscriptions.write();
-        let shared_trie = self.shared_trie.write();
-        
+        // Trie is internally thread-safe, no need for external lock
         for topic in topics {
             // Check if it's a shared subscription
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
                 // Use Trie for cleanup - use pointer comparison
-                shared_trie.with_mut(|root| {
+                self.shared_trie.with_mut(|root| {
                     let _ = root.set(actual_topic, |node| {
                         let values = node.values_mut();
                         if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
@@ -1333,7 +1307,7 @@ impl BrokerContext {
                 });
             } else {
                 // Use pointer comparison for normal subscriptions
-                subs.with_mut(|root| {
+                self.subscriptions.with_mut(|root| {
                     root.remove(topic, |h| h.same_sender(tx));
                 });
             }
