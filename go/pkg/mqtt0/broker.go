@@ -305,7 +305,7 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 		close(old.msgCh) // Signal old client to disconnect
 		oldHandle = old
 		oldTopics = b.clientSubscriptions[connect.ClientID]
-		delete(b.clientSubscriptions, connect.ClientID)
+			delete(b.clientSubscriptions, connect.ClientID)
 	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
@@ -388,7 +388,7 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 		close(old.msgCh) // Signal old client to disconnect
 		oldHandle = old
 		oldTopics = b.clientSubscriptions[connect.ClientID]
-		delete(b.clientSubscriptions, connect.ClientID)
+			delete(b.clientSubscriptions, connect.ClientID)
 	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
@@ -705,15 +705,18 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 			continue
 		}
 
-		// Check subscription limit
+		// Atomically check subscription limit and reserve slot
 		b.mu.Lock()
 		currentCount := len(b.clientSubscriptions[clientID])
-		b.mu.Unlock()
 		if b.MaxSubscriptionsPerClient > 0 && currentCount >= b.MaxSubscriptionsPerClient {
+			b.mu.Unlock()
 			slog.Debug("mqtt0: subscription limit exceeded", "clientID", clientID, "current", currentCount, "max", b.MaxSubscriptionsPerClient)
 			codes[i] = 0x80 // Failure
 			continue
 		}
+		// Reserve the slot atomically with the check
+		b.clientSubscriptions[clientID] = append(b.clientSubscriptions[clientID], topic)
+		b.mu.Unlock()
 
 		// Parse shared subscription once for both ACL and subscription handling
 		group, actualTopic, isShared := ParseSharedTopic(topic)
@@ -724,6 +727,10 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 
 		if !auth.ACL(clientID, aclTopic, false) {
 			slog.Debug("mqtt0: acl denied subscribe", "clientID", clientID, "topic", topic)
+			// Rollback the reserved slot
+			b.mu.Lock()
+			b.removeLastSubscription(clientID, topic)
+			b.mu.Unlock()
 			codes[i] = 0x80 // Failure
 			continue
 		}
@@ -731,7 +738,7 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 		// Handle shared subscriptions
 		if isShared {
 			// Use Trie for O(topic_length) lookup
-			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+			if err := b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
 				// Find existing group or create new one
 				for _, e := range *entries {
 					if e.groupName == group {
@@ -743,21 +750,28 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 				g := &sharedGroup{}
 				g.add(handle)
 				*entries = append(*entries, &sharedEntry{groupName: group, group: g})
-			})
+			}); err != nil {
+				slog.Debug("mqtt0: shared subscribe failed", "error", err, "clientID", clientID, "topic", topic)
+				// Rollback the reserved slot
+				b.mu.Lock()
+				b.removeLastSubscription(clientID, topic)
+				b.mu.Unlock()
+				codes[i] = 0x80 // Failure
+				continue
+			}
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
-			if err := b.subscriptions.Insert(topic, handle); err != nil {
-				slog.Debug("mqtt0: subscribe failed", "error", err)
-				codes[i] = 0x80
-				continue
+		if err := b.subscriptions.Insert(topic, handle); err != nil {
+			slog.Debug("mqtt0: subscribe failed", "error", err)
+				// Rollback the reserved slot
+				b.mu.Lock()
+				b.removeLastSubscription(clientID, topic)
+				b.mu.Unlock()
+			codes[i] = 0x80
+			continue
 			}
 			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", topic)
 		}
-
-		// Track subscription for cleanup
-		b.mu.Lock()
-		b.clientSubscriptions[clientID] = append(b.clientSubscriptions[clientID], topic)
-		b.mu.Unlock()
 
 		codes[i] = 0x00 // Success QoS 0
 	}
@@ -776,15 +790,18 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 			continue
 		}
 
-		// Check subscription limit
+		// Atomically check subscription limit and reserve slot
 		b.mu.Lock()
 		currentCount := len(b.clientSubscriptions[clientID])
-		b.mu.Unlock()
 		if b.MaxSubscriptionsPerClient > 0 && currentCount >= b.MaxSubscriptionsPerClient {
+			b.mu.Unlock()
 			slog.Debug("mqtt0: subscription limit exceeded", "clientID", clientID, "current", currentCount, "max", b.MaxSubscriptionsPerClient)
 			codes[i] = ReasonQuotaExceeded
 			continue
 		}
+		// Reserve the slot atomically with the check
+		b.clientSubscriptions[clientID] = append(b.clientSubscriptions[clientID], filter.Topic)
+		b.mu.Unlock()
 
 		// Parse shared subscription once for both ACL and subscription handling
 		group, actualTopic, isShared := ParseSharedTopic(filter.Topic)
@@ -795,6 +812,10 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 
 		if !auth.ACL(clientID, aclTopic, false) {
 			slog.Debug("mqtt0: acl denied subscribe", "clientID", clientID, "topic", filter.Topic)
+			// Rollback the reserved slot
+			b.mu.Lock()
+			b.removeLastSubscription(clientID, filter.Topic)
+			b.mu.Unlock()
 			codes[i] = ReasonNotAuthorized
 			continue
 		}
@@ -802,7 +823,7 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 		// Handle shared subscriptions
 		if isShared {
 			// Use Trie for O(topic_length) lookup
-			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+			if err := b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
 				// Find existing group or create new one
 				for _, e := range *entries {
 					if e.groupName == group {
@@ -814,21 +835,28 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 				g := &sharedGroup{}
 				g.add(handle)
 				*entries = append(*entries, &sharedEntry{groupName: group, group: g})
-			})
-			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
-		} else {
-			if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
-				slog.Debug("mqtt0: subscribe failed", "error", err)
+			}); err != nil {
+				slog.Debug("mqtt0: shared subscribe failed", "error", err, "clientID", clientID, "topic", filter.Topic)
+				// Rollback the reserved slot
+				b.mu.Lock()
+				b.removeLastSubscription(clientID, filter.Topic)
+				b.mu.Unlock()
 				codes[i] = ReasonUnspecifiedError
 				continue
 			}
+			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
+		} else {
+		if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
+			slog.Debug("mqtt0: subscribe failed", "error", err)
+				// Rollback the reserved slot
+				b.mu.Lock()
+				b.removeLastSubscription(clientID, filter.Topic)
+				b.mu.Unlock()
+			codes[i] = ReasonUnspecifiedError
+			continue
+			}
 			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", filter.Topic)
 		}
-
-		// Track subscription for cleanup
-		b.mu.Lock()
-		b.clientSubscriptions[clientID] = append(b.clientSubscriptions[clientID], filter.Topic)
-		b.mu.Unlock()
 
 		codes[i] = ReasonGrantedQoS0
 	}
@@ -836,11 +864,25 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 	return codes
 }
 
+// removeLastSubscription removes a topic from the client's subscription list.
+// Must be called while holding b.mu lock.
+// Used for rollback when subscription fails after the slot was reserved.
+func (b *Broker) removeLastSubscription(clientID, topic string) {
+	subs := b.clientSubscriptions[clientID]
+	for i := len(subs) - 1; i >= 0; i-- {
+		if subs[i] == topic {
+			b.clientSubscriptions[clientID] = append(subs[:i], subs[i+1:]...)
+			return
+		}
+	}
+}
+
 // removeOneSubscription removes a single subscription by clientID.
 // This is used by handleUnsubscribe for explicit unsubscribe requests.
 func (b *Broker) removeOneSubscription(clientID, topic string) {
 	if group, actualTopic, ok := ParseSharedTopic(topic); ok {
-		b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+		// Ignore error for unsubscribe - failure is acceptable
+		_ = b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
 			for _, e := range *entries {
 				if e.groupName == group {
 					e.group.remove(clientID)
@@ -924,7 +966,8 @@ func (b *Broker) removeClientSubscriptions(topics []string, handle *clientHandle
 		// Handle shared subscriptions
 		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
 			// Use Trie for cleanup - use pointer comparison
-			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
+			// Ignore error for cleanup - failure is acceptable
+			_ = b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
 				for _, e := range *entries {
 					if e.groupName == group {
 						e.group.removeByHandle(handle) // Pointer comparison
@@ -958,11 +1001,11 @@ func (b *Broker) cleanupClient(clientID, username string, handle *clientHandle) 
 	// This prevents removing a new client that connected with the same clientID
 	var topics []string
 	if current, exists := b.clients[clientID]; exists && current == handle {
-		delete(b.clients, clientID)
+	delete(b.clients, clientID)
 		// Only remove subscriptions tracking if this is the correct client instance
 		// This prevents a stale cleanup from wiping a new client's subscription data
 		topics = b.clientSubscriptions[clientID]
-		delete(b.clientSubscriptions, clientID)
+	delete(b.clientSubscriptions, clientID)
 	}
 	b.mu.Unlock()
 
@@ -1084,16 +1127,7 @@ type sysDisconnectedEvent struct {
 // sanitizeClientIDForTopic replaces MQTT topic special characters in clientID
 // to prevent topic injection attacks. Replaces /, +, # with _.
 func sanitizeClientIDForTopic(clientID string) string {
-	result := make([]byte, len(clientID))
-	for i := 0; i < len(clientID); i++ {
-		switch clientID[i] {
-		case '/', '+', '#':
-			result[i] = '_'
-		default:
-			result[i] = clientID[i]
-		}
-	}
-	return string(result)
+	return strings.NewReplacer("/", "_", "+", "_", "#", "_").Replace(clientID)
 }
 
 // publishSysConnected publishes a $SYS client connected event.

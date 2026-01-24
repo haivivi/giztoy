@@ -1046,20 +1046,25 @@ impl BrokerContext {
                 continue;
             }
 
-            // Check subscription limit
-            let current_count = {
-                let subs = self.client_subscriptions.read();
-                subs.get(client_id).map(|v| v.len()).unwrap_or(0)
-            };
-            if self.max_subscriptions_per_client > 0
-                && current_count >= self.max_subscriptions_per_client
+            // Atomically check subscription limit and reserve slot
             {
-                warn!(
-                    "Client {} subscription limit exceeded: {} >= {}",
-                    client_id, current_count, self.max_subscriptions_per_client
-                );
-                return_codes.push(SubscribeReasonCode::Failure);
-                continue;
+                let mut client_subs = self.client_subscriptions.write();
+                let current_count = client_subs.get(client_id).map(|v| v.len()).unwrap_or(0);
+                if self.max_subscriptions_per_client > 0
+                    && current_count >= self.max_subscriptions_per_client
+                {
+                    warn!(
+                        "Client {} subscription limit exceeded: {} >= {}",
+                        client_id, current_count, self.max_subscriptions_per_client
+                    );
+                    return_codes.push(SubscribeReasonCode::Failure);
+                    continue;
+                }
+                // Reserve the slot atomically with the check
+                client_subs
+                    .entry(client_id.to_string())
+                    .or_default()
+                    .push(topic.to_string());
             }
 
             // For shared subscriptions, check ACL on the actual topic
@@ -1071,6 +1076,8 @@ impl BrokerContext {
 
             if !self.authenticator.acl(client_id, acl_topic, false) {
                 warn!("ACL denied subscribe from {} to {}", client_id, topic);
+                // Rollback the reserved slot
+                self.remove_last_subscription(client_id, topic);
                 return_codes.push(SubscribeReasonCode::Failure);
                 continue;
             }
@@ -1078,49 +1085,54 @@ impl BrokerContext {
             // Handle shared subscriptions
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
                 // Use Trie for O(topic_length) lookup
-                let shared_trie = self.shared_trie.write();
-                shared_trie.with_mut(|root| {
-                    let _ = root.set(actual_topic, |node| {
-                        // Find existing group or create new one
-                        let values = node.values_mut();
-                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
-                            entry.group.add(client_handle.clone());
-                        } else {
-                            let mut new_group = SharedGroup::new();
-                            new_group.add(client_handle.clone());
-                            values.push(SharedEntry {
-                                group_name: group.to_string(),
-                                group: new_group,
-                            });
-                        }
-                    });
-                });
+                let insert_result = {
+                    let shared_trie = self.shared_trie.write();
+                    shared_trie.with_mut(|root| {
+                        root.set(actual_topic, |node| {
+                            // Find existing group or create new one
+                            let values = node.values_mut();
+                            if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                                entry.group.add(client_handle.clone());
+                            } else {
+                                let mut new_group = SharedGroup::new();
+                                new_group.add(client_handle.clone());
+                                values.push(SharedEntry {
+                                    group_name: group.to_string(),
+                                    group: new_group,
+                                });
+                            }
+                        })
+                    })
+                };
+                if let Err(e) = insert_result {
+                    warn!(
+                        "Failed to insert shared subscription {} for {}: {}",
+                        topic, client_id, e
+                    );
+                    // Rollback the reserved slot
+                    self.remove_last_subscription(client_id, topic);
+                    return_codes.push(SubscribeReasonCode::Failure);
+                    continue;
+                }
                 debug!(
                     "Client {} subscribed to shared group '{}' topic '{}' (v4)",
                     client_id, group, actual_topic
                 );
             } else {
                 // Normal subscription - insert into trie
-            let insert_result = {
-                let subs = self.subscriptions.read();
-                subs.insert(topic, client_handle.clone())
-            };
+                let insert_result = {
+                    let subs = self.subscriptions.read();
+                    subs.insert(topic, client_handle.clone())
+                };
 
-            if let Err(e) = insert_result {
-                warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
-                return_codes.push(SubscribeReasonCode::Failure);
-                continue;
+                if let Err(e) = insert_result {
+                    warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
+                    // Rollback the reserved slot
+                    self.remove_last_subscription(client_id, topic);
+                    return_codes.push(SubscribeReasonCode::Failure);
+                    continue;
                 }
                 debug!("Client {} subscribed to {} (v4)", client_id, topic);
-            }
-
-            // Track subscription for cleanup on disconnect
-            {
-                let mut client_subs = self.client_subscriptions.write();
-                client_subs
-                    .entry(client_id.to_string())
-                    .or_default()
-                    .push(topic.to_string());
             }
 
             return_codes.push(SubscribeReasonCode::Success(QoS::AtMostOnce));
@@ -1152,20 +1164,25 @@ impl BrokerContext {
                 continue;
             }
 
-            // Check subscription limit
-            let current_count = {
-                let subs = self.client_subscriptions.read();
-                subs.get(client_id).map(|v| v.len()).unwrap_or(0)
-            };
-            if self.max_subscriptions_per_client > 0
-                && current_count >= self.max_subscriptions_per_client
+            // Atomically check subscription limit and reserve slot
             {
-                warn!(
-                    "Client {} subscription limit exceeded: {} >= {}",
-                    client_id, current_count, self.max_subscriptions_per_client
-                );
-                return_codes.push(crate::protocol::v5::SubscribeReasonCode::QuotaExceeded);
-                continue;
+                let mut client_subs = self.client_subscriptions.write();
+                let current_count = client_subs.get(client_id).map(|v| v.len()).unwrap_or(0);
+                if self.max_subscriptions_per_client > 0
+                    && current_count >= self.max_subscriptions_per_client
+                {
+                    warn!(
+                        "Client {} subscription limit exceeded: {} >= {}",
+                        client_id, current_count, self.max_subscriptions_per_client
+                    );
+                    return_codes.push(crate::protocol::v5::SubscribeReasonCode::QuotaExceeded);
+                    continue;
+                }
+                // Reserve the slot atomically with the check
+                client_subs
+                    .entry(client_id.to_string())
+                    .or_default()
+                    .push(topic.to_string());
             }
 
             // For shared subscriptions, check ACL on the actual topic
@@ -1177,6 +1194,8 @@ impl BrokerContext {
 
             if !self.authenticator.acl(client_id, acl_topic, false) {
                 warn!("ACL denied subscribe from {} to {}", client_id, topic);
+                // Rollback the reserved slot
+                self.remove_last_subscription(client_id, topic);
                 return_codes.push(crate::protocol::v5::SubscribeReasonCode::NotAuthorized);
                 continue;
             }
@@ -1184,55 +1203,71 @@ impl BrokerContext {
             // Handle shared subscriptions
             if let Some((group, actual_topic)) = parse_shared_topic(topic) {
                 // Use Trie for O(topic_length) lookup
-                let shared_trie = self.shared_trie.write();
-                shared_trie.with_mut(|root| {
-                    let _ = root.set(actual_topic, |node| {
-                        // Find existing group or create new one
-                        let values = node.values_mut();
-                        if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
-                            entry.group.add(client_handle.clone());
-                        } else {
-                            let mut new_group = SharedGroup::new();
-                            new_group.add(client_handle.clone());
-                            values.push(SharedEntry {
-                                group_name: group.to_string(),
-                                group: new_group,
-                            });
-                        }
-                    });
-                });
+                let insert_result = {
+                    let shared_trie = self.shared_trie.write();
+                    shared_trie.with_mut(|root| {
+                        root.set(actual_topic, |node| {
+                            // Find existing group or create new one
+                            let values = node.values_mut();
+                            if let Some(entry) = values.iter_mut().find(|e| e.group_name == group) {
+                                entry.group.add(client_handle.clone());
+                            } else {
+                                let mut new_group = SharedGroup::new();
+                                new_group.add(client_handle.clone());
+                                values.push(SharedEntry {
+                                    group_name: group.to_string(),
+                                    group: new_group,
+                                });
+                            }
+                        })
+                    })
+                };
+                if let Err(e) = insert_result {
+                    warn!(
+                        "Failed to insert shared subscription {} for {}: {}",
+                        topic, client_id, e
+                    );
+                    // Rollback the reserved slot
+                    self.remove_last_subscription(client_id, topic);
+                    return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
+                    continue;
+                }
                 debug!(
                     "Client {} subscribed to shared group '{}' topic '{}' (v5)",
                     client_id, group, actual_topic
                 );
             } else {
                 // Normal subscription - insert into trie
-            let insert_result = {
-                let subs = self.subscriptions.read();
-                subs.insert(topic, client_handle.clone())
-            };
+                let insert_result = {
+                    let subs = self.subscriptions.read();
+                    subs.insert(topic, client_handle.clone())
+                };
 
-            if let Err(e) = insert_result {
-                warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
-                return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
-                continue;
+                if let Err(e) = insert_result {
+                    warn!("Failed to insert subscription {} for {}: {}", topic, client_id, e);
+                    // Rollback the reserved slot
+                    self.remove_last_subscription(client_id, topic);
+                    return_codes.push(crate::protocol::v5::SubscribeReasonCode::Unspecified);
+                    continue;
                 }
                 debug!("Client {} subscribed to {} (v5)", client_id, topic);
-            }
-
-            // Track subscription for cleanup on disconnect
-            {
-                let mut client_subs = self.client_subscriptions.write();
-                client_subs
-                    .entry(client_id.to_string())
-                    .or_default()
-                    .push(topic.to_string());
             }
 
             return_codes.push(crate::protocol::v5::SubscribeReasonCode::Success(crate::protocol::v5::QoS::AtMostOnce));
         }
 
         return_codes
+    }
+
+    /// Remove a topic from client's subscription list.
+    /// Used for rollback when subscription fails after the slot was reserved.
+    fn remove_last_subscription(&self, client_id: &str, topic: &str) {
+        let mut client_subs = self.client_subscriptions.write();
+        if let Some(subs) = client_subs.get_mut(client_id) {
+            if let Some(pos) = subs.iter().rposition(|t| t == topic) {
+                subs.remove(pos);
+            }
+        }
     }
 
     fn handle_unsubscribe(&self, client_id: &str, topics: &[String]) {
