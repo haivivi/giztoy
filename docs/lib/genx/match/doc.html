@@ -169,9 +169,10 @@
 <li><strong>LLM-Powered</strong>: Use LLM for flexible matching</li>
 </ol>
 <h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
-<pre><code>Rules + User Input → LLM → Structured Output
-                           ↓
-                      "rule_name: var1=value1, var2=value2"
+<pre><code class="language-mermaid">flowchart LR
+    A["Rules +&lt;br/&gt;User Input"] --&gt; B[LLM]
+    B --&gt; C["Structured&lt;br/&gt;Output"]
+    C --&gt; D["rule_name:&lt;br/&gt;var1=value1,&lt;br/&gt;var2=value2"]
 </code></pre>
 <ol>
 <li><strong>Compile</strong>: Rules are compiled into a system prompt</li>
@@ -227,35 +228,16 @@ patterns:
 </tbody></table>
 </div>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌─────────────────────────────────────────────────────────┐
-│                        Rules                             │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐        │
-│  │   weather   │ │    music    │ │    chat     │        │
-│  │   patterns  │ │   vars      │ │   patterns  │        │
-│  └─────────────┘ └─────────────┘ └─────────────┘        │
-└──────────────────────────┬──────────────────────────────┘
-                           │
-                     Compile()
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                       Matcher                            │
-│                   (System Prompt)                        │
-└──────────────────────────┬──────────────────────────────┘
-                           │
-                Match(ctx, input, mctx)
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                         LLM                              │
-│              (Generates structured output)               │
-└──────────────────────────┬──────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                   iter.Seq2[Result]                      │
-│      Rule: "music", Args: {artist: "周杰伦"}             │
-└─────────────────────────────────────────────────────────┘
+<pre><code class="language-mermaid">flowchart TB
+    subgraph rules["Rules"]
+        weather["weather&lt;br/&gt;patterns"]
+        music["music&lt;br/&gt;vars"]
+        chat["chat&lt;br/&gt;patterns"]
+    end
+    
+    rules --&gt;|"Compile()"| matcher["Matcher&lt;br/&gt;(System Prompt)"]
+    matcher --&gt;|"Match(ctx, input, mctx)"| llm["LLM&lt;br/&gt;(Generates structured output)"]
+    llm --&gt; result["iter.Seq2[Result]&lt;br/&gt;Rule: 'music'&lt;br/&gt;Args: {artist: '周杰伦'}"]
 </code></pre>
 <h2 id="integration-with-matchagent"><a class="header" href="#integration-with-matchagent">Integration with MatchAgent</a></h2>
 <p>The match package is used by MatchAgent for intent routing:</p>
@@ -281,11 +263,11 @@ route:
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/genx/agentcfg/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../lib/genx/agentcfg/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../lib/genx/match/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../lib/genx/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -295,11 +277,11 @@ route:
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/genx/agentcfg/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../lib/genx/agentcfg/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../lib/genx/match/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../lib/genx/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -325,6 +307,7 @@ route:
         <!-- Custom JS scripts -->
         <script src="../../../mermaid.min.js"></script>
         <script src="../../../mermaid-init.js"></script>
+        <script src="../../../lang-switch.js"></script>
 
 
     </div>

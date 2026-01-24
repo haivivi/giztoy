@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>简介 - Giztoy 文档</title>
+        <title>技术概述 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -156,80 +156,236 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="giztoy-核心包文档"><a class="header" href="#giztoy-核心包文档">Giztoy 核心包文档</a></h1>
-<p>本目录包含 Giztoy 所有核心包的设计文档、实现说明和已知问题。
-库文档位于 <code>docs/lib/</code> 目录下。</p>
+                        <h1 id="giztoy-核心包文档"><a class="header" href="#giztoy-核心包文档">GizToy 核心包文档</a></h1>
+<p>本目录包含所有 GizToy 核心包的设计文档、实现说明和已知问题。
+库文档位于 <code>docs/lib/</code> 下。</p>
 <h2 id="文档结构"><a class="header" href="#文档结构">文档结构</a></h2>
-<p>每个模块在 <code>docs/lib/</code> 下都有独立目录，包含以下文件：</p>
-<pre><code>lib/{mod}/
-├── doc.md      # 主文档：设计目标、特性、用法示例
-├── go.md       # Go 实现：接口设计、类型定义、使用方法
-├── rust.md     # Rust 实现：trait 设计、类型定义、进度
-├── issues.md   # 已知问题：bug、待改进、设计缺陷
-└── {submod}/   # 子模块（如有）
-    ├── doc.md
-    ├── go.md
-    ├── rust.md
-    └── issues.md
+<p>每个模块在 <code>docs/lib/</code> 下都有自己的目录，包含以下文件：</p>
+<pre><code class="language-mermaid">graph LR
+    subgraph mod["lib/{mod}/"]
+        doc[doc.md&lt;br/&gt;设计与特性]
+        go[go.md&lt;br/&gt;Go 实现]
+        rust[rust.md&lt;br/&gt;Rust 实现]
+        issues[issues.md&lt;br/&gt;已知问题]
+        submod["{submod}/&lt;br/&gt;子模块"]
+    end
 </code></pre>
 <hr />
 <h2 id="包列表"><a class="header" href="#包列表">包列表</a></h2>
 <h3 id="基础层"><a class="header" href="#基础层">基础层</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/buffer/">buffer</a></td><td>Buffer 工具库</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/encoding/">encoding</a></td><td>编码工具（Base64, Hex）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/jsontime/">jsontime</a></td><td>JSON 时间类型序列化</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/trie/">trie</a></td><td>前缀树数据结构</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/cli/">cli</a></td><td>CLI 工具库</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/buffer/doc.html">buffer</a></td><td>缓冲区工具</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/encoding/doc.html">encoding</a></td><td>编码工具（Base64、Hex）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/jsontime/doc.html">jsontime</a></td><td>JSON 时间类型序列化</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/trie/doc.html">trie</a></td><td>前缀树数据结构</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/cli/doc.html">cli</a></td><td>CLI 工具</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
 <h3 id="音频处理层"><a class="header" href="#音频处理层">音频处理层</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/audio/">audio</a></td><td>音频处理框架</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/codec/">audio/codec</a></td><td>编解码器（Opus, MP3, OGG）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/pcm/">audio/pcm</a></td><td>PCM 处理、混音器</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/resampler/">audio/resampler</a></td><td>采样率转换（soxr）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/opusrt/">audio/opusrt</a></td><td>Opus 实时流</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/audio/doc.html">audio</a></td><td>音频处理框架</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/codec/doc.html">audio/codec</a></td><td>编解码器（Opus、MP3、OGG）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/pcm/doc.html">audio/pcm</a></td><td>PCM 处理、混音器</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/resampler/doc.html">audio/resampler</a></td><td>采样率转换（soxr）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/opusrt/doc.html">audio/opusrt</a></td><td>Opus 实时流</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/audio/portaudio/doc.html">audio/portaudio</a></td><td>音频 I/O（仅 Go）</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/audio/songs/doc.html">audio/songs</a></td><td>内置声音生成</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
 <h3 id="api-客户端层"><a class="header" href="#api-客户端层">API 客户端层</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/minimax/">minimax</a></td><td>MiniMax AI SDK</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/dashscope/">dashscope</a></td><td>阿里云 DashScope SDK</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/doubaospeech/">doubaospeech</a></td><td>豆包语音 SDK</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/jiutian/">jiutian</a></td><td>九天 SDK</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/minimax/doc.html">minimax</a></td><td>MiniMax API 客户端</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/dashscope/doc.html">dashscope</a></td><td>DashScope 实时 API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/doubaospeech/doc.html">doubaospeech</a></td><td>豆包语音 API 客户端</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/jiutian/doc.html">jiutian</a></td><td>九天 API（仅文档）</td><td style="text-align: center">❌</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/openai-realtime/doc.html">openai-realtime</a></td><td>OpenAI 实时 API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
 <h3 id="通信层"><a class="header" href="#通信层">通信层</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/mqtt0/">mqtt0</a></td><td>MQTT 客户端</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/chatgear/">chatgear</a></td><td>聊天协议框架</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/mqtt0/doc.html">mqtt0</a></td><td>轻量级 MQTT 客户端</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/doc.html">chatgear</a></td><td>设备通信框架</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/transport/doc.html">chatgear/transport</a></td><td>传输层抽象</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/port/doc.html">chatgear/port</a></td><td>媒体端口</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
 <h3 id="ai-应用层"><a class="header" href="#ai-应用层">AI 应用层</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/speech/">speech</a></td><td>语音处理</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/genx/">genx</a></td><td>LLM 通用接口</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/speech/doc.html">speech</a></td><td>统一语音接口</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/genx/doc.html">genx</a></td><td>LLM 通用接口框架</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/genx/agent/doc.html">genx/agent</a></td><td>Agent 框架（仅 Go）</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/genx/agentcfg/doc.html">genx/agentcfg</a></td><td>Agent 配置系统（仅 Go）</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/genx/match/doc.html">genx/match</a></td><td>模式匹配引擎（仅 Go）</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
 </tbody></table>
 </div>
 <hr />
-<h2 id="esp32-开发"><a class="header" href="#esp32-开发">ESP32 开发</a></h2>
+<h2 id="示例"><a class="header" href="#示例">示例</a></h2>
 <ul>
-<li><a href="./esp/esp32-dev-comparison.html">ESP32 开发方案对比</a> - 对比分析 ESP32 嵌入式开发的五种技术方案</li>
-<li><a href="./esp/esp-rs-migration.html">ESP-RS 迁移指南</a> - 将 C/ESP-IDF 固件迁移到 Rust 的技术方案</li>
+<li><a href="./examples/doc.html">examples</a>：目录结构和如何运行示例</li>
 </ul>
 <hr />
-<h2 id="附录"><a class="header" href="#附录">附录</a></h2>
+<h2 id="目录结构"><a class="header" href="#目录结构">目录结构</a></h2>
+<pre><code class="language-mermaid">graph TB
+    subgraph docs["docs/"]
+        outline[outline.md]
+        pkg[packages-comparison.md]
+        
+        subgraph examples["examples/"]
+            exdoc[doc.md]
+        end
+        
+        subgraph lib["lib/"]
+            buffer[buffer/]
+            encoding[encoding/]
+            jsontime[jsontime/]
+            trie[trie/]
+            cli[cli/]
+            
+            subgraph audio["audio/"]
+                adoc[doc.md, go.md, rust.md, issues.md]
+                codec[codec/]
+                pcm[pcm/]
+                resampler[resampler/]
+                opusrt[opusrt/]
+                portaudio[portaudio/]
+                songs[songs/]
+            end
+            
+            minimax[minimax/]
+            dashscope[dashscope/]
+            doubaospeech[doubaospeech/]
+            jiutian[jiutian/]
+            mqtt0[mqtt0/]
+            chatgear[chatgear/]
+            speech[speech/]
+            genx[genx/]
+        end
+        
+        esp[esp/]
+        bazel[bazel/]
+    end
+</code></pre>
+<hr />
+<h2 id="其他文档"><a class="header" href="#其他文档">其他文档</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>目录</th><th>用途</th></tr></thead><tbody>
+<tr><td><code>esp/</code></td><td>ESP32 和 ESP-RS 说明和比较</td></tr>
+<tr><td><code>bazel/</code></td><td>Bazel 构建规则和集成说明</td></tr>
+<tr><td><code>packages-comparison.md</code></td><td>跨语言包比较</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="实现进度概览"><a class="header" href="#实现进度概览">实现进度概览</a></h2>
+<h3 id="图例"><a class="header" href="#图例">图例</a></h3>
 <ul>
-<li><a href="./packages-comparison.html">Go vs Rust 包对比</a></li>
+<li>✅ 完全实现</li>
+<li>⚠️ 部分实现</li>
+<li>❌ 未实现</li>
+</ul>
+<h3 id="功能比较"><a class="header" href="#功能比较">功能比较</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>功能</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th><th>备注</th></tr></thead><tbody>
+<tr><td><strong>基础</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>块缓冲区</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>环形缓冲区</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Base64 编码</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Hex 编码</td><td style="text-align: center">❌</td><td style="text-align: center">✅</td><td>Rust 额外实现</td></tr>
+<tr><td>JSON 时间类型</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>前缀树</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td><strong>音频</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>Opus 编解码器</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>MP3 编解码器</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>OGG 容器</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>PCM 混音器</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>采样率转换</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>Opus 实时流</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td><td>Rust 缺少 OGG 读写器</td></tr>
+<tr><td>音频 I/O</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td>仅 Go（portaudio）</td></tr>
+<tr><td><strong>API 客户端</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>MiniMax 文本/语音/视频</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>DashScope 实时</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>豆包语音 TTS/ASR</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>豆包语音 TTS v2</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+<tr><td>豆包语音 ASR v2</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+<tr><td>OpenAI 实时</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td><strong>通信</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>MQTT 3.1.1</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>MQTT 5.0</td><td style="text-align: center">⚠️</td><td style="text-align: center">⚠️</td><td>部分支持，见 Issue #32</td></tr>
+<tr><td>ChatGear 传输层</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>ChatGear MediaPort</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td><strong>AI 应用</strong></td><td style="text-align: center"></td><td style="text-align: center"></td><td></td></tr>
+<tr><td>统一语音接口</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>LLM 上下文</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td><td>Rust 基本实现</td></tr>
+<tr><td>LLM 流式传输</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td><td>Rust 基本实现</td></tr>
+<tr><td>工具调用</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td><td>Rust 基本实现</td></tr>
+<tr><td>Agent 框架</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+<tr><td>Agent 配置</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+<tr><td>模式匹配</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td><td></td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="优先级建议"><a class="header" href="#优先级建议">优先级建议</a></h2>
+<h3 id="p0---关键缺失"><a class="header" href="#p0---关键缺失">P0 - 关键缺失</a></h3>
+<ol>
+<li><strong>genx/agent</strong>（Rust）：Agent 框架是核心功能</li>
+<li><strong>audio/opusrt OGG 读写</strong>（Rust）：实时音频流所需</li>
+</ol>
+<h3 id="p1---功能对等"><a class="header" href="#p1---功能对等">P1 - 功能对等</a></h3>
+<ol>
+<li><strong>doubaospeech v2</strong>（Rust）：新 API 版本支持</li>
+<li><strong>genx 流式/工具</strong>（Rust）：完成基础功能</li>
+</ol>
+<h3 id="p2---增强"><a class="header" href="#p2---增强">P2 - 增强</a></h3>
+<ol>
+<li><strong>audio/portaudio</strong>（Rust）：音频 I/O 支持</li>
+<li><strong>mqtt0 MQTT 5.0</strong>：完整协议支持</li>
+</ol>
+<hr />
+<h2 id="工作方法论"><a class="header" href="#工作方法论">工作方法论</a></h2>
+<h3 id="逐文件审查流程"><a class="header" href="#逐文件审查流程">逐文件审查流程</a></h3>
+<p>对于每个模块，文档通过严格的逐文件审查流程生成：</p>
+<pre><code class="language-mermaid">flowchart TB
+    A["1. 列出所有源文件"] --&gt; B["2. 仔细阅读每个文件"]
+    B --&gt; C["3. 分析潜在问题"]
+    C --&gt; D["4. 记录发现"]
+    
+    A1["Go: go/pkg/{mod}/*.go"] --&gt; A
+    A2["Rust: rust/{mod}/src/*.rs"] --&gt; A
+    
+    C1["竞态条件"] --&gt; C
+    C2["资源泄漏"] --&gt; C
+    C3["错误处理缺口"] --&gt; C
+    C4["API 不一致"] --&gt; C
+    
+    D1["doc.md"] --&gt; D
+    D2["go.md"] --&gt; D
+    D3["rust.md"] --&gt; D
+    D4["issues.md"] --&gt; D
+</code></pre>
+<h3 id="问题分类"><a class="header" href="#问题分类">问题分类</a></h3>
+<p>审查中发现的问题按严重程度分类：</p>
+<div class="table-wrapper"><table><thead><tr><th>严重程度</th><th>描述</th><th>示例</th></tr></thead><tbody>
+<tr><td>🔴 <strong>严重</strong></td><td>数据丢失、安全漏洞、崩溃</td><td>缓冲区溢出、SQL 注入</td></tr>
+<tr><td>🟠 <strong>主要</strong></td><td>错误行为、资源泄漏</td><td>内存泄漏、竞态条件</td></tr>
+<tr><td>🟡 <strong>次要</strong></td><td>边缘情况 bug、错误消息不清晰</td><td>边界错误、不清晰的 panic 消息</td></tr>
+<tr><td>🔵 <strong>增强</strong></td><td>缺少功能、性能改进</td><td>缺少 API、不必要的分配</td></tr>
+<tr><td>⚪ <strong>备注</strong></td><td>设计观察、技术债务</td><td>代码重复、命名不一致</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="相关资源"><a class="header" href="#相关资源">相关资源</a></h2>
+<ul>
+<li>外部 API 文档：<code>lib/minimax/api/</code>、<code>lib/dashscope/api/</code>、<code>lib/doubaospeech/api/</code></li>
+<li>问题跟踪：<code>issues/</code></li>
+<li>示例代码：<code>examples/go/</code>、<code>examples/rust/</code></li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="intro/about.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
-                            <a rel="next prefetch" href="lib/buffer/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="examples/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -239,8 +395,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="intro/about.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
-                    <a rel="next prefetch" href="lib/buffer/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="examples/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -266,6 +425,7 @@
         <!-- Custom JS scripts -->
         <script src="mermaid.min.js"></script>
         <script src="mermaid-init.js"></script>
+        <script src="lang-switch.js"></script>
 
 
     </div>

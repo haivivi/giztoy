@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Doubao Speech - Giztoy 文档</title>
+        <title>Doubao Speech 豆包语音 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -156,115 +156,113 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="doubao-speech-sdk"><a class="header" href="#doubao-speech-sdk">Doubao Speech SDK</a></h1>
-<p>Go and Rust SDK for Volcengine Doubao Speech API (豆包语音).</p>
+                        <h1 id="豆包语音-sdk"><a class="header" href="#豆包语音-sdk">豆包语音 SDK</a></h1>
+<p>火山引擎豆包语音 API 的 Go 和 Rust SDK。</p>
 <blockquote>
-<p><strong>Official API Documentation</strong>: <a href="./api/README.html">api/README.md</a></p>
+<p><strong>官方 API 文档</strong>：<a href="./api/README.html">api/README.md</a></p>
 </blockquote>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>Dual API Version Support</strong>: V1 (Classic) and V2/V3 (BigModel) APIs</li>
-<li><strong>Multiple Auth Methods</strong>: Bearer Token, API Key, V2 API Key</li>
-<li><strong>Comprehensive Coverage</strong>: TTS, ASR, Voice Clone, Realtime, Meeting, Podcast, etc.</li>
-<li><strong>Streaming-first</strong>: WebSocket-based streaming for real-time scenarios</li>
+<li><strong>双 API 版本支持</strong>：V1（经典）和 V2/V3（大模型）API</li>
+<li><strong>多种认证方式</strong>：Bearer Token、API Key、V2 API Key</li>
+<li><strong>全面覆盖</strong>：TTS、ASR、声音克隆、实时对话、会议、播客等</li>
+<li><strong>流式优先</strong>：基于 WebSocket 的流式传输，适用于实时场景</li>
 </ol>
-<h2 id="api-versions"><a class="header" href="#api-versions">API Versions</a></h2>
-<p>Doubao Speech has two API generations:</p>
-<div class="table-wrapper"><table><thead><tr><th>Version</th><th>Name</th><th>Features</th><th>Recommended</th></tr></thead><tbody>
-<tr><td>V1</td><td>Classic</td><td>Basic TTS/ASR</td><td>Legacy use</td></tr>
-<tr><td>V2/V3</td><td>BigModel</td><td>Advanced TTS/ASR, Realtime</td><td>✅ New projects</td></tr>
+<h2 id="api-版本"><a class="header" href="#api-版本">API 版本</a></h2>
+<p>豆包语音有两代 API：</p>
+<div class="table-wrapper"><table><thead><tr><th>版本</th><th>名称</th><th>功能</th><th>推荐</th></tr></thead><tbody>
+<tr><td>V1</td><td>经典版</td><td>基础 TTS/ASR</td><td>旧项目</td></tr>
+<tr><td>V2/V3</td><td>大模型版</td><td>高级 TTS/ASR、实时对话</td><td>✅ 新项目</td></tr>
 </tbody></table>
 </div>
-<h2 id="api-coverage"><a class="header" href="#api-coverage">API Coverage</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Feature</th><th style="text-align: center">V1 (Classic)</th><th style="text-align: center">V2 (BigModel)</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td>TTS Sync</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>TTS Stream</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>TTS Async (Long Text)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
-<tr><td>ASR One-sentence</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>ASR Stream</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>ASR File</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
-<tr><td>Voice Clone</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>Realtime Dialogue</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>Meeting Transcription</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>Podcast Synthesis</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>Translation (SIMT)</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>Media Subtitle</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>Console API</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<h2 id="api-覆盖"><a class="header" href="#api-覆盖">API 覆盖</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>功能</th><th style="text-align: center">V1（经典版）</th><th style="text-align: center">V2（大模型版）</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
+<tr><td>TTS 同步</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>TTS 流式</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>TTS 异步（长文本）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td>ASR 一句话</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>ASR 流式</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>ASR 文件</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td>声音克隆</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>实时对话</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>会议转写</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>播客合成</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>同传翻译（SIMT）</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>媒体字幕</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>控制台 API</td><td style="text-align: center">N/A</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
-<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌──────────────────────────────────────────────────────────┐
-│                      Client                              │
-├──────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │               V1 Services (Classic)                 │ │
-│ │  ┌──────────┐ ┌──────────┐                         │ │
-│ │  │   TTS    │ │   ASR    │                         │ │
-│ │  └──────────┘ └──────────┘                         │ │
-│ └─────────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │               V2 Services (BigModel)                │ │
-│ │  ┌──────────┐ ┌──────────┐ ┌──────────────────────┐│ │
-│ │  │  TTSV2   │ │  ASRV2   │ │ VoiceClone, Realtime ││ │
-│ │  └──────────┘ └──────────┘ │ Meeting, Podcast     ││ │
-│ │                            │ Translation, Media   ││ │
-│ │                            └──────────────────────┘│ │
-│ └─────────────────────────────────────────────────────┘ │
-├──────────────────────────────────────────────────────────┤
-│                     Console Client                       │
-│          (AK/SK Signature Authentication)                │
-└──────────────────────────────────────────────────────────┘
+<h2 id="架构"><a class="header" href="#架构">架构</a></h2>
+<pre><code class="language-mermaid">graph TB
+    subgraph client["Client"]
+        subgraph v1["V1 服务（经典版）"]
+            tts1[TTS]
+            asr1[ASR]
+        end
+        subgraph v2["V2 服务（大模型版）"]
+            tts2[TTSV2]
+            asr2[ASRV2]
+            advanced["声音克隆&lt;br/&gt;实时对话&lt;br/&gt;会议&lt;br/&gt;播客&lt;br/&gt;翻译&lt;br/&gt;媒体"]
+        end
+    end
+    
+    subgraph console["控制台客户端"]
+        aksig["AK/SK 签名&lt;br/&gt;认证"]
+    end
+    
+    client --&gt; api["火山引擎 API"]
+    console --&gt; api
 </code></pre>
-<h2 id="authentication-methods"><a class="header" href="#authentication-methods">Authentication Methods</a></h2>
-<h3 id="speech-api-client"><a class="header" href="#speech-api-client">Speech API Client</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>Method</th><th>Header</th><th>Use Case</th></tr></thead><tbody>
-<tr><td>API Key</td><td><code>x-api-key: {key}</code></td><td>Simplest, recommended</td></tr>
-<tr><td>Bearer Token</td><td><code>Authorization: Bearer;{token}</code></td><td>V1 APIs</td></tr>
-<tr><td>V2 API Key</td><td><code>X-Api-Access-Key</code>, <code>X-Api-App-Key</code></td><td>V2/V3 APIs</td></tr>
+<h2 id="认证方式"><a class="header" href="#认证方式">认证方式</a></h2>
+<h3 id="语音-api-客户端"><a class="header" href="#语音-api-客户端">语音 API 客户端</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>方式</th><th>请求头</th><th>使用场景</th></tr></thead><tbody>
+<tr><td>API Key</td><td><code>x-api-key: {key}</code></td><td>最简单，推荐</td></tr>
+<tr><td>Bearer Token</td><td><code>Authorization: Bearer;{token}</code></td><td>V1 API</td></tr>
+<tr><td>V2 API Key</td><td><code>X-Api-Access-Key</code>、<code>X-Api-App-Key</code></td><td>V2/V3 API</td></tr>
 </tbody></table>
 </div>
-<h3 id="console-client"><a class="header" href="#console-client">Console Client</a></h3>
-<p>Uses Volcengine OpenAPI AK/SK signature (HMAC-SHA256).</p>
-<h2 id="resource-ids-v2v3"><a class="header" href="#resource-ids-v2v3">Resource IDs (V2/V3)</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Service</th><th>Resource ID</th></tr></thead><tbody>
+<h3 id="控制台客户端"><a class="header" href="#控制台客户端">控制台客户端</a></h3>
+<p>使用火山引擎 OpenAPI AK/SK 签名（HMAC-SHA256）。</p>
+<h2 id="资源-idv2v3"><a class="header" href="#资源-idv2v3">资源 ID（V2/V3）</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>服务</th><th>资源 ID</th></tr></thead><tbody>
 <tr><td>TTS 2.0</td><td><code>seed-tts-2.0</code></td></tr>
-<tr><td>TTS 2.0 Concurrent</td><td><code>seed-tts-2.0-concurr</code></td></tr>
-<tr><td>ASR Stream</td><td><code>volc.bigasr.sauc.duration</code></td></tr>
-<tr><td>ASR File</td><td><code>volc.bigasr.auc.duration</code></td></tr>
-<tr><td>Realtime</td><td><code>volc.speech.dialog</code></td></tr>
-<tr><td>Podcast</td><td><code>volc.service_type.10050</code></td></tr>
-<tr><td>Translation</td><td><code>volc.megatts.simt</code></td></tr>
-<tr><td>Voice Clone</td><td><code>seed-icl-2.0</code></td></tr>
+<tr><td>TTS 2.0 并发</td><td><code>seed-tts-2.0-concurr</code></td></tr>
+<tr><td>ASR 流式</td><td><code>volc.bigasr.sauc.duration</code></td></tr>
+<tr><td>ASR 文件</td><td><code>volc.bigasr.auc.duration</code></td></tr>
+<tr><td>实时对话</td><td><code>volc.speech.dialog</code></td></tr>
+<tr><td>播客</td><td><code>volc.service_type.10050</code></td></tr>
+<tr><td>翻译</td><td><code>volc.megatts.simt</code></td></tr>
+<tr><td>声音克隆</td><td><code>seed-icl-2.0</code></td></tr>
 </tbody></table>
 </div>
-<h2 id="clusters-v1"><a class="header" href="#clusters-v1">Clusters (V1)</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Cluster</th><th>Service</th></tr></thead><tbody>
-<tr><td><code>volcano_tts</code></td><td>TTS Standard</td></tr>
-<tr><td><code>volcano_mega</code></td><td>TTS BigModel</td></tr>
-<tr><td><code>volcano_icl</code></td><td>Voice Clone</td></tr>
-<tr><td><code>volcengine_streaming_common</code></td><td>ASR Streaming</td></tr>
+<h2 id="集群v1"><a class="header" href="#集群v1">集群（V1）</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>集群</th><th>服务</th></tr></thead><tbody>
+<tr><td><code>volcano_tts</code></td><td>TTS 标准版</td></tr>
+<tr><td><code>volcano_mega</code></td><td>TTS 大模型版</td></tr>
+<tr><td><code>volcano_icl</code></td><td>声音克隆</td></tr>
+<tr><td><code>volcengine_streaming_common</code></td><td>ASR 流式</td></tr>
 </tbody></table>
 </div>
-<h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
+<h2 id="示例目录"><a class="header" href="#示例目录">示例目录</a></h2>
 <ul>
-<li><code>examples/go/doubaospeech/</code> - Go SDK examples</li>
-<li><code>examples/cmd/doubaospeech/</code> - CLI test scripts</li>
+<li><code>examples/go/doubaospeech/</code> - Go SDK 示例</li>
+<li><code>examples/cmd/doubaospeech/</code> - CLI 测试脚本</li>
 </ul>
-<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<h2 id="相关"><a class="header" href="#相关">相关</a></h2>
 <ul>
-<li>CLI tool: <code>go/cmd/doubaospeech/</code></li>
-<li>CLI tests: <code>examples/cmd/doubaospeech/</code></li>
+<li>CLI 工具：<code>go/cmd/doubaospeech/</code></li>
+<li>CLI 测试：<code>examples/cmd/doubaospeech/</code></li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/dashscope/api/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/dashscope/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/doubaospeech/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/doubaospeech/api/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -274,11 +272,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/dashscope/api/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/dashscope/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/doubaospeech/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/doubaospeech/api/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -304,6 +302,7 @@
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

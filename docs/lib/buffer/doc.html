@@ -160,44 +160,50 @@
 <p>Thread-safe streaming buffer implementations for producer-consumer patterns.</p>
 <h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
 <ol>
-<li><strong>Type Safety</strong>: Generic buffers supporting any element type (not just bytes)</li>
-<li><strong>Thread Safety</strong>: All operations are safe for concurrent access</li>
-<li><strong>Blocking Semantics</strong>: Support for blocking reads/writes with proper shutdown</li>
-<li><strong>Flow Control</strong>: Different strategies for handling full buffers</li>
+<li><strong>Type-safe</strong>: Generic buffers for any element type (not limited to bytes)</li>
+<li><strong>Thread-safe</strong>: All operations support concurrent access</li>
+<li><strong>Blocking Semantics</strong>: Support blocking read/write with proper close mechanics</li>
+<li><strong>Flow Control</strong>: Different policies for handling full buffers</li>
 </ol>
 <h2 id="buffer-types"><a class="header" href="#buffer-types">Buffer Types</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Type</th><th>Full Behavior</th><th>Empty Behavior</th><th>Use Case</th></tr></thead><tbody>
-<tr><td><strong>Buffer</strong></td><td>Grows</td><td>Blocks</td><td>Variable-size data, unknown total size</td></tr>
-<tr><td><strong>BlockBuffer</strong></td><td>Blocks</td><td>Blocks</td><td>Flow control, bounded memory</td></tr>
-<tr><td><strong>RingBuffer</strong></td><td>Overwrites</td><td>Blocks</td><td>Sliding window, recent data only</td></tr>
+<tr><td><strong>Buffer</strong></td><td>Grow</td><td>Block</td><td>Variable-size data, unknown total size</td></tr>
+<tr><td><strong>BlockBuffer</strong></td><td>Block</td><td>Block</td><td>Flow control, bounded memory</td></tr>
+<tr><td><strong>RingBuffer</strong></td><td>Overwrite</td><td>Block</td><td>Sliding window, latest data only</td></tr>
 </tbody></table>
 </div>
 <h3 id="buffer-growable"><a class="header" href="#buffer-growable">Buffer (Growable)</a></h3>
-<p>A dynamically growing buffer that never blocks on write. Ideal for scenarios where:</p>
+<p>A dynamically growing buffer that never blocks writes. Ideal for scenarios where:</p>
 <ul>
-<li>Data size is unknown in advance</li>
+<li>Data size is not known in advance</li>
 <li>Memory is not constrained</li>
-<li>Writer should never be blocked</li>
+<li>Writer should never block</li>
 </ul>
-<pre><code>Writer ──► [grow as needed] ──► Reader (blocks when empty)
+<pre><code class="language-mermaid">flowchart LR
+    W[Writer] --&gt; B["[Grows on demand]"]
+    B --&gt; R["Reader&lt;br/&gt;(blocks when empty)"]
 </code></pre>
 <h3 id="blockbuffer-fixed-blocking"><a class="header" href="#blockbuffer-fixed-blocking">BlockBuffer (Fixed, Blocking)</a></h3>
-<p>A fixed-size circular buffer that blocks both readers and writers. Provides backpressure for flow control:</p>
+<p>A fixed-size circular buffer that blocks on both read and write. Provides backpressure for flow control:</p>
 <ul>
 <li>Writer blocks when buffer is full</li>
 <li>Reader blocks when buffer is empty</li>
 <li>Predictable memory usage</li>
 </ul>
-<pre><code>Writer (blocks when full) ──► [fixed size] ──► Reader (blocks when empty)
+<pre><code class="language-mermaid">flowchart LR
+    W["Writer&lt;br/&gt;(blocks when full)"] --&gt; B["[Fixed Size]"]
+    B --&gt; R["Reader&lt;br/&gt;(blocks when empty)"]
 </code></pre>
 <h3 id="ringbuffer-fixed-overwriting"><a class="header" href="#ringbuffer-fixed-overwriting">RingBuffer (Fixed, Overwriting)</a></h3>
-<p>A fixed-size circular buffer that overwrites oldest data when full. Perfect for:</p>
+<p>A fixed-size circular buffer that overwrites oldest data when full. Ideal for:</p>
 <ul>
-<li>Maintaining a sliding window of recent data</li>
-<li>Real-time data where old samples are obsolete</li>
-<li>Bounded memory with data freshness priority</li>
+<li>Maintaining a sliding window of latest data</li>
+<li>Real-time data where older samples are stale</li>
+<li>Memory-bounded with freshness priority</li>
 </ul>
-<pre><code>Writer ──► [overwrites oldest] ──► Reader (blocks when empty)
+<pre><code class="language-mermaid">flowchart LR
+    W[Writer] --&gt; B["[Overwrites oldest]"]
+    B --&gt; R["Reader&lt;br/&gt;(blocks when empty)"]
 </code></pre>
 <h2 id="common-interface"><a class="header" href="#common-interface">Common Interface</a></h2>
 <p>All buffer types share a consistent interface:</p>
@@ -209,25 +215,35 @@
 <tr><td><code>Discard(n)</code></td><td>Skip n elements without reading</td></tr>
 <tr><td><code>Len()</code></td><td>Current element count</td></tr>
 <tr><td><code>Reset()</code></td><td>Clear all data</td></tr>
-<tr><td><code>CloseWrite()</code></td><td>Graceful shutdown (drain allowed)</td></tr>
-<tr><td><code>CloseWithError(err)</code></td><td>Immediate shutdown with error</td></tr>
+<tr><td><code>CloseWrite()</code></td><td>Graceful close (allow drain)</td></tr>
+<tr><td><code>CloseWithError(err)</code></td><td>Immediate close with error</td></tr>
 <tr><td><code>Close()</code></td><td>Close both ends</td></tr>
-<tr><td><code>Error()</code></td><td>Get close error if any</td></tr>
+<tr><td><code>Error()</code></td><td>Get close error (if any)</td></tr>
 </tbody></table>
 </div>
-<h2 id="shutdown-semantics"><a class="header" href="#shutdown-semantics">Shutdown Semantics</a></h2>
-<h3 id="closewrite---graceful-shutdown"><a class="header" href="#closewrite---graceful-shutdown">CloseWrite() - Graceful Shutdown</a></h3>
-<ul>
-<li>Prevents new writes (returns error)</li>
-<li>Allows reading existing data</li>
-<li>Returns EOF/Done when empty</li>
-</ul>
-<h3 id="closewitherrorerr---immediate-shutdown"><a class="header" href="#closewitherrorerr---immediate-shutdown">CloseWithError(err) - Immediate Shutdown</a></h3>
-<ul>
-<li>Immediately closes both ends</li>
-<li>All operations return the error</li>
-<li>Clears internal buffer</li>
-</ul>
+<h2 id="close-semantics"><a class="header" href="#close-semantics">Close Semantics</a></h2>
+<h3 id="closewrite---graceful"><a class="header" href="#closewrite---graceful">CloseWrite() - Graceful</a></h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant W as Writer
+    participant B as Buffer
+    participant R as Reader
+    W-&gt;&gt;B: CloseWrite()
+    Note over B: No new writes
+    R-&gt;&gt;B: Read()
+    B--&gt;&gt;R: Remaining data
+    R-&gt;&gt;B: Read()
+    B--&gt;&gt;R: EOF
+</code></pre>
+<h3 id="closewitherrorerr---immediate"><a class="header" href="#closewitherrorerr---immediate">CloseWithError(err) - Immediate</a></h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant W as Writer
+    participant B as Buffer
+    participant R as Reader
+    W-&gt;&gt;B: CloseWithError(err)
+    Note over B: Both ends closed
+    R-&gt;&gt;B: Read()
+    B--&gt;&gt;R: err
+</code></pre>
 <h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
 <ul>
 <li><code>examples/go/buffer/</code> - Go usage examples</li>
@@ -235,24 +251,26 @@
 </ul>
 <h2 id="implementation-notes"><a class="header" href="#implementation-notes">Implementation Notes</a></h2>
 <h3 id="memory-layout"><a class="header" href="#memory-layout">Memory Layout</a></h3>
-<pre><code>Buffer:      [dynamic slice] ──► grows via append
-BlockBuffer: [fixed circular] ──► head/tail pointers wrap
-RingBuffer:  [fixed circular] ──► overwrites when head catches tail
-</code></pre>
+<div class="table-wrapper"><table><thead><tr><th>Type</th><th>Layout</th></tr></thead><tbody>
+<tr><td>Buffer</td><td>Dynamic slice → grows via append</td></tr>
+<tr><td>BlockBuffer</td><td>Fixed circular → head/tail pointers wrap</td></tr>
+<tr><td>RingBuffer</td><td>Fixed circular → overwrites when head catches tail</td></tr>
+</tbody></table>
+</div>
 <h3 id="notification-mechanism"><a class="header" href="#notification-mechanism">Notification Mechanism</a></h3>
 <ul>
-<li><strong>Go</strong>: Channel-based (<code>writeNotify chan struct{}</code>) or Cond variable</li>
+<li><strong>Go</strong>: Channel-based (<code>writeNotify chan struct{}</code>) or Cond variables</li>
 <li><strong>Rust</strong>: Condvar-based (<code>Condvar::notify_one/all</code>)</li>
 </ul>
 <h3 id="thread-safety"><a class="header" href="#thread-safety">Thread Safety</a></h3>
 <ul>
-<li><strong>Go</strong>: <code>sync.Mutex</code> + <code>sync.Cond</code> / channel</li>
+<li><strong>Go</strong>: <code>sync.Mutex</code> + <code>sync.Cond</code> / channels</li>
 <li><strong>Rust</strong>: <code>Mutex&lt;State&gt;</code> + <code>Condvar</code>, wrapped in <code>Arc</code> for cloning</li>
 </ul>
 <h2 id="related-packages"><a class="header" href="#related-packages">Related Packages</a></h2>
 <ul>
-<li><code>audio/pcm</code> - Uses buffers for PCM audio streaming</li>
-<li><code>chatgear</code> - Uses buffers for audio frame transport</li>
+<li><code>audio/pcm</code> - Uses buffers for PCM audio streams</li>
+<li><code>chatgear</code> - Uses buffers for audio frame transmission</li>
 <li><code>opusrt</code> - Uses RingBuffer for jitter buffering</li>
 </ul>
 
@@ -260,7 +278,7 @@ RingBuffer:  [fixed circular] ──► overwrites when head catches tail
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../outline.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/mqtt0/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -274,7 +292,7 @@ RingBuffer:  [fixed circular] ──► overwrites when head catches tail
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../outline.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/mqtt0/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
@@ -304,6 +322,7 @@ RingBuffer:  [fixed circular] ──► overwrites when head catches tail
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

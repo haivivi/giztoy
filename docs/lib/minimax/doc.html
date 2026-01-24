@@ -184,24 +184,29 @@
 </tbody></table>
 </div>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌──────────────────────────────────────────────────────────┐
-│                      Client                              │
-├──────────────────────────────────────────────────────────┤
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
-│ │   Text   │ │  Speech  │ │  Voice   │ │  Video   │     │
-│ │ Service  │ │ Service  │ │ Service  │ │ Service  │     │
-│ └──────────┘ └──────────┘ └──────────┘ └──────────┘     │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐                  │
-│ │  Image   │ │  Music   │ │   File   │                  │
-│ │ Service  │ │ Service  │ │ Service  │                  │
-│ └──────────┘ └──────────┘ └──────────┘                  │
-├──────────────────────────────────────────────────────────┤
-│                    HTTP Client                           │
-│            (retry, auth, error handling)                 │
-└──────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-              https://api.minimaxi.com
+<pre><code class="language-mermaid">graph TB
+    subgraph client["Client"]
+        subgraph services1[" "]
+            text[Text Service]
+            speech[Speech Service]
+            voice[Voice Service]
+            video[Video Service]
+        end
+        subgraph services2[" "]
+            image[Image Service]
+            music[Music Service]
+            file[File Service]
+        end
+    end
+    
+    subgraph http["HTTP Client"]
+        retry[Retry]
+        auth[Auth]
+        error[Error Handling]
+    end
+    
+    client --&gt; http
+    http --&gt; api["https://api.minimaxi.com"]
 </code></pre>
 <h2 id="services"><a class="header" href="#services">Services</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Service</th><th>Description</th></tr></thead><tbody>
@@ -236,11 +241,17 @@
 </ul>
 <h3 id="async-tasks"><a class="header" href="#async-tasks">Async Tasks</a></h3>
 <p>For long-running operations (video, async speech):</p>
-<ol>
-<li>Create task → get <code>task_id</code></li>
-<li>Poll status → <code>Pending</code>/<code>Running</code>/<code>Success</code>/<code>Failed</code></li>
-<li>Retrieve result on success</li>
-</ol>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as Client
+    participant S as Server
+    C-&gt;&gt;S: Create Task
+    S--&gt;&gt;C: task_id
+    loop Poll Status
+        C-&gt;&gt;S: Query Status
+        S--&gt;&gt;C: Pending/Running
+    end
+    S--&gt;&gt;C: Success + Result
+</code></pre>
 <h2 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h2>
 <p>All errors include:</p>
 <ul>
@@ -270,11 +281,11 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/audio/opusrt/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/audio/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/minimax/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/minimax/api/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -284,11 +295,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/audio/opusrt/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/audio/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/minimax/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/minimax/api/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -314,6 +325,7 @@
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

@@ -193,27 +193,25 @@
 </tbody></table>
 </div>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌──────────────────────────────────────────────────────────┐
-│                      Client                              │
-├──────────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │               V1 Services (Classic)                 │ │
-│ │  ┌──────────┐ ┌──────────┐                         │ │
-│ │  │   TTS    │ │   ASR    │                         │ │
-│ │  └──────────┘ └──────────┘                         │ │
-│ └─────────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │               V2 Services (BigModel)                │ │
-│ │  ┌──────────┐ ┌──────────┐ ┌──────────────────────┐│ │
-│ │  │  TTSV2   │ │  ASRV2   │ │ VoiceClone, Realtime ││ │
-│ │  └──────────┘ └──────────┘ │ Meeting, Podcast     ││ │
-│ │                            │ Translation, Media   ││ │
-│ │                            └──────────────────────┘│ │
-│ └─────────────────────────────────────────────────────┘ │
-├──────────────────────────────────────────────────────────┤
-│                     Console Client                       │
-│          (AK/SK Signature Authentication)                │
-└──────────────────────────────────────────────────────────┘
+<pre><code class="language-mermaid">graph TB
+    subgraph client["Client"]
+        subgraph v1["V1 Services (Classic)"]
+            tts1[TTS]
+            asr1[ASR]
+        end
+        subgraph v2["V2 Services (BigModel)"]
+            tts2[TTSV2]
+            asr2[ASRV2]
+            advanced["VoiceClone&lt;br/&gt;Realtime&lt;br/&gt;Meeting&lt;br/&gt;Podcast&lt;br/&gt;Translation&lt;br/&gt;Media"]
+        end
+    end
+    
+    subgraph console["Console Client"]
+        aksig["AK/SK Signature&lt;br/&gt;Authentication"]
+    end
+    
+    client --&gt; api["Volcengine API"]
+    console --&gt; api
 </code></pre>
 <h2 id="authentication-methods"><a class="header" href="#authentication-methods">Authentication Methods</a></h2>
 <h3 id="speech-api-client"><a class="header" href="#speech-api-client">Speech API Client</a></h3>
@@ -260,11 +258,11 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/dashscope/api/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/dashscope/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/doubaospeech/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/doubaospeech/api/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -274,11 +272,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/dashscope/api/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/dashscope/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/doubaospeech/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/doubaospeech/api/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -304,6 +302,7 @@
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

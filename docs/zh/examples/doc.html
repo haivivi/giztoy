@@ -156,78 +156,76 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="examples"><a class="header" href="#examples">Examples</a></h1>
-<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
-<p>This document describes the <code>examples/</code> directory layout and how to run the
-included example programs and CLI scripts. Examples are grouped by language
-and by SDK.</p>
-<h2 id="directory-layout"><a class="header" href="#directory-layout">Directory Layout</a></h2>
-<pre><code>examples/
-├── cmd/                     # CLI test scripts (shell)
-│   ├── minimax/
-│   │   ├── run.sh
-│   │   └── commands/
-│   └── doubaospeech/
-│       ├── run.sh
-│       └── commands/
-├── go/                      # Go examples (single module)
-│   ├── go.mod
-│   ├── audio/
-│   ├── dashscope/
-│   ├── doubaospeech/
-│   ├── genx/
-│   └── minimax/
-└── rust/                    # Rust examples
-    └── minimax/
-        ├── Cargo.toml
-        └── src/bin/
+                        <h1 id="示例"><a class="header" href="#示例">示例</a></h1>
+<h2 id="概述"><a class="header" href="#概述">概述</a></h2>
+<p>本文档描述了 <code>examples/</code> 目录布局以及如何运行其中包含的示例程序和 CLI 脚本。示例按语言和 SDK 分组。</p>
+<h2 id="目录布局"><a class="header" href="#目录布局">目录布局</a></h2>
+<pre><code class="language-mermaid">graph LR
+    subgraph examples["examples/"]
+        subgraph cmd["cmd/"]
+            mm_cmd["minimax/&lt;br/&gt;run.sh&lt;br/&gt;commands/"]
+            db_cmd["doubaospeech/&lt;br/&gt;run.sh&lt;br/&gt;commands/"]
+        end
+        
+        subgraph go["go/"]
+            gomod[go.mod]
+            go_audio[audio/]
+            go_dash[dashscope/]
+            go_doubao[doubaospeech/]
+            go_genx[genx/]
+            go_minimax[minimax/]
+        end
+        
+        subgraph rust["rust/"]
+            rust_mm["minimax/&lt;br/&gt;Cargo.toml&lt;br/&gt;src/bin/"]
+        end
+    end
 </code></pre>
-<h2 id="how-to-run"><a class="header" href="#how-to-run">How to Run</a></h2>
-<h3 id="cli-script-examples"><a class="header" href="#cli-script-examples">CLI Script Examples</a></h3>
+<h2 id="如何运行"><a class="header" href="#如何运行">如何运行</a></h2>
+<h3 id="cli-脚本示例"><a class="header" href="#cli-脚本示例">CLI 脚本示例</a></h3>
 <ul>
-<li>Minimax CLI test runner:
+<li>Minimax CLI 测试运行器：
 <ul>
 <li><code>./examples/cmd/minimax/run.sh go 1</code></li>
-<li>Bazel: <code>bazel run //examples/cmd/minimax:run -- go 1</code></li>
+<li>Bazel：<code>bazel run //examples/cmd/minimax:run -- go 1</code></li>
 </ul>
 </li>
-<li>Doubao Speech CLI test runner:
+<li>豆包语音 CLI 测试运行器：
 <ul>
 <li><code>./examples/cmd/doubaospeech/run.sh tts</code></li>
-<li>Bazel: <code>bazel run //examples/cmd/doubaospeech:run -- tts</code></li>
+<li>Bazel：<code>bazel run //examples/cmd/doubaospeech:run -- tts</code></li>
 </ul>
 </li>
 </ul>
-<h3 id="go-examples"><a class="header" href="#go-examples">Go Examples</a></h3>
-<p>All Go examples share one module at <code>examples/go/go.mod</code> and depend on the
-local <code>go/</code> module via <code>replace</code>.</p>
+<h3 id="go-示例"><a class="header" href="#go-示例">Go 示例</a></h3>
+<p>所有 Go 示例共享 <code>examples/go/go.mod</code> 中的一个模块，并通过 <code>replace</code> 依赖于本地 <code>go/</code> 模块。</p>
 <ul>
-<li>Build all Go examples:
+<li>构建所有 Go 示例：
 <ul>
 <li><code>cd examples/go &amp;&amp; go build ./...</code></li>
 </ul>
 </li>
 </ul>
-<h3 id="rust-examples"><a class="header" href="#rust-examples">Rust Examples</a></h3>
-<p>Rust examples are independent crates.</p>
+<h3 id="rust-示例"><a class="header" href="#rust-示例">Rust 示例</a></h3>
+<p>Rust 示例是独立的 crate。</p>
 <ul>
-<li>Build the MiniMax Rust examples:
+<li>构建 MiniMax Rust 示例：
 <ul>
 <li><code>cd examples/rust/minimax &amp;&amp; cargo build --release</code></li>
 </ul>
 </li>
 </ul>
-<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
+<h2 id="注意事项"><a class="header" href="#注意事项">注意事项</a></h2>
 <ul>
-<li>Example binaries often depend on environment variables for API keys.</li>
-<li>Refer to the SDK docs under <code>docs/lib/{sdk}/</code> for configuration details.</li>
+<li>示例二进制文件通常依赖于 API 密钥的环境变量。</li>
+<li>有关配置详情，请参阅 <code>docs/lib/{sdk}/</code> 下的 SDK 文档。</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../packages-comparison.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../outline.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -241,7 +239,7 @@ local <code>go/</code> module via <code>replace</code>.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../packages-comparison.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../outline.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
@@ -271,6 +269,7 @@ local <code>go/</code> module via <code>replace</code>.</p>
         <!-- Custom JS scripts -->
         <script src="../mermaid.min.js"></script>
         <script src="../mermaid-init.js"></script>
+        <script src="../lang-switch.js"></script>
 
 
     </div>

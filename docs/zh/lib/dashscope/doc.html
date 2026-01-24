@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>DashScope - Giztoy 文档</title>
+        <title>DashScope 通义千问 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -157,116 +157,108 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="dashscope-sdk"><a class="header" href="#dashscope-sdk">DashScope SDK</a></h1>
-<p>Go and Rust SDK for Aliyun DashScope (百炼 Model Studio) APIs.</p>
+<p>阿里云 DashScope（百炼模型工作室）API 的 Go 和 Rust SDK。</p>
 <blockquote>
-<p><strong>Official API Documentation</strong>: <a href="./api/README.html">api/README.md</a></p>
+<p><strong>官方 API 文档</strong>：<a href="./api/README.html">api/README.md</a></p>
 </blockquote>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>Realtime Focus</strong>: Primarily implement Qwen-Omni-Realtime WebSocket API</li>
-<li><strong>OpenAI Compatibility</strong>: Text/chat APIs use OpenAI-compatible SDK</li>
-<li><strong>Native WebSocket</strong>: Direct WebSocket implementation, not polling</li>
+<li><strong>实时优先</strong>：主要实现 Qwen-Omni-Realtime WebSocket API</li>
+<li><strong>OpenAI 兼容</strong>：文本/聊天 API 使用 OpenAI 兼容 SDK</li>
+<li><strong>原生 WebSocket</strong>：直接 WebSocket 实现，非轮询</li>
 </ol>
-<h2 id="scope"><a class="header" href="#scope">Scope</a></h2>
-<p>This SDK focuses on <strong>Qwen-Omni-Realtime</strong> API for real-time multimodal conversation. For standard text APIs, use OpenAI-compatible SDKs.</p>
-<div class="table-wrapper"><table><thead><tr><th>API</th><th style="text-align: center">SDK Coverage</th><th>Alternative</th></tr></thead><tbody>
-<tr><td>Text Chat</td><td style="text-align: center">❌</td><td>OpenAI SDK with custom base URL</td></tr>
-<tr><td>App/Agent</td><td style="text-align: center">❌</td><td>Direct HTTP calls</td></tr>
-<tr><td>Realtime</td><td style="text-align: center">✅</td><td><strong>This SDK</strong></td></tr>
+<h2 id="范围"><a class="header" href="#范围">范围</a></h2>
+<p>本 SDK 专注于 <strong>Qwen-Omni-Realtime</strong> API，用于实时多模态对话。对于标准文本 API，请使用 OpenAI 兼容 SDK。</p>
+<div class="table-wrapper"><table><thead><tr><th>API</th><th style="text-align: center">SDK 覆盖</th><th>替代方案</th></tr></thead><tbody>
+<tr><td>文本聊天</td><td style="text-align: center">❌</td><td>使用自定义 base URL 的 OpenAI SDK</td></tr>
+<tr><td>应用/智能体</td><td style="text-align: center">❌</td><td>直接 HTTP 调用</td></tr>
+<tr><td>实时</td><td style="text-align: center">✅</td><td><strong>本 SDK</strong></td></tr>
 </tbody></table>
 </div>
-<h2 id="api-coverage"><a class="header" href="#api-coverage">API Coverage</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Feature</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th><th>Official Doc</th></tr></thead><tbody>
-<tr><td>Realtime Session</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/realtime/">api/realtime/</a></td></tr>
-<tr><td>Audio Input/Output</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
-<tr><td>Function Calls</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
-<tr><td>Text Input</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
-<tr><td>Video Input</td><td style="text-align: center">⚠️</td><td style="text-align: center">⚠️</td><td>Limited support</td></tr>
+<h2 id="api-覆盖"><a class="header" href="#api-覆盖">API 覆盖</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>功能</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th><th>官方文档</th></tr></thead><tbody>
+<tr><td>实时会话</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/realtime/">api/realtime/</a></td></tr>
+<tr><td>音频输入/输出</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>函数调用</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>文本输入</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td></td></tr>
+<tr><td>视频输入</td><td style="text-align: center">⚠️</td><td style="text-align: center">⚠️</td><td>有限支持</td></tr>
 </tbody></table>
 </div>
-<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌─────────────────────────────────────────┐
-│              Client                      │
-├─────────────────────────────────────────┤
-│          RealtimeService                 │
-│   ┌─────────────────────────────────┐   │
-│   │       RealtimeSession           │   │
-│   │  ┌───────────┐ ┌───────────┐    │   │
-│   │  │   Send    │ │  Receive  │    │   │
-│   │  │  Events   │ │  Events   │    │   │
-│   │  └───────────┘ └───────────┘    │   │
-│   └─────────────────────────────────┘   │
-└─────────────────────────────────────────┘
-                    │
-                    ▼
-       wss://dashscope.aliyuncs.com/api-ws/v1/realtime
+<h2 id="架构"><a class="header" href="#架构">架构</a></h2>
+<pre><code class="language-mermaid">graph TB
+    subgraph client["Client"]
+        subgraph realtime["RealtimeService"]
+            session["RealtimeSession"]
+            send["发送事件"]
+            recv["接收事件"]
+        end
+    end
+    
+    client --&gt; ws["wss://dashscope.aliyuncs.com&lt;br/&gt;/api-ws/v1/realtime"]
 </code></pre>
-<h2 id="authentication"><a class="header" href="#authentication">Authentication</a></h2>
+<h2 id="认证"><a class="header" href="#认证">认证</a></h2>
 <pre><code>Authorization: Bearer &lt;api_key&gt;
 </code></pre>
-<p>Optional workspace isolation:</p>
+<p>可选的工作空间隔离：</p>
 <pre><code>X-DashScope-WorkSpace: &lt;workspace_id&gt;
 </code></pre>
-<h2 id="base-urls"><a class="header" href="#base-urls">Base URLs</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Region</th><th>WebSocket URL</th></tr></thead><tbody>
-<tr><td>China (Beijing)</td><td><code>wss://dashscope.aliyuncs.com/api-ws/v1/realtime</code></td></tr>
-<tr><td>International (Singapore)</td><td><code>wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime</code></td></tr>
+<h2 id="基础-url"><a class="header" href="#基础-url">基础 URL</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>区域</th><th>WebSocket URL</th></tr></thead><tbody>
+<tr><td>中国（北京）</td><td><code>wss://dashscope.aliyuncs.com/api-ws/v1/realtime</code></td></tr>
+<tr><td>国际（新加坡）</td><td><code>wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime</code></td></tr>
 </tbody></table>
 </div>
-<h2 id="models"><a class="header" href="#models">Models</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Model</th><th>Input</th><th>Output</th><th>Sample Rate</th></tr></thead><tbody>
-<tr><td><code>qwen-omni-turbo-realtime</code></td><td>audio/text</td><td>audio/text</td><td>16kHz</td></tr>
-<tr><td><code>qwen3-omni-flash-realtime</code></td><td>audio/text/video</td><td>audio/text</td><td>24kHz</td></tr>
+<h2 id="模型"><a class="header" href="#模型">模型</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>模型</th><th>输入</th><th>输出</th><th>采样率</th></tr></thead><tbody>
+<tr><td><code>qwen-omni-turbo-realtime</code></td><td>音频/文本</td><td>音频/文本</td><td>16kHz</td></tr>
+<tr><td><code>qwen3-omni-flash-realtime</code></td><td>音频/文本/视频</td><td>音频/文本</td><td>24kHz</td></tr>
 </tbody></table>
 </div>
-<h2 id="event-flow"><a class="header" href="#event-flow">Event Flow</a></h2>
-<pre><code>Client                                     Server
-   |                                         |
-   |------ session.update ------------------&gt;|
-   |                                         |
-   |------ input_audio_buffer.append -------&gt;|
-   |                                         |
-   |------ response.create -----------------&gt;|
-   |                                         |
-   |&lt;----- response.audio.delta -------------|
-   |&lt;----- response.audio.delta -------------|
-   |&lt;----- response.done --------------------|
-   |                                         |
+<h2 id="事件流"><a class="header" href="#事件流">事件流</a></h2>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as 客户端
+    participant S as 服务器
+    C-&gt;&gt;S: session.update
+    C-&gt;&gt;S: input_audio_buffer.append
+    C-&gt;&gt;S: response.create
+    S--&gt;&gt;C: response.audio.delta
+    S--&gt;&gt;C: response.audio.delta
+    S--&gt;&gt;C: response.done
 </code></pre>
-<h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
+<h2 id="示例目录"><a class="header" href="#示例目录">示例目录</a></h2>
 <ul>
-<li><code>examples/go/dashscope/</code> - Go SDK examples</li>
-<li><code>examples/cmd/dashscope/</code> - CLI test scripts</li>
+<li><code>examples/go/dashscope/</code> - Go SDK 示例</li>
+<li><code>examples/cmd/dashscope/</code> - CLI 测试脚本</li>
 </ul>
-<h2 id="for-textchat-apis"><a class="header" href="#for-textchat-apis">For Text/Chat APIs</a></h2>
-<p>Use OpenAI-compatible SDK:</p>
-<p><strong>Go:</strong></p>
+<h2 id="对于文本聊天-api"><a class="header" href="#对于文本聊天-api">对于文本/聊天 API</a></h2>
+<p>使用 OpenAI 兼容 SDK：</p>
+<p><strong>Go：</strong></p>
 <pre><code class="language-go">import "github.com/sashabaranov/go-openai"
 
 config := openai.DefaultConfig(apiKey)
 config.BaseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 client := openai.NewClientWithConfig(config)
 </code></pre>
-<p><strong>Rust:</strong></p>
+<p><strong>Rust：</strong></p>
 <pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
 </span><span class="boring">fn main() {
-</span>// Use async-openai with custom base URL
+</span>// 使用带自定义 base URL 的 async-openai
 <span class="boring">}</span></code></pre></pre>
-<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<h2 id="相关"><a class="header" href="#相关">相关</a></h2>
 <ul>
-<li>CLI tool: <code>go/cmd/dashscope/</code></li>
-<li>CLI tests: <code>examples/cmd/dashscope/</code></li>
+<li>CLI 工具：<code>go/cmd/dashscope/</code></li>
+<li>CLI 测试：<code>examples/cmd/dashscope/</code></li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/minimax/api/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/minimax/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/dashscope/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/dashscope/api/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -276,11 +268,11 @@ client := openai.NewClientWithConfig(config)
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/minimax/api/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/minimax/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/dashscope/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/dashscope/api/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -306,6 +298,7 @@ client := openai.NewClientWithConfig(config)
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

@@ -157,124 +157,135 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="minimax-sdk"><a class="header" href="#minimax-sdk">MiniMax SDK</a></h1>
-<p>Go and Rust SDK for the MiniMax AI platform API.</p>
+<p>MiniMax AI 平台 API 的 Go 和 Rust SDK。</p>
 <blockquote>
-<p><strong>Official API Documentation</strong>: <a href="./api/README.html">api/README.md</a></p>
+<p><strong>官方 API 文档</strong>：<a href="./api/README.html">api/README.md</a></p>
 </blockquote>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>Full API Coverage</strong>: Support all MiniMax API capabilities</li>
-<li><strong>Idiomatic Language Design</strong>: Natural Go/Rust patterns</li>
-<li><strong>Streaming Support</strong>: First-class support for streaming responses</li>
-<li><strong>Async Task Handling</strong>: Convenient polling for long-running operations</li>
+<li><strong>完整 API 覆盖</strong>：支持所有 MiniMax API 功能</li>
+<li><strong>地道的语言设计</strong>：自然的 Go/Rust 模式</li>
+<li><strong>流式支持</strong>：一流的流式响应支持</li>
+<li><strong>异步任务处理</strong>：便捷的长时间操作轮询</li>
 </ol>
-<h2 id="api-coverage"><a class="header" href="#api-coverage">API Coverage</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>API Feature</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th><th>Official Doc</th></tr></thead><tbody>
-<tr><td>Text Generation (Chat)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/text.html">api/text.md</a></td></tr>
-<tr><td>Sync Speech (T2A)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/speech-t2a.html">api/speech-t2a.md</a></td></tr>
-<tr><td>Async Speech (Long Text)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/speech-t2a-async.html">api/speech-t2a-async.md</a></td></tr>
-<tr><td>Voice Cloning</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/voice-cloning.html">api/voice-cloning.md</a></td></tr>
-<tr><td>Voice Design</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/voice-design.html">api/voice-design.md</a></td></tr>
-<tr><td>Voice Management</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/voice-management.html">api/voice-management.md</a></td></tr>
-<tr><td>Video Generation</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/video.html">api/video.md</a></td></tr>
-<tr><td>Video Agent</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/video-agent.html">api/video-agent.md</a></td></tr>
-<tr><td>Image Generation</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/image.html">api/image.md</a></td></tr>
-<tr><td>Music Generation</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/music.html">api/music.md</a></td></tr>
-<tr><td>File Management</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/file.html">api/file.md</a></td></tr>
+<h2 id="api-覆盖"><a class="header" href="#api-覆盖">API 覆盖</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>API 功能</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th><th>官方文档</th></tr></thead><tbody>
+<tr><td>文本生成（聊天）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/text.html">api/text.md</a></td></tr>
+<tr><td>同步语音（T2A）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/speech-t2a.html">api/speech-t2a.md</a></td></tr>
+<tr><td>异步语音（长文本）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/speech-t2a-async.html">api/speech-t2a-async.md</a></td></tr>
+<tr><td>声音克隆</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/voice-cloning.html">api/voice-cloning.md</a></td></tr>
+<tr><td>声音设计</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/voice-design.html">api/voice-design.md</a></td></tr>
+<tr><td>声音管理</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/voice-management.html">api/voice-management.md</a></td></tr>
+<tr><td>视频生成</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/video.html">api/video.md</a></td></tr>
+<tr><td>视频 Agent</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/video-agent.html">api/video-agent.md</a></td></tr>
+<tr><td>图像生成</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/image.html">api/image.md</a></td></tr>
+<tr><td>音乐生成</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/music.html">api/music.md</a></td></tr>
+<tr><td>文件管理</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td><td><a href="./api/file.html">api/file.md</a></td></tr>
 </tbody></table>
 </div>
-<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌──────────────────────────────────────────────────────────┐
-│                      Client                              │
-├──────────────────────────────────────────────────────────┤
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐     │
-│ │   Text   │ │  Speech  │ │  Voice   │ │  Video   │     │
-│ │ Service  │ │ Service  │ │ Service  │ │ Service  │     │
-│ └──────────┘ └──────────┘ └──────────┘ └──────────┘     │
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐                  │
-│ │  Image   │ │  Music   │ │   File   │                  │
-│ │ Service  │ │ Service  │ │ Service  │                  │
-│ └──────────┘ └──────────┘ └──────────┘                  │
-├──────────────────────────────────────────────────────────┤
-│                    HTTP Client                           │
-│            (retry, auth, error handling)                 │
-└──────────────────────────────────────────────────────────┘
-                         │
-                         ▼
-              https://api.minimaxi.com
+<h2 id="架构"><a class="header" href="#架构">架构</a></h2>
+<pre><code class="language-mermaid">graph TB
+    subgraph client["Client"]
+        subgraph services1[" "]
+            text[文本服务]
+            speech[语音服务]
+            voice[声音服务]
+            video[视频服务]
+        end
+        subgraph services2[" "]
+            image[图像服务]
+            music[音乐服务]
+            file[文件服务]
+        end
+    end
+    
+    subgraph http["HTTP 客户端"]
+        retry[重试]
+        auth[认证]
+        error[错误处理]
+    end
+    
+    client --&gt; http
+    http --&gt; api["https://api.minimaxi.com"]
 </code></pre>
-<h2 id="services"><a class="header" href="#services">Services</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Service</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>Text</code></td><td>Chat completion, streaming, tool calls</td></tr>
-<tr><td><code>Speech</code></td><td>TTS sync/stream, async long-text</td></tr>
-<tr><td><code>Voice</code></td><td>List voices, clone, design</td></tr>
-<tr><td><code>Video</code></td><td>Text-to-video, image-to-video, agent</td></tr>
-<tr><td><code>Image</code></td><td>Text-to-image, image reference</td></tr>
-<tr><td><code>Music</code></td><td>Music generation from lyrics</td></tr>
-<tr><td><code>File</code></td><td>Upload, list, retrieve, delete files</td></tr>
+<h2 id="服务"><a class="header" href="#服务">服务</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>服务</th><th>描述</th></tr></thead><tbody>
+<tr><td><code>Text</code></td><td>聊天补全、流式、工具调用</td></tr>
+<tr><td><code>Speech</code></td><td>TTS 同步/流式、异步长文本</td></tr>
+<tr><td><code>Voice</code></td><td>声音列表、克隆、设计</td></tr>
+<tr><td><code>Video</code></td><td>文本生成视频、图像生成视频、Agent</td></tr>
+<tr><td><code>Image</code></td><td>文本生成图像、图像参考</td></tr>
+<tr><td><code>Music</code></td><td>从歌词生成音乐</td></tr>
+<tr><td><code>File</code></td><td>上传、列表、获取、删除文件</td></tr>
 </tbody></table>
 </div>
-<h2 id="authentication"><a class="header" href="#authentication">Authentication</a></h2>
-<p>Uses Bearer token authentication:</p>
+<h2 id="认证"><a class="header" href="#认证">认证</a></h2>
+<p>使用 Bearer Token 认证：</p>
 <pre><code>Authorization: Bearer &lt;api_key&gt;
 </code></pre>
-<p>API keys are obtained from <a href="https://platform.minimaxi.com">MiniMax Platform</a>.</p>
-<h2 id="base-urls"><a class="header" href="#base-urls">Base URLs</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Region</th><th>URL</th></tr></thead><tbody>
-<tr><td>China (Default)</td><td><code>https://api.minimaxi.com</code></td></tr>
-<tr><td>Global</td><td><code>https://api.minimaxi.chat</code></td></tr>
+<p>API 密钥从 <a href="https://platform.minimaxi.com">MiniMax 平台</a> 获取。</p>
+<h2 id="基础-url"><a class="header" href="#基础-url">基础 URL</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>区域</th><th>URL</th></tr></thead><tbody>
+<tr><td>中国（默认）</td><td><code>https://api.minimaxi.com</code></td></tr>
+<tr><td>全球</td><td><code>https://api.minimaxi.chat</code></td></tr>
 </tbody></table>
 </div>
-<h2 id="response-patterns"><a class="header" href="#response-patterns">Response Patterns</a></h2>
-<h3 id="synchronous"><a class="header" href="#synchronous">Synchronous</a></h3>
-<p>Direct response with data.</p>
-<h3 id="streaming"><a class="header" href="#streaming">Streaming</a></h3>
-<p>SSE (Server-Sent Events) for real-time data:</p>
+<h2 id="响应模式"><a class="header" href="#响应模式">响应模式</a></h2>
+<h3 id="同步"><a class="header" href="#同步">同步</a></h3>
+<p>直接返回数据的响应。</p>
+<h3 id="流式"><a class="header" href="#流式">流式</a></h3>
+<p>SSE（服务器发送事件）用于实时数据：</p>
 <ul>
-<li>Text: Token-by-token chat responses</li>
-<li>Speech: Audio chunk streaming</li>
+<li>文本：逐 Token 的聊天响应</li>
+<li>语音：音频块流式传输</li>
 </ul>
-<h3 id="async-tasks"><a class="header" href="#async-tasks">Async Tasks</a></h3>
-<p>For long-running operations (video, async speech):</p>
-<ol>
-<li>Create task → get <code>task_id</code></li>
-<li>Poll status → <code>Pending</code>/<code>Running</code>/<code>Success</code>/<code>Failed</code></li>
-<li>Retrieve result on success</li>
-</ol>
-<h2 id="error-handling"><a class="header" href="#error-handling">Error Handling</a></h2>
-<p>All errors include:</p>
+<h3 id="异步任务"><a class="header" href="#异步任务">异步任务</a></h3>
+<p>用于长时间运行的操作（视频、异步语音）：</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as 客户端
+    participant S as 服务器
+    C-&gt;&gt;S: 创建任务
+    S--&gt;&gt;C: task_id
+    loop 轮询状态
+        C-&gt;&gt;S: 查询状态
+        S--&gt;&gt;C: Pending/Running
+    end
+    S--&gt;&gt;C: Success + 结果
+</code></pre>
+<h2 id="错误处理"><a class="header" href="#错误处理">错误处理</a></h2>
+<p>所有错误包含：</p>
 <ul>
-<li><code>status_code</code>: Numeric error code</li>
-<li><code>status_msg</code>: Human-readable message</li>
+<li><code>status_code</code>：数字错误码</li>
+<li><code>status_msg</code>：人类可读消息</li>
 </ul>
-<p>Common error codes:</p>
+<p>常见错误码：</p>
 <ul>
-<li><code>1000</code>: General error</li>
-<li><code>1001</code>: Rate limit exceeded</li>
-<li><code>1002</code>: Invalid parameters</li>
-<li><code>1004</code>: Authentication failed</li>
+<li><code>1000</code>：一般错误</li>
+<li><code>1001</code>：超出速率限制</li>
+<li><code>1002</code>：无效参数</li>
+<li><code>1004</code>：认证失败</li>
 </ul>
-<h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
+<h2 id="示例目录"><a class="header" href="#示例目录">示例目录</a></h2>
 <ul>
-<li><code>examples/go/minimax/</code> - Go SDK examples</li>
-<li><code>examples/rust/minimax/</code> - Rust SDK examples</li>
-<li><code>examples/cmd/minimax/</code> - CLI test scripts</li>
+<li><code>examples/go/minimax/</code> - Go SDK 示例</li>
+<li><code>examples/rust/minimax/</code> - Rust SDK 示例</li>
+<li><code>examples/cmd/minimax/</code> - CLI 测试脚本</li>
 </ul>
-<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<h2 id="相关"><a class="header" href="#相关">相关</a></h2>
 <ul>
-<li>CLI tool: <code>go/cmd/minimax/</code></li>
-<li>CLI tests: <code>examples/cmd/minimax/</code></li>
+<li>CLI 工具：<code>go/cmd/minimax/</code></li>
+<li>CLI 测试：<code>examples/cmd/minimax/</code></li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/audio/opusrt/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/audio/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/minimax/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/minimax/api/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -284,11 +295,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/audio/opusrt/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/audio/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/minimax/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/minimax/api/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -314,6 +325,7 @@
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

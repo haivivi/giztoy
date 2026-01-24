@@ -185,21 +185,16 @@
 </tbody></table>
 </div>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌─────────────────────────────────────────┐
-│              Client                      │
-├─────────────────────────────────────────┤
-│          RealtimeService                 │
-│   ┌─────────────────────────────────┐   │
-│   │       RealtimeSession           │   │
-│   │  ┌───────────┐ ┌───────────┐    │   │
-│   │  │   Send    │ │  Receive  │    │   │
-│   │  │  Events   │ │  Events   │    │   │
-│   │  └───────────┘ └───────────┘    │   │
-│   └─────────────────────────────────┘   │
-└─────────────────────────────────────────┘
-                    │
-                    ▼
-       wss://dashscope.aliyuncs.com/api-ws/v1/realtime
+<pre><code class="language-mermaid">graph TB
+    subgraph client["Client"]
+        subgraph realtime["RealtimeService"]
+            session["RealtimeSession"]
+            send["Send Events"]
+            recv["Receive Events"]
+        end
+    end
+    
+    client --&gt; ws["wss://dashscope.aliyuncs.com&lt;br/&gt;/api-ws/v1/realtime"]
 </code></pre>
 <h2 id="authentication"><a class="header" href="#authentication">Authentication</a></h2>
 <pre><code>Authorization: Bearer &lt;api_key&gt;
@@ -220,18 +215,15 @@
 </tbody></table>
 </div>
 <h2 id="event-flow"><a class="header" href="#event-flow">Event Flow</a></h2>
-<pre><code>Client                                     Server
-   |                                         |
-   |------ session.update ------------------&gt;|
-   |                                         |
-   |------ input_audio_buffer.append -------&gt;|
-   |                                         |
-   |------ response.create -----------------&gt;|
-   |                                         |
-   |&lt;----- response.audio.delta -------------|
-   |&lt;----- response.audio.delta -------------|
-   |&lt;----- response.done --------------------|
-   |                                         |
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as Client
+    participant S as Server
+    C-&gt;&gt;S: session.update
+    C-&gt;&gt;S: input_audio_buffer.append
+    C-&gt;&gt;S: response.create
+    S--&gt;&gt;C: response.audio.delta
+    S--&gt;&gt;C: response.audio.delta
+    S--&gt;&gt;C: response.done
 </code></pre>
 <h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
 <ul>
@@ -262,11 +254,11 @@ client := openai.NewClientWithConfig(config)
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/minimax/api/index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/minimax/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/dashscope/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/dashscope/api/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -276,11 +268,11 @@ client := openai.NewClientWithConfig(config)
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/minimax/api/index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/minimax/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/dashscope/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/dashscope/api/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -306,6 +298,7 @@ client := openai.NewClientWithConfig(config)
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Resampler - Giztoy 文档</title>
+        <title>Resampler 重采样 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -156,99 +156,112 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="audio-resampler-module"><a class="header" href="#audio-resampler-module">Audio Resampler Module</a></h1>
-<p>Sample rate conversion using libsoxr (SoX Resampler Library).</p>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+                        <h1 id="音频重采样模块"><a class="header" href="#音频重采样模块">音频重采样模块</a></h1>
+<p>使用 libsoxr（SoX 重采样库）进行采样率转换。</p>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>High Quality</strong>: Professional-grade resampling via libsoxr</li>
-<li><strong>Streaming</strong>: Process audio as continuous stream, not files</li>
-<li><strong>Channel Conversion</strong>: Support mono↔stereo conversion</li>
-<li><strong>io.Reader Interface</strong>: Drop-in replacement for audio sources</li>
+<li><strong>高质量</strong>：通过 libsoxr 提供专业级重采样</li>
+<li><strong>流式处理</strong>：将音频作为连续流处理，而非文件</li>
+<li><strong>声道转换</strong>：支持单声道↔立体声转换</li>
+<li><strong>io.Reader 接口</strong>：可直接替换音频源</li>
 </ol>
-<h2 id="supported-conversions"><a class="header" href="#supported-conversions">Supported Conversions</a></h2>
-<h3 id="sample-rate"><a class="header" href="#sample-rate">Sample Rate</a></h3>
-<p>Any integer sample rate to any other integer sample rate:</p>
+<h2 id="支持的转换"><a class="header" href="#支持的转换">支持的转换</a></h2>
+<h3 id="采样率"><a class="header" href="#采样率">采样率</a></h3>
+<p>任意整数采样率到任意其他整数采样率：</p>
 <ul>
 <li>8000 Hz ↔ 16000 Hz ↔ 24000 Hz ↔ 48000 Hz</li>
-<li>Non-standard rates supported</li>
+<li>支持非标准采样率</li>
 </ul>
-<h3 id="channel-conversion"><a class="header" href="#channel-conversion">Channel Conversion</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>From</th><th>To</th><th>Method</th></tr></thead><tbody>
-<tr><td>Mono</td><td>Stereo</td><td>Duplicate</td></tr>
-<tr><td>Stereo</td><td>Mono</td><td>Average (L+R)/2</td></tr>
+<h3 id="声道转换"><a class="header" href="#声道转换">声道转换</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>从</th><th>到</th><th>方法</th></tr></thead><tbody>
+<tr><td>单声道</td><td>立体声</td><td>复制</td></tr>
+<tr><td>立体声</td><td>单声道</td><td>平均 (L+R)/2</td></tr>
 </tbody></table>
 </div>
-<h2 id="quality-levels"><a class="header" href="#quality-levels">Quality Levels</a></h2>
-<p>libsoxr supports multiple quality presets:</p>
-<div class="table-wrapper"><table><thead><tr><th>Level</th><th>Name</th><th>Description</th></tr></thead><tbody>
-<tr><td>0</td><td>Quick</td><td>Low quality, fast</td></tr>
-<tr><td>1</td><td>Low</td><td>Better than quick</td></tr>
-<tr><td>2</td><td>Medium</td><td>Balance of quality/speed</td></tr>
-<tr><td>3</td><td>High</td><td>Good quality (default)</td></tr>
-<tr><td>4</td><td>Very High</td><td>Best quality</td></tr>
+<h2 id="质量级别"><a class="header" href="#质量级别">质量级别</a></h2>
+<p>libsoxr 支持多个质量预设：</p>
+<div class="table-wrapper"><table><thead><tr><th>级别</th><th>名称</th><th>描述</th></tr></thead><tbody>
+<tr><td>0</td><td>Quick</td><td>低质量，快速</td></tr>
+<tr><td>1</td><td>Low</td><td>比 Quick 好</td></tr>
+<tr><td>2</td><td>Medium</td><td>质量/速度平衡</td></tr>
+<tr><td>3</td><td>High</td><td>良好质量（默认）</td></tr>
+<tr><td>4</td><td>Very High</td><td>最佳质量</td></tr>
 </tbody></table>
 </div>
-<p><strong>Note:</strong> Current implementation uses High quality by default.</p>
-<h2 id="algorithm"><a class="header" href="#algorithm">Algorithm</a></h2>
-<p>libsoxr uses polyphase filter banks with configurable:</p>
+<p><strong>注意：</strong> 当前实现默认使用 High 质量。</p>
+<h2 id="算法"><a class="header" href="#算法">算法</a></h2>
+<p>libsoxr 使用多相滤波器组，可配置：</p>
 <ul>
-<li>Passband rolloff</li>
-<li>Stop-band attenuation</li>
-<li>Linear/minimum phase</li>
+<li>通带滚降</li>
+<li>阻带衰减</li>
+<li>线性/最小相位</li>
 </ul>
-<p>The High quality preset provides:</p>
+<p>High 质量预设提供：</p>
 <ul>
-<li>Passband: 0-0.91 Nyquist</li>
-<li>Stop-band attenuation: -100 dB</li>
-<li>Linear phase</li>
+<li>通带：0-0.91 奈奎斯特</li>
+<li>阻带衰减：-100 dB</li>
+<li>线性相位</li>
 </ul>
-<h2 id="common-resampling-scenarios"><a class="header" href="#common-resampling-scenarios">Common Resampling Scenarios</a></h2>
-<h3 id="speech-api-to-local-playback"><a class="header" href="#speech-api-to-local-playback">Speech API to Local Playback</a></h3>
-<pre><code>API Output (24kHz) → Resample → Mixer Input (16kHz)
+<h2 id="常见重采样场景"><a class="header" href="#常见重采样场景">常见重采样场景</a></h2>
+<h3 id="语音-api-到本地播放"><a class="header" href="#语音-api-到本地播放">语音 API 到本地播放</a></h3>
+<pre><code class="language-mermaid">flowchart LR
+    A["API 输出&lt;br/&gt;(24kHz)"] --&gt; B[重采样]
+    B --&gt; C["混音器输入&lt;br/&gt;(16kHz)"]
 </code></pre>
-<h3 id="local-capture-to-speech-api"><a class="header" href="#local-capture-to-speech-api">Local Capture to Speech API</a></h3>
-<pre><code>Microphone (48kHz) → Resample → API Input (16kHz)
+<h3 id="本地采集到语音-api"><a class="header" href="#本地采集到语音-api">本地采集到语音 API</a></h3>
+<pre><code class="language-mermaid">flowchart LR
+    A["麦克风&lt;br/&gt;(48kHz)"] --&gt; B[重采样]
+    B --&gt; C["API 输入&lt;br/&gt;(16kHz)"]
 </code></pre>
-<h3 id="multi-source-mixing"><a class="header" href="#multi-source-mixing">Multi-source Mixing</a></h3>
-<pre><code>Source 1 (24kHz) ─┬─► Resample ─► 16kHz ─┐
-Source 2 (16kHz) ─┼─────────────────────►├─► Mixer
-Source 3 (48kHz) ─┴─► Resample ─► 16kHz ─┘
+<h3 id="多源混音"><a class="header" href="#多源混音">多源混音</a></h3>
+<pre><code class="language-mermaid">flowchart LR
+    s1["源 1&lt;br/&gt;(24kHz)"] --&gt; r1[重采样]
+    r1 --&gt; m1["16kHz"]
+    
+    s2["源 2&lt;br/&gt;(16kHz)"] --&gt; m2["16kHz"]
+    
+    s3["源 3&lt;br/&gt;(48kHz)"] --&gt; r3[重采样]
+    r3 --&gt; m3["16kHz"]
+    
+    m1 --&gt; mixer[混音器]
+    m2 --&gt; mixer
+    m3 --&gt; mixer
 </code></pre>
-<h2 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h2>
-<p>Approximate cycles per sample (on modern CPU):</p>
+<h2 id="性能特征"><a class="header" href="#性能特征">性能特征</a></h2>
+<p>每样本的近似周期数（在现代 CPU 上）：</p>
 <ul>
-<li>Quick: ~10</li>
-<li>High: ~50-100</li>
-<li>Very High: ~200-500</li>
+<li>Quick：~10</li>
+<li>High：~50-100</li>
+<li>Very High：~200-500</li>
 </ul>
-<p>For real-time 16kHz mono:</p>
+<p>对于实时 16kHz 单声道：</p>
 <ul>
-<li>16000 samples/sec × 100 cycles ≈ 1.6M cycles/sec</li>
-<li>Negligible CPU load on modern hardware</li>
+<li>16000 样本/秒 × 100 周期 ≈ 1.6M 周期/秒</li>
+<li>在现代硬件上 CPU 负载可忽略不计</li>
 </ul>
-<h2 id="memory-usage"><a class="header" href="#memory-usage">Memory Usage</a></h2>
-<p>libsoxr maintains internal buffers for filter state:</p>
+<h2 id="内存使用"><a class="header" href="#内存使用">内存使用</a></h2>
+<p>libsoxr 为滤波器状态维护内部缓冲区：</p>
 <ul>
-<li>~10-50KB per resampler instance</li>
-<li>More for higher quality settings</li>
+<li>每个重采样器实例 ~10-50KB</li>
+<li>更高质量设置需要更多内存</li>
 </ul>
-<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<p>See parent <code>audio/</code> documentation for usage examples.</p>
-<h2 id="related-modules"><a class="header" href="#related-modules">Related Modules</a></h2>
+<h2 id="示例"><a class="header" href="#示例">示例</a></h2>
+<p>请参阅父级 <code>audio/</code> 文档的使用示例。</p>
+<h2 id="相关模块"><a class="header" href="#相关模块">相关模块</a></h2>
 <ul>
-<li><code>audio/pcm/</code> - Format definitions, use with resampler</li>
-<li><code>audio/codec/</code> - Often resample before/after encoding</li>
+<li><code>audio/pcm/</code> - 格式定义，与重采样器配合使用</li>
+<li><code>audio/codec/</code> - 通常在编码前后进行重采样</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/audio/pcm/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../lib/audio/pcm/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../lib/audio/resampler/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../lib/audio/opusrt/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -258,11 +271,11 @@ Source 3 (48kHz) ─┴─► Resample ─► 16kHz ─┘
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/audio/pcm/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../lib/audio/pcm/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../lib/audio/resampler/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../lib/audio/opusrt/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -288,6 +301,7 @@ Source 3 (48kHz) ─┴─► Resample ─► 16kHz ─┘
         <!-- Custom JS scripts -->
         <script src="../../../mermaid.min.js"></script>
         <script src="../../../mermaid-init.js"></script>
+        <script src="../../../lang-switch.js"></script>
 
 
     </div>

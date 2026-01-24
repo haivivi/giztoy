@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>GenX - Giztoy Documentation</title>
+        <title>GenX - LLM Interface - Giztoy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -166,36 +166,35 @@
 <li><strong>Agent Framework</strong>: Build autonomous AI agents (Go only)</li>
 </ol>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌─────────────────────────────────────────────────────────────┐
-│                     Application Layer                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                    Agent Framework (Go)                 │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐    │ │
-│  │  │  ReActAgent  │ │  MatchAgent  │ │  SubAgents   │    │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘    │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                      Tool System                        │ │
-│  │  ┌────────┐ ┌────────────┐ ┌────────┐ ┌────────────┐  │ │
-│  │  │FuncTool│ │GeneratorTool│ │HTTPTool│ │CompositeTool│  │ │
-│  │  └────────┘ └────────────┘ └────────┘ └────────────┘  │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                                                              │
-├─────────────────────────────────────────────────────────────┤
-│                    Core Abstraction                          │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
-│  │ModelContext  │ │  Generator   │ │      Stream          │ │
-│  │  (Builder)   │ │  (Trait)     │ │   (Chunks)           │ │
-│  └──────────────┘ └──────────────┘ └──────────────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│                   Provider Adapters                          │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
-│  │    OpenAI    │ │    Gemini    │ │       Other          │ │
-│  └──────────────┘ └──────────────┘ └──────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+<pre><code class="language-mermaid">graph TB
+    subgraph app["Application Layer"]
+        subgraph agent["Agent Framework (Go)"]
+            react[ReActAgent]
+            match[MatchAgent]
+            sub[SubAgents]
+        end
+        subgraph tools["Tool System"]
+            func[FuncTool]
+            gen[GeneratorTool]
+            http[HTTPTool]
+            comp[CompositeTool]
+        end
+    end
+    
+    subgraph core["Core Abstraction"]
+        ctx[ModelContext&lt;br/&gt;Builder]
+        generator[Generator&lt;br/&gt;Trait]
+        stream[Stream&lt;br/&gt;Chunks]
+    end
+    
+    subgraph providers["Provider Adapters"]
+        openai[OpenAI]
+        gemini[Gemini]
+        other[Other]
+    end
+    
+    app --&gt; core
+    core --&gt; providers
 </code></pre>
 <h2 id="core-concepts"><a class="header" href="#core-concepts">Core Concepts</a></h2>
 <h3 id="modelcontext"><a class="header" href="#modelcontext">ModelContext</a></h3>
@@ -293,11 +292,11 @@ tools:
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/speech/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../bazel/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/genx/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/genx/agent/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -307,11 +306,11 @@ tools:
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/speech/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../bazel/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/genx/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/genx/agent/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -337,6 +336,7 @@ tools:
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

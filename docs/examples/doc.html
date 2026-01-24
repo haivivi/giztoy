@@ -162,25 +162,26 @@
 included example programs and CLI scripts. Examples are grouped by language
 and by SDK.</p>
 <h2 id="directory-layout"><a class="header" href="#directory-layout">Directory Layout</a></h2>
-<pre><code>examples/
-├── cmd/                     # CLI test scripts (shell)
-│   ├── minimax/
-│   │   ├── run.sh
-│   │   └── commands/
-│   └── doubaospeech/
-│       ├── run.sh
-│       └── commands/
-├── go/                      # Go examples (single module)
-│   ├── go.mod
-│   ├── audio/
-│   ├── dashscope/
-│   ├── doubaospeech/
-│   ├── genx/
-│   └── minimax/
-└── rust/                    # Rust examples
-    └── minimax/
-        ├── Cargo.toml
-        └── src/bin/
+<pre><code class="language-mermaid">graph LR
+    subgraph examples["examples/"]
+        subgraph cmd["cmd/"]
+            mm_cmd["minimax/&lt;br/&gt;run.sh&lt;br/&gt;commands/"]
+            db_cmd["doubaospeech/&lt;br/&gt;run.sh&lt;br/&gt;commands/"]
+        end
+        
+        subgraph go["go/"]
+            gomod[go.mod]
+            go_audio[audio/]
+            go_dash[dashscope/]
+            go_doubao[doubaospeech/]
+            go_genx[genx/]
+            go_minimax[minimax/]
+        end
+        
+        subgraph rust["rust/"]
+            rust_mm["minimax/&lt;br/&gt;Cargo.toml&lt;br/&gt;src/bin/"]
+        end
+    end
 </code></pre>
 <h2 id="how-to-run"><a class="header" href="#how-to-run">How to Run</a></h2>
 <h3 id="cli-script-examples"><a class="header" href="#cli-script-examples">CLI Script Examples</a></h3>
@@ -227,7 +228,7 @@ local <code>go/</code> module via <code>replace</code>.</p>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../lib/genx/match/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../outline.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -241,7 +242,7 @@ local <code>go/</code> module via <code>replace</code>.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../lib/genx/match/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../outline.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
@@ -271,6 +272,7 @@ local <code>go/</code> module via <code>replace</code>.</p>
         <!-- Custom JS scripts -->
         <script src="../mermaid.min.js"></script>
         <script src="../mermaid-init.js"></script>
+        <script src="../lang-switch.js"></script>
 
 
     </div>

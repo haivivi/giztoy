@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>CLI - Giztoy 文档</title>
+        <title>CLI 命令行 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -156,39 +156,43 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="cli-package"><a class="header" href="#cli-package">CLI Package</a></h1>
-<p>Common CLI utilities for giztoy command-line tools.</p>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+                        <h1 id="cli-包"><a class="header" href="#cli-包">CLI 包</a></h1>
+<p>Giztoy 命令行工具的通用 CLI 工具集。</p>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>Consistent UX</strong>: Shared patterns across all giztoy CLI tools</li>
-<li><strong>kubectl-style Contexts</strong>: Multiple API configurations with context switching</li>
-<li><strong>Flexible Output</strong>: Support JSON, YAML, and raw output formats</li>
-<li><strong>Cross-Platform Paths</strong>: Standard directory structure for config/cache/logs</li>
+<li><strong>一致的用户体验</strong>：所有 giztoy CLI 工具共享相同模式</li>
+<li><strong>kubectl 风格的上下文</strong>：支持多 API 配置和上下文切换</li>
+<li><strong>灵活的输出</strong>：支持 JSON、YAML 和原始输出格式</li>
+<li><strong>跨平台路径</strong>：标准的配置/缓存/日志目录结构</li>
 </ol>
-<h2 id="components"><a class="header" href="#components">Components</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Component</th><th>Description</th></tr></thead><tbody>
-<tr><td><strong>Config</strong></td><td>Multi-context configuration management</td></tr>
-<tr><td><strong>Output</strong></td><td>Output formatting (JSON, YAML, raw)</td></tr>
-<tr><td><strong>Paths</strong></td><td>Directory structure (~/.giztoy/<app>/)</td></tr>
-<tr><td><strong>Request</strong></td><td>Load request data from YAML/JSON files</td></tr>
-<tr><td><strong>LogWriter</strong></td><td>Capture logs for TUI display</td></tr>
+<h2 id="组件"><a class="header" href="#组件">组件</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>组件</th><th>描述</th></tr></thead><tbody>
+<tr><td><strong>Config</strong></td><td>多上下文配置管理</td></tr>
+<tr><td><strong>Output</strong></td><td>输出格式化（JSON、YAML、原始）</td></tr>
+<tr><td><strong>Paths</strong></td><td>目录结构（~/.giztoy/<app>/）</td></tr>
+<tr><td><strong>Request</strong></td><td>从 YAML/JSON 文件加载请求数据</td></tr>
+<tr><td><strong>LogWriter</strong></td><td>捕获日志用于 TUI 显示</td></tr>
 </tbody></table>
 </div>
-<h2 id="directory-structure"><a class="header" href="#directory-structure">Directory Structure</a></h2>
-<pre><code>~/.giztoy/
-├── minimax/
-│   ├── config.yaml
-│   ├── cache/
-│   ├── logs/
-│   └── data/
-├── doubao/
-│   ├── config.yaml
-│   ├── cache/
-│   └── ...
-└── dashscope/
-    └── ...
+<h2 id="目录结构"><a class="header" href="#目录结构">目录结构</a></h2>
+<pre><code class="language-mermaid">graph LR
+    subgraph giztoy["~/.giztoy/"]
+        subgraph minimax["minimax/"]
+            m1[config.yaml]
+            m2[cache/]
+            m3[logs/]
+            m4[data/]
+        end
+        subgraph doubao["doubao/"]
+            d1[config.yaml]
+            d2[cache/]
+        end
+        subgraph dashscope["dashscope/"]
+            s1[...]
+        end
+    end
 </code></pre>
-<h2 id="configuration-format"><a class="header" href="#configuration-format">Configuration Format</a></h2>
+<h2 id="配置格式"><a class="header" href="#配置格式">配置格式</a></h2>
 <pre><code class="language-yaml">current_context: production
 
 contexts:
@@ -205,52 +209,52 @@ contexts:
     api_key: "sk-dev-..."
     base_url: "https://dev-api.example.com"
 </code></pre>
-<h2 id="context-system"><a class="header" href="#context-system">Context System</a></h2>
-<p>Similar to kubectl, supports multiple API contexts:</p>
-<pre><code class="language-bash"># List contexts
+<h2 id="上下文系统"><a class="header" href="#上下文系统">上下文系统</a></h2>
+<p>类似于 kubectl，支持多个 API 上下文：</p>
+<pre><code class="language-bash"># 列出上下文
 myapp config list
 
-# Use a context
+# 使用一个上下文
 myapp config use production
 
-# Add a context
+# 添加一个上下文
 myapp config add staging --api-key=sk-...
 
-# Delete a context
+# 删除一个上下文
 myapp config delete staging
 </code></pre>
-<h2 id="output-formats"><a class="header" href="#output-formats">Output Formats</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Format</th><th>Flag</th><th>Description</th></tr></thead><tbody>
-<tr><td>YAML</td><td><code>--output=yaml</code></td><td>Default, human-readable</td></tr>
-<tr><td>JSON</td><td><code>--output=json</code></td><td>Machine-readable</td></tr>
-<tr><td>Raw</td><td><code>--output=raw</code></td><td>Binary/raw data</td></tr>
+<h2 id="输出格式"><a class="header" href="#输出格式">输出格式</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>格式</th><th>标志</th><th>描述</th></tr></thead><tbody>
+<tr><td>YAML</td><td><code>--output=yaml</code></td><td>默认，人类可读</td></tr>
+<tr><td>JSON</td><td><code>--output=json</code></td><td>机器可读</td></tr>
+<tr><td>Raw</td><td><code>--output=raw</code></td><td>二进制/原始数据</td></tr>
 </tbody></table>
 </div>
-<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
-<h3 id="api-cli-tools"><a class="header" href="#api-cli-tools">API CLI Tools</a></h3>
+<h2 id="使用场景"><a class="header" href="#使用场景">使用场景</a></h2>
+<h3 id="api-cli-工具"><a class="header" href="#api-cli-工具">API CLI 工具</a></h3>
 <pre><code class="language-bash"># minimax CLI
 minimax chat "Hello" --context=production --output=json
 
 # doubao CLI  
 doubao tts "Hello world" --output=audio.mp3
 </code></pre>
-<h3 id="configuration-management"><a class="header" href="#configuration-management">Configuration Management</a></h3>
-<pre><code class="language-bash"># View current config
+<h3 id="配置管理"><a class="header" href="#配置管理">配置管理</a></h3>
+<pre><code class="language-bash"># 查看当前配置
 myapp config show
 
-# Set default voice
+# 设置默认语音
 myapp config set default_voice "zh-CN-Standard-A"
 </code></pre>
-<h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
+<h2 id="示例目录"><a class="header" href="#示例目录">示例目录</a></h2>
 <ul>
-<li><code>go/cmd/minimax/</code> - MiniMax CLI using this package</li>
-<li><code>go/cmd/doubaospeech/</code> - Doubao Speech CLI</li>
+<li><code>go/cmd/minimax/</code> - 使用此包的 MiniMax CLI</li>
+<li><code>go/cmd/doubaospeech/</code> - 豆包语音 CLI</li>
 <li><code>rust/cmd/minimax/</code> - Rust MiniMax CLI</li>
 </ul>
-<h2 id="related-packages"><a class="header" href="#related-packages">Related Packages</a></h2>
+<h2 id="相关包"><a class="header" href="#相关包">相关包</a></h2>
 <ul>
-<li>Used by all CLI tools in the project</li>
-<li>Provides consistent user experience across Go and Rust implementations</li>
+<li>项目中所有 CLI 工具都在使用</li>
+<li>为 Go 和 Rust 实现提供一致的用户体验</li>
 </ul>
 
                     </main>
@@ -301,6 +305,7 @@ myapp config set default_voice "zh-CN-Standard-A"
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

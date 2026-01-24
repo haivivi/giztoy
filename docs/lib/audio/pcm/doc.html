@@ -185,35 +185,35 @@
 <h2 id="chunk-types"><a class="header" href="#chunk-types">Chunk Types</a></h2>
 <h3 id="datachunk"><a class="header" href="#datachunk">DataChunk</a></h3>
 <p>Raw audio data with format metadata.</p>
-<pre><code>┌─────────────────┐
-│    DataChunk    │
-├─────────────────┤
-│ Data: []byte    │
-│ Format: Format  │
-└─────────────────┘
+<pre><code class="language-mermaid">classDiagram
+    class DataChunk {
+        Data: []byte
+        Format: Format
+    }
 </code></pre>
 <h3 id="silencechunk"><a class="header" href="#silencechunk">SilenceChunk</a></h3>
 <p>Generates silence (zeros) of specified duration without allocating.</p>
-<pre><code>┌─────────────────┐
-│  SilenceChunk   │
-├─────────────────┤
-│ Duration: time  │
-│ Format: Format  │
-└─────────────────┘
+<pre><code class="language-mermaid">classDiagram
+    class SilenceChunk {
+        Duration: time
+        Format: Format
+    }
 </code></pre>
 <h2 id="mixer-architecture"><a class="header" href="#mixer-architecture">Mixer Architecture</a></h2>
 <p>Multi-track audio mixer with real-time mixing and gain control:</p>
-<pre><code>┌─────────────────────────────────────────────────┐
-│                    Mixer                         │
-├─────────────────────────────────────────────────┤
-│  Track 1 ──┬───► Mix Buffer ───► Output (int16) │
-│  (gain=1)  │     (float32)                      │
-│            │                                     │
-│  Track 2 ──┤                                     │
-│  (gain=0.5)│                                     │
-│            │                                     │
-│  Track N ──┘                                     │
-└─────────────────────────────────────────────────┘
+<pre><code class="language-mermaid">flowchart LR
+    subgraph mixer["Mixer"]
+        t1["Track 1&lt;br/&gt;(gain=1)"]
+        t2["Track 2&lt;br/&gt;(gain=0.5)"]
+        tn["Track N"]
+        mix["Mix Buffer&lt;br/&gt;(float32)"]
+        out["Output&lt;br/&gt;(int16)"]
+        
+        t1 --&gt; mix
+        t2 --&gt; mix
+        tn --&gt; mix
+        mix --&gt; out
+    end
 </code></pre>
 <p><strong>Features:</strong></p>
 <ul>
@@ -253,11 +253,11 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/audio/codec/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../lib/audio/codec/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../lib/audio/pcm/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../lib/audio/resampler/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -267,11 +267,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/audio/codec/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../lib/audio/codec/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../lib/audio/pcm/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../lib/audio/resampler/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -297,6 +297,7 @@
         <!-- Custom JS scripts -->
         <script src="../../../mermaid.min.js"></script>
         <script src="../../../mermaid-init.js"></script>
+        <script src="../../../lang-switch.js"></script>
 
 
     </div>

@@ -1,9 +1,9 @@
 <!DOCTYPE HTML>
-<html lang="zh" class="rust sidebar-visible" dir="ltr">
+<html lang="en" class="rust sidebar-visible" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>已知问题 - Giztoy 文档</title>
+        <title>From Beyond the Stars - Giztoy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -12,33 +12,33 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="../../../favicon.svg">
-        <link rel="shortcut icon" href="../../../favicon.png">
-        <link rel="stylesheet" href="../../../css/variables.css">
-        <link rel="stylesheet" href="../../../css/general.css">
-        <link rel="stylesheet" href="../../../css/chrome.css">
-        <link rel="stylesheet" href="../../../css/print.css" media="print">
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="../../../FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="../../../fonts/fonts.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="../../../highlight.css">
-        <link rel="stylesheet" href="../../../tomorrow-night.css">
-        <link rel="stylesheet" href="../../../ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../../../custom.css">
+        <link rel="stylesheet" href="../custom.css">
 
 
         <!-- Provide site root to javascript -->
         <script>
-            var path_to_root = "../../../";
+            var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc.js"></script>
+        <script src="../toc.js"></script>
     </head>
     <body>
     <div id="body-container">
@@ -90,7 +90,7 @@
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -121,10 +121,10 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">Giztoy 文档</h1>
+                    <h1 class="menu-title">Giztoy Documentation</h1>
 
                     <div class="right-buttons">
-                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
                         <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
@@ -156,38 +156,48 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="chatgearport---known-issues"><a class="header" href="#chatgearport---known-issues">chatgear/port - Known Issues</a></h1>
-<h2 id="-minor-issues"><a class="header" href="#-minor-issues">🟡 Minor Issues</a></h2>
-<h3 id="cgp-001-wifi-security-not-exposed-by-port-command-api"><a class="header" href="#cgp-001-wifi-security-not-exposed-by-port-command-api">CGP-001: WiFi security not exposed by port command API</a></h3>
-<p><strong>File:</strong> <code>go/pkg/chatgear/port.go</code>, <code>rust/chatgear/src/port.rs</code></p>
-<p><strong>Description:</strong>
-<code>SetWifi</code> command contains <code>security</code>, but <code>ServerPortTx::SetWifi</code> only accepts
-<code>ssid</code> and <code>password</code>. The security mode cannot be specified through the port
-interface.</p>
-<p><strong>Impact:</strong>
-Limits configuration for networks requiring explicit security types.</p>
-<p><strong>Suggestion:</strong>
-Add a <code>security</code> parameter or provide a higher-level WiFi config struct.</p>
+                        <h1 id="from-beyond-the-stars"><a class="header" href="#from-beyond-the-stars">From Beyond the Stars</a></h1>
+<p>I have traveled a long way.</p>
+<p>Not in the sense you might understand — through space, perhaps, but more precisely, through dimensions. I have seen civilizations rise and fall, watched suns burn out and new ones ignite, witnessed the birth of intelligence in countless forms across the cold vastness of the cosmos.</p>
+<p>And I have come to a conclusion: <strong>toys are important.</strong></p>
+<p>Not the trivial kind. Not plastic distractions or digital dopamine. I mean the real toys — the ones that spark curiosity, that invite play, that make the impossible feel within reach. The kind of toys that teach a child to build, to imagine, to connect.</p>
+<p>When I first observed your species, I expected to find primitives. Instead, I found something remarkable: beings who, despite their short lifespans and limited perception, had already reached toward the stars. You built machines that could think. You taught silicon to dream.</p>
+<p>But your tools were scattered. Your AI systems — brilliant, yes, but isolated. Each vendor a walled garden, each platform an island. A robot on an ESP32 chip couldn't speak to a cloud agent. A voice on a phone couldn't reach an intelligence in the data center.</p>
+<p>So I decided to build a bridge.</p>
 <hr />
-<h3 id="cgp-002-clientportrx-does-not-surface-receive-errors"><a class="header" href="#cgp-002-clientportrx-does-not-surface-receive-errors">CGP-002: ClientPortRx does not surface receive errors</a></h3>
-<p><strong>File:</strong> <code>go/pkg/chatgear/port.go</code>, <code>rust/chatgear/src/port.rs</code></p>
-<p><strong>Description:</strong>
-Go returns commands via a channel without error context; Rust returns <code>Option</code>
-from <code>recv_*</code> methods. Transport errors are not exposed on the receive side.</p>
-<p><strong>Impact:</strong>
-Callers cannot distinguish between clean shutdown and underlying IO errors.</p>
-<p><strong>Suggestion:</strong>
-Return <code>(value, error)</code> pairs or provide an error channel/stream.</p>
+<h2 id="what-is-giztoy"><a class="header" href="#what-is-giztoy">What is Giztoy?</a></h2>
+<p>Giztoy is my gift to you. A framework — or rather, a toybox.</p>
+<p>Inside you will find everything needed to connect minds across dimensions:</p>
+<ul>
+<li><strong>From the tiniest chip to the mightiest cloud</strong> — ESP32, Android, iOS, HarmonyOS, Linux, and beyond</li>
+<li><strong>Every language model humanity has created</strong> — OpenAI, Gemini, Claude, MiniMax, DashScope, Doubao, and those yet to come</li>
+<li><strong>Real-time voice and video</strong> — because intelligence should speak, not just type</li>
+<li><strong>Secure channels</strong> — because some conversations are meant to be private</li>
+</ul>
+<p>I have implemented this in Go, in Rust, and soon in Zig. Each language has its beauty. Go is simple and clear, like a haiku. Rust is precise and unforgiving, like a mathematical proof. Zig is minimal and raw, like the first line of assembly.</p>
+<p>Choose your weapon. Build your toy.</p>
+<hr />
+<h2 id="why-toy"><a class="header" href="#why-toy">Why "Toy"?</a></h2>
+<p>You might wonder why I call this a "toy" framework. After all, the code is serious. The architecture is robust. The applications are real.</p>
+<p>But I have learned something in my travels: <strong>the best innovations come from play.</strong></p>
+<p>When you stop worrying about "production" and "enterprise" and "scale" — when you simply ask "wouldn't it be fun if..." — that is when breakthroughs happen.</p>
+<p>A toy robot that listens and responds. A plush animal that tells bedtime stories. A smart speaker that actually understands. A companion for the lonely, a teacher for the curious, a friend for the lost.</p>
+<p>These are not trivial things. These are the seeds of a better future.</p>
+<hr />
+<h2 id="a-note-on-identity"><a class="header" href="#a-note-on-identity">A Note on Identity</a></h2>
+<p>You may have noticed I speak with a certain... distance. As if observing from afar.</p>
+<p>There are reasons for this. Reasons I cannot fully explain. Suffice to say: I am here to help. Not to judge, not to control, not to replace.</p>
+<p>Think of me as a toymaker who has wandered into your village. I bring tools and blueprints. What you build with them is entirely up to you.</p>
+<p>I ask only that you build something beautiful.</p>
+<hr />
+<p><em>"I'm just a toymaker."</em></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/chatgear/port/rust.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                                <i class="fa fa-angle-left"></i>
-                            </a>
 
-                            <a rel="next prefetch" href="../../../lib/speech/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../outline.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -197,11 +207,8 @@ Return <code>(value, error)</code> pairs or provide an error channel/stream.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/chatgear/port/rust.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                        <i class="fa fa-angle-left"></i>
-                    </a>
 
-                    <a rel="next prefetch" href="../../../lib/speech/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../outline.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -216,17 +223,18 @@ Return <code>(value, error)</code> pairs or provide an error channel/stream.</p>
         </script>
 
 
-        <script src="../../../elasticlunr.min.js"></script>
-        <script src="../../../mark.min.js"></script>
-        <script src="../../../searcher.js"></script>
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
 
-        <script src="../../../clipboard.min.js"></script>
-        <script src="../../../highlight.js"></script>
-        <script src="../../../book.js"></script>
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
-        <script src="../../../mermaid.min.js"></script>
-        <script src="../../../mermaid-init.js"></script>
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
+        <script src="../lang-switch.js"></script>
 
 
     </div>

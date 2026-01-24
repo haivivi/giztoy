@@ -21,8 +21,8 @@
     --glow-purple: rgba(168, 85, 247, 0.3);
     
     --font-display: 'Orbitron', sans-serif;
-    --font-body: 'Rajdhani', 'Noto Sans SC', sans-serif;
-    --font-zh: 'Noto Sans SC', sans-serif;
+    --font-body: 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-zh: -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
     
     --transition-fast: 0.2s ease;
     --transition-medium: 0.4s ease;
@@ -182,7 +182,13 @@ body {
 }
 
 .lang-icon {
-    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    color: var(--text-secondary);
+}
+
+.lang-switch:hover .lang-icon {
+    color: var(--accent-cyan);
 }
 
 .lang-text {
@@ -299,7 +305,8 @@ body {
 .btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
+    justify-content: center;
+    gap: 0.5rem;
     padding: 1rem 2rem;
     font-family: var(--font-body);
     font-size: 1rem;
@@ -310,6 +317,12 @@ body {
     cursor: pointer;
     border: none;
 }
+
+/* Button text alignment */
+.btn-text {
+    line-height: 1;
+}
+
 
 .btn-primary {
     background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
@@ -345,7 +358,8 @@ body {
 }
 
 .btn-icon {
-    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
 }
 
 .btn-large {
@@ -353,8 +367,20 @@ body {
     font-size: 1.1rem;
 }
 
+/* Button icons */
+.btn svg {
+    width: 1em;
+    height: 1em;
+    display: block;
+}
+
 .btn-arrow {
     transition: transform var(--transition-fast);
+}
+
+/* Star button icon color */
+.btn-star svg {
+    color: #1a1a1a;
 }
 
 .btn:hover .btn-arrow {
@@ -465,9 +491,22 @@ section {
 }
 
 .feature-icon {
-    font-size: 2.5rem;
     margin-bottom: 1rem;
 }
+
+.feature-icon svg {
+    width: 2.5rem;
+    height: 2.5rem;
+    stroke-width: 1.5;
+}
+
+/* Different colors for different features */
+.feature-card:nth-child(1) .feature-icon { color: #a855f7; } /* purple - layers */
+.feature-card:nth-child(2) .feature-icon { color: #f97316; } /* orange - hammer */
+.feature-card:nth-child(3) .feature-icon { color: #ec4899; } /* pink - brain */
+.feature-card:nth-child(4) .feature-icon { color: #22c55e; } /* green - shield */
+.feature-card:nth-child(5) .feature-icon { color: #06b6d4; } /* cyan - audio */
+.feature-card:nth-child(6) .feature-icon { color: #eab308; } /* yellow - code */
 
 .feature-title {
     font-family: var(--font-display);
@@ -494,7 +533,7 @@ section {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 1rem;
 }
 
 .arch-layer {
@@ -582,8 +621,26 @@ section {
 }
 
 .platform-icon {
-    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.platform-icon svg {
+    width: 2rem;
+    height: 2rem;
+    stroke-width: 1.5;
+}
+
+/* Platform icon colors */
+.platform-item:nth-child(1) .platform-icon { color: #22c55e; } /* green - Linux */
+.platform-item:nth-child(2) .platform-icon { color: #a1a1aa; } /* silver - macOS */
+.platform-item:nth-child(3) .platform-icon { color: #22c55e; } /* green - Android */
+.platform-item:nth-child(4) .platform-icon { color: #3b82f6; } /* blue - iOS */
+.platform-item:nth-child(5) .platform-icon { color: #ec4899; } /* pink - HarmonyOS */
+.platform-item:nth-child(6) .platform-icon { color: #f97316; } /* orange - ESP32 */
+.platform-item:nth-child(7) .platform-icon { color: #3b82f6; } /* blue - BLE */
+.platform-item:nth-child(8) .platform-icon { color: #06b6d4; } /* cyan - OpenWrt */
 
 .platform-name {
     font-family: var(--font-display);

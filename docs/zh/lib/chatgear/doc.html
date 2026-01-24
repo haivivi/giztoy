@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>ChatGear - Giztoy 文档</title>
+        <title>ChatGear 对话引擎 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -157,51 +157,48 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="chatgear"><a class="header" href="#chatgear">chatgear</a></h1>
-<h2 id="overview"><a class="header" href="#overview">Overview</a></h2>
-<p>chatgear defines the core protocol types for device-to-server communication:
-commands, state events, statistics, and audio streaming metadata. It focuses on
-interface design rather than transport implementation, and provides an
-in-process pipe for testing.</p>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+<h2 id="概述"><a class="header" href="#概述">概述</a></h2>
+<p>chatgear 定义了设备到服务器通信的核心协议类型：命令、状态事件、统计数据和音频流元数据。它专注于接口设计而非传输实现，并提供用于测试的进程内管道。</p>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ul>
-<li>Stable, typed protocol for device state and control</li>
-<li>Clear separation between uplink (device -&gt; server) and downlink (server -&gt; device)</li>
-<li>Explicit metadata for timestamps and command issuance</li>
-<li>Audio streaming with Opus frame stamping</li>
-<li>Support both Go and Rust with comparable API surfaces</li>
+<li>设备状态和控制的稳定类型化协议</li>
+<li>上行链路（设备 -&gt; 服务器）和下行链路（服务器 -&gt; 设备）的清晰分离</li>
+<li>时间戳和命令发布的显式元数据</li>
+<li>带有 Opus 帧时间戳的音频流</li>
+<li>Go 和 Rust 支持相似的 API 表面</li>
 </ul>
-<h2 id="key-concepts"><a class="header" href="#key-concepts">Key Concepts</a></h2>
+<h2 id="关键概念"><a class="header" href="#关键概念">关键概念</a></h2>
 <ul>
-<li><strong>Session commands</strong>: device control commands with typed payloads</li>
-<li><strong>State events</strong>: gear state transitions with causes</li>
-<li><strong>Stats events</strong>: telemetry snapshots and incremental changes</li>
-<li><strong>Uplink/Downlink</strong>: split interfaces for bidirectional streams</li>
-<li><strong>Ports</strong>: higher-level client/server port abstraction</li>
+<li><strong>会话命令</strong>：带有类型化载荷的设备控制命令</li>
+<li><strong>状态事件</strong>：带有原因的设备状态转换</li>
+<li><strong>统计事件</strong>：遥测快照和增量变化</li>
+<li><strong>上行/下行</strong>：双向流的分离接口</li>
+<li><strong>端口</strong>：更高级别的客户端/服务器端口抽象</li>
 </ul>
-<h2 id="submodules"><a class="header" href="#submodules">Submodules</a></h2>
+<h2 id="子模块"><a class="header" href="#子模块">子模块</a></h2>
 <ul>
-<li><code>transport</code>: uplink/downlink connection traits and pipe helpers</li>
-<li><code>port</code>: client/server port traits and audio track controls</li>
+<li><code>transport</code>：上行/下行连接 trait 和管道辅助函数</li>
+<li><code>port</code>：客户端/服务器端口 trait 和音频轨道控制</li>
 </ul>
-<h2 id="external-reference"><a class="header" href="#external-reference">External Reference</a></h2>
+<h2 id="外部参考"><a class="header" href="#外部参考">外部参考</a></h2>
 <ul>
-<li><code>/Users/idy/Work/haivivi/x/docs/chatgear</code> (original protocol/design notes)</li>
+<li><code>/Users/idy/Work/haivivi/x/docs/chatgear</code>（原始协议/设计笔记）</li>
 </ul>
-<h2 id="related-modules"><a class="header" href="#related-modules">Related Modules</a></h2>
+<h2 id="相关模块"><a class="header" href="#相关模块">相关模块</a></h2>
 <ul>
-<li><code>docs/lib/audio/opusrt</code> for Opus frame handling</li>
-<li><code>docs/lib/jsontime</code> for millisecond timestamps</li>
+<li><code>docs/lib/audio/opusrt</code> 用于 Opus 帧处理</li>
+<li><code>docs/lib/jsontime</code> 用于毫秒时间戳</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/mqtt0/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/speech/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/chatgear/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/chatgear/transport/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -211,11 +208,11 @@ in-process pipe for testing.</p>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/mqtt0/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/speech/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/chatgear/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/chatgear/transport/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -241,6 +238,7 @@ in-process pipe for testing.</p>
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

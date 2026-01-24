@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Introduction - Giztoy Documentation</title>
+        <title>Technical Overview - Giztoy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -161,63 +161,61 @@
 Library docs live under <code>docs/lib/</code>.</p>
 <h2 id="documentation-structure"><a class="header" href="#documentation-structure">Documentation Structure</a></h2>
 <p>Each module has its own directory under <code>docs/lib/</code> with the following files:</p>
-<pre><code>lib/{mod}/
-├── doc.md      # Main doc: design goals, features, characteristics, examples
-├── go.md       # Go implementation: interface design, type definitions, usage
-├── rust.md     # Rust implementation: trait design, type definitions, progress
-├── issues.md   # Known issues: bugs, improvements needed, design flaws
-└── {submod}/   # Submodules (if any)
-    ├── doc.md
-    ├── go.md
-    ├── rust.md
-    └── issues.md
+<pre><code class="language-mermaid">graph LR
+    subgraph mod["lib/{mod}/"]
+        doc[doc.md&lt;br/&gt;Design &amp; Features]
+        go[go.md&lt;br/&gt;Go Implementation]
+        rust[rust.md&lt;br/&gt;Rust Implementation]
+        issues[issues.md&lt;br/&gt;Known Issues]
+        submod["{submod}/&lt;br/&gt;Submodules"]
+    end
 </code></pre>
 <hr />
 <h2 id="package-list"><a class="header" href="#package-list">Package List</a></h2>
 <h3 id="foundation-layer"><a class="header" href="#foundation-layer">Foundation Layer</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/buffer/">buffer</a></td><td>Buffer utilities</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/encoding/">encoding</a></td><td>Encoding utilities (Base64, Hex)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/jsontime/">jsontime</a></td><td>JSON time type serialization</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/trie/">trie</a></td><td>Prefix tree data structure</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/cli/">cli</a></td><td>CLI utilities</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/buffer/doc.html">buffer</a></td><td>Buffer utilities</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/encoding/doc.html">encoding</a></td><td>Encoding utilities (Base64, Hex)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/jsontime/doc.html">jsontime</a></td><td>JSON time type serialization</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/trie/doc.html">trie</a></td><td>Prefix tree data structure</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/cli/doc.html">cli</a></td><td>CLI utilities</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
 <h3 id="audio-processing-layer"><a class="header" href="#audio-processing-layer">Audio Processing Layer</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/audio/">audio</a></td><td>Audio processing framework</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/codec/">audio/codec</a></td><td>Codecs (Opus, MP3, OGG)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/pcm/">audio/pcm</a></td><td>PCM processing, mixer</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/resampler/">audio/resampler</a></td><td>Sample rate conversion (soxr)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/opusrt/">audio/opusrt</a></td><td>Opus realtime streaming</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
-<tr><td><a href="./lib/audio/portaudio/">audio/portaudio</a></td><td>Audio I/O (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
-<tr><td><a href="./lib/audio/songs/">audio/songs</a></td><td>Built-in sound generation</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/doc.html">audio</a></td><td>Audio processing framework</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/codec/doc.html">audio/codec</a></td><td>Codecs (Opus, MP3, OGG)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/pcm/doc.html">audio/pcm</a></td><td>PCM processing, mixer</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/resampler/doc.html">audio/resampler</a></td><td>Sample rate conversion (soxr)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/audio/opusrt/doc.html">audio/opusrt</a></td><td>Opus realtime streaming</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/audio/portaudio/doc.html">audio/portaudio</a></td><td>Audio I/O (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/audio/songs/doc.html">audio/songs</a></td><td>Built-in sound generation</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
 <h3 id="api-client-layer"><a class="header" href="#api-client-layer">API Client Layer</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/minimax/">minimax</a></td><td>MiniMax API client</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/dashscope/">dashscope</a></td><td>DashScope Realtime API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/doubaospeech/">doubaospeech</a></td><td>Doubao Speech API client</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
-<tr><td><a href="./lib/jiutian/">jiutian</a></td><td>Jiutian API (docs only)</td><td style="text-align: center">❌</td><td style="text-align: center">❌</td></tr>
-<tr><td><a href="./lib/openai-realtime/">openai-realtime</a></td><td>OpenAI Realtime API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/minimax/doc.html">minimax</a></td><td>MiniMax API client</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/dashscope/doc.html">dashscope</a></td><td>DashScope Realtime API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/doubaospeech/doc.html">doubaospeech</a></td><td>Doubao Speech API client</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/jiutian/doc.html">jiutian</a></td><td>Jiutian API (docs only)</td><td style="text-align: center">❌</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/openai-realtime/doc.html">openai-realtime</a></td><td>OpenAI Realtime API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
 <h3 id="communication-layer"><a class="header" href="#communication-layer">Communication Layer</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/mqtt0/">mqtt0</a></td><td>Lightweight MQTT client</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/chatgear/">chatgear</a></td><td>Device communication framework</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/chatgear/transport/">chatgear/transport</a></td><td>Transport layer abstraction</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/chatgear/port/">chatgear/port</a></td><td>Media port</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/mqtt0/doc.html">mqtt0</a></td><td>Lightweight MQTT client</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/doc.html">chatgear</a></td><td>Device communication framework</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/transport/doc.html">chatgear/transport</a></td><td>Transport layer abstraction</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/chatgear/port/doc.html">chatgear/port</a></td><td>Media port</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
 <h3 id="ai-application-layer"><a class="header" href="#ai-application-layer">AI Application Layer</a></h3>
 <div class="table-wrapper"><table><thead><tr><th>Package</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/speech/">speech</a></td><td>Unified speech interface</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/genx/">genx</a></td><td>LLM universal interface framework</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
-<tr><td><a href="./lib/genx/agent/">genx/agent</a></td><td>Agent framework (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
-<tr><td><a href="./lib/genx/agentcfg/">genx/agentcfg</a></td><td>Agent configuration system (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
-<tr><td><a href="./lib/genx/match/">genx/match</a></td><td>Pattern matching engine (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/speech/doc.html">speech</a></td><td>Unified speech interface</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./lib/genx/doc.html">genx</a></td><td>LLM universal interface framework</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./lib/genx/agent/doc.html">genx/agent</a></td><td>Agent framework (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/genx/agentcfg/doc.html">genx/agentcfg</a></td><td>Agent configuration system (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./lib/genx/match/doc.html">genx/match</a></td><td>Pattern matching engine (Go only)</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
 </tbody></table>
 </div>
 <hr />
@@ -227,77 +225,45 @@ Library docs live under <code>docs/lib/</code>.</p>
 </ul>
 <hr />
 <h2 id="directory-structure"><a class="header" href="#directory-structure">Directory Structure</a></h2>
-<pre><code>docs/
-├── outline.md                  # This file
-├── packages-comparison.md      # Cross-language comparison notes
-├── examples/
-│   └── doc.md                   # Examples overview and how to run
-│
-├── lib/                        # Library docs (design + impl + issues)
-│   ├── buffer/                 # doc.md, go.md, rust.md, issues.md
-│   ├── encoding/               # doc.md, go.md, rust.md, issues.md
-│   ├── jsontime/               # doc.md, go.md, rust.md, issues.md
-│   ├── trie/                   # doc.md, go.md, rust.md, issues.md
-│   ├── cli/                    # doc.md, go.md, rust.md, issues.md
-│   ├── audio/
-│   │   ├── doc.md
-│   │   ├── go.md
-│   │   ├── rust.md
-│   │   ├── issues.md
-│   │   ├── codec/              # doc.md, go.md, rust.md, issues.md
-│   │   ├── pcm/                # doc.md, go.md, rust.md, issues.md
-│   │   ├── resampler/          # doc.md, go.md, rust.md, issues.md
-│   │   ├── opusrt/             # doc.md, go.md, rust.md, issues.md
-│   │   ├── portaudio/          # doc.md, go.md
-│   │   └── songs/              # doc.md, go.md, rust.md
-│   ├── minimax/
-│   │   ├── api/                # Official API docs
-│   │   ├── doc.md
-│   │   ├── go.md
-│   │   ├── rust.md
-│   │   └── issues.md
-│   ├── dashscope/
-│   │   ├── api/
-│   │   ├── doc.md
-│   │   ├── go.md
-│   │   ├── rust.md
-│   │   └── issues.md
-│   ├── doubaospeech/
-│   │   ├── api/
-│   │   ├── doc.md
-│   │   ├── go.md
-│   │   ├── rust.md
-│   │   └── issues.md
-│   ├── jiutian/
-│   │   ├── api/
-│   │   ├── doc.md
-│   │   ├── go.md
-│   │   ├── rust.md
-│   │   └── issues.md
-│   ├── openai-realtime/        # doc.md, go.md, rust.md, issues.md
-│   ├── mqtt0/                  # doc.md, go.md, rust.md, issues.md
-│   ├── chatgear/
-│   │   ├── doc.md
-│   │   ├── go.md
-│   │   ├── rust.md
-│   │   ├── issues.md
-│   │   ├── transport/          # doc.md, go.md, rust.md, issues.md
-│   │   └── port/               # doc.md, go.md, rust.md, issues.md
-│   ├── speech/                 # doc.md, go.md, rust.md, issues.md
-│   └── genx/
-│       ├── doc.md
-│       ├── go.md
-│       ├── rust.md
-│       ├── issues.md
-│       ├── agent/              # doc.md, go.md, issues.md
-│       ├── agentcfg/           # doc.md, go.md, issues.md
-│       └── match/              # doc.md, go.md, issues.md
-│
-├── esp/                         # ESP-related docs
-│   ├── esp32-dev-comparison.md
-│   └── esp-rs-migration.md
-│
-└── bazel/                        # Bazel-specific docs
+<pre><code class="language-mermaid">graph TB
+    subgraph docs["docs/"]
+        outline[outline.md]
+        pkg[packages-comparison.md]
+        
+        subgraph examples["examples/"]
+            exdoc[doc.md]
+        end
+        
+        subgraph lib["lib/"]
+            buffer[buffer/]
+            encoding[encoding/]
+            jsontime[jsontime/]
+            trie[trie/]
+            cli[cli/]
+            
+            subgraph audio["audio/"]
+                adoc[doc.md, go.md, rust.md, issues.md]
+                codec[codec/]
+                pcm[pcm/]
+                resampler[resampler/]
+                opusrt[opusrt/]
+                portaudio[portaudio/]
+                songs[songs/]
+            end
+            
+            minimax[minimax/]
+            dashscope[dashscope/]
+            doubaospeech[doubaospeech/]
+            jiutian[jiutian/]
+            mqtt0[mqtt0/]
+            chatgear[chatgear/]
+            speech[speech/]
+            genx[genx/]
+        end
+        
+        esp[esp/]
+        bazel[bazel/]
+    end
 </code></pre>
 <hr />
 <h2 id="other-documentation"><a class="header" href="#other-documentation">Other Documentation</a></h2>
@@ -375,28 +341,23 @@ Library docs live under <code>docs/lib/</code>.</p>
 <h2 id="work-methodology"><a class="header" href="#work-methodology">Work Methodology</a></h2>
 <h3 id="file-by-file-review-process"><a class="header" href="#file-by-file-review-process">File-by-File Review Process</a></h3>
 <p>For each module, the documentation is generated through a rigorous file-by-file review process:</p>
-<pre><code>1. LIST all source files in the module
-   └─► Go: go/pkg/{mod}/*.go
-   └─► Rust: rust/{mod}/src/*.rs
-
-2. READ each file carefully
-   └─► Understand the purpose and design
-   └─► Identify public interfaces/traits
-   └─► Note internal implementation details
-
-3. ANALYZE for potential issues
-   └─► Race conditions (concurrent access)
-   └─► Resource leaks (unclosed handles, memory)
-   └─► Error handling gaps (ignored errors, panics)
-   └─► API inconsistencies (Go vs Rust parity)
-   └─► Performance concerns (allocations, copies)
-   └─► Security vulnerabilities (input validation, injection)
-
-4. DOCUMENT findings
-   └─► doc.md: Architecture and design
-   └─► go.md: Go-specific implementation
-   └─► rust.md: Rust-specific implementation
-   └─► issues.md: All discovered problems
+<pre><code class="language-mermaid">flowchart TB
+    A["1. LIST all source files"] --&gt; B["2. READ each file carefully"]
+    B --&gt; C["3. ANALYZE for potential issues"]
+    C --&gt; D["4. DOCUMENT findings"]
+    
+    A1["Go: go/pkg/{mod}/*.go"] --&gt; A
+    A2["Rust: rust/{mod}/src/*.rs"] --&gt; A
+    
+    C1["Race conditions"] --&gt; C
+    C2["Resource leaks"] --&gt; C
+    C3["Error handling gaps"] --&gt; C
+    C4["API inconsistencies"] --&gt; C
+    
+    D1["doc.md"] --&gt; D
+    D2["go.md"] --&gt; D
+    D3["rust.md"] --&gt; D
+    D4["issues.md"] --&gt; D
 </code></pre>
 <h3 id="issue-classification"><a class="header" href="#issue-classification">Issue Classification</a></h3>
 <p>Issues discovered during review are classified by severity:</p>
@@ -499,8 +460,11 @@ Cryptographic correctness</li>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="intro/about.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
-                            <a rel="next prefetch" href="lib/buffer/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="examples/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -510,8 +474,11 @@ Cryptographic correctness</li>
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="intro/about.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
-                    <a rel="next prefetch" href="lib/buffer/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="examples/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -537,6 +504,7 @@ Cryptographic correctness</li>
         <!-- Custom JS scripts -->
         <script src="mermaid.min.js"></script>
         <script src="mermaid-init.js"></script>
+        <script src="lang-switch.js"></script>
 
 
     </div>

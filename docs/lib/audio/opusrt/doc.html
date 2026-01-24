@@ -169,15 +169,20 @@
 <h3 id="jitter-buffer"><a class="header" href="#jitter-buffer">Jitter Buffer</a></h3>
 <p>Network packets may arrive out of order or with variable delay (jitter).
 The jitter buffer collects packets and outputs them in correct order:</p>
-<pre><code>Network          Buffer              Output
-   │               │                   │
-   │──[PKT 3]──►  │  ┌──────────┐     │
-   │              │  │ Heap     │     │
-   │──[PKT 1]──►  │  │ [1,3]    │     │
-   │              │  │          │     │──[PKT 1]──►
-   │──[PKT 2]──►  │  │ [2,3]    │     │
-   │              │  │          │     │──[PKT 2]──►
-   │              │  │ [3]      │     │──[PKT 3]──►
+<pre><code class="language-mermaid">sequenceDiagram
+    participant N as Network
+    participant B as Buffer (Heap)
+    participant O as Output
+    
+    N-&gt;&gt;B: PKT 3
+    Note over B: [3]
+    N-&gt;&gt;B: PKT 1
+    Note over B: [1, 3]
+    B-&gt;&gt;O: PKT 1
+    N-&gt;&gt;B: PKT 2
+    Note over B: [2, 3]
+    B-&gt;&gt;O: PKT 2
+    B-&gt;&gt;O: PKT 3
 </code></pre>
 <h3 id="packet-loss-detection"><a class="header" href="#packet-loss-detection">Packet Loss Detection</a></h3>
 <p>Gaps between consecutive frame timestamps indicate lost packets:</p>
@@ -194,12 +199,11 @@ if loss &gt; 0 {
 </code></pre>
 <h3 id="timestamped-frames"><a class="header" href="#timestamped-frames">Timestamped Frames</a></h3>
 <p>Frames are timestamped with epoch milliseconds:</p>
-<pre><code>┌─────────────────────────────────┐
-│        StampedFrame             │
-├─────────────────────────────────┤
-│ Timestamp (8 bytes, big-endian) │
-│ Opus Frame (variable)           │
-└─────────────────────────────────┘
+<pre><code class="language-mermaid">classDiagram
+    class StampedFrame {
+        Timestamp: int64 (8 bytes, big-endian)
+        OpusFrame: []byte (variable)
+    }
 </code></pre>
 <h2 id="components"><a class="header" href="#components">Components</a></h2>
 <h3 id="buffer"><a class="header" href="#buffer">Buffer</a></h3>
@@ -239,13 +243,23 @@ duration := stamp.Duration() // time.Duration
 </code></pre>
 <h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
 <h3 id="webrtc-audio"><a class="header" href="#webrtc-audio">WebRTC Audio</a></h3>
-<pre><code>WebRTC → RTP Packets → Jitter Buffer → Opus Decode → Playback
+<pre><code class="language-mermaid">flowchart LR
+    A[WebRTC] --&gt; B[RTP Packets]
+    B --&gt; C[Jitter Buffer]
+    C --&gt; D[Opus Decode]
+    D --&gt; E[Playback]
 </code></pre>
 <h3 id="speech-api-streaming"><a class="header" href="#speech-api-streaming">Speech API Streaming</a></h3>
-<pre><code>API Response → Stamped Frames → RealtimeBuffer → Decode → Mixer
+<pre><code class="language-mermaid">flowchart LR
+    A[API Response] --&gt; B[Stamped Frames]
+    B --&gt; C[RealtimeBuffer]
+    C --&gt; D[Decode]
+    D --&gt; E[Mixer]
 </code></pre>
 <h3 id="audio-recording"><a class="header" href="#audio-recording">Audio Recording</a></h3>
-<pre><code>Opus Frames → OGG Writer → File
+<pre><code class="language-mermaid">flowchart LR
+    A[Opus Frames] --&gt; B[OGG Writer]
+    B --&gt; C[File]
 </code></pre>
 <h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
 <p>See parent <code>audio/</code> documentation for usage examples.</p>
@@ -260,11 +274,11 @@ duration := stamp.Duration() // time.Duration
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/audio/resampler/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../lib/audio/resampler/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../lib/audio/opusrt/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../lib/audio/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -274,11 +288,11 @@ duration := stamp.Duration() // time.Duration
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/audio/resampler/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../lib/audio/resampler/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../lib/audio/opusrt/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../lib/audio/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -304,6 +318,7 @@ duration := stamp.Duration() // time.Duration
         <!-- Custom JS scripts -->
         <script src="../../../mermaid.min.js"></script>
         <script src="../../../mermaid-init.js"></script>
+        <script src="../../../lang-switch.js"></script>
 
 
     </div>

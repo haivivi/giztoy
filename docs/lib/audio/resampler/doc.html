@@ -204,15 +204,28 @@
 </ul>
 <h2 id="common-resampling-scenarios"><a class="header" href="#common-resampling-scenarios">Common Resampling Scenarios</a></h2>
 <h3 id="speech-api-to-local-playback"><a class="header" href="#speech-api-to-local-playback">Speech API to Local Playback</a></h3>
-<pre><code>API Output (24kHz) → Resample → Mixer Input (16kHz)
+<pre><code class="language-mermaid">flowchart LR
+    A["API Output&lt;br/&gt;(24kHz)"] --&gt; B[Resample]
+    B --&gt; C["Mixer Input&lt;br/&gt;(16kHz)"]
 </code></pre>
 <h3 id="local-capture-to-speech-api"><a class="header" href="#local-capture-to-speech-api">Local Capture to Speech API</a></h3>
-<pre><code>Microphone (48kHz) → Resample → API Input (16kHz)
+<pre><code class="language-mermaid">flowchart LR
+    A["Microphone&lt;br/&gt;(48kHz)"] --&gt; B[Resample]
+    B --&gt; C["API Input&lt;br/&gt;(16kHz)"]
 </code></pre>
 <h3 id="multi-source-mixing"><a class="header" href="#multi-source-mixing">Multi-source Mixing</a></h3>
-<pre><code>Source 1 (24kHz) ─┬─► Resample ─► 16kHz ─┐
-Source 2 (16kHz) ─┼─────────────────────►├─► Mixer
-Source 3 (48kHz) ─┴─► Resample ─► 16kHz ─┘
+<pre><code class="language-mermaid">flowchart LR
+    s1["Source 1&lt;br/&gt;(24kHz)"] --&gt; r1[Resample]
+    r1 --&gt; m1["16kHz"]
+    
+    s2["Source 2&lt;br/&gt;(16kHz)"] --&gt; m2["16kHz"]
+    
+    s3["Source 3&lt;br/&gt;(48kHz)"] --&gt; r3[Resample]
+    r3 --&gt; m3["16kHz"]
+    
+    m1 --&gt; mixer[Mixer]
+    m2 --&gt; mixer
+    m3 --&gt; mixer
 </code></pre>
 <h2 id="performance-characteristics"><a class="header" href="#performance-characteristics">Performance Characteristics</a></h2>
 <p>Approximate cycles per sample (on modern CPU):</p>
@@ -244,11 +257,11 @@ Source 3 (48kHz) ─┴─► Resample ─► 16kHz ─┘
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/audio/pcm/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../lib/audio/pcm/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../lib/audio/resampler/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../lib/audio/opusrt/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -258,11 +271,11 @@ Source 3 (48kHz) ─┴─► Resample ─► 16kHz ─┘
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/audio/pcm/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../lib/audio/pcm/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../lib/audio/resampler/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../lib/audio/opusrt/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -288,6 +301,7 @@ Source 3 (48kHz) ─┴─► Resample ─► 16kHz ─┘
         <!-- Custom JS scripts -->
         <script src="../../../mermaid.min.js"></script>
         <script src="../../../mermaid-init.js"></script>
+        <script src="../../../lang-switch.js"></script>
 
 
     </div>

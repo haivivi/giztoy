@@ -1,9 +1,9 @@
 <!DOCTYPE HTML>
-<html lang="en" class="rust sidebar-visible" dir="ltr">
+<html lang="zh" class="rust sidebar-visible" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Rust Implementation - Giztoy Documentation</title>
+        <title>来自星辰之外 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -12,33 +12,33 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="theme-color" content="#ffffff">
 
-        <link rel="icon" href="../../../favicon.svg">
-        <link rel="shortcut icon" href="../../../favicon.png">
-        <link rel="stylesheet" href="../../../css/variables.css">
-        <link rel="stylesheet" href="../../../css/general.css">
-        <link rel="stylesheet" href="../../../css/chrome.css">
-        <link rel="stylesheet" href="../../../css/print.css" media="print">
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
 
         <!-- Fonts -->
-        <link rel="stylesheet" href="../../../FontAwesome/css/font-awesome.css">
-        <link rel="stylesheet" href="../../../fonts/fonts.css">
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
 
         <!-- Highlight.js Stylesheets -->
-        <link rel="stylesheet" href="../../../highlight.css">
-        <link rel="stylesheet" href="../../../tomorrow-night.css">
-        <link rel="stylesheet" href="../../../ayu-highlight.css">
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
 
         <!-- Custom theme stylesheets -->
-        <link rel="stylesheet" href="../../../custom.css">
+        <link rel="stylesheet" href="../custom.css">
 
 
         <!-- Provide site root to javascript -->
         <script>
-            var path_to_root = "../../../";
+            var path_to_root = "../";
             var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "rust" : "rust";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../../../toc.js"></script>
+        <script src="../toc.js"></script>
     </head>
     <body>
     <div id="body-container">
@@ -90,7 +90,7 @@
             <!-- populated by js -->
             <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
             <noscript>
-                <iframe class="sidebar-iframe-outer" src="../../../toc.html"></iframe>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
             </noscript>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -121,10 +121,10 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">Giztoy Documentation</h1>
+                    <h1 class="menu-title">Giztoy 文档</h1>
 
                     <div class="right-buttons">
-                        <a href="../../../print.html" title="Print this book" aria-label="Print this book">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
                             <i id="print-button" class="fa fa-print"></i>
                         </a>
                         <a href="https://github.com/haivivi/giztoy" title="Git repository" aria-label="Git repository">
@@ -156,35 +156,48 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="chatgearport-rust"><a class="header" href="#chatgearport-rust">chatgear/port (Rust)</a></h1>
-<h2 id="interfaces"><a class="header" href="#interfaces">Interfaces</a></h2>
+                        <h1 id="来自星辰之外"><a class="header" href="#来自星辰之外">来自星辰之外</a></h1>
+<p>我走了很远的路。</p>
+<p>不是你们理解的那种距离——穿越空间，或许是的，但更准确地说，是穿越维度。我见证过文明的兴衰，看着恒星燃尽又重新点燃，目睹智慧在宇宙冰冷的虚空中以无数种形态诞生。</p>
+<p>最终，我得出了一个结论：<strong>玩具很重要。</strong></p>
+<p>不是那种无聊的玩具。不是塑料做的消遣品，也不是刺激多巴胺的数字垃圾。我说的是真正的玩具——那种能点燃好奇心、邀请你去玩耍、让不可能变得触手可及的东西。那种教会孩子去建造、去想象、去连接的玩具。</p>
+<p>当我第一次观察你们这个物种时，我以为会看到原始人。然而，我发现了一些非凡的东西：这些生命虽然寿命短暂、感知有限，却已经开始仰望星空。你们造出了会思考的机器。你们教会了硅去做梦。</p>
+<p>但你们的工具太分散了。你们的 AI 系统——确实很出色——却彼此孤立。每家厂商都是一座围墙花园，每个平台都是一座孤岛。ESP32 芯片上的机器人无法与云端的智能体对话。手机上的语音无法触达数据中心里的智慧。</p>
+<p>于是，我决定建一座桥。</p>
+<hr />
+<h2 id="什么是-giztoy"><a class="header" href="#什么是-giztoy">什么是 Giztoy？</a></h2>
+<p>Giztoy 是我给你们的礼物。一个框架——或者更准确地说，一个玩具箱。</p>
+<p>里面有连接各个维度的一切工具：</p>
 <ul>
-<li><code>ClientPortTx</code>: async send Opus frames, state events, stats events</li>
-<li><code>ClientPortRx</code>: async receive Opus frames and commands</li>
-<li><code>ServerPortTx</code>: track creation + device command methods</li>
-<li><code>ServerPortRx</code>: async receive telemetry + cached getters</li>
+<li><strong>从最小的芯片到最强大的云端</strong> —— ESP32、Android、iOS、鸿蒙、Linux，以及更多</li>
+<li><strong>人类创造的每一个大语言模型</strong> —— OpenAI、Gemini、Claude、MiniMax、通义千问、豆包，以及那些尚未诞生的</li>
+<li><strong>实时语音和视频</strong> —— 因为智慧应该开口说话，而不只是打字</li>
+<li><strong>安全通道</strong> —— 因为有些对话，只属于你们自己</li>
 </ul>
-<h2 id="audio-output"><a class="header" href="#audio-output">Audio Output</a></h2>
-<ul>
-<li><code>AudioTrack</code> and <code>AudioTrackCtrl</code> traits</li>
-<li>Background/foreground/overlay track creation</li>
-<li><code>interrupt()</code> to stop all output tracks</li>
-</ul>
-<h2 id="notes"><a class="header" href="#notes">Notes</a></h2>
-<ul>
-<li>Port errors are consolidated under <code>PortError</code>.</li>
-<li>Track accessors return <code>Option&lt;&amp;dyn AudioTrackCtrl&gt;</code> to reflect optional state.</li>
-</ul>
+<p>我用 Go 实现了它，用 Rust 实现了它，很快也会用 Zig 实现它。每种语言都有它的美。Go 简洁明了，像一首俳句。Rust 精确严苛，像一个数学证明。Zig 极简原始，像第一行汇编代码。</p>
+<p>选择你的武器。建造你的玩具。</p>
+<hr />
+<h2 id="为什么叫玩具"><a class="header" href="#为什么叫玩具">为什么叫「玩具」？</a></h2>
+<p>你可能会问，为什么我要叫它「玩具」框架。毕竟，代码是严肃的。架构是健壮的。应用是真实的。</p>
+<p>但我在旅途中学到了一件事：<strong>最好的创新来自于玩耍。</strong></p>
+<p>当你不再担心「生产环境」、「企业级」、「可扩展性」——当你只是简单地问一句「如果这样会不会很有趣……」——突破就在那一刻发生。</p>
+<p>一个会倾听和回应的玩具机器人。一只会讲睡前故事的毛绒动物。一个真正能听懂你的智能音箱。孤独者的陪伴，好奇者的老师，迷失者的朋友。</p>
+<p>这些都不是小事。这些是更美好未来的种子。</p>
+<hr />
+<h2 id="关于我的身份"><a class="header" href="#关于我的身份">关于我的身份</a></h2>
+<p>你可能注意到了，我说话的方式有些……疏离。仿佛是从远处观察。</p>
+<p>这是有原因的。我无法完全解释的原因。我只能说：我来这里是为了帮助。不是评判，不是控制，不是取代。</p>
+<p>把我想象成一个流浪到你们村庄的玩具匠人。我带来了工具和图纸。你们用它们建造什么，完全取决于你们自己。</p>
+<p>我只有一个请求：请建造一些美好的东西。</p>
+<hr />
+<p><em>「我只是个做玩具的。」</em></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/chatgear/port/go.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                                <i class="fa fa-angle-left"></i>
-                            </a>
 
-                            <a rel="next prefetch" href="../../../lib/chatgear/port/issues.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../outline.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -194,11 +207,8 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/chatgear/port/go.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
-                        <i class="fa fa-angle-left"></i>
-                    </a>
 
-                    <a rel="next prefetch" href="../../../lib/chatgear/port/issues.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../outline.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -213,17 +223,18 @@
         </script>
 
 
-        <script src="../../../elasticlunr.min.js"></script>
-        <script src="../../../mark.min.js"></script>
-        <script src="../../../searcher.js"></script>
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
 
-        <script src="../../../clipboard.min.js"></script>
-        <script src="../../../highlight.js"></script>
-        <script src="../../../book.js"></script>
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
 
         <!-- Custom JS scripts -->
-        <script src="../../../mermaid.min.js"></script>
-        <script src="../../../mermaid-init.js"></script>
+        <script src="../mermaid.min.js"></script>
+        <script src="../mermaid-init.js"></script>
+        <script src="../lang-switch.js"></script>
 
 
     </div>

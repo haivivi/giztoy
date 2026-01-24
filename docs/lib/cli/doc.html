@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>CLI Utilities - Giztoy Documentation</title>
+        <title>CLI - Giztoy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -175,18 +175,22 @@
 </tbody></table>
 </div>
 <h2 id="directory-structure"><a class="header" href="#directory-structure">Directory Structure</a></h2>
-<pre><code>~/.giztoy/
-├── minimax/
-│   ├── config.yaml
-│   ├── cache/
-│   ├── logs/
-│   └── data/
-├── doubao/
-│   ├── config.yaml
-│   ├── cache/
-│   └── ...
-└── dashscope/
-    └── ...
+<pre><code class="language-mermaid">graph LR
+    subgraph giztoy["~/.giztoy/"]
+        subgraph minimax["minimax/"]
+            m1[config.yaml]
+            m2[cache/]
+            m3[logs/]
+            m4[data/]
+        end
+        subgraph doubao["doubao/"]
+            d1[config.yaml]
+            d2[cache/]
+        end
+        subgraph dashscope["dashscope/"]
+            s1[...]
+        end
+    end
 </code></pre>
 <h2 id="configuration-format"><a class="header" href="#configuration-format">Configuration Format</a></h2>
 <pre><code class="language-yaml">current_context: production
@@ -301,6 +305,7 @@ myapp config set default_voice "zh-CN-Standard-A"
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

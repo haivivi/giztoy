@@ -156,108 +156,108 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="audio-pcm-module"><a class="header" href="#audio-pcm-module">Audio PCM Module</a></h1>
-<p>PCM (Pulse Code Modulation) audio format handling, chunks, and multi-track mixing.</p>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+                        <h1 id="音频-pcm-模块"><a class="header" href="#音频-pcm-模块">音频 PCM 模块</a></h1>
+<p>PCM（脉冲编码调制）音频格式处理、分块和多轨混音。</p>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>Standard Formats</strong>: Predefined configurations for common use cases</li>
-<li><strong>Chunk Abstraction</strong>: Unified interface for audio data and silence</li>
-<li><strong>Real-time Mixing</strong>: Low-latency multi-track audio mixing with gain control</li>
-<li><strong>Streaming Interface</strong>: Compatible with io.Reader/io.Writer patterns</li>
+<li><strong>标准格式</strong>：为常见用例提供预定义配置</li>
+<li><strong>分块抽象</strong>：音频数据和静音的统一接口</li>
+<li><strong>实时混音</strong>：带增益控制的低延迟多轨音频混音</li>
+<li><strong>流式接口</strong>：兼容 io.Reader/io.Writer 模式</li>
 </ol>
-<h2 id="predefined-formats"><a class="header" href="#predefined-formats">Predefined Formats</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Format</th><th>Sample Rate</th><th>Channels</th><th>Bit Depth</th><th>Bytes/sec</th></tr></thead><tbody>
-<tr><td><code>L16Mono16K</code></td><td>16000 Hz</td><td>1</td><td>16-bit</td><td>32,000</td></tr>
-<tr><td><code>L16Mono24K</code></td><td>24000 Hz</td><td>1</td><td>16-bit</td><td>48,000</td></tr>
-<tr><td><code>L16Mono48K</code></td><td>48000 Hz</td><td>1</td><td>16-bit</td><td>96,000</td></tr>
+<h2 id="预定义格式"><a class="header" href="#预定义格式">预定义格式</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>格式</th><th>采样率</th><th>声道</th><th>位深</th><th>字节/秒</th></tr></thead><tbody>
+<tr><td><code>L16Mono16K</code></td><td>16000 Hz</td><td>1</td><td>16 位</td><td>32,000</td></tr>
+<tr><td><code>L16Mono24K</code></td><td>24000 Hz</td><td>1</td><td>16 位</td><td>48,000</td></tr>
+<tr><td><code>L16Mono48K</code></td><td>48000 Hz</td><td>1</td><td>16 位</td><td>96,000</td></tr>
 </tbody></table>
 </div>
-<h2 id="durationbytes-calculations"><a class="header" href="#durationbytes-calculations">Duration/Bytes Calculations</a></h2>
-<p>For <code>L16Mono16K</code> (16kHz, 16-bit mono):</p>
-<div class="table-wrapper"><table><thead><tr><th>Duration</th><th>Samples</th><th>Bytes</th></tr></thead><tbody>
+<h2 id="时长字节计算"><a class="header" href="#时长字节计算">时长/字节计算</a></h2>
+<p>对于 <code>L16Mono16K</code>（16kHz，16 位单声道）：</p>
+<div class="table-wrapper"><table><thead><tr><th>时长</th><th>样本数</th><th>字节</th></tr></thead><tbody>
 <tr><td>20ms</td><td>320</td><td>640</td></tr>
 <tr><td>50ms</td><td>800</td><td>1,600</td></tr>
 <tr><td>100ms</td><td>1,600</td><td>3,200</td></tr>
 <tr><td>1s</td><td>16,000</td><td>32,000</td></tr>
 </tbody></table>
 </div>
-<p>Formula: <code>bytes = samples × channels × (bit_depth / 8)</code></p>
-<h2 id="chunk-types"><a class="header" href="#chunk-types">Chunk Types</a></h2>
+<p>公式：<code>字节 = 样本数 × 声道数 × (位深 / 8)</code></p>
+<h2 id="分块类型"><a class="header" href="#分块类型">分块类型</a></h2>
 <h3 id="datachunk"><a class="header" href="#datachunk">DataChunk</a></h3>
-<p>Raw audio data with format metadata.</p>
-<pre><code>┌─────────────────┐
-│    DataChunk    │
-├─────────────────┤
-│ Data: []byte    │
-│ Format: Format  │
-└─────────────────┘
+<p>带格式元数据的原始音频数据。</p>
+<pre><code class="language-mermaid">classDiagram
+    class DataChunk {
+        Data: []byte
+        Format: Format
+    }
 </code></pre>
 <h3 id="silencechunk"><a class="header" href="#silencechunk">SilenceChunk</a></h3>
-<p>Generates silence (zeros) of specified duration without allocating.</p>
-<pre><code>┌─────────────────┐
-│  SilenceChunk   │
-├─────────────────┤
-│ Duration: time  │
-│ Format: Format  │
-└─────────────────┘
+<p>生成指定时长的静音（零值），无需分配内存。</p>
+<pre><code class="language-mermaid">classDiagram
+    class SilenceChunk {
+        Duration: time
+        Format: Format
+    }
 </code></pre>
-<h2 id="mixer-architecture"><a class="header" href="#mixer-architecture">Mixer Architecture</a></h2>
-<p>Multi-track audio mixer with real-time mixing and gain control:</p>
-<pre><code>┌─────────────────────────────────────────────────┐
-│                    Mixer                         │
-├─────────────────────────────────────────────────┤
-│  Track 1 ──┬───► Mix Buffer ───► Output (int16) │
-│  (gain=1)  │     (float32)                      │
-│            │                                     │
-│  Track 2 ──┤                                     │
-│  (gain=0.5)│                                     │
-│            │                                     │
-│  Track N ──┘                                     │
-└─────────────────────────────────────────────────┘
+<h2 id="混音器架构"><a class="header" href="#混音器架构">混音器架构</a></h2>
+<p>带实时混音和增益控制的多轨音频混音器：</p>
+<pre><code class="language-mermaid">flowchart LR
+    subgraph mixer["Mixer"]
+        t1["轨道 1&lt;br/&gt;(gain=1)"]
+        t2["轨道 2&lt;br/&gt;(gain=0.5)"]
+        tn["轨道 N"]
+        mix["混音缓冲&lt;br/&gt;(float32)"]
+        out["输出&lt;br/&gt;(int16)"]
+        
+        t1 --&gt; mix
+        t2 --&gt; mix
+        tn --&gt; mix
+        mix --&gt; out
+    end
 </code></pre>
-<p><strong>Features:</strong></p>
+<p><strong>特性：</strong></p>
 <ul>
-<li>Dynamic track creation/removal</li>
-<li>Per-track gain control (0.0 - 1.0+)</li>
-<li>Silence gap detection</li>
-<li>Auto-close when all tracks done</li>
-<li>Thread-safe operations</li>
+<li>动态轨道创建/移除</li>
+<li>每轨增益控制（0.0 - 1.0+）</li>
+<li>静音间隙检测</li>
+<li>所有轨道完成时自动关闭</li>
+<li>线程安全操作</li>
 </ul>
-<h2 id="mixing-algorithm"><a class="header" href="#mixing-algorithm">Mixing Algorithm</a></h2>
+<h2 id="混音算法"><a class="header" href="#混音算法">混音算法</a></h2>
 <ol>
-<li>Convert int16 PCM to float32 (-1.0 to 1.0)</li>
-<li>Apply per-track gain</li>
-<li>Sum all track samples</li>
-<li>Clip to [-1.0, 1.0]</li>
-<li>Convert back to int16</li>
+<li>将 int16 PCM 转换为 float32（-1.0 到 1.0）</li>
+<li>应用每轨增益</li>
+<li>求和所有轨道样本</li>
+<li>裁剪到 [-1.0, 1.0]</li>
+<li>转换回 int16</li>
 </ol>
 <pre><code>output = clip(Σ(track[i] × gain[i]), -1.0, 1.0) × 32767
 </code></pre>
-<h2 id="use-cases"><a class="header" href="#use-cases">Use Cases</a></h2>
-<h3 id="voice-chat-mixing"><a class="header" href="#voice-chat-mixing">Voice Chat Mixing</a></h3>
-<p>Multiple participants' audio mixed into single output stream.</p>
-<h3 id="background-music"><a class="header" href="#background-music">Background Music</a></h3>
-<p>Mix background music track with voice at lower gain.</p>
-<h3 id="audio-ducking"><a class="header" href="#audio-ducking">Audio Ducking</a></h3>
-<p>Reduce music volume when voice is detected.</p>
-<h2 id="examples"><a class="header" href="#examples">Examples</a></h2>
-<p>See parent <code>audio/</code> documentation for usage examples.</p>
-<h2 id="related-modules"><a class="header" href="#related-modules">Related Modules</a></h2>
+<h2 id="使用场景"><a class="header" href="#使用场景">使用场景</a></h2>
+<h3 id="语音聊天混音"><a class="header" href="#语音聊天混音">语音聊天混音</a></h3>
+<p>多个参与者的音频混合成单一输出流。</p>
+<h3 id="背景音乐"><a class="header" href="#背景音乐">背景音乐</a></h3>
+<p>以较低增益将背景音乐轨道与语音混合。</p>
+<h3 id="音频闪避"><a class="header" href="#音频闪避">音频闪避</a></h3>
+<p>检测到语音时降低音乐音量。</p>
+<h2 id="示例"><a class="header" href="#示例">示例</a></h2>
+<p>请参阅父级 <code>audio/</code> 文档的使用示例。</p>
+<h2 id="相关模块"><a class="header" href="#相关模块">相关模块</a></h2>
 <ul>
-<li><code>audio/codec/</code> - Encode/decode before/after mixing</li>
-<li><code>audio/resampler/</code> - Convert sample rates before mixing</li>
-<li><code>buffer/</code> - Buffer audio data between processing stages</li>
+<li><code>audio/codec/</code> - 混音前后的编码/解码</li>
+<li><code>audio/resampler/</code> - 混音前转换采样率</li>
+<li><code>buffer/</code> - 处理阶段之间缓冲音频数据</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/audio/codec/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../lib/audio/codec/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../lib/audio/pcm/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../lib/audio/resampler/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -267,11 +267,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/audio/codec/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../lib/audio/codec/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../lib/audio/pcm/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../lib/audio/resampler/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -297,6 +297,7 @@
         <!-- Custom JS scripts -->
         <script src="../../../mermaid.min.js"></script>
         <script src="../../../mermaid-init.js"></script>
+        <script src="../../../lang-switch.js"></script>
 
 
     </div>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>GenX - Giztoy 文档</title>
+        <title>GenX - LLM 通用接口 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -156,148 +156,147 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="genx---universal-llm-interface"><a class="header" href="#genx---universal-llm-interface">GenX - Universal LLM Interface</a></h1>
-<p>GenX is a universal abstraction layer for Large Language Models (LLMs).</p>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+                        <h1 id="genx---通用-llm-接口"><a class="header" href="#genx---通用-llm-接口">GenX - 通用 LLM 接口</a></h1>
+<p>GenX 是大语言模型（LLM）的通用抽象层。</p>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>Provider Agnostic</strong>: Single API for OpenAI, Gemini, and other providers</li>
-<li><strong>Streaming First</strong>: Native support for streaming responses</li>
-<li><strong>Tool Orchestration</strong>: Rich function calling and tool management</li>
-<li><strong>Agent Framework</strong>: Build autonomous AI agents (Go only)</li>
+<li><strong>提供商无关</strong>：单一 API 适用于 OpenAI、Gemini 等提供商</li>
+<li><strong>流式优先</strong>：原生支持流式响应</li>
+<li><strong>工具编排</strong>：丰富的函数调用和工具管理</li>
+<li><strong>Agent 框架</strong>：构建自主 AI 代理（仅 Go）</li>
 </ol>
-<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌─────────────────────────────────────────────────────────────┐
-│                     Application Layer                        │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                    Agent Framework (Go)                 │ │
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐    │ │
-│  │  │  ReActAgent  │ │  MatchAgent  │ │  SubAgents   │    │ │
-│  │  └──────────────┘ └──────────────┘ └──────────────┘    │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                      Tool System                        │ │
-│  │  ┌────────┐ ┌────────────┐ ┌────────┐ ┌────────────┐  │ │
-│  │  │FuncTool│ │GeneratorTool│ │HTTPTool│ │CompositeTool│  │ │
-│  │  └────────┘ └────────────┘ └────────┘ └────────────┘  │ │
-│  └────────────────────────────────────────────────────────┘ │
-│                                                              │
-├─────────────────────────────────────────────────────────────┤
-│                    Core Abstraction                          │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
-│  │ModelContext  │ │  Generator   │ │      Stream          │ │
-│  │  (Builder)   │ │  (Trait)     │ │   (Chunks)           │ │
-│  └──────────────┘ └──────────────┘ └──────────────────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│                   Provider Adapters                          │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
-│  │    OpenAI    │ │    Gemini    │ │       Other          │ │
-│  └──────────────┘ └──────────────┘ └──────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+<h2 id="架构"><a class="header" href="#架构">架构</a></h2>
+<pre><code class="language-mermaid">graph TB
+    subgraph app["应用层"]
+        subgraph agent["Agent 框架 (Go)"]
+            react[ReActAgent]
+            match[MatchAgent]
+            sub[SubAgents]
+        end
+        subgraph tools["工具系统"]
+            func[FuncTool]
+            gen[GeneratorTool]
+            http[HTTPTool]
+            comp[CompositeTool]
+        end
+    end
+    
+    subgraph core["核心抽象"]
+        ctx[ModelContext&lt;br/&gt;构建器]
+        generator[Generator&lt;br/&gt;Trait]
+        stream[Stream&lt;br/&gt;分块]
+    end
+    
+    subgraph providers["提供商适配器"]
+        openai[OpenAI]
+        gemini[Gemini]
+        other[其他]
+    end
+    
+    app --&gt; core
+    core --&gt; providers
 </code></pre>
-<h2 id="core-concepts"><a class="header" href="#core-concepts">Core Concepts</a></h2>
+<h2 id="核心概念"><a class="header" href="#核心概念">核心概念</a></h2>
 <h3 id="modelcontext"><a class="header" href="#modelcontext">ModelContext</a></h3>
-<p>Contains all inputs for LLM generation:</p>
+<p>包含 LLM 生成的所有输入：</p>
 <ul>
-<li><strong>Prompts</strong>: System instructions (named prompts)</li>
-<li><strong>Messages</strong>: Conversation history</li>
-<li><strong>Tools</strong>: Available function definitions</li>
-<li><strong>Params</strong>: Model parameters (temperature, max_tokens, etc.)</li>
-<li><strong>CoTs</strong>: Chain-of-thought examples</li>
+<li><strong>Prompts</strong>：系统指令（命名提示词）</li>
+<li><strong>Messages</strong>：对话历史</li>
+<li><strong>Tools</strong>：可用函数定义</li>
+<li><strong>Params</strong>：模型参数（temperature、max_tokens 等）</li>
+<li><strong>CoTs</strong>：思维链示例</li>
 </ul>
 <h3 id="generator"><a class="header" href="#generator">Generator</a></h3>
-<p>Interface for LLM providers:</p>
+<p>LLM 提供商接口：</p>
 <ul>
-<li><code>GenerateStream()</code>: Streaming text generation</li>
-<li><code>Invoke()</code>: Structured function call</li>
+<li><code>GenerateStream()</code>：流式文本生成</li>
+<li><code>Invoke()</code>：结构化函数调用</li>
 </ul>
 <h3 id="stream"><a class="header" href="#stream">Stream</a></h3>
-<p>Streaming response handler:</p>
+<p>流式响应处理器：</p>
 <ul>
-<li><code>Next()</code>: Get next message chunk</li>
-<li><code>Close()</code>: Close stream</li>
-<li><code>CloseWithError()</code>: Close with error</li>
+<li><code>Next()</code>：获取下一个消息块</li>
+<li><code>Close()</code>：关闭流</li>
+<li><code>CloseWithError()</code>：带错误关闭</li>
 </ul>
-<h3 id="message-types"><a class="header" href="#message-types">Message Types</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>user</code></td><td>User input</td></tr>
-<tr><td><code>assistant</code></td><td>Model response</td></tr>
-<tr><td><code>system</code></td><td>System prompt (in messages)</td></tr>
-<tr><td><code>tool</code></td><td>Tool call/result</td></tr>
+<h3 id="消息类型"><a class="header" href="#消息类型">消息类型</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>类型</th><th>描述</th></tr></thead><tbody>
+<tr><td><code>user</code></td><td>用户输入</td></tr>
+<tr><td><code>assistant</code></td><td>模型响应</td></tr>
+<tr><td><code>system</code></td><td>系统提示（在消息中）</td></tr>
+<tr><td><code>tool</code></td><td>工具调用/结果</td></tr>
 </tbody></table>
 </div>
-<h3 id="content-types"><a class="header" href="#content-types">Content Types</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>Type</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>Text</code></td><td>Plain text</td></tr>
-<tr><td><code>Blob</code></td><td>Binary data (images, audio)</td></tr>
-<tr><td><code>ToolCall</code></td><td>Function call request</td></tr>
-<tr><td><code>ToolResult</code></td><td>Function call response</td></tr>
+<h3 id="内容类型"><a class="header" href="#内容类型">内容类型</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>类型</th><th>描述</th></tr></thead><tbody>
+<tr><td><code>Text</code></td><td>纯文本</td></tr>
+<tr><td><code>Blob</code></td><td>二进制数据（图像、音频）</td></tr>
+<tr><td><code>ToolCall</code></td><td>函数调用请求</td></tr>
+<tr><td><code>ToolResult</code></td><td>函数调用响应</td></tr>
 </tbody></table>
 </div>
-<h2 id="agent-framework-go-only"><a class="header" href="#agent-framework-go-only">Agent Framework (Go only)</a></h2>
-<h3 id="agent-types"><a class="header" href="#agent-types">Agent Types</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>Agent</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>ReActAgent</code></td><td>Reasoning + Acting pattern</td></tr>
-<tr><td><code>MatchAgent</code></td><td>Intent-based routing</td></tr>
+<h2 id="agent-框架仅-go"><a class="header" href="#agent-框架仅-go">Agent 框架（仅 Go）</a></h2>
+<h3 id="agent-类型"><a class="header" href="#agent-类型">Agent 类型</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>Agent</th><th>描述</th></tr></thead><tbody>
+<tr><td><code>ReActAgent</code></td><td>推理 + 行动模式</td></tr>
+<tr><td><code>MatchAgent</code></td><td>基于意图的路由</td></tr>
 </tbody></table>
 </div>
-<h3 id="tool-types"><a class="header" href="#tool-types">Tool Types</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>Tool</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>FuncTool</code></td><td>Go function wrapper</td></tr>
-<tr><td><code>GeneratorTool</code></td><td>LLM-based generation</td></tr>
-<tr><td><code>HTTPTool</code></td><td>HTTP requests</td></tr>
-<tr><td><code>CompositeTool</code></td><td>Tool pipeline</td></tr>
-<tr><td><code>TextProcessorTool</code></td><td>Text manipulation</td></tr>
+<h3 id="工具类型"><a class="header" href="#工具类型">工具类型</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>工具</th><th>描述</th></tr></thead><tbody>
+<tr><td><code>FuncTool</code></td><td>Go 函数包装器</td></tr>
+<tr><td><code>GeneratorTool</code></td><td>基于 LLM 的生成</td></tr>
+<tr><td><code>HTTPTool</code></td><td>HTTP 请求</td></tr>
+<tr><td><code>CompositeTool</code></td><td>工具管道</td></tr>
+<tr><td><code>TextProcessorTool</code></td><td>文本处理</td></tr>
 </tbody></table>
 </div>
-<h3 id="event-system"><a class="header" href="#event-system">Event System</a></h3>
-<p>Agents emit events for fine-grained control:</p>
+<h3 id="事件系统"><a class="header" href="#事件系统">事件系统</a></h3>
+<p>Agent 发出事件以进行细粒度控制：</p>
 <ul>
-<li><code>EventChunk</code>: Output chunk</li>
-<li><code>EventEOF</code>: Round ended</li>
-<li><code>EventClosed</code>: Agent completed</li>
-<li><code>EventToolStart</code>: Tool execution started</li>
-<li><code>EventToolDone</code>: Tool completed</li>
-<li><code>EventToolError</code>: Tool failed</li>
-<li><code>EventInterrupted</code>: Interrupted</li>
+<li><code>EventChunk</code>：输出块</li>
+<li><code>EventEOF</code>：轮次结束</li>
+<li><code>EventClosed</code>：Agent 完成</li>
+<li><code>EventToolStart</code>：工具执行开始</li>
+<li><code>EventToolDone</code>：工具完成</li>
+<li><code>EventToolError</code>：工具失败</li>
+<li><code>EventInterrupted</code>：被中断</li>
 </ul>
-<h2 id="configuration-agentcfg"><a class="header" href="#configuration-agentcfg">Configuration (agentcfg)</a></h2>
-<p>YAML/JSON configuration for agents and tools:</p>
+<h2 id="配置agentcfg"><a class="header" href="#配置agentcfg">配置（agentcfg）</a></h2>
+<p>Agent 和工具的 YAML/JSON 配置：</p>
 <pre><code class="language-yaml">type: react
 name: assistant
 prompt: |
-  You are a helpful assistant.
+  你是一个有帮助的助手。
 generator:
   model: gpt-4
 tools:
   - $ref: tool:search
   - $ref: tool:calculator
 </code></pre>
-<p>Supports <code>$ref</code> for reusable components.</p>
-<h2 id="provider-support"><a class="header" href="#provider-support">Provider Support</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Provider</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
+<p>支持 <code>$ref</code> 引用可复用组件。</p>
+<h2 id="提供商支持"><a class="header" href="#提供商支持">提供商支持</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>提供商</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
 <tr><td>OpenAI</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 <tr><td>Gemini</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td>Compatible APIs</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td>兼容 API</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
 </tbody></table>
 </div>
-<h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
+<h2 id="示例目录"><a class="header" href="#示例目录">示例目录</a></h2>
 <ul>
-<li><code>examples/go/genx/</code> - Go examples</li>
-<li><code>examples/rust/genx/</code> - Rust examples</li>
+<li><code>examples/go/genx/</code> - Go 示例</li>
+<li><code>examples/rust/genx/</code> - Rust 示例</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/speech/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../bazel/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/genx/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/genx/agent/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -307,11 +306,11 @@ tools:
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/speech/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../bazel/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/genx/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/genx/agent/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -337,6 +336,7 @@ tools:
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

@@ -156,7 +156,145 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="bazel-build"><a class="header" href="#bazel-build">Bazel Build</a></h1>
+                        <h1 id="bazel-构建"><a class="header" href="#bazel-构建">Bazel 构建</a></h1>
+<p>Giztoy 使用 <a href="https://bazel.build">Bazel</a> 作为跨所有语言和平台的统一构建系统。</p>
+<h2 id="为什么选择-bazel"><a class="header" href="#为什么选择-bazel">为什么选择 Bazel？</a></h2>
+<ol>
+<li><strong>多语言支持</strong>：用单一工具构建 Go、Rust、C/C++</li>
+<li><strong>密封构建</strong>：在不同机器上可重现的构建</li>
+<li><strong>跨平台</strong>：从单一代码库构建多个平台目标</li>
+<li><strong>增量构建</strong>：只重新构建有变化的部分</li>
+</ol>
+<h2 id="快速开始"><a class="header" href="#快速开始">快速开始</a></h2>
+<h3 id="前置条件"><a class="header" href="#前置条件">前置条件</a></h3>
+<ul>
+<li><a href="https://github.com/bazelbuild/bazelisk">Bazelisk</a>（推荐）或 Bazel 7.x+</li>
+<li>Go 1.24+（用于原生 Go 构建）</li>
+<li>Rust 1.80+（用于原生 Rust 构建）</li>
+</ul>
+<h3 id="构建命令"><a class="header" href="#构建命令">构建命令</a></h3>
+<pre><code class="language-bash"># 构建所有目标
+bazel build //...
+
+# 构建特定目标
+bazel build //go/cmd/minimax      # Go CLI
+bazel build //rust/cmd/minimax    # Rust CLI
+
+# 运行测试
+bazel test //...
+
+# 运行二进制文件
+bazel run //go/cmd/minimax -- --help
+</code></pre>
+<h2 id="项目结构"><a class="header" href="#项目结构">项目结构</a></h2>
+<pre><code class="language-mermaid">graph LR
+    subgraph root["giztoy/"]
+        mod[MODULE.bazel]
+        build[BUILD.bazel]
+        bazelrc[.bazelrc]
+        ver[.bazelversion]
+        
+        subgraph go["go/"]
+            go_build[BUILD.bazel]
+            go_cmd["cmd/&lt;br/&gt;Go CLI 目标"]
+            go_pkg["pkg/&lt;br/&gt;Go 库目标"]
+        end
+        
+        subgraph rust["rust/"]
+            rust_build[BUILD.bazel]
+            rust_cmd["cmd/&lt;br/&gt;Rust CLI 目标"]
+            rust_lib["*/&lt;br/&gt;Rust 库 crate"]
+        end
+        
+        subgraph third["third_party/"]
+            opus[opus/]
+            portaudio[portaudio/]
+            soxr[soxr/]
+        end
+    end
+</code></pre>
+<h2 id="使用的规则"><a class="header" href="#使用的规则">使用的规则</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>语言</th><th>规则</th></tr></thead><tbody>
+<tr><td>Go</td><td><a href="https://github.com/bazelbuild/rules_go">rules_go</a> + Gazelle</td></tr>
+<tr><td>Rust</td><td><a href="https://github.com/bazelbuild/rules_rust">rules_rust</a> + crate_universe</td></tr>
+<tr><td>C/C++</td><td>内置 <code>cc_library</code>、<code>cc_binary</code></td></tr>
+<tr><td>Shell</td><td><a href="https://github.com/bazelbuild/rules_shell">rules_shell</a></td></tr>
+</tbody></table>
+</div>
+<h2 id="依赖管理"><a class="header" href="#依赖管理">依赖管理</a></h2>
+<h3 id="go-依赖"><a class="header" href="#go-依赖">Go 依赖</a></h3>
+<p>Go 依赖通过 <code>go/go.mod</code> 管理，使用 Gazelle 同步：</p>
+<pre><code class="language-bash"># 更新 Go 依赖
+cd go &amp;&amp; go mod tidy
+
+# 重新生成 BUILD 文件
+bazel run //:gazelle
+</code></pre>
+<h3 id="rust-依赖"><a class="header" href="#rust-依赖">Rust 依赖</a></h3>
+<p>Rust 依赖通过 <code>rust/Cargo.toml</code> 管理，使用 crate_universe 同步：</p>
+<pre><code class="language-bash"># 更新 Cargo.lock
+cd rust &amp;&amp; cargo update
+
+# 下次构建时 Bazel 会自动获取 crate
+</code></pre>
+<h3 id="cc-依赖"><a class="header" href="#cc-依赖">C/C++ 依赖</a></h3>
+<p>第三方 C 库在 <code>third_party/</code> 中配置，使用自定义 BUILD 文件。</p>
+<h2 id="跨平台构建"><a class="header" href="#跨平台构建">跨平台构建</a></h2>
+<h3 id="支持的平台"><a class="header" href="#支持的平台">支持的平台</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>平台</th><th>状态</th></tr></thead><tbody>
+<tr><td>Linux（x86_64、arm64）</td><td>✅</td></tr>
+<tr><td>macOS（x86_64、arm64）</td><td>✅</td></tr>
+<tr><td>Android</td><td>✅</td></tr>
+<tr><td>iOS</td><td>✅</td></tr>
+<tr><td>HarmonyOS（鸿蒙）</td><td>✅</td></tr>
+<tr><td>ESP32</td><td>🚧</td></tr>
+</tbody></table>
+</div>
+<h3 id="平台特定构建"><a class="header" href="#平台特定构建">平台特定构建</a></h3>
+<pre><code class="language-bash"># Android
+bazel build --config=android //...
+
+# iOS
+bazel build --config=ios //...
+</code></pre>
+<h2 id="常见任务"><a class="header" href="#常见任务">常见任务</a></h2>
+<h3 id="添加新的-go-包"><a class="header" href="#添加新的-go-包">添加新的 Go 包</a></h3>
+<ol>
+<li>在 <code>go/pkg/mypackage/</code> 创建包</li>
+<li>运行 Gazelle 生成 BUILD 文件：
+<pre><code class="language-bash">bazel run //:gazelle
+</code></pre>
+</li>
+</ol>
+<h3 id="添加新的-rust-crate"><a class="header" href="#添加新的-rust-crate">添加新的 Rust Crate</a></h3>
+<ol>
+<li>在 <code>rust/mypackage/</code> 创建 crate</li>
+<li>添加到 <code>rust/Cargo.toml</code> 工作空间成员</li>
+<li>创建带有 <code>rust_library</code> 规则的 <code>BUILD.bazel</code></li>
+</ol>
+<h3 id="添加-cc-依赖"><a class="header" href="#添加-cc-依赖">添加 C/C++ 依赖</a></h3>
+<ol>
+<li>在 <code>third_party/libname/</code> 创建配置</li>
+<li>添加带有 <code>cc_library</code> 规则的 <code>BUILD.bazel</code></li>
+<li>从依赖目标中引用</li>
+</ol>
+<h2 id="故障排除"><a class="header" href="#故障排除">故障排除</a></h2>
+<h3 id="清理构建"><a class="header" href="#清理构建">清理构建</a></h3>
+<pre><code class="language-bash">bazel clean --expunge
+bazel build //...
+</code></pre>
+<h3 id="依赖问题"><a class="header" href="#依赖问题">依赖问题</a></h3>
+<pre><code class="language-bash"># 刷新 Go 依赖
+bazel run //:gazelle -- update-repos -from_file=go/go.mod
+
+# 刷新 Rust 依赖
+bazel clean --expunge  # crate_universe 会在下次构建时重新获取
+</code></pre>
+<h2 id="相关"><a class="header" href="#相关">相关</a></h2>
+<ul>
+<li><a href="../examples/doc.html">示例文档</a></li>
+<li><a href="../../.github/workflows/">GitHub Actions CI</a></li>
+</ul>
 
                     </main>
 
@@ -166,6 +304,9 @@
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
+                            <a rel="next prefetch" href="../lib/genx/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -177,6 +318,9 @@
                         <i class="fa fa-angle-left"></i>
                     </a>
 
+                    <a rel="next prefetch" href="../lib/genx/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
             </nav>
 
         </div>
@@ -200,6 +344,7 @@
         <!-- Custom JS scripts -->
         <script src="../mermaid.min.js"></script>
         <script src="../mermaid-init.js"></script>
+        <script src="../lang-switch.js"></script>
 
 
     </div>

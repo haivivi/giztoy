@@ -184,28 +184,34 @@
 <li>Useful for building multi-skill assistants</li>
 </ul>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌─────────────────────────────────────────────────────────────┐
-│                     Agent Interface                          │
-│   Input() → Events() → Close()                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌─────────────────────────┐  ┌─────────────────────────┐  │
-│  │      ReActAgent         │  │      MatchAgent         │  │
-│  │                         │  │                         │  │
-│  │  ┌─────────────────┐   │  │  ┌─────────────────┐   │  │
-│  │  │   Reasoning     │   │  │  │   Rule Matching │   │  │
-│  │  │   + Acting      │   │  │  │   + Routing     │   │  │
-│  │  └────────┬────────┘   │  │  └────────┬────────┘   │  │
-│  │           │            │  │           │            │  │
-│  │  ┌────────▼────────┐   │  │  ┌────────▼────────┐   │  │
-│  │  │    Tool Calls   │   │  │  │   Sub-Agents    │   │  │
-│  │  └─────────────────┘   │  │  └─────────────────┘   │  │
-│  └─────────────────────────┘  └─────────────────────────┘  │
-│                                                              │
-├─────────────────────────────────────────────────────────────┤
-│                      Tool System                             │
-│  FuncTool │ GeneratorTool │ HTTPTool │ CompositeTool        │
-└─────────────────────────────────────────────────────────────┘
+<pre><code class="language-mermaid">graph TB
+    subgraph interface["Agent Interface"]
+        api["Input() → Events() → Close()"]
+    end
+    
+    subgraph agents[" "]
+        subgraph react["ReActAgent"]
+            reasoning["Reasoning&lt;br/&gt;+ Acting"]
+            tools["Tool Calls"]
+            reasoning --&gt; tools
+        end
+        
+        subgraph match["MatchAgent"]
+            rules["Rule Matching&lt;br/&gt;+ Routing"]
+            subs["Sub-Agents"]
+            rules --&gt; subs
+        end
+    end
+    
+    subgraph toolsys["Tool System"]
+        func[FuncTool]
+        gen[GeneratorTool]
+        http[HTTPTool]
+        comp[CompositeTool]
+    end
+    
+    interface --&gt; agents
+    agents --&gt; toolsys
 </code></pre>
 <h2 id="event-system"><a class="header" href="#event-system">Event System</a></h2>
 <p>Agents communicate through events:</p>
@@ -236,19 +242,26 @@
 </code></pre>
 <p>When executed, the agent finishes and returns <code>EventClosed</code>.</p>
 <h2 id="multi-skill-assistant-pattern"><a class="header" href="#multi-skill-assistant-pattern">Multi-Skill Assistant Pattern</a></h2>
-<pre><code>         Router Agent (Match)
-        Rules: chat, fortune, music
-               │
-    ┌──────────┼──────────┐
-    │          │          │
-    ▼          ▼          ▼
-  Chat      Fortune     Music
-  Agent     Agent       Agent
-           (ReAct)     (ReAct)
-              │           │
-          ┌───┴───┐   ┌───┴───┐
-          │       │   │       │
-       lunar   calc  search  play
+<pre><code class="language-mermaid">graph TD
+    router["Router Agent&lt;br/&gt;(Match)&lt;br/&gt;Rules: chat, fortune, music"]
+    
+    chat[Chat Agent]
+    fortune["Fortune Agent&lt;br/&gt;(ReAct)"]
+    music["Music Agent&lt;br/&gt;(ReAct)"]
+    
+    lunar[lunar]
+    calc[calc]
+    search[search]
+    play[play]
+    
+    router --&gt; chat
+    router --&gt; fortune
+    router --&gt; music
+    
+    fortune --&gt; lunar
+    fortune --&gt; calc
+    music --&gt; search
+    music --&gt; play
 </code></pre>
 <h2 id="related"><a class="header" href="#related">Related</a></h2>
 <ul>
@@ -260,11 +273,11 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/genx/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../lib/genx/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../lib/genx/agent/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../lib/genx/agentcfg/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -274,11 +287,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/genx/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../lib/genx/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../lib/genx/agent/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../lib/genx/agentcfg/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -304,6 +317,7 @@
         <!-- Custom JS scripts -->
         <script src="../../../mermaid.min.js"></script>
         <script src="../../../mermaid-init.js"></script>
+        <script src="../../../lang-switch.js"></script>
 
 
     </div>

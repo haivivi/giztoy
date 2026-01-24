@@ -105,6 +105,39 @@ blockquote {
     border-radius: 6px;
 }
 
+/* Fix mdBook header vertical alignment */
+#menu-bar-hover-placeholder,
+#menu-bar {
+    display: flex;
+    align-items: center;
+}
+
+.menu-title {
+    line-height: 50px;
+}
+
+/* Language switch button */
+.lang-switch {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 8px;
+    height: 34px;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: var(--icons);
+    text-decoration: none;
+    border: 1px solid var(--searchbar-border-color);
+    border-radius: 4px;
+    margin-right: 8px;
+    transition: all 0.2s;
+}
+
+.lang-switch:hover {
+    color: var(--icons-hover);
+    background-color: var(--theme-hover);
+    border-color: var(--icons);
+}
+
 /* Print-friendly adjustments */
 @media print {
     .sidebar {

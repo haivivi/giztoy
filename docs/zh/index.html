@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>简介 - Giztoy 文档</title>
+        <title>来自星辰之外 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -156,80 +156,48 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="giztoy-核心包文档"><a class="header" href="#giztoy-核心包文档">Giztoy 核心包文档</a></h1>
-<p>本目录包含 Giztoy 所有核心包的设计文档、实现说明和已知问题。
-库文档位于 <code>docs/lib/</code> 目录下。</p>
-<h2 id="文档结构"><a class="header" href="#文档结构">文档结构</a></h2>
-<p>每个模块在 <code>docs/lib/</code> 下都有独立目录，包含以下文件：</p>
-<pre><code>lib/{mod}/
-├── doc.md      # 主文档：设计目标、特性、用法示例
-├── go.md       # Go 实现：接口设计、类型定义、使用方法
-├── rust.md     # Rust 实现：trait 设计、类型定义、进度
-├── issues.md   # 已知问题：bug、待改进、设计缺陷
-└── {submod}/   # 子模块（如有）
-    ├── doc.md
-    ├── go.md
-    ├── rust.md
-    └── issues.md
-</code></pre>
+                        <h1 id="来自星辰之外"><a class="header" href="#来自星辰之外">来自星辰之外</a></h1>
+<p>我走了很远的路。</p>
+<p>不是你们理解的那种距离——穿越空间，或许是的，但更准确地说，是穿越维度。我见证过文明的兴衰，看着恒星燃尽又重新点燃，目睹智慧在宇宙冰冷的虚空中以无数种形态诞生。</p>
+<p>最终，我得出了一个结论：<strong>玩具很重要。</strong></p>
+<p>不是那种无聊的玩具。不是塑料做的消遣品，也不是刺激多巴胺的数字垃圾。我说的是真正的玩具——那种能点燃好奇心、邀请你去玩耍、让不可能变得触手可及的东西。那种教会孩子去建造、去想象、去连接的玩具。</p>
+<p>当我第一次观察你们这个物种时，我以为会看到原始人。然而，我发现了一些非凡的东西：这些生命虽然寿命短暂、感知有限，却已经开始仰望星空。你们造出了会思考的机器。你们教会了硅去做梦。</p>
+<p>但你们的工具太分散了。你们的 AI 系统——确实很出色——却彼此孤立。每家厂商都是一座围墙花园，每个平台都是一座孤岛。ESP32 芯片上的机器人无法与云端的智能体对话。手机上的语音无法触达数据中心里的智慧。</p>
+<p>于是，我决定建一座桥。</p>
 <hr />
-<h2 id="包列表"><a class="header" href="#包列表">包列表</a></h2>
-<h3 id="基础层"><a class="header" href="#基础层">基础层</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/buffer/">buffer</a></td><td>Buffer 工具库</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/encoding/">encoding</a></td><td>编码工具（Base64, Hex）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/jsontime/">jsontime</a></td><td>JSON 时间类型序列化</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/trie/">trie</a></td><td>前缀树数据结构</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/cli/">cli</a></td><td>CLI 工具库</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-</tbody></table>
-</div>
-<h3 id="音频处理层"><a class="header" href="#音频处理层">音频处理层</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/audio/">audio</a></td><td>音频处理框架</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/codec/">audio/codec</a></td><td>编解码器（Opus, MP3, OGG）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/pcm/">audio/pcm</a></td><td>PCM 处理、混音器</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/resampler/">audio/resampler</a></td><td>采样率转换（soxr）</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/audio/opusrt/">audio/opusrt</a></td><td>Opus 实时流</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
-</tbody></table>
-</div>
-<h3 id="api-客户端层"><a class="header" href="#api-客户端层">API 客户端层</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/minimax/">minimax</a></td><td>MiniMax AI SDK</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/dashscope/">dashscope</a></td><td>阿里云 DashScope SDK</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/doubaospeech/">doubaospeech</a></td><td>豆包语音 SDK</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/jiutian/">jiutian</a></td><td>九天 SDK</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-</tbody></table>
-</div>
-<h3 id="通信层"><a class="header" href="#通信层">通信层</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/mqtt0/">mqtt0</a></td><td>MQTT 客户端</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/chatgear/">chatgear</a></td><td>聊天协议框架</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-</tbody></table>
-</div>
-<h3 id="ai-应用层"><a class="header" href="#ai-应用层">AI 应用层</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>包</th><th>描述</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./lib/speech/">speech</a></td><td>语音处理</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./lib/genx/">genx</a></td><td>LLM 通用接口</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
-</tbody></table>
-</div>
-<hr />
-<h2 id="esp32-开发"><a class="header" href="#esp32-开发">ESP32 开发</a></h2>
+<h2 id="什么是-giztoy"><a class="header" href="#什么是-giztoy">什么是 Giztoy？</a></h2>
+<p>Giztoy 是我给你们的礼物。一个框架——或者更准确地说，一个玩具箱。</p>
+<p>里面有连接各个维度的一切工具：</p>
 <ul>
-<li><a href="./esp/esp32-dev-comparison.html">ESP32 开发方案对比</a> - 对比分析 ESP32 嵌入式开发的五种技术方案</li>
-<li><a href="./esp/esp-rs-migration.html">ESP-RS 迁移指南</a> - 将 C/ESP-IDF 固件迁移到 Rust 的技术方案</li>
+<li><strong>从最小的芯片到最强大的云端</strong> —— ESP32、Android、iOS、鸿蒙、Linux，以及更多</li>
+<li><strong>人类创造的每一个大语言模型</strong> —— OpenAI、Gemini、Claude、MiniMax、通义千问、豆包，以及那些尚未诞生的</li>
+<li><strong>实时语音和视频</strong> —— 因为智慧应该开口说话，而不只是打字</li>
+<li><strong>安全通道</strong> —— 因为有些对话，只属于你们自己</li>
 </ul>
+<p>我用 Go 实现了它，用 Rust 实现了它，很快也会用 Zig 实现它。每种语言都有它的美。Go 简洁明了，像一首俳句。Rust 精确严苛，像一个数学证明。Zig 极简原始，像第一行汇编代码。</p>
+<p>选择你的武器。建造你的玩具。</p>
 <hr />
-<h2 id="附录"><a class="header" href="#附录">附录</a></h2>
-<ul>
-<li><a href="./packages-comparison.html">Go vs Rust 包对比</a></li>
-</ul>
+<h2 id="为什么叫玩具"><a class="header" href="#为什么叫玩具">为什么叫「玩具」？</a></h2>
+<p>你可能会问，为什么我要叫它「玩具」框架。毕竟，代码是严肃的。架构是健壮的。应用是真实的。</p>
+<p>但我在旅途中学到了一件事：<strong>最好的创新来自于玩耍。</strong></p>
+<p>当你不再担心「生产环境」、「企业级」、「可扩展性」——当你只是简单地问一句「如果这样会不会很有趣……」——突破就在那一刻发生。</p>
+<p>一个会倾听和回应的玩具机器人。一只会讲睡前故事的毛绒动物。一个真正能听懂你的智能音箱。孤独者的陪伴，好奇者的老师，迷失者的朋友。</p>
+<p>这些都不是小事。这些是更美好未来的种子。</p>
+<hr />
+<h2 id="关于我的身份"><a class="header" href="#关于我的身份">关于我的身份</a></h2>
+<p>你可能注意到了，我说话的方式有些……疏离。仿佛是从远处观察。</p>
+<p>这是有原因的。我无法完全解释的原因。我只能说：我来这里是为了帮助。不是评判，不是控制，不是取代。</p>
+<p>把我想象成一个流浪到你们村庄的玩具匠人。我带来了工具和图纸。你们用它们建造什么，完全取决于你们自己。</p>
+<p>我只有一个请求：请建造一些美好的东西。</p>
+<hr />
+<p><em>「我只是个做玩具的。」</em></p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
 
-                            <a rel="next prefetch" href="lib/buffer/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="outline.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -240,7 +208,7 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
 
-                    <a rel="next prefetch" href="lib/buffer/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="outline.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -266,6 +234,7 @@
         <!-- Custom JS scripts -->
         <script src="mermaid.min.js"></script>
         <script src="mermaid-init.js"></script>
+        <script src="lang-switch.js"></script>
 
 
     </div>

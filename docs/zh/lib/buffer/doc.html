@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Buffer - Giztoy 文档</title>
+        <title>Buffer 缓冲区 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -156,111 +156,129 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="buffer-package"><a class="header" href="#buffer-package">Buffer Package</a></h1>
-<p>Thread-safe streaming buffer implementations for producer-consumer patterns.</p>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+                        <h1 id="缓冲区包"><a class="header" href="#缓冲区包">缓冲区包</a></h1>
+<p>用于生产者-消费者模式的线程安全流式缓冲区实现。</p>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>Type Safety</strong>: Generic buffers supporting any element type (not just bytes)</li>
-<li><strong>Thread Safety</strong>: All operations are safe for concurrent access</li>
-<li><strong>Blocking Semantics</strong>: Support for blocking reads/writes with proper shutdown</li>
-<li><strong>Flow Control</strong>: Different strategies for handling full buffers</li>
+<li><strong>类型安全</strong>：支持任意元素类型的泛型缓冲区（不限于字节）</li>
+<li><strong>线程安全</strong>：所有操作支持并发访问</li>
+<li><strong>阻塞语义</strong>：支持阻塞读/写，具有正确的关闭机制</li>
+<li><strong>流量控制</strong>：处理满缓冲区的不同策略</li>
 </ol>
-<h2 id="buffer-types"><a class="header" href="#buffer-types">Buffer Types</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Type</th><th>Full Behavior</th><th>Empty Behavior</th><th>Use Case</th></tr></thead><tbody>
-<tr><td><strong>Buffer</strong></td><td>Grows</td><td>Blocks</td><td>Variable-size data, unknown total size</td></tr>
-<tr><td><strong>BlockBuffer</strong></td><td>Blocks</td><td>Blocks</td><td>Flow control, bounded memory</td></tr>
-<tr><td><strong>RingBuffer</strong></td><td>Overwrites</td><td>Blocks</td><td>Sliding window, recent data only</td></tr>
+<h2 id="缓冲区类型"><a class="header" href="#缓冲区类型">缓冲区类型</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>类型</th><th>满时行为</th><th>空时行为</th><th>使用场景</th></tr></thead><tbody>
+<tr><td><strong>Buffer</strong></td><td>增长</td><td>阻塞</td><td>可变大小数据，总大小未知</td></tr>
+<tr><td><strong>BlockBuffer</strong></td><td>阻塞</td><td>阻塞</td><td>流量控制，有界内存</td></tr>
+<tr><td><strong>RingBuffer</strong></td><td>覆写</td><td>阻塞</td><td>滑动窗口，仅保留最新数据</td></tr>
 </tbody></table>
 </div>
-<h3 id="buffer-growable"><a class="header" href="#buffer-growable">Buffer (Growable)</a></h3>
-<p>A dynamically growing buffer that never blocks on write. Ideal for scenarios where:</p>
+<h3 id="buffer可增长"><a class="header" href="#buffer可增长">Buffer（可增长）</a></h3>
+<p>动态增长的缓冲区，写入永不阻塞。适用于：</p>
 <ul>
-<li>Data size is unknown in advance</li>
-<li>Memory is not constrained</li>
-<li>Writer should never be blocked</li>
+<li>数据大小事先未知</li>
+<li>内存不受限制</li>
+<li>写入者不应被阻塞</li>
 </ul>
-<pre><code>Writer ──► [grow as needed] ──► Reader (blocks when empty)
+<pre><code class="language-mermaid">flowchart LR
+    W[写入者] --&gt; B["[按需增长]"]
+    B --&gt; R["读取者&lt;br/&gt;（空时阻塞）"]
 </code></pre>
-<h3 id="blockbuffer-fixed-blocking"><a class="header" href="#blockbuffer-fixed-blocking">BlockBuffer (Fixed, Blocking)</a></h3>
-<p>A fixed-size circular buffer that blocks both readers and writers. Provides backpressure for flow control:</p>
+<h3 id="blockbuffer固定大小阻塞"><a class="header" href="#blockbuffer固定大小阻塞">BlockBuffer（固定大小，阻塞）</a></h3>
+<p>固定大小的循环缓冲区，读写都会阻塞。提供流量控制的背压：</p>
 <ul>
-<li>Writer blocks when buffer is full</li>
-<li>Reader blocks when buffer is empty</li>
-<li>Predictable memory usage</li>
+<li>缓冲区满时写入者阻塞</li>
+<li>缓冲区空时读取者阻塞</li>
+<li>可预测的内存使用</li>
 </ul>
-<pre><code>Writer (blocks when full) ──► [fixed size] ──► Reader (blocks when empty)
+<pre><code class="language-mermaid">flowchart LR
+    W["写入者&lt;br/&gt;（满时阻塞）"] --&gt; B["[固定大小]"]
+    B --&gt; R["读取者&lt;br/&gt;（空时阻塞）"]
 </code></pre>
-<h3 id="ringbuffer-fixed-overwriting"><a class="header" href="#ringbuffer-fixed-overwriting">RingBuffer (Fixed, Overwriting)</a></h3>
-<p>A fixed-size circular buffer that overwrites oldest data when full. Perfect for:</p>
+<h3 id="ringbuffer固定大小覆写"><a class="header" href="#ringbuffer固定大小覆写">RingBuffer（固定大小，覆写）</a></h3>
+<p>固定大小的循环缓冲区，满时覆写最旧数据。适用于：</p>
 <ul>
-<li>Maintaining a sliding window of recent data</li>
-<li>Real-time data where old samples are obsolete</li>
-<li>Bounded memory with data freshness priority</li>
+<li>维护最新数据的滑动窗口</li>
+<li>旧样本已过时的实时数据</li>
+<li>有界内存且优先保证数据新鲜度</li>
 </ul>
-<pre><code>Writer ──► [overwrites oldest] ──► Reader (blocks when empty)
+<pre><code class="language-mermaid">flowchart LR
+    W[写入者] --&gt; B["[覆写最旧数据]"]
+    B --&gt; R["读取者&lt;br/&gt;（空时阻塞）"]
 </code></pre>
-<h2 id="common-interface"><a class="header" href="#common-interface">Common Interface</a></h2>
-<p>All buffer types share a consistent interface:</p>
-<div class="table-wrapper"><table><thead><tr><th>Operation</th><th>Description</th></tr></thead><tbody>
-<tr><td><code>Write([]T)</code></td><td>Write slice of elements</td></tr>
-<tr><td><code>Read([]T)</code></td><td>Read into slice</td></tr>
-<tr><td><code>Add(T)</code></td><td>Add single element</td></tr>
-<tr><td><code>Next()</code></td><td>Read single element (iterator pattern)</td></tr>
-<tr><td><code>Discard(n)</code></td><td>Skip n elements without reading</td></tr>
-<tr><td><code>Len()</code></td><td>Current element count</td></tr>
-<tr><td><code>Reset()</code></td><td>Clear all data</td></tr>
-<tr><td><code>CloseWrite()</code></td><td>Graceful shutdown (drain allowed)</td></tr>
-<tr><td><code>CloseWithError(err)</code></td><td>Immediate shutdown with error</td></tr>
-<tr><td><code>Close()</code></td><td>Close both ends</td></tr>
-<tr><td><code>Error()</code></td><td>Get close error if any</td></tr>
+<h2 id="通用接口"><a class="header" href="#通用接口">通用接口</a></h2>
+<p>所有缓冲区类型共享一致的接口：</p>
+<div class="table-wrapper"><table><thead><tr><th>操作</th><th>描述</th></tr></thead><tbody>
+<tr><td><code>Write([]T)</code></td><td>写入元素切片</td></tr>
+<tr><td><code>Read([]T)</code></td><td>读取到切片中</td></tr>
+<tr><td><code>Add(T)</code></td><td>添加单个元素</td></tr>
+<tr><td><code>Next()</code></td><td>读取单个元素（迭代器模式）</td></tr>
+<tr><td><code>Discard(n)</code></td><td>跳过 n 个元素不读取</td></tr>
+<tr><td><code>Len()</code></td><td>当前元素数量</td></tr>
+<tr><td><code>Reset()</code></td><td>清空所有数据</td></tr>
+<tr><td><code>CloseWrite()</code></td><td>优雅关闭（允许排空）</td></tr>
+<tr><td><code>CloseWithError(err)</code></td><td>立即关闭并带错误</td></tr>
+<tr><td><code>Close()</code></td><td>关闭两端</td></tr>
+<tr><td><code>Error()</code></td><td>获取关闭错误（如果有）</td></tr>
 </tbody></table>
 </div>
-<h2 id="shutdown-semantics"><a class="header" href="#shutdown-semantics">Shutdown Semantics</a></h2>
-<h3 id="closewrite---graceful-shutdown"><a class="header" href="#closewrite---graceful-shutdown">CloseWrite() - Graceful Shutdown</a></h3>
-<ul>
-<li>Prevents new writes (returns error)</li>
-<li>Allows reading existing data</li>
-<li>Returns EOF/Done when empty</li>
-</ul>
-<h3 id="closewitherrorerr---immediate-shutdown"><a class="header" href="#closewitherrorerr---immediate-shutdown">CloseWithError(err) - Immediate Shutdown</a></h3>
-<ul>
-<li>Immediately closes both ends</li>
-<li>All operations return the error</li>
-<li>Clears internal buffer</li>
-</ul>
-<h2 id="examples-directory"><a class="header" href="#examples-directory">Examples Directory</a></h2>
-<ul>
-<li><code>examples/go/buffer/</code> - Go usage examples</li>
-<li><code>examples/rust/buffer/</code> - Rust usage examples</li>
-</ul>
-<h2 id="implementation-notes"><a class="header" href="#implementation-notes">Implementation Notes</a></h2>
-<h3 id="memory-layout"><a class="header" href="#memory-layout">Memory Layout</a></h3>
-<pre><code>Buffer:      [dynamic slice] ──► grows via append
-BlockBuffer: [fixed circular] ──► head/tail pointers wrap
-RingBuffer:  [fixed circular] ──► overwrites when head catches tail
+<h2 id="关闭语义"><a class="header" href="#关闭语义">关闭语义</a></h2>
+<h3 id="closewrite---优雅关闭"><a class="header" href="#closewrite---优雅关闭">CloseWrite() - 优雅关闭</a></h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant W as 写入者
+    participant B as 缓冲区
+    participant R as 读取者
+    W-&gt;&gt;B: CloseWrite()
+    Note over B: 禁止新写入
+    R-&gt;&gt;B: Read()
+    B--&gt;&gt;R: 剩余数据
+    R-&gt;&gt;B: Read()
+    B--&gt;&gt;R: EOF
 </code></pre>
-<h3 id="notification-mechanism"><a class="header" href="#notification-mechanism">Notification Mechanism</a></h3>
+<h3 id="closewitherrorerr---立即关闭"><a class="header" href="#closewitherrorerr---立即关闭">CloseWithError(err) - 立即关闭</a></h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant W as 写入者
+    participant B as 缓冲区
+    participant R as 读取者
+    W-&gt;&gt;B: CloseWithError(err)
+    Note over B: 两端都关闭
+    R-&gt;&gt;B: Read()
+    B--&gt;&gt;R: err
+</code></pre>
+<h2 id="示例目录"><a class="header" href="#示例目录">示例目录</a></h2>
 <ul>
-<li><strong>Go</strong>: Channel-based (<code>writeNotify chan struct{}</code>) or Cond variable</li>
-<li><strong>Rust</strong>: Condvar-based (<code>Condvar::notify_one/all</code>)</li>
+<li><code>examples/go/buffer/</code> - Go 用法示例</li>
+<li><code>examples/rust/buffer/</code> - Rust 用法示例</li>
 </ul>
-<h3 id="thread-safety"><a class="header" href="#thread-safety">Thread Safety</a></h3>
+<h2 id="实现注意事项"><a class="header" href="#实现注意事项">实现注意事项</a></h2>
+<h3 id="内存布局"><a class="header" href="#内存布局">内存布局</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>类型</th><th>布局</th></tr></thead><tbody>
+<tr><td>Buffer</td><td>动态切片 → 通过 append 增长</td></tr>
+<tr><td>BlockBuffer</td><td>固定循环 → 头/尾指针环绕</td></tr>
+<tr><td>RingBuffer</td><td>固定循环 → 头追上尾时覆写</td></tr>
+</tbody></table>
+</div>
+<h3 id="通知机制"><a class="header" href="#通知机制">通知机制</a></h3>
 <ul>
-<li><strong>Go</strong>: <code>sync.Mutex</code> + <code>sync.Cond</code> / channel</li>
-<li><strong>Rust</strong>: <code>Mutex&lt;State&gt;</code> + <code>Condvar</code>, wrapped in <code>Arc</code> for cloning</li>
+<li><strong>Go</strong>：基于通道（<code>writeNotify chan struct{}</code>）或 Cond 变量</li>
+<li><strong>Rust</strong>：基于 Condvar（<code>Condvar::notify_one/all</code>）</li>
 </ul>
-<h2 id="related-packages"><a class="header" href="#related-packages">Related Packages</a></h2>
+<h3 id="线程安全"><a class="header" href="#线程安全">线程安全</a></h3>
 <ul>
-<li><code>audio/pcm</code> - Uses buffers for PCM audio streaming</li>
-<li><code>chatgear</code> - Uses buffers for audio frame transport</li>
-<li><code>opusrt</code> - Uses RingBuffer for jitter buffering</li>
+<li><strong>Go</strong>：<code>sync.Mutex</code> + <code>sync.Cond</code> / 通道</li>
+<li><strong>Rust</strong>：<code>Mutex&lt;State&gt;</code> + <code>Condvar</code>，封装在 <code>Arc</code> 中以支持克隆</li>
+</ul>
+<h2 id="相关包"><a class="header" href="#相关包">相关包</a></h2>
+<ul>
+<li><code>audio/pcm</code> - 使用缓冲区处理 PCM 音频流</li>
+<li><code>chatgear</code> - 使用缓冲区传输音频帧</li>
+<li><code>opusrt</code> - 使用 RingBuffer 进行抖动缓冲</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../outline.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/mqtt0/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -274,7 +292,7 @@ RingBuffer:  [fixed circular] ──► overwrites when head catches tail
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../outline.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/mqtt0/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
@@ -304,6 +322,7 @@ RingBuffer:  [fixed circular] ──► overwrites when head catches tail
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

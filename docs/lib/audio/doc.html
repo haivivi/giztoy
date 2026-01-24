@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Audio - Giztoy Documentation</title>
+        <title>Audio Overview - Giztoy Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -166,36 +166,28 @@
 <li><strong>Streaming-first</strong>: Designed for continuous audio streams, not just files</li>
 </ol>
 <h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌─────────────────────────────────────────────────────────────┐
-│                         audio/                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐       │
-│  │    pcm/     │   │   codec/    │   │  resampler/ │       │
-│  │             │   │             │   │             │       │
-│  │  - Format   │   │  - opus/    │   │  - soxr     │       │
-│  │  - Chunk    │   │  - mp3/     │   │  - Format   │       │
-│  │  - Mixer    │   │  - ogg/     │   │  - Convert  │       │
-│  └─────────────┘   └─────────────┘   └─────────────┘       │
-│                                                             │
-│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐       │
-│  │   opusrt/   │   │   songs/    │   │ portaudio/  │       │
-│  │             │   │             │   │  (Go only)  │       │
-│  │  - Buffer   │   │  - Catalog  │   │             │       │
-│  │  - Realtime │   │  - Notes    │   │  - Stream   │       │
-│  │  - OGG R/W  │   │  - PCM gen  │   │  - Device   │       │
-│  └─────────────┘   └─────────────┘   └─────────────┘       │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+<pre><code class="language-mermaid">graph TB
+    subgraph audio["audio/"]
+        subgraph row1[" "]
+            pcm["pcm/&lt;br/&gt;- Format&lt;br/&gt;- Chunk&lt;br/&gt;- Mixer"]
+            codec["codec/&lt;br/&gt;- opus/&lt;br/&gt;- mp3/&lt;br/&gt;- ogg/"]
+            resampler["resampler/&lt;br/&gt;- soxr&lt;br/&gt;- Format&lt;br/&gt;- Convert"]
+        end
+        subgraph row2[" "]
+            opusrt["opusrt/&lt;br/&gt;- Buffer&lt;br/&gt;- Realtime&lt;br/&gt;- OGG R/W"]
+            songs["songs/&lt;br/&gt;- Catalog&lt;br/&gt;- Notes&lt;br/&gt;- PCM gen"]
+            portaudio["portaudio/&lt;br/&gt;(Go only)&lt;br/&gt;- Stream&lt;br/&gt;- Device"]
+        end
+    end
 </code></pre>
 <h2 id="submodules"><a class="header" href="#submodules">Submodules</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Module</th><th>Description</th><th style="text-align: center">Go</th><th style="text-align: center">Rust</th></tr></thead><tbody>
-<tr><td><a href="./pcm/">pcm/</a></td><td>PCM format, chunks, mixing</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./codec/">codec/</a></td><td>Audio codecs (Opus, MP3, OGG)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./resampler/">resampler/</a></td><td>Sample rate conversion (soxr)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./opusrt/">opusrt/</a></td><td>Realtime Opus streaming</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
-<tr><td><a href="./songs/">songs/</a></td><td>Built-in melodies</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
-<tr><td><a href="./portaudio/">portaudio/</a></td><td>Audio I/O devices</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
+<tr><td><a href="./pcm/doc.html">pcm/</a></td><td>PCM format, chunks, mixing</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./codec/doc.html">codec/</a></td><td>Audio codecs (Opus, MP3, OGG)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./resampler/doc.html">resampler/</a></td><td>Sample rate conversion (soxr)</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./opusrt/doc.html">opusrt/</a></td><td>Realtime Opus streaming</td><td style="text-align: center">✅</td><td style="text-align: center">⚠️</td></tr>
+<tr><td><a href="./songs/doc.html">songs/</a></td><td>Built-in melodies</td><td style="text-align: center">✅</td><td style="text-align: center">✅</td></tr>
+<tr><td><a href="./portaudio/doc.html">portaudio/</a></td><td>Audio I/O devices</td><td style="text-align: center">✅</td><td style="text-align: center">❌</td></tr>
 </tbody></table>
 </div>
 <h2 id="audio-formats"><a class="header" href="#audio-formats">Audio Formats</a></h2>
@@ -215,13 +207,26 @@
 </div>
 <h2 id="common-workflows"><a class="header" href="#common-workflows">Common Workflows</a></h2>
 <h3 id="voice-chat-low-latency"><a class="header" href="#voice-chat-low-latency">Voice Chat (Low Latency)</a></h3>
-<pre><code>Microphone → PCM 16kHz → Opus Encode → Network → Opus Decode → Mixer → Speaker
+<pre><code class="language-mermaid">flowchart LR
+    A[Microphone] --&gt; B[PCM 16kHz]
+    B --&gt; C[Opus Encode]
+    C --&gt; D[Network]
+    D --&gt; E[Opus Decode]
+    E --&gt; F[Mixer]
+    F --&gt; G[Speaker]
 </code></pre>
 <h3 id="speech-synthesis-playback"><a class="header" href="#speech-synthesis-playback">Speech Synthesis Playback</a></h3>
-<pre><code>API Response (Base64 MP3) → MP3 Decode → Resample 24K→16K → Mixer → Speaker
+<pre><code class="language-mermaid">flowchart LR
+    A[API Response&lt;br/&gt;Base64 MP3] --&gt; B[MP3 Decode]
+    B --&gt; C[Resample&lt;br/&gt;24K→16K]
+    C --&gt; D[Mixer]
+    D --&gt; E[Speaker]
 </code></pre>
 <h3 id="audio-recording"><a class="header" href="#audio-recording">Audio Recording</a></h3>
-<pre><code>PCM Stream → Opus Encode → OGG Writer → File
+<pre><code class="language-mermaid">flowchart LR
+    A[PCM Stream] --&gt; B[Opus Encode]
+    B --&gt; C[OGG Writer]
+    C --&gt; D[File]
 </code></pre>
 <h2 id="native-dependencies"><a class="header" href="#native-dependencies">Native Dependencies</a></h2>
 <div class="table-wrapper"><table><thead><tr><th>Library</th><th>Purpose</th><th>Build System</th></tr></thead><tbody>
@@ -249,11 +254,11 @@
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../lib/cli/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../lib/chatgear/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../lib/audio/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../lib/audio/codec/doc.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -263,11 +268,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../lib/cli/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../lib/chatgear/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../lib/audio/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../lib/audio/codec/doc.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -293,6 +298,7 @@
         <!-- Custom JS scripts -->
         <script src="../../mermaid.min.js"></script>
         <script src="../../mermaid-init.js"></script>
+        <script src="../../lang-switch.js"></script>
 
 
     </div>

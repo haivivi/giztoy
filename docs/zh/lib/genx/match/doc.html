@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Match - Giztoy 文档</title>
+        <title>模式匹配 - Giztoy 文档</title>
 
 
         <!-- Custom HTML head -->
@@ -156,37 +156,38 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="genx-match---pattern-matching-engine"><a class="header" href="#genx-match---pattern-matching-engine">GenX Match - Pattern Matching Engine</a></h1>
-<p>LLM-based intent recognition and pattern matching.</p>
+                        <h1 id="genx-match---模式匹配引擎"><a class="header" href="#genx-match---模式匹配引擎">GenX Match - 模式匹配引擎</a></h1>
+<p>基于 LLM 的意图识别和模式匹配。</p>
 <blockquote>
-<p><strong>Note:</strong> This package is Go-only. No Rust implementation exists.</p>
+<p><strong>注意：</strong> 此包仅支持 Go。没有 Rust 实现。</p>
 </blockquote>
-<h2 id="design-goals"><a class="header" href="#design-goals">Design Goals</a></h2>
+<h2 id="设计目标"><a class="header" href="#设计目标">设计目标</a></h2>
 <ol>
-<li><strong>Intent Recognition</strong>: Match user input to predefined intents</li>
-<li><strong>Variable Extraction</strong>: Extract structured data from natural language</li>
-<li><strong>Streaming Output</strong>: Process matches as they arrive</li>
-<li><strong>LLM-Powered</strong>: Use LLM for flexible matching</li>
+<li><strong>意图识别</strong>：将用户输入匹配到预定义意图</li>
+<li><strong>变量提取</strong>：从自然语言中提取结构化数据</li>
+<li><strong>流式输出</strong>：在匹配到达时处理</li>
+<li><strong>LLM 驱动</strong>：使用 LLM 进行灵活匹配</li>
 </ol>
-<h2 id="how-it-works"><a class="header" href="#how-it-works">How It Works</a></h2>
-<pre><code>Rules + User Input → LLM → Structured Output
-                           ↓
-                      "rule_name: var1=value1, var2=value2"
+<h2 id="工作原理"><a class="header" href="#工作原理">工作原理</a></h2>
+<pre><code class="language-mermaid">flowchart LR
+    A["规则 +&lt;br/&gt;用户输入"] --&gt; B[LLM]
+    B --&gt; C["结构化&lt;br/&gt;输出"]
+    C --&gt; D["rule_name:&lt;br/&gt;var1=value1,&lt;br/&gt;var2=value2"]
 </code></pre>
 <ol>
-<li><strong>Compile</strong>: Rules are compiled into a system prompt</li>
-<li><strong>Match</strong>: User input is sent to LLM with the prompt</li>
-<li><strong>Parse</strong>: Output lines are parsed into structured Results</li>
+<li><strong>编译</strong>：规则被编译成系统提示</li>
+<li><strong>匹配</strong>：用户输入与提示一起发送到 LLM</li>
+<li><strong>解析</strong>：输出行被解析为结构化 Results</li>
 </ol>
-<h2 id="rule-definition"><a class="header" href="#rule-definition">Rule Definition</a></h2>
-<h3 id="basic-rule"><a class="header" href="#basic-rule">Basic Rule</a></h3>
+<h2 id="规则定义"><a class="header" href="#规则定义">规则定义</a></h2>
+<h3 id="基本规则"><a class="header" href="#基本规则">基本规则</a></h3>
 <pre><code class="language-yaml">name: weather
 patterns:
   - 查天气
   - 今天天气怎么样
   - 明天下雨吗
 </code></pre>
-<h3 id="rule-with-variables"><a class="header" href="#rule-with-variables">Rule with Variables</a></h3>
+<h3 id="带变量的规则"><a class="header" href="#带变量的规则">带变量的规则</a></h3>
 <pre><code class="language-yaml">name: music
 vars:
   title:
@@ -202,64 +203,45 @@ patterns:
   - ["我想听[artist]的歌", "artist=[歌手]"]
   - ["我想听[artist]的[title]", "artist=[歌手], title=[歌曲名]"]
 </code></pre>
-<h3 id="pattern-format"><a class="header" href="#pattern-format">Pattern Format</a></h3>
-<div class="table-wrapper"><table><thead><tr><th>Format</th><th>Description</th><th>Example</th></tr></thead><tbody>
-<tr><td>String</td><td>Simple pattern, no vars</td><td><code>"播放歌曲"</code></td></tr>
-<tr><td>Array <code>[input, output]</code></td><td>Pattern with expected output</td><td><code>["我想听[title]", "title=[歌曲名]"]</code></td></tr>
+<h3 id="模式格式"><a class="header" href="#模式格式">模式格式</a></h3>
+<div class="table-wrapper"><table><thead><tr><th>格式</th><th>描述</th><th>示例</th></tr></thead><tbody>
+<tr><td>字符串</td><td>简单模式，无变量</td><td><code>"播放歌曲"</code></td></tr>
+<tr><td>数组 <code>[input, output]</code></td><td>带预期输出的模式</td><td><code>["我想听[title]", "title=[歌曲名]"]</code></td></tr>
 </tbody></table>
 </div>
-<h2 id="output-format"><a class="header" href="#output-format">Output Format</a></h2>
-<p>LLM outputs one line per match:</p>
+<h2 id="输出格式"><a class="header" href="#输出格式">输出格式</a></h2>
+<p>LLM 每个匹配输出一行：</p>
 <pre><code>rule_name: var1=value1, var2=value2
 </code></pre>
-<p>Examples:</p>
+<p>示例：</p>
 <ul>
-<li><code>weather</code> (no variables)</li>
-<li><code>music: artist=周杰伦</code> (one variable)</li>
-<li><code>music: artist=周杰伦, title=稻香</code> (multiple variables)</li>
+<li><code>weather</code>（无变量）</li>
+<li><code>music: artist=周杰伦</code>（一个变量）</li>
+<li><code>music: artist=周杰伦, title=稻香</code>（多个变量）</li>
 </ul>
-<h2 id="variable-types"><a class="header" href="#variable-types">Variable Types</a></h2>
-<div class="table-wrapper"><table><thead><tr><th>Type</th><th>Description</th><th>Parsing</th></tr></thead><tbody>
-<tr><td><code>string</code></td><td>Text (default)</td><td>As-is</td></tr>
-<tr><td><code>int</code></td><td>Integer</td><td><code>strconv.ParseInt</code></td></tr>
-<tr><td><code>float</code></td><td>Floating point</td><td><code>strconv.ParseFloat</code></td></tr>
-<tr><td><code>bool</code></td><td>Boolean</td><td><code>strconv.ParseBool</code></td></tr>
+<h2 id="变量类型"><a class="header" href="#变量类型">变量类型</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>类型</th><th>描述</th><th>解析</th></tr></thead><tbody>
+<tr><td><code>string</code></td><td>文本（默认）</td><td>原样</td></tr>
+<tr><td><code>int</code></td><td>整数</td><td><code>strconv.ParseInt</code></td></tr>
+<tr><td><code>float</code></td><td>浮点数</td><td><code>strconv.ParseFloat</code></td></tr>
+<tr><td><code>bool</code></td><td>布尔值</td><td><code>strconv.ParseBool</code></td></tr>
 </tbody></table>
 </div>
-<h2 id="architecture"><a class="header" href="#architecture">Architecture</a></h2>
-<pre><code>┌─────────────────────────────────────────────────────────┐
-│                        Rules                             │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐        │
-│  │   weather   │ │    music    │ │    chat     │        │
-│  │   patterns  │ │   vars      │ │   patterns  │        │
-│  └─────────────┘ └─────────────┘ └─────────────┘        │
-└──────────────────────────┬──────────────────────────────┘
-                           │
-                     Compile()
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                       Matcher                            │
-│                   (System Prompt)                        │
-└──────────────────────────┬──────────────────────────────┘
-                           │
-                Match(ctx, input, mctx)
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                         LLM                              │
-│              (Generates structured output)               │
-└──────────────────────────┬──────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                   iter.Seq2[Result]                      │
-│      Rule: "music", Args: {artist: "周杰伦"}             │
-└─────────────────────────────────────────────────────────┘
+<h2 id="架构"><a class="header" href="#架构">架构</a></h2>
+<pre><code class="language-mermaid">flowchart TB
+    subgraph rules["规则"]
+        weather["weather&lt;br/&gt;patterns"]
+        music["music&lt;br/&gt;vars"]
+        chat["chat&lt;br/&gt;patterns"]
+    end
+    
+    rules --&gt;|"Compile()"| matcher["Matcher&lt;br/&gt;(系统提示)"]
+    matcher --&gt;|"Match(ctx, input, mctx)"| llm["LLM&lt;br/&gt;(生成结构化输出)"]
+    llm --&gt; result["iter.Seq2[Result]&lt;br/&gt;Rule: 'music'&lt;br/&gt;Args: {artist: '周杰伦'}"]
 </code></pre>
-<h2 id="integration-with-matchagent"><a class="header" href="#integration-with-matchagent">Integration with MatchAgent</a></h2>
-<p>The match package is used by MatchAgent for intent routing:</p>
-<pre><code class="language-yaml"># MatchAgent config
+<h2 id="与-matchagent-集成"><a class="header" href="#与-matchagent-集成">与 MatchAgent 集成</a></h2>
+<p>match 包被 MatchAgent 用于意图路由：</p>
+<pre><code class="language-yaml"># MatchAgent 配置
 type: match
 name: router
 rules:
@@ -271,21 +253,21 @@ route:
   - rules: [music]
     agent: $ref: agent:music_player
 </code></pre>
-<h2 id="related"><a class="header" href="#related">Related</a></h2>
+<h2 id="相关"><a class="header" href="#相关">相关</a></h2>
 <ul>
-<li>Agent framework: <a href="../agent/">../agent/</a></li>
-<li>Configuration: <a href="../agentcfg/">../agentcfg/</a></li>
+<li>Agent 框架：<a href="../agent/">../agent/</a></li>
+<li>配置：<a href="../agentcfg/">../agentcfg/</a></li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../../../lib/genx/agentcfg/issues.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../../../lib/genx/agentcfg/doc.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../../../lib/genx/match/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../../../lib/genx/go.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -295,11 +277,11 @@ route:
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../../../lib/genx/agentcfg/issues.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../../../lib/genx/agentcfg/doc.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../../../lib/genx/match/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../../../lib/genx/go.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
@@ -325,6 +307,7 @@ route:
         <!-- Custom JS scripts -->
         <script src="../../../mermaid.min.js"></script>
         <script src="../../../mermaid-init.js"></script>
+        <script src="../../../lang-switch.js"></script>
 
 
     </div>
