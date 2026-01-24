@@ -509,6 +509,15 @@ func encodeV5Properties(w io.Writer, props *V5Properties) error {
 		}
 	}
 
+	if props.TopicAlias != nil {
+		if err := writeByte(&buf, propTopicAlias); err != nil {
+			return err
+		}
+		if err := writeUint16(&buf, *props.TopicAlias); err != nil {
+			return err
+		}
+	}
+
 	if props.ServerKeepAlive != nil {
 		if err := writeByte(&buf, propServerKeepAlive); err != nil {
 			return err

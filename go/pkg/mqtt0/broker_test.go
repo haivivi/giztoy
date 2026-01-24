@@ -1,6 +1,7 @@
 package mqtt0
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -826,23 +827,12 @@ func TestTopicAlias(t *testing.T) {
 	defer ln.Close()
 
 	broker := &Broker{
-		MaxTopicAlias: 10, // Allow up to 10 topic aliases
+		MaxTopicAlias: 5, // Allow up to 5 topic aliases
 	}
 	go broker.Serve(ln)
 
-	// Connect publisher with MQTT 5.0
+	// Connect subscriber with regular client
 	ctx := context.Background()
-	pub, err := Connect(ctx, ClientConfig{
-		Addr:            "tcp://" + addr,
-		ClientID:        "topic-alias-pub",
-		ProtocolVersion: ProtocolV5,
-	})
-	if err != nil {
-		t.Fatalf("connect publisher failed: %v", err)
-	}
-	defer pub.Close()
-
-	// Connect subscriber
 	sub, err := Connect(ctx, ClientConfig{
 		Addr:            "tcp://" + addr,
 		ClientID:        "topic-alias-sub",
@@ -853,27 +843,153 @@ func TestTopicAlias(t *testing.T) {
 	}
 	defer sub.Close()
 
-	if err := sub.Subscribe(ctx, "test/alias/#"); err != nil {
+	if err := sub.Subscribe(ctx, "alias/test/#"); err != nil {
 		t.Fatalf("subscribe failed: %v", err)
 	}
 	time.Sleep(100 * time.Millisecond)
 
-	// Publish with topic alias (first time sets the alias)
-	// Note: Our client doesn't support topic alias yet, so we test the broker
-	// accepts normal publishes and verify the subscriber receives them
-	if err := pub.Publish(ctx, "test/alias/1", []byte("message1")); err != nil {
-		t.Fatalf("publish failed: %v", err)
+	// Connect publisher with raw TCP to send custom packets with topic alias
+	pubConn, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatalf("dial failed: %v", err)
+	}
+	defer pubConn.Close()
+
+	// Send CONNECT
+	connectPkt := &V5Connect{
+		ClientID:   "topic-alias-pub",
+		CleanStart: true,
+		KeepAlive:  60,
+	}
+	if err := WriteV5Packet(pubConn, connectPkt); err != nil {
+		t.Fatalf("write connect failed: %v", err)
 	}
 
-	msg, err := sub.RecvTimeout(500 * time.Millisecond)
+	// Read CONNACK
+	reader := bufio.NewReader(pubConn)
+	_, err = ReadV5Packet(reader, 1024*1024)
 	if err != nil {
-		t.Fatalf("recv failed: %v", err)
+		t.Fatalf("read connack failed: %v", err)
 	}
-	if msg.Topic != "test/alias/1" {
-		t.Errorf("Expected topic test/alias/1, got %s", msg.Topic)
+
+	// Test 1: Set alias 1 = "alias/test/one"
+	alias1 := uint16(1)
+	pub1 := &V5Publish{
+		Topic:      "alias/test/one",
+		Payload:    []byte("msg1"),
+		Properties: &V5Properties{TopicAlias: &alias1},
 	}
-	if string(msg.Payload) != "message1" {
-		t.Errorf("Expected payload message1, got %s", string(msg.Payload))
+	if err := WriteV5Packet(pubConn, pub1); err != nil {
+		t.Fatalf("write publish1 failed: %v", err)
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	msg, err := sub.RecvTimeout(200 * time.Millisecond)
+	if err != nil {
+		t.Fatalf("recv msg1 failed: %v", err)
+	}
+	if msg.Topic != "alias/test/one" {
+		t.Errorf("Expected topic alias/test/one, got %s", msg.Topic)
+	}
+	if string(msg.Payload) != "msg1" {
+		t.Errorf("Expected payload msg1, got %s", string(msg.Payload))
+	}
+
+	// Test 2: Reuse alias 1 with empty topic
+	pub2 := &V5Publish{
+		Topic:      "", // Empty topic - should resolve from alias
+		Payload:    []byte("msg2"),
+		Properties: &V5Properties{TopicAlias: &alias1},
+	}
+	if err := WriteV5Packet(pubConn, pub2); err != nil {
+		t.Fatalf("write publish2 failed: %v", err)
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	msg, err = sub.RecvTimeout(200 * time.Millisecond)
+	if err != nil {
+		t.Fatalf("recv msg2 failed: %v", err)
+	}
+	if msg.Topic != "alias/test/one" {
+		t.Errorf("Expected topic alias/test/one (resolved from alias), got %s", msg.Topic)
+	}
+	if string(msg.Payload) != "msg2" {
+		t.Errorf("Expected payload msg2, got %s", string(msg.Payload))
+	}
+
+	// Small delay to ensure all previous messages are fully processed
+	time.Sleep(100 * time.Millisecond)
+
+	// Test 3: Invalid alias 0 should be ignored (no message delivered)
+	alias0 := uint16(0)
+	pub3 := &V5Publish{
+		Topic:      "alias/test/zero",
+		Payload:    []byte("msg_zero"),
+		Properties: &V5Properties{TopicAlias: &alias0},
+	}
+	if err := WriteV5Packet(pubConn, pub3); err != nil {
+		t.Fatalf("write publish3 failed: %v", err)
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	msg, _ = sub.RecvTimeout(100 * time.Millisecond)
+	if msg != nil {
+		t.Errorf("Expected no message for alias 0, but received: topic=%s", msg.Topic)
+	}
+
+	// Test 4: Alias exceeding limit (max=5, use alias=10) should be ignored
+	alias10 := uint16(10)
+	pub4 := &V5Publish{
+		Topic:      "alias/test/exceed",
+		Payload:    []byte("msg_exceed"),
+		Properties: &V5Properties{TopicAlias: &alias10},
+	}
+	if err := WriteV5Packet(pubConn, pub4); err != nil {
+		t.Fatalf("write publish4 failed: %v", err)
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	msg, _ = sub.RecvTimeout(100 * time.Millisecond)
+	if msg != nil {
+		t.Errorf("Expected no message for alias exceeding limit, but received: topic=%s", msg.Topic)
+	}
+
+	// Test 5: Unknown alias (empty topic with alias 3 that was never set)
+	alias3 := uint16(3)
+	pub5 := &V5Publish{
+		Topic:      "", // Empty topic
+		Payload:    []byte("msg_unknown"),
+		Properties: &V5Properties{TopicAlias: &alias3},
+	}
+	if err := WriteV5Packet(pubConn, pub5); err != nil {
+		t.Fatalf("write publish5 failed: %v", err)
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	msg, _ = sub.RecvTimeout(100 * time.Millisecond)
+	if msg != nil {
+		t.Errorf("Expected no message for unknown alias, but received: topic=%s", msg.Topic)
+	}
+
+	// Test 6: Valid message without alias should still work
+	pub6 := &V5Publish{
+		Topic:   "alias/test/normal",
+		Payload: []byte("msg_normal"),
+	}
+	if err := WriteV5Packet(pubConn, pub6); err != nil {
+		t.Fatalf("write publish6 failed: %v", err)
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	msg, err = sub.RecvTimeout(200 * time.Millisecond)
+	if err != nil {
+		t.Fatalf("recv msg_normal failed: %v", err)
+	}
+	if msg.Topic != "alias/test/normal" {
+		t.Errorf("Expected topic alias/test/normal, got %s", msg.Topic)
+	}
+	if string(msg.Payload) != "msg_normal" {
+		t.Errorf("Expected payload msg_normal, got %s", string(msg.Payload))
 	}
 
 	broker.Close()
@@ -1058,6 +1174,88 @@ func TestSubscriptionLimit(t *testing.T) {
 	if err == nil && msg != nil && msg.Topic == "topic/f" {
 		t.Errorf("client should NOT receive message on topic/f (subscription was rejected)")
 	}
+
+	broker.Close()
+}
+
+// TestDuplicateClientID tests that when a new client connects with the same clientID,
+// the old client is disconnected gracefully without panic.
+func TestDuplicateClientID(t *testing.T) {
+	addr := getTestAddr()
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatalf("listen failed: %v", err)
+	}
+	defer ln.Close()
+
+	broker := &Broker{}
+	go broker.Serve(ln)
+
+	ctx := context.Background()
+
+	// Connect first client
+	client1, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "duplicate-test",
+	})
+	if err != nil {
+		t.Fatalf("connect client1 failed: %v", err)
+	}
+
+	// Subscribe to a topic
+	if err := client1.Subscribe(ctx, "test/dup"); err != nil {
+		t.Fatalf("subscribe failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	// Connect second client with same clientID
+	client2, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "duplicate-test", // Same clientID
+	})
+	if err != nil {
+		t.Fatalf("connect client2 failed: %v", err)
+	}
+	defer client2.Close()
+
+	// Subscribe with new client
+	if err := client2.Subscribe(ctx, "test/dup"); err != nil {
+		t.Fatalf("client2 subscribe failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	// Publish a message
+	pub, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "dup-publisher",
+	})
+	if err != nil {
+		t.Fatalf("connect publisher failed: %v", err)
+	}
+	defer pub.Close()
+
+	if err := pub.Publish(ctx, "test/dup", []byte("hello")); err != nil {
+		t.Fatalf("publish failed: %v", err)
+	}
+
+	// Client2 should receive the message
+	msg, err := client2.RecvTimeout(500 * time.Millisecond)
+	if err != nil {
+		t.Fatalf("client2 should receive message: %v", err)
+	}
+	if msg == nil {
+		t.Fatal("client2 received nil message")
+	}
+	if msg.Topic != "test/dup" {
+		t.Errorf("wrong topic: got %s, want test/dup", msg.Topic)
+	}
+	if string(msg.Payload) != "hello" {
+		t.Errorf("wrong payload: got %s, want hello", string(msg.Payload))
+	}
+
+	// Old client (client1) should be disconnected and not receive any messages
+	// Note: client1 may already be closed, so we don't check error
+	_ = client1.Close()
 
 	broker.Close()
 }

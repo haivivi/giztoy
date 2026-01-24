@@ -294,19 +294,20 @@ impl Broker {
     }
 
     /// Publish a message from the broker.
-    pub async fn publish(&self, topic: &str, payload: &[u8]) -> Result<()> {
+    pub fn publish(&self, topic: &str, payload: &[u8]) -> Result<()> {
         let msg = Message::new(topic, Bytes::copy_from_slice(payload));
-        self.route_message(&msg).await;
+        self.route_message(&msg);
         Ok(())
     }
 
-    async fn route_message(&self, msg: &Message) {
+    fn route_message(&self, msg: &Message) {
         // Trie is internally thread-safe, no need for external lock
         let subscribers = self.subscriptions.get(&msg.topic);
 
         for handle in subscribers {
-            if let Err(e) = handle.tx.send(msg.clone()).await {
-                warn!("Failed to send to {}: {}", handle.client_id, e);
+            // Use try_send for non-blocking delivery (drop message if channel full)
+            if let Err(e) = handle.tx.try_send(msg.clone()) {
+                warn!("Message dropped for {} (channel full): {}", handle.client_id, e);
             }
         }
     }
@@ -849,7 +850,7 @@ impl BrokerContext {
             handler.handle(client_id, &msg);
         }
 
-        self.route_to_subscribers(&topic, &msg).await;
+        self.route_to_subscribers(&topic, &msg);
         Ok(())
     }
 
@@ -979,17 +980,18 @@ impl BrokerContext {
             handler.handle(client_id, &msg);
         }
 
-        self.route_to_subscribers(&topic, &msg).await;
+        self.route_to_subscribers(&topic, &msg);
         Ok(())
     }
 
-    async fn route_to_subscribers(&self, topic: &str, msg: &Message) {
+    fn route_to_subscribers(&self, topic: &str, msg: &Message) {
         // Route to normal subscribers - Trie is internally thread-safe
         let subscribers = self.subscriptions.get(topic);
 
         for handle in subscribers {
-            if let Err(e) = handle.tx.send(msg.clone()).await {
-                warn!("Failed to send to {}: {}", handle.client_id, e);
+            // Use try_send for non-blocking delivery (drop message if channel full)
+            if let Err(e) = handle.tx.try_send(msg.clone()) {
+                warn!("Message dropped for {} (channel full): {}", handle.client_id, e);
             }
         }
 
@@ -1003,9 +1005,10 @@ impl BrokerContext {
 
         for (group_name, subscriber) in shared_subscribers {
             if let Some(handle) = subscriber {
-                if let Err(e) = handle.tx.send(msg.clone()).await {
+                // Use try_send for non-blocking delivery (drop message if channel full)
+                if let Err(e) = handle.tx.try_send(msg.clone()) {
                     warn!(
-                        "Failed to send to shared subscriber {} (group {}): {}",
+                        "Message dropped for shared subscriber {} (group {}, channel full): {}",
                         handle.client_id, group_name, e
                     );
                 }
@@ -1352,12 +1355,9 @@ impl BrokerContext {
     /// Replaces /, +, # with _ to prevent topic injection attacks.
     fn sanitize_client_id_for_topic(client_id: &str) -> String {
         client_id
-            .chars()
-            .map(|c| match c {
-                '/' | '+' | '#' => '_',
-                _ => c,
-            })
-            .collect()
+            .replace('/', "_")
+            .replace('+', "_")
+            .replace('#', "_")
     }
 
     /// Publish $SYS client connected event.
@@ -1406,7 +1406,7 @@ impl BrokerContext {
         };
 
         let msg = Message::new(topic.clone(), Bytes::from(payload));
-        self.route_to_subscribers(&topic, &msg).await;
+        self.route_to_subscribers(&topic, &msg);
     }
 
     /// Publish $SYS client disconnected event.
@@ -1441,7 +1441,7 @@ impl BrokerContext {
         };
 
         let msg = Message::new(topic.clone(), Bytes::from(payload));
-        self.route_to_subscribers(&topic, &msg).await;
+        self.route_to_subscribers(&topic, &msg);
     }
 }
 

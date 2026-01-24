@@ -2272,6 +2272,119 @@ mod keepalive_tests {
         assert!(client.disconnect().await.is_ok());
     }
 
+    /// Test Topic Alias functionality with raw TCP connection.
+    /// Tests:
+    /// - Valid alias mapping (topic + alias → alias reuse with empty topic)
+    /// - Invalid alias 0 (should be ignored)
+    /// - Alias exceeding max_topic_alias (should be ignored)
+    /// - Unknown alias (empty topic with unset alias should be ignored)
+    #[tokio::test]
+    async fn test_topic_alias_behavior() {
+        use crate::protocol::v5;
+        use tokio::net::TcpStream;
+        use bytes::BytesMut;
+
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with max_topic_alias = 5
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr).max_topic_alias(5)
+        ).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect subscriber using regular client
+        let mut subscriber = Client::connect(
+            ClientConfig::new(&addr, "alias-test-sub").with_protocol(ProtocolVersion::V5)
+        ).await.unwrap();
+        subscriber.subscribe(&["alias/test/#"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect publisher with raw TCP to send custom packets
+        let mut pub_stream = TcpStream::connect(&addr).await.unwrap();
+        let (mut reader, mut writer) = pub_stream.split();
+        let mut buf = BytesMut::with_capacity(4096);
+
+        // Send CONNECT
+        v5::write_packet(
+            &mut writer,
+            v5::create_connect("alias-test-pub", None, None, 60, true, None),
+        ).await.unwrap();
+
+        // Read CONNACK
+        let connack = v5::read_packet(&mut reader, &mut buf, 1024 * 1024).await.unwrap();
+        assert!(matches!(connack, v5::Packet::ConnAck(_)));
+
+        // Test 1: Set alias 1 = "alias/test/one"
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("alias/test/one", b"msg1", false, 1),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let msg = subscriber.recv_timeout(Duration::from_millis(200)).await.unwrap().expect("Should receive message");
+        assert_eq!(msg.topic, "alias/test/one");
+        assert_eq!(msg.payload.as_ref(), b"msg1");
+
+        // Test 2: Reuse alias 1 with empty topic
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("", b"msg2", false, 1),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let msg = subscriber.recv_timeout(Duration::from_millis(200)).await.unwrap().expect("Should receive message");
+        assert_eq!(msg.topic, "alias/test/one", "Should resolve alias 1 to stored topic");
+        assert_eq!(msg.payload.as_ref(), b"msg2");
+
+        // Test 3: Invalid alias 0 should be ignored (no message delivered)
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("alias/test/zero", b"msg_zero", false, 0),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let result = subscriber.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(result.is_none(), "Alias 0 should be rejected, no message delivered");
+
+        // Test 4: Alias exceeding limit (max=5, use alias=10) should be ignored
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("alias/test/exceed", b"msg_exceed", false, 10),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let result = subscriber.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(result.is_none(), "Alias exceeding limit should be rejected");
+
+        // Test 5: Unknown alias (empty topic with alias 3 that was never set)
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish_with_alias("", b"msg_unknown", false, 3),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let result = subscriber.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(result.is_none(), "Unknown alias should be rejected");
+
+        // Test 6: Valid message without alias should still work
+        v5::write_packet(
+            &mut writer,
+            v5::create_publish("alias/test/normal", b"msg_normal", false),
+        ).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let msg = subscriber.recv_timeout(Duration::from_millis(200)).await.unwrap().expect("Should receive message");
+        assert_eq!(msg.topic, "alias/test/normal");
+        assert_eq!(msg.payload.as_ref(), b"msg_normal");
+
+        subscriber.disconnect().await.unwrap();
+    }
+
     /// Test Trie correctly handles $ topic MQTT spec compliance.
     #[test]
     fn test_trie_dollar_topic_routing() {
@@ -2305,5 +2418,63 @@ mod keepalive_tests {
         // $ topic should NOT match + at root level
         let matches = trie2.get("$SYS/broker/stats");
         assert_eq!(matches, vec!["sys_plus_sub"], "$SYS should only match explicit $SYS/+/stats pattern");
+    }
+
+    /// Test that when a new client connects with the same clientID,
+    /// the old client is disconnected gracefully.
+    #[tokio::test]
+    async fn test_duplicate_client_id() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        let broker = Broker::builder(BrokerConfig::new(&addr)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Connect first client
+        let client1 = Client::connect(
+            ClientConfig::new(&addr, "duplicate-test")
+        ).await.unwrap();
+
+        // Subscribe to a topic
+        client1.subscribe(&["test/dup"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect second client with same clientID
+        // This should cause the first client to be disconnected
+        let client2 = Client::connect(
+            ClientConfig::new(&addr, "duplicate-test")
+        ).await.unwrap();
+
+        // Subscribe with new client
+        client2.subscribe(&["test/dup"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Connect a publisher
+        let publisher = Client::connect(
+            ClientConfig::new(&addr, "dup-publisher")
+        ).await.unwrap();
+
+        // Publish a message
+        publisher.publish("test/dup", b"hello").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Client2 should receive the message
+        let msg = client2.recv_timeout(Duration::from_millis(500)).await.unwrap();
+        assert!(msg.is_some(), "client2 should receive message");
+        let msg = msg.unwrap();
+        assert_eq!(msg.topic, "test/dup");
+        assert_eq!(msg.payload.as_ref(), b"hello");
+
+        // Client1 may receive None (channel closed) or error when trying to receive
+        // We don't check the exact behavior, just ensure no panic
+
+        client2.disconnect().await.unwrap();
+        publisher.disconnect().await.unwrap();
+        // client1 may already be disconnected, so we don't check error
+        let _ = client1.disconnect().await;
     }
 }

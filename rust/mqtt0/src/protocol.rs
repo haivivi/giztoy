@@ -270,6 +270,31 @@ pub mod v5 {
         })
     }
 
+    /// Create a PUBLISH packet with topic alias (QoS 0, MQTT 5.0).
+    ///
+    /// Used for testing topic alias functionality:
+    /// - `topic`: The topic string (can be empty when using existing alias)
+    /// - `topic_alias`: The topic alias value (1-65535, 0 is invalid per MQTT spec)
+    pub fn create_publish_with_alias(
+        topic: &str,
+        payload: &[u8],
+        retain: bool,
+        topic_alias: u16,
+    ) -> Packet {
+        use rumqttc::v5::mqttbytes::v5::PublishProperties;
+        let mut props = PublishProperties::default();
+        props.topic_alias = Some(topic_alias);
+        Packet::Publish(Publish {
+            dup: false,
+            qos: QoS::AtMostOnce,
+            retain,
+            topic: bytes::Bytes::copy_from_slice(topic.as_bytes()),
+            pkid: 0,
+            payload: bytes::Bytes::copy_from_slice(payload),
+            properties: Some(props),
+        })
+    }
+
     /// Create a SUBSCRIBE packet.
     pub fn create_subscribe(pkid: u16, topics: &[&str]) -> Packet {
         let filters: Vec<Filter> = topics
