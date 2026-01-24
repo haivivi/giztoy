@@ -59,16 +59,17 @@ func (t *Trie[T]) Remove(pattern string, predicate func(T) bool) bool {
 
 // Update allows modifying values at the given pattern using a callback.
 // The callback receives a pointer to the values slice and can modify it.
-func (t *Trie[T]) Update(pattern string, f func(*[]T)) {
+// Returns an error if the pattern is invalid (e.g., # not at end).
+func (t *Trie[T]) Update(pattern string, f func(*[]T)) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.root.update(pattern, f)
+	return t.root.update(pattern, f)
 }
 
-func (n *trieNode[T]) update(pattern string, f func(*[]T)) {
+func (n *trieNode[T]) update(pattern string, f func(*[]T)) error {
 	if pattern == "" {
 		f(&n.values)
-		return
+		return nil
 	}
 
 	var first, rest string
@@ -83,8 +84,7 @@ func (n *trieNode[T]) update(pattern string, f func(*[]T)) {
 	// Check existing children first
 	if n.children != nil {
 		if child, ok := n.children[first]; ok {
-			child.update(rest, f)
-			return
+			return child.update(rest, f)
 		}
 	}
 
@@ -93,12 +93,17 @@ func (n *trieNode[T]) update(pattern string, f func(*[]T)) {
 		if n.matchAny == nil {
 			n.matchAny = &trieNode[T]{}
 		}
-		n.matchAny.update(rest, f)
+		return n.matchAny.update(rest, f)
 	case "#":
+		// # must be the last segment
+		if rest != "" {
+			return ErrInvalidTopic
+		}
 		if n.matchAll == nil {
 			n.matchAll = &trieNode[T]{}
 		}
 		f(&n.matchAll.values)
+		return nil
 	default:
 		if n.children == nil {
 			n.children = make(map[string]*trieNode[T])
@@ -106,7 +111,7 @@ func (n *trieNode[T]) update(pattern string, f func(*[]T)) {
 		if n.children[first] == nil {
 			n.children[first] = &trieNode[T]{}
 		}
-		n.children[first].update(rest, f)
+		return n.children[first].update(rest, f)
 	}
 }
 
