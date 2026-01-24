@@ -698,6 +698,13 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 	codes := make([]byte, len(topics))
 
 	for i, topic := range topics {
+		// Check topic length limit
+		if b.MaxTopicLength > 0 && len(topic) > b.MaxTopicLength {
+			slog.Debug("mqtt0: topic too long", "clientID", clientID, "topic_len", len(topic), "max", b.MaxTopicLength)
+			codes[i] = 0x80 // Failure
+			continue
+		}
+
 		// Check subscription limit
 		b.mu.Lock()
 		currentCount := len(b.clientSubscriptions[clientID])
@@ -708,11 +715,11 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 			continue
 		}
 
-		// For shared subscriptions, check ACL on the actual topic
+		// Parse shared subscription once for both ACL and subscription handling
+		group, actualTopic, isShared := ParseSharedTopic(topic)
 		aclTopic := topic
-		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
+		if isShared {
 			aclTopic = actualTopic
-			_ = group // used below
 		}
 
 		if !auth.ACL(clientID, aclTopic, false) {
@@ -722,7 +729,7 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 		}
 
 		// Handle shared subscriptions
-		if group, actualTopic, ok := ParseSharedTopic(topic); ok {
+		if isShared {
 			// Use Trie for O(topic_length) lookup
 			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
 				// Find existing group or create new one
@@ -762,6 +769,13 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 	codes := make([]ReasonCode, len(filters))
 
 	for i, filter := range filters {
+		// Check topic length limit
+		if b.MaxTopicLength > 0 && len(filter.Topic) > b.MaxTopicLength {
+			slog.Debug("mqtt0: topic too long", "clientID", clientID, "topic_len", len(filter.Topic), "max", b.MaxTopicLength)
+			codes[i] = ReasonTopicFilterInvalid
+			continue
+		}
+
 		// Check subscription limit
 		b.mu.Lock()
 		currentCount := len(b.clientSubscriptions[clientID])
@@ -772,11 +786,11 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 			continue
 		}
 
-		// For shared subscriptions, check ACL on the actual topic
+		// Parse shared subscription once for both ACL and subscription handling
+		group, actualTopic, isShared := ParseSharedTopic(filter.Topic)
 		aclTopic := filter.Topic
-		if group, actualTopic, ok := ParseSharedTopic(filter.Topic); ok {
+		if isShared {
 			aclTopic = actualTopic
-			_ = group // used below
 		}
 
 		if !auth.ACL(clientID, aclTopic, false) {
@@ -786,7 +800,7 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 		}
 
 		// Handle shared subscriptions
-		if group, actualTopic, ok := ParseSharedTopic(filter.Topic); ok {
+		if isShared {
 			// Use Trie for O(topic_length) lookup
 			b.sharedTrie.Update(actualTopic, func(entries *[]*sharedEntry) {
 				// Find existing group or create new one
@@ -1067,13 +1081,29 @@ type sysDisconnectedEvent struct {
 	DisconnectedAt int64  `json:"disconnected_at"`
 }
 
+// sanitizeClientIDForTopic replaces MQTT topic special characters in clientID
+// to prevent topic injection attacks. Replaces /, +, # with _.
+func sanitizeClientIDForTopic(clientID string) string {
+	result := make([]byte, len(clientID))
+	for i := 0; i < len(clientID); i++ {
+		switch clientID[i] {
+		case '/', '+', '#':
+			result[i] = '_'
+		default:
+			result[i] = clientID[i]
+		}
+	}
+	return string(result)
+}
+
 // publishSysConnected publishes a $SYS client connected event.
 func (b *Broker) publishSysConnected(clientID, username string, addr netip.AddrPort, protoVer ProtocolVersion, keepAlive uint16) {
 	if !b.SysEventsEnabled {
 		return
 	}
 
-	topic := fmt.Sprintf("$SYS/brokers/%s/connected", clientID)
+	safeClientID := sanitizeClientIDForTopic(clientID)
+	topic := fmt.Sprintf("$SYS/brokers/%s/connected", safeClientID)
 
 	event := sysConnectedEvent{
 		ClientID:    clientID,
@@ -1099,7 +1129,8 @@ func (b *Broker) publishSysDisconnected(clientID, username string) {
 		return
 	}
 
-	topic := fmt.Sprintf("$SYS/brokers/%s/disconnected", clientID)
+	safeClientID := sanitizeClientIDForTopic(clientID)
+	topic := fmt.Sprintf("$SYS/brokers/%s/disconnected", safeClientID)
 
 	event := sysDisconnectedEvent{
 		ClientID:       clientID,

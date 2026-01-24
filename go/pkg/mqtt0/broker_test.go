@@ -988,6 +988,8 @@ func TestSubscriptionLimit(t *testing.T) {
 	go broker.Serve(ln)
 
 	ctx := context.Background()
+
+	// Client that will hit the subscription limit
 	client, err := Connect(ctx, ClientConfig{
 		Addr:     "tcp://" + addr,
 		ClientID: "sub-limit-client",
@@ -1005,10 +1007,56 @@ func TestSubscriptionLimit(t *testing.T) {
 		}
 	}
 
-	// 6th subscription should fail (but client.Subscribe doesn't return suback codes)
-	// The broker will return failure code, but our simple client doesn't check it
+	// 6th subscription to "topic/f" - broker rejects but client.Subscribe doesn't check SUBACK
 	if err := client.Subscribe(ctx, "topic/f"); err != nil {
-		t.Logf("expected: 6th subscription might fail: %v", err)
+		t.Logf("6th subscription error: %v", err)
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Create another client (verifier) that subscribes to "topic/f" to verify it works
+	verifier, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "verifier-client",
+	})
+	if err != nil {
+		t.Fatalf("connect verifier failed: %v", err)
+	}
+	defer verifier.Close()
+
+	if err := verifier.Subscribe(ctx, "topic/f"); err != nil {
+		t.Fatalf("verifier subscribe failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a publisher
+	publisher, err := Connect(ctx, ClientConfig{
+		Addr:     "tcp://" + addr,
+		ClientID: "publisher-client",
+	})
+	if err != nil {
+		t.Fatalf("connect publisher failed: %v", err)
+	}
+	defer publisher.Close()
+
+	// Publish to "topic/f"
+	if err := publisher.Publish(ctx, "topic/f", []byte("test-message")); err != nil {
+		t.Fatalf("publish failed: %v", err)
+	}
+
+	// Verifier should receive the message (its subscription succeeded)
+	msg, err := verifier.RecvTimeout(500 * time.Millisecond)
+	if err != nil {
+		t.Fatalf("verifier should receive message: %v", err)
+	}
+	if msg.Topic != "topic/f" {
+		t.Errorf("verifier got wrong topic: %s", msg.Topic)
+	}
+
+	// Original client should NOT receive the message (6th subscription was rejected)
+	msg, err = client.RecvTimeout(200 * time.Millisecond)
+	if err == nil && msg != nil && msg.Topic == "topic/f" {
+		t.Errorf("client should NOT receive message on topic/f (subscription was rejected)")
 	}
 
 	broker.Close()

@@ -1032,6 +1032,20 @@ impl BrokerContext {
         let mut return_codes = Vec::with_capacity(filters.len());
 
         for filter in filters {
+            let topic = &filter.path;
+
+            // Check topic length limit
+            if self.max_topic_length > 0 && topic.len() > self.max_topic_length {
+                warn!(
+                    "Client {} topic too long: {} > {}",
+                    client_id,
+                    topic.len(),
+                    self.max_topic_length
+                );
+                return_codes.push(SubscribeReasonCode::Failure);
+                continue;
+            }
+
             // Check subscription limit
             let current_count = {
                 let subs = self.client_subscriptions.read();
@@ -1047,8 +1061,6 @@ impl BrokerContext {
                 return_codes.push(SubscribeReasonCode::Failure);
                 continue;
             }
-
-            let topic = &filter.path;
 
             // For shared subscriptions, check ACL on the actual topic
             let acl_topic = if let Some((_, actual_topic)) = parse_shared_topic(topic) {
@@ -1126,6 +1138,20 @@ impl BrokerContext {
         let mut return_codes = Vec::with_capacity(filters.len());
 
         for filter in filters {
+            let topic = &filter.path;
+
+            // Check topic length limit
+            if self.max_topic_length > 0 && topic.len() > self.max_topic_length {
+                warn!(
+                    "Client {} topic too long: {} > {}",
+                    client_id,
+                    topic.len(),
+                    self.max_topic_length
+                );
+                return_codes.push(crate::protocol::v5::SubscribeReasonCode::TopicFilterInvalid);
+                continue;
+            }
+
             // Check subscription limit
             let current_count = {
                 let subs = self.client_subscriptions.read();
@@ -1141,8 +1167,6 @@ impl BrokerContext {
                 return_codes.push(crate::protocol::v5::SubscribeReasonCode::QuotaExceeded);
                 continue;
             }
-
-            let topic = &filter.path;
 
             // For shared subscriptions, check ACL on the actual topic
             let acl_topic = if let Some((_, actual_topic)) = parse_shared_topic(topic) {
@@ -1315,6 +1339,18 @@ impl BrokerContext {
         self.publish_sys_disconnected(client_id, username).await;
     }
 
+    /// Sanitize client_id for use in MQTT topic names.
+    /// Replaces /, +, # with _ to prevent topic injection attacks.
+    fn sanitize_client_id_for_topic(client_id: &str) -> String {
+        client_id
+            .chars()
+            .map(|c| match c {
+                '/' | '+' | '#' => '_',
+                _ => c,
+            })
+            .collect()
+    }
+
     /// Publish $SYS client connected event.
     /// Topic: $SYS/brokers/{clientid}/connected
     /// Format compatible with EMQX: https://docs.emqx.com/en/emqx/latest/observability/mqtt-system-topics.html
@@ -1330,7 +1366,8 @@ impl BrokerContext {
             return;
         }
 
-        let topic = format!("$SYS/brokers/{}/connected", client_id);
+        let safe_client_id = Self::sanitize_client_id_for_topic(client_id);
+        let topic = format!("$SYS/brokers/{}/connected", safe_client_id);
 
         let connected_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -1371,7 +1408,8 @@ impl BrokerContext {
             return;
         }
 
-        let topic = format!("$SYS/brokers/{}/disconnected", client_id);
+        let safe_client_id = Self::sanitize_client_id_for_topic(client_id);
+        let topic = format!("$SYS/brokers/{}/disconnected", safe_client_id);
 
         let disconnected_at = SystemTime::now()
             .duration_since(UNIX_EPOCH)
