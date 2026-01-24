@@ -1,0 +1,26 @@
+[book]
+title = "Giztoy 文档"
+authors = ["Haivivi Team"]
+language = "zh"
+multilingual = false
+src = "../../docs/zh"
+
+[build]
+build-dir = "book-zh"
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "rust"
+git-repository-url = "https://github.com/haivivi/giztoy"
+git-repository-icon = "fa-github"
+additional-css = ["custom.css"]
+additional-js = ["mermaid.min.js", "mermaid-init.js", "lang-switch.js"]
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+enable = true
+limit-results = 30
+use-hierarchical = true

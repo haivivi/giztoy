@@ -1,0 +1,137 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# mdBook configuration files
+filegroup(
+    name = "book_config",
+    srcs = glob(["book/**"]),
+)
+
+# Homepage files
+filegroup(
+    name = "home",
+    srcs = glob(["home/**"]),
+)
+
+# Documentation source files
+filegroup(
+    name = "docs_srcs",
+    srcs = ["//docs:srcs"],
+)
+
+# =============================================================================
+# Build website artifact
+# Usage: bazel build //pages:www
+# Output: bazel-bin/pages/www.tar.gz
+# =============================================================================
+genrule(
+    name = "www",
+    srcs = [
+        ":book_config",
+        ":home",
+        ":docs_srcs",
+    ],
+    outs = ["www.tar.gz"],
+    cmd = """
+        set -e
+        
+        # Save original directory
+        ORIG_DIR="$$PWD"
+        
+        # Tools (absolute paths)
+        MDBOOK="$$ORIG_DIR/$(execpath @mdbook//:mdbook)"
+        MERMAID="$$ORIG_DIR/$(execpath @mermaid//:mermaid.min.js)"
+        
+        # Create work directories
+        WORK=$$(mktemp -d)
+        MDBOOK_EN="$$WORK/mdbook-en"
+        MDBOOK_ZH="$$WORK/mdbook-zh"
+        SITE="$$WORK/site"
+        mkdir -p "$$MDBOOK_EN" "$$MDBOOK_ZH" "$$SITE"
+        
+        # Copy mdbook config files and mermaid
+        for f in $(locations :book_config); do
+            cp "$$ORIG_DIR/$$f" "$$MDBOOK_EN/"
+            cp "$$ORIG_DIR/$$f" "$$MDBOOK_ZH/"
+        done
+        cp "$$MERMAID" "$$MDBOOK_EN/mermaid.min.js"
+        cp "$$MERMAID" "$$MDBOOK_ZH/mermaid.min.js"
+        
+        # Rename book-zh.toml to book.toml for Chinese build
+        mv "$$MDBOOK_ZH/book-zh.toml" "$$MDBOOK_ZH/book.toml"
+        
+        # Copy docs source - English
+        mkdir -p "$$MDBOOK_EN/en"
+        for f in $(locations :docs_srcs); do
+            if [[ "$$f" == *"/en/"* ]]; then
+                REL_PATH="$${f#*docs/en/}"
+                mkdir -p "$$MDBOOK_EN/en/$$(dirname $$REL_PATH)"
+                cp "$$ORIG_DIR/$$f" "$$MDBOOK_EN/en/$$REL_PATH"
+            fi
+        done
+        
+        # Copy docs source - Chinese
+        mkdir -p "$$MDBOOK_ZH/zh"
+        for f in $(locations :docs_srcs); do
+            if [[ "$$f" == *"/zh/"* ]]; then
+                REL_PATH="$${f#*docs/zh/}"
+                mkdir -p "$$MDBOOK_ZH/zh/$$(dirname $$REL_PATH)"
+                cp "$$ORIG_DIR/$$f" "$$MDBOOK_ZH/zh/$$REL_PATH"
+            fi
+        done
+        
+        # Fix book.toml src paths
+        sed -i.bak 's|src = "../../docs/en"|src = "en"|' "$$MDBOOK_EN/book.toml"
+        sed -i.bak 's|src = "../../docs/zh"|src = "zh"|' "$$MDBOOK_ZH/book.toml"
+        
+        # Build English documentation
+        cd "$$MDBOOK_EN"
+        "$$MDBOOK" build . --dest-dir "$$SITE/docs"
+        
+        # Build Chinese documentation
+        cd "$$MDBOOK_ZH"
+        "$$MDBOOK" build . --dest-dir "$$SITE/docs/zh"
+        
+        # Copy homepage files
+        for f in $(locations :home); do
+            if [[ "$$f" == *"/index.html" ]]; then
+                cp "$$ORIG_DIR/$$f" "$$SITE/"
+            elif [[ "$$f" == *"/assets/"* ]]; then
+                mkdir -p "$$SITE/assets"
+                cp "$$ORIG_DIR/$$f" "$$SITE/assets/"
+            fi
+        done
+        
+        # Create tarball
+        cd "$$SITE"
+        tar -czf "$$ORIG_DIR/$@" .
+        
+        # Cleanup
+        rm -rf "$$WORK"
+    """,
+    tools = [
+        "@mdbook//:mdbook",
+        "@mermaid//:mermaid.min.js",
+    ],
+)
+
+# =============================================================================
+# Serve website locally
+# Usage: bazel run //pages:serve-local -- [port]
+# =============================================================================
+sh_binary(
+    name = "serve-local",
+    srcs = ["serve-local.sh"],
+    data = [":www"],
+)
+
+# =============================================================================
+# Deploy to GitHub Pages
+# Usage: bazel run //pages:deploy
+# =============================================================================
+sh_binary(
+    name = "deploy",
+    srcs = ["deploy.sh"],
+    data = [":www"],
+)
