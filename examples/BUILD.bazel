@@ -1,6 +1,10 @@
 # Examples directory structure:
 #
 # examples/
+# ├── bazel/        - Bazel mobile platform examples
+# │   ├── ios/       - iOS examples (rules_apple, rules_swift)
+# │   ├── android/   - Android examples (rules_android, rules_kotlin)
+# │   └── harmonyos/ - HarmonyOS examples (custom rules_harmonyos)
 # ├── cmd/          - CLI test scripts (shell)
 # │   ├── minimax/
 # │   └── doubaospeech/

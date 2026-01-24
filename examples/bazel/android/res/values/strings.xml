@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HelloWorld</string>
+    <string name="hello_message">Hello, Bazel!</string>
+    <string name="subtitle_message">Built with rules_android</string>
+    <string name="button_text">Tap Me!</string>
+</resources>

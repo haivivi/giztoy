@@ -1,0 +1,7 @@
+# examples/bazel BUILD file
+# Contains iOS and Android example projects
+
+# This is the root BUILD file for mobile examples.
+# See subdirectories for platform-specific examples:
+#   - ios/: iOS application example using rules_apple
+#   - android/: Android application example using rules_android

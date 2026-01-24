@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Hello Bazel Module"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "A HarmonyOS app built with command line"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Hello Bazel"
+    }
+  ]
+}

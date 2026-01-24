@@ -1,0 +1,12 @@
+string EntryAbility_desc 0x01000004
+string EntryAbility_label 0x01000005
+string app_name 0x01000000
+string module_desc 0x01000006
+color start_window_background 0x01000007
+float page_text_font_size 0x01000008
+media background 0x01000001
+media foreground 0x01000002
+media layered_image 0x01000003
+media startIcon 0x01000009
+profile backup_config 0x0100000a
+profile main_pages 0x0100000b

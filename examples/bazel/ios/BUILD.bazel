@@ -1,0 +1,95 @@
+"""iOS example application using rules_apple and rules_swift."""
+
+load("@rules_apple//apple:ios.bzl", "ios_application", "ios_extension")
+load("@rules_swift//swift:swift.bzl", "swift_library")
+
+# Swift library containing the app source code
+# tags = ["manual"] prevents direct build by //... (would compile on wrong platform)
+# Only built indirectly as ios_application dependency
+swift_library(
+    name = "HelloWorldLib",
+    srcs = glob(["HelloWorld/*.swift"]),
+    module_name = "HelloWorld",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+# iOS application bundle
+ios_application(
+    name = "HelloWorld",
+    bundle_id = "com.example.helloworld",
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = ["HelloWorld/Info.plist"],
+    minimum_os_version = "15.0",
+    visibility = ["//visibility:public"],
+    deps = [":HelloWorldLib"],
+)
+
+# ============================================================================
+# Alternative: Minimal SwiftUI app (no Storyboard)
+# ============================================================================
+
+swift_library(
+    name = "SwiftUIAppLib",
+    srcs = glob(["SwiftUIApp/*.swift"]),
+    module_name = "SwiftUIApp",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+ios_application(
+    name = "SwiftUIApp",
+    bundle_id = "com.example.swiftuiapp",
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = ["SwiftUIApp/Info.plist"],
+    minimum_os_version = "15.0",
+    visibility = ["//visibility:public"],
+    deps = [":SwiftUIAppLib"],
+)
+
+# ============================================================================
+# iOS Widget Extension Example
+# ============================================================================
+
+swift_library(
+    name = "BazelWidgetLib",
+    srcs = glob(["Widget/*.swift"]),
+    module_name = "BazelWidget",
+    tags = ["manual"],
+    visibility = ["//visibility:private"],
+)
+
+# Widget Extension (standalone, for development/testing)
+ios_extension(
+    name = "BazelWidgetExtension",
+    bundle_id = "com.example.swiftuiapp.widget",
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = ["Widget/Info.plist"],
+    minimum_os_version = "17.0",
+    visibility = ["//visibility:public"],
+    deps = [":BazelWidgetLib"],
+)
+
+# SwiftUI App with Widget Extension embedded
+ios_application(
+    name = "SwiftUIAppWithWidget",
+    bundle_id = "com.example.swiftuiapp",
+    extensions = [":BazelWidgetExtension"],
+    families = [
+        "iphone",
+        "ipad",
+    ],
+    infoplists = ["SwiftUIApp/Info.plist"],
+    minimum_os_version = "17.0",
+    visibility = ["//visibility:public"],
+    deps = [":SwiftUIAppLib"],
+)

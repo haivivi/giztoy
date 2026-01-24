@@ -1,0 +1,23 @@
+{
+  "modulePathMap": {
+    "entry": "/Users/idy/Work/haivivi/giztoy/examples/bazel/harmonyos/HelloWorld/entry"
+  },
+  "compileMode": "esmodule",
+  "projectRootPath": "/Users/idy/Work/haivivi/giztoy/examples/bazel/harmonyos/HelloWorld",
+  "nodeModulesPath": "/Users/idy/Work/haivivi/giztoy/examples/bazel/harmonyos/HelloWorld/entry/build/default/intermediates/loader_out/default/node_modules",
+  "byteCodeHarInfo": {},
+  "declarationEntry": [],
+  "moduleName": "entry",
+  "hspNameOhmMap": {},
+  "harNameOhmMap": {},
+  "packageManagerType": "ohpm",
+  "compileEntry": [],
+  "otherCompileFiles": [],
+  "dynamicImportLibInfo": {},
+  "routerMap": [],
+  "hspResourcesMap": {},
+  "updateVersionInfo": {},
+  "customizedHar": false,
+  "anBuildOutPut": "/Users/idy/Work/haivivi/giztoy/examples/bazel/harmonyos/HelloWorld/entry/build/default/intermediates/loader_out/default/an/arm64-v8a",
+  "anBuildMode": "type"
+}
