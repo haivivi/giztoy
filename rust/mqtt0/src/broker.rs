@@ -832,8 +832,8 @@ impl BrokerContext {
     ) -> Result<()> {
         let topic = publish.topic.to_string();
 
-        // Enforce topic length limit
-        if topic.len() > self.max_topic_length {
+        // Enforce topic length limit (0 = no limit)
+        if self.max_topic_length > 0 && topic.len() > self.max_topic_length {
             warn!(
                 "Client {} topic too long: {} > {}",
                 client_id,
@@ -953,8 +953,8 @@ impl BrokerContext {
             topic_from_packet
         };
 
-        // Enforce topic length limit
-        if topic.len() > self.max_topic_length {
+        // Enforce topic length limit (0 = no limit)
+        if self.max_topic_length > 0 && topic.len() > self.max_topic_length {
             warn!(
                 "Client {} topic too long: {} > {}",
                 client_id,
