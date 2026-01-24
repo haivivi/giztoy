@@ -652,11 +652,7 @@ func (b *Broker) handlePublishV5(clientID string, p *V5Publish, auth Authenticat
 
 		if topic != "" {
 			// Topic is provided with alias - update the mapping
-			// Enforce topic length limit
-			if len(topic) > b.MaxTopicLength {
-				slog.Debug("mqtt0: topic too long for alias", "clientID", clientID, "len", len(topic), "max", b.MaxTopicLength)
-				return
-			}
+			// Note: topic length is checked after alias resolution (below)
 			topicAliases[alias] = topic
 			slog.Debug("mqtt0: set topic alias", "clientID", clientID, "alias", alias, "topic", topic)
 		} else {

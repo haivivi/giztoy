@@ -2477,4 +2477,84 @@ mod keepalive_tests {
         // client1 may already be disconnected, so we don't check error
         let _ = client1.disconnect().await;
     }
+
+    #[tokio::test]
+    async fn test_topic_length_limit() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with max_topic_length = 50
+        let broker = Broker::builder(BrokerConfig::new(&addr).max_topic_length(50)).build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut publisher = Client::connect(ClientConfig::new(&addr, "topic-len-pub")).await.unwrap();
+        let mut subscriber = Client::connect(ClientConfig::new(&addr, "topic-len-sub")).await.unwrap();
+
+        // Subscribe to wildcard
+        subscriber.subscribe(&["test/#"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Short topic should work
+        publisher.publish("test/short", b"ok").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        let msg = subscriber.recv_timeout(Duration::from_millis(200)).await.unwrap();
+        assert!(msg.is_some(), "short topic should be delivered");
+        assert_eq!(msg.unwrap().topic, "test/short");
+
+        // Long topic (>50 bytes) should be silently dropped
+        let long_topic = "test/this/is/a/very/long/topic/that/exceeds/the/limit";
+        assert!(long_topic.len() > 50, "test topic should be >50 bytes");
+        publisher.publish(long_topic, b"dropped").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // Should NOT receive the long topic message
+        let msg = subscriber.recv_timeout(Duration::from_millis(100)).await.unwrap();
+        assert!(msg.is_none(), "long topic should be dropped by broker");
+
+        publisher.disconnect().await.unwrap();
+        subscriber.disconnect().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_subscription_limit() {
+        let port = find_available_port();
+        let addr = format!("127.0.0.1:{}", port);
+
+        // Create broker with max_subscriptions_per_client = 3
+        let broker = Broker::builder(
+            BrokerConfig::new(&addr).max_subscriptions_per_client(3),
+        )
+        .build();
+        tokio::spawn(async move {
+            let _ = broker.serve().await;
+        });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut client = Client::connect(ClientConfig::new(&addr, "sub-limit-client")).await.unwrap();
+
+        // First 3 subscriptions should succeed
+        client.subscribe(&["topic/a"]).await.unwrap();
+        client.subscribe(&["topic/b"]).await.unwrap();
+        client.subscribe(&["topic/c"]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        // 4th subscription - broker rejects, client should receive error
+        let result = client.subscribe(&["topic/d"]).await;
+        assert!(result.is_err(), "4th subscription should be rejected by broker");
+
+        // But "topic/a" (first 3) should still work
+        let publisher = Client::connect(ClientConfig::new(&addr, "sub-limit-pub")).await.unwrap();
+        publisher.publish("topic/a", b"should-receive").await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let msg = client.recv_timeout(Duration::from_millis(200)).await.unwrap();
+        assert!(msg.is_some(), "first 3 subscriptions should work");
+        assert_eq!(msg.unwrap().topic, "topic/a");
+
+        client.disconnect().await.unwrap();
+        publisher.disconnect().await.unwrap();
+    }
 }

@@ -301,13 +301,32 @@ impl Broker {
     }
 
     fn route_message(&self, msg: &Message) {
-        // Trie is internally thread-safe, no need for external lock
+        // Route to normal subscribers - Trie is internally thread-safe
         let subscribers = self.subscriptions.get(&msg.topic);
 
         for handle in subscribers {
             // Use try_send for non-blocking delivery (drop message if channel full)
             if let Err(e) = handle.tx.try_send(msg.clone()) {
                 warn!("Message dropped for {} (channel full): {}", handle.client_id, e);
+            }
+        }
+
+        // Route to shared subscription groups (round-robin) using Trie lookup
+        let shared_subscribers: Vec<(String, Option<ClientHandle>)> = self
+            .shared_trie
+            .get(&msg.topic)
+            .into_iter()
+            .map(|entry| (entry.group_name.clone(), entry.group.next_subscriber().cloned()))
+            .collect();
+
+        for (group_name, subscriber) in shared_subscribers {
+            if let Some(handle) = subscriber {
+                if let Err(e) = handle.tx.try_send(msg.clone()) {
+                    warn!(
+                        "Message dropped for shared subscriber {} (group {}, channel full): {}",
+                        handle.client_id, group_name, e
+                    );
+                }
             }
         }
     }
@@ -899,16 +918,7 @@ impl BrokerContext {
 
             if !topic_from_packet.is_empty() {
                 // Topic is provided with alias - update the mapping
-                // Enforce topic length limit before storing
-                if topic_from_packet.len() > self.max_topic_length {
-                    warn!(
-                        "Client {} topic too long for alias: {} > {}",
-                        client_id,
-                        topic_from_packet.len(),
-                        self.max_topic_length
-                    );
-                    return Ok(());
-                }
+                // Note: topic length is checked after alias resolution (below)
                 topic_aliases.insert(alias, topic_from_packet.clone());
                 trace!(
                     "Client {} set topic alias {} = '{}'",
