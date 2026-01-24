@@ -94,12 +94,12 @@ type SessionConfig struct {
 	InputAudioTranscription *TranscriptionConfig `json:"input_audio_transcription,omitzero"`
 
 	// TurnDetection configures voice activity detection.
-	// Use TurnDetectionOff() to explicitly disable VAD (manual mode).
+	// Set TurnDetectionDisabled=true to explicitly disable VAD (manual mode).
 	// Use nil to keep current setting.
 	TurnDetection *TurnDetection `json:"turn_detection,omitzero"`
 
 	// TurnDetectionDisabled when true, sends "turn_detection": null explicitly.
-	// This is needed because omitzero won't send null values.
+	// This disables server-side VAD and enables manual mode.
 	TurnDetectionDisabled bool `json:"-"`
 
 	// Tools defines the available functions for the model.

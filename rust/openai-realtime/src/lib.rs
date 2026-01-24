@@ -20,7 +20,7 @@
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // Create client
-//!     let client = Client::new("your-api-key");
+//!     let client = Client::new("your-api-key")?;
 //!
 //!     // Connect via WebSocket
 //!     let mut session = client.connect_websocket(None).await?;

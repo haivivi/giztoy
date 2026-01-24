@@ -382,14 +382,14 @@ func (s *WebSocketSession) readLoop() {
 			s.mu.Unlock()
 		}
 
-		// Check for error event
+		// Check for error event - send error and stop reading
 		if event.Type == EventTypeError && event.TranscriptionError != nil {
 			select {
 			case <-s.closeCh:
 				return
 			case s.eventsCh <- eventOrError{err: event.TranscriptionError.ToError()}:
 			}
-			continue
+			return // Stop on error event as Events() terminates on first error
 		}
 
 		select {

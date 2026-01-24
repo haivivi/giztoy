@@ -7,7 +7,10 @@
 //
 // WebSocket mode is suitable for server-side applications:
 //
-//	client := openairealtime.NewClient(apiKey)
+//	client, err := openairealtime.NewClient(apiKey)
+//	if err != nil {
+//	    return err
+//	}
 //	session, err := client.ConnectWebSocket(ctx, &openairealtime.ConnectConfig{
 //	    Model: openairealtime.ModelGPT4oRealtimePreview,
 //	})
