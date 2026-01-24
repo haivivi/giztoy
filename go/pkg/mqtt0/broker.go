@@ -39,15 +39,15 @@ type Broker struct {
 	SysEventsEnabled bool
 
 	// MaxTopicAlias is the maximum topic alias value per client (MQTT 5.0).
-	// Default: 65535. Set to 0 to disable topic alias.
+	// Default: 65535. Range: 1-65535 (0 is treated as default).
 	MaxTopicAlias uint16
 
 	// MaxTopicLength is the maximum topic string length in bytes.
-	// Default: 256. MQTT spec allows up to 65535.
+	// Default: 256. MQTT spec allows up to 65535 (0 is treated as default).
 	MaxTopicLength int
 
 	// MaxSubscriptionsPerClient is the maximum number of subscriptions per client.
-	// Default: 100. Set to 0 for unlimited.
+	// Default: 100. Range: 1+ (0 is treated as default).
 	MaxSubscriptionsPerClient int
 
 	// internal state
@@ -305,7 +305,7 @@ func (b *Broker) handleConnectionV4(conn net.Conn, reader *bufio.Reader) {
 		close(old.msgCh) // Signal old client to disconnect
 		oldHandle = old
 		oldTopics = b.clientSubscriptions[connect.ClientID]
-			delete(b.clientSubscriptions, connect.ClientID)
+		delete(b.clientSubscriptions, connect.ClientID)
 	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
@@ -388,7 +388,7 @@ func (b *Broker) handleConnectionV5(conn net.Conn, reader *bufio.Reader) {
 		close(old.msgCh) // Signal old client to disconnect
 		oldHandle = old
 		oldTopics = b.clientSubscriptions[connect.ClientID]
-			delete(b.clientSubscriptions, connect.ClientID)
+		delete(b.clientSubscriptions, connect.ClientID)
 	}
 	b.clients[connect.ClientID] = handle
 	b.mu.Unlock()
@@ -739,10 +739,10 @@ func (b *Broker) handleSubscribeV4(clientID string, handle *clientHandle, topics
 			})
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
-		if err := b.subscriptions.Insert(topic, handle); err != nil {
-			slog.Debug("mqtt0: subscribe failed", "error", err)
-			codes[i] = 0x80
-			continue
+			if err := b.subscriptions.Insert(topic, handle); err != nil {
+				slog.Debug("mqtt0: subscribe failed", "error", err)
+				codes[i] = 0x80
+				continue
 			}
 			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", topic)
 		}
@@ -803,10 +803,10 @@ func (b *Broker) handleSubscribeV5(clientID string, handle *clientHandle, filter
 			})
 			slog.Debug("mqtt0: subscribed to shared", "clientID", clientID, "group", group, "topic", actualTopic)
 		} else {
-		if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
-			slog.Debug("mqtt0: subscribe failed", "error", err)
-			codes[i] = ReasonUnspecifiedError
-			continue
+			if err := b.subscriptions.Insert(filter.Topic, handle); err != nil {
+				slog.Debug("mqtt0: subscribe failed", "error", err)
+				codes[i] = ReasonUnspecifiedError
+				continue
 			}
 			slog.Debug("mqtt0: subscribed", "clientID", clientID, "topic", filter.Topic)
 		}
@@ -944,11 +944,11 @@ func (b *Broker) cleanupClient(clientID, username string, handle *clientHandle) 
 	// This prevents removing a new client that connected with the same clientID
 	var topics []string
 	if current, exists := b.clients[clientID]; exists && current == handle {
-	delete(b.clients, clientID)
+		delete(b.clients, clientID)
 		// Only remove subscriptions tracking if this is the correct client instance
 		// This prevents a stale cleanup from wiping a new client's subscription data
 		topics = b.clientSubscriptions[clientID]
-	delete(b.clientSubscriptions, clientID)
+		delete(b.clientSubscriptions, clientID)
 	}
 	b.mu.Unlock()
 

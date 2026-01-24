@@ -128,11 +128,12 @@ impl<T> TrieNode<T> {
     /// Get values for the given topic (exact match).
     /// This is optimized to avoid unnecessary allocations.
     pub fn get(&self, topic: &str) -> Vec<&T> {
-        self.get_values(topic)
+        self.get_values_internal(topic, true)
     }
 
     /// Get values without building matched path (fast path).
-    fn get_values(&self, topic: &str) -> Vec<&T> {
+    /// `at_root` tracks whether we're at the root level for $ topic handling.
+    fn get_values_internal(&self, topic: &str, at_root: bool) -> Vec<&T> {
         if topic.is_empty() {
             return self.values.iter().collect();
         }
@@ -142,25 +143,32 @@ impl<T> TrieNode<T> {
             Some(idx) => (&topic[..idx], &topic[idx + 1..]),
         };
 
+        // MQTT spec: $ topics should only match explicit $ patterns, not wildcards at root level
+        let is_dollar_topic = first.starts_with('$');
+
         // Try exact match first
         if let Some(child) = self.children.get(first) {
-            let values = child.get_values(subseq);
+            let values = child.get_values_internal(subseq, false);
             if !values.is_empty() {
                 return values;
             }
         }
 
         // Try single-level wildcard (+)
+        // Skip if this is a $ topic at root level (MQTT spec compliance)
         if let Some(ref match_any) = self.match_any {
-            let values = match_any.get_values(subseq);
-            if !values.is_empty() {
-                return values;
+            if !(is_dollar_topic && at_root) {
+                let values = match_any.get_values_internal(subseq, false);
+                if !values.is_empty() {
+                    return values;
+                }
             }
         }
 
         // Try multi-level wildcard (#)
+        // Skip if this is a $ topic at root level (MQTT spec compliance)
         if let Some(ref match_all) = self.match_all {
-            if !match_all.values.is_empty() {
+            if !(is_dollar_topic && at_root) && !match_all.values.is_empty() {
                 return match_all.values.iter().collect();
             }
         }
@@ -170,6 +178,10 @@ impl<T> TrieNode<T> {
 
     /// Get values as a slice reference (zero-copy).
     fn get_values_slice(&self, topic: &str) -> &[T] {
+        self.get_values_slice_internal(topic, true)
+    }
+
+    fn get_values_slice_internal(&self, topic: &str, at_root: bool) -> &[T] {
         if topic.is_empty() {
             return &self.values;
         }
@@ -179,25 +191,32 @@ impl<T> TrieNode<T> {
             Some(idx) => (&topic[..idx], &topic[idx + 1..]),
         };
 
+        // MQTT spec: $ topics should only match explicit $ patterns, not wildcards at root level
+        let is_dollar_topic = first.starts_with('$');
+
         // Try exact match first
         if let Some(child) = self.children.get(first) {
-            let values = child.get_values_slice(subseq);
+            let values = child.get_values_slice_internal(subseq, false);
             if !values.is_empty() {
                 return values;
             }
         }
 
         // Try single-level wildcard (+)
+        // Skip if this is a $ topic at root level (MQTT spec compliance)
         if let Some(ref match_any) = self.match_any {
-            let values = match_any.get_values_slice(subseq);
-            if !values.is_empty() {
-                return values;
+            if !(is_dollar_topic && at_root) {
+                let values = match_any.get_values_slice_internal(subseq, false);
+                if !values.is_empty() {
+                    return values;
+                }
             }
         }
 
         // Try multi-level wildcard (#)
+        // Skip if this is a $ topic at root level (MQTT spec compliance)
         if let Some(ref match_all) = self.match_all {
-            if !match_all.values.is_empty() {
+            if !(is_dollar_topic && at_root) && !match_all.values.is_empty() {
                 return &match_all.values;
             }
         }
@@ -208,10 +227,15 @@ impl<T> TrieNode<T> {
     /// Match a topic and return the matched values.
     pub fn match_topic(&self, topic: &str) -> (String, Vec<&T>, bool) {
         let mut matched = String::new();
-        self.match_topic_internal(&mut matched, topic)
+        self.match_topic_internal_with_root(&mut matched, topic, true)
     }
 
-    fn match_topic_internal(&self, matched: &mut String, topic: &str) -> (String, Vec<&T>, bool) {
+    fn match_topic_internal_with_root(
+        &self,
+        matched: &mut String,
+        topic: &str,
+        at_root: bool,
+    ) -> (String, Vec<&T>, bool) {
         if topic.is_empty() {
             return (
                 matched.clone(),
@@ -225,6 +249,9 @@ impl<T> TrieNode<T> {
             Some(idx) => (&topic[..idx], &topic[idx + 1..]),
         };
 
+        // MQTT spec: $ topics should only match explicit $ patterns, not wildcards at root level
+        let is_dollar_topic = first.starts_with('$');
+
         let matched_len = matched.len();
 
         // Try exact match first
@@ -233,7 +260,7 @@ impl<T> TrieNode<T> {
                 matched.push('/');
             }
             matched.push_str(first);
-            let (route, values, ok) = child.match_topic_internal(matched, subseq);
+            let (route, values, ok) = child.match_topic_internal_with_root(matched, subseq, false);
             if ok {
                 return (route, values, true);
             }
@@ -241,27 +268,35 @@ impl<T> TrieNode<T> {
         }
 
         // Try single-level wildcard (+)
+        // Skip if this is a $ topic at root level (MQTT spec compliance)
         if let Some(ref match_any) = self.match_any {
-            if !matched.is_empty() {
-                matched.push('/');
+            if !(is_dollar_topic && at_root) {
+                if !matched.is_empty() {
+                    matched.push('/');
+                }
+                matched.push('+');
+                let (route, values, ok) =
+                    match_any.match_topic_internal_with_root(matched, subseq, false);
+                if ok {
+                    return (route, values, true);
+                }
+                matched.truncate(matched_len);
             }
-            matched.push('+');
-            let (route, values, ok) = match_any.match_topic_internal(matched, subseq);
-            if ok {
-                return (route, values, true);
-            }
-            matched.truncate(matched_len);
         }
 
         // Try multi-level wildcard (#)
+        // Skip if this is a $ topic at root level (MQTT spec compliance)
         if let Some(ref match_all) = self.match_all {
-            if !matched.is_empty() {
-                matched.push('/');
-            }
-            matched.push('#');
-            let (route, values, ok) = match_all.match_topic_internal(matched, "");
-            if ok {
-                return (route, values, true);
+            if !(is_dollar_topic && at_root) {
+                if !matched.is_empty() {
+                    matched.push('/');
+                }
+                matched.push('#');
+                let (route, values, ok) =
+                    match_all.match_topic_internal_with_root(matched, "", false);
+                if ok {
+                    return (route, values, true);
+                }
             }
             matched.truncate(matched_len);
         }

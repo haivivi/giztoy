@@ -2271,4 +2271,39 @@ mod keepalive_tests {
         // but we verify the config is set correctly
         assert!(client.disconnect().await.is_ok());
     }
+
+    /// Test Trie correctly handles $ topic MQTT spec compliance.
+    #[test]
+    fn test_trie_dollar_topic_routing() {
+        use crate::trie::Trie;
+
+        let trie: Trie<&str> = Trie::new();
+
+        // Subscribe to # (multi-level wildcard)
+        trie.insert("#", "wildcard_sub").unwrap();
+
+        // Subscribe to explicit $SYS pattern
+        trie.insert("$SYS/#", "sys_sub").unwrap();
+
+        // Normal topic SHOULD match # wildcard
+        let matches = trie.get("normal/topic");
+        assert_eq!(matches, vec!["wildcard_sub"], "# should match normal topics");
+
+        // $ topic should NOT match # wildcard (MQTT spec compliance)
+        let matches = trie.get("$SYS/broker/stats");
+        assert_eq!(matches, vec!["sys_sub"], "$SYS should only match explicit $SYS/# pattern, not #");
+
+        // Test + wildcard
+        let trie2: Trie<&str> = Trie::new();
+        trie2.insert("+/stats", "plus_sub").unwrap();
+        trie2.insert("$SYS/+/stats", "sys_plus_sub").unwrap();
+
+        // Normal topic should match + wildcard
+        let matches = trie2.get("sensor/stats");
+        assert_eq!(matches, vec!["plus_sub"], "+ should match normal topics");
+
+        // $ topic should NOT match + at root level
+        let matches = trie2.get("$SYS/broker/stats");
+        assert_eq!(matches, vec!["sys_plus_sub"], "$SYS should only match explicit $SYS/+/stats pattern");
+    }
 }
