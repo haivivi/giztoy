@@ -1,0 +1,18 @@
+[package]
+name = "openai-realtime-examples"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+giztoy-openai-realtime = { path = "../../../rust/openai-realtime" }
+giztoy-minimax = { path = "../../../rust/minimax" }
+giztoy-audio = { path = "../../../rust/audio" }
+
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[[bin]]
+name = "dual_chat"
+path = "src/bin/dual_chat.rs"

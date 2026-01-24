@@ -1,0 +1,12 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "openai-realtime",
+    srcs = glob(["src/**/*.rs"]),
+    aliases = aliases(),
+    crate_name = "giztoy_openai_realtime",
+    proc_macro_deps = all_crate_deps(proc_macro = True),
+    visibility = ["//visibility:public"],
+    deps = all_crate_deps(),
+)

@@ -1,0 +1,13 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+    name = "dual_chat",
+    srcs = ["main.go"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/pcm",
+        "//go/pkg/audio/resampler",
+        "//go/pkg/minimax",
+        "//go/pkg/openai-realtime",
+    ],
+)

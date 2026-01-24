@@ -7,6 +7,7 @@ members = [
     "dashscope",
     "minimax",
     "doubaospeech",
+    "openai-realtime",
     "mqtt0",
     "cli",
     "jsontime",
@@ -34,6 +35,7 @@ giztoy-dashscope = { path = "dashscope" }
 giztoy-minimax = { path = "minimax" }
 giztoy-doubaospeech = { path = "doubaospeech" }
 giztoy-mqtt0 = { path = "mqtt0" }
+giztoy-openai-realtime = { path = "openai-realtime" }
 giztoy-cli = { path = "cli" }
 giztoy-jsontime = { path = "jsontime" }
 giztoy-encoding = { path = "encoding" }

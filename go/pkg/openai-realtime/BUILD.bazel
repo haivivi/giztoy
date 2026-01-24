@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "openai-realtime",
+    srcs = [
+        "client.go",
+        "doc.go",
+        "error.go",
+        "event.go",
+        "session.go",
+        "types.go",
+        "webrtc.go",
+        "websocket.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/pkg/openai-realtime",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+        "@com_github_gorilla_websocket//:websocket",
+        "@com_github_pion_webrtc_v3//:webrtc",
+    ],
+)
