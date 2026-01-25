@@ -59,7 +59,7 @@ sh_binary(
     data = [
         "//rust/cmd/matchtest",
         "//html/matchtest:files",
-        ":run",  # 依赖 report.json
+        ":run",  # depends on report.json
     ],
     env = {
         "MATCHTEST_BIN": "$(rootpath //rust/cmd/matchtest)",
@@ -75,7 +75,7 @@ sh_binary(
     data = [
         "//go/cmd/genx/matchtest",
         "//html/matchtest:files",
-        ":run_go",  # 依赖 report_go.json
+        ":run_go",  # depends on report_go.json
     ],
     env = {
         "MATCHTEST_BIN": "$(rootpath //go/cmd/genx/matchtest)",
