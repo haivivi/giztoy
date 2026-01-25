@@ -9,10 +9,7 @@ go_library(
         "runner.go",
         "server.go",
     ],
-    embedsrcs = glob([
-        "rules/**",
-        "templates/**",
-    ]),
+    embedsrcs = glob(["rules/**"]),
     importpath = "github.com/haivivi/giztoy/cmd/genx/matchtest",
     visibility = ["//visibility:private"],
     deps = [

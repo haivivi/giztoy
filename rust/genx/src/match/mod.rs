@@ -6,12 +6,15 @@
 //! # Example
 //!
 //! ```rust,ignore
-//! use giztoy_genx::r#match::{Rule, Matcher, CompileOptions};
+//! use giztoy_genx::r#match::{Rule, Var, Pattern, Matcher, CompileOptions};
 //!
 //! let rules = vec![
 //!     Rule {
 //!         name: "play_song".to_string(),
-//!         vars: [("title".to_string(), Var { label: "song title".to_string(), r#type: "string".to_string() })].into(),
+//!         vars: [(
+//!             "title".to_string(),
+//!             Var { label: "song title".to_string(), var_type: "string".to_string() }
+//!         )].into(),
 //!         patterns: vec![Pattern { input: "play [title]".to_string(), output: String::new() }],
 //!         ..Default::default()
 //!     },

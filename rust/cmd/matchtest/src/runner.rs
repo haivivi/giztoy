@@ -323,11 +323,6 @@ impl BenchmarkRunner {
             }
         };
 
-        // Build user context with input
-        let mut mcb = ModelContextBuilder::new();
-        mcb.user_text("user", &tc.input);
-        let _user_ctx = mcb.build();
-
         // Get matcher from inner
         let matcher = {
             let inner = self.inner.read().await;
@@ -343,7 +338,7 @@ impl BenchmarkRunner {
 
         // Run matching with timeout
         let timeout_duration = tokio::time::Duration::from_secs(60);
-        let result = match tokio::time::timeout(
+        let (result, raw_text) = match tokio::time::timeout(
             timeout_duration,
             generator.generate_stream("", &full_ctx),
         )
@@ -401,7 +396,7 @@ impl BenchmarkRunner {
 
                 // Parse the first line of output
                 let first_line = output.lines().next().unwrap_or("").trim();
-                self.parse_output_line(first_line)
+                (self.parse_output_line(first_line), output)
             }
             Ok(Err(e)) => {
                 return CaseResult {
@@ -439,8 +434,8 @@ impl BenchmarkRunner {
 
         let duration_ms = start.elapsed().as_millis() as i64;
 
-        // Compare results
-        let status = compare_results(&tc.expected, &result);
+        // Compare results (pass raw_text for "nothing" rule handling)
+        let status = compare_results(&tc.expected, &result, &raw_text);
 
         CaseResult {
             input: tc.input.clone(),
@@ -489,7 +484,21 @@ impl BenchmarkRunner {
 }
 
 /// Compare expected result with actual result.
-fn compare_results(expected: &ExpectedResult, actual: &ActualResult) -> String {
+fn compare_results(expected: &ExpectedResult, actual: &ActualResult, raw_text: &str) -> String {
+    // Special handling for "nothing" rule (matching Go behavior)
+    if expected.rule == "nothing" {
+        // expected "nothing" matches actual empty (no rule matched)
+        if actual.rule.is_empty() || actual.rule == "nothing" {
+            return "pass".to_string();
+        }
+        // Check raw text for "nothing"
+        let raw_lower = raw_text.trim().to_lowercase();
+        if raw_lower == "nothing" || raw_lower.contains("nothing") {
+            return "pass".to_string();
+        }
+        return "fail".to_string();
+    }
+
     // Rule must match
     if expected.rule != actual.rule {
         return "fail".to_string();
@@ -515,11 +524,11 @@ fn calc_percentiles(durations: &[i64]) -> (i64, i64, i64) {
     let mut sorted = durations.to_vec();
     sorted.sort();
 
+    // Use (n-1)*P/100 for more accurate percentile calculation
     let n = sorted.len();
-    let p50 = sorted[n * 50 / 100];
-    let p95 = sorted[n * 95 / 100];
-    let p99_idx = (n * 99 / 100).min(n - 1);
-    let p99 = sorted[p99_idx];
+    let p50 = sorted[(n - 1) * 50 / 100];
+    let p95 = sorted[(n - 1) * 95 / 100];
+    let p99 = sorted[(n - 1) * 99 / 100];
 
     (p50, p95, p99)
 }

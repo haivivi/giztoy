@@ -52,7 +52,7 @@ genrule(
     tags = ["requires-network"],
 )
 
-# Serve results (Rust) - 依赖 :run 的输出
+# Serve results (Rust) - depends on :run output
 sh_binary(
     name = "serve",
     srcs = ["serve.sh"],
@@ -68,7 +68,7 @@ sh_binary(
     },
 )
 
-# Serve results (Go) - 依赖 :run_go 的输出
+# Serve results (Go) - depends on :run_go output
 sh_binary(
     name = "serve_go",
     srcs = ["serve_go.sh"],
@@ -84,7 +84,7 @@ sh_binary(
     },
 )
 
-# Live mode (Rust): 不用缓存结果，直接运行 + 展示
+# Live mode (Rust): run benchmark with live web UI, no caching
 sh_binary(
     name = "live",
     srcs = ["live.sh"],
@@ -102,7 +102,7 @@ sh_binary(
     },
 )
 
-# Live mode (Go): 不用缓存结果，直接运行 + 展示
+# Live mode (Go): run benchmark with live web UI, no caching
 sh_binary(
     name = "live_go",
     srcs = ["live_go.sh"],

@@ -1,19 +1,12 @@
 package main
 
 import (
-	"embed"
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
 	"os"
 	"sync"
 )
-
-//go:embed templates/*
-var templatesFS embed.FS
-
-var indexTmpl = template.Must(template.ParseFS(templatesFS, "templates/index.html"))
 
 // Server wraps HTTP server with benchmark runner
 type Server struct {
@@ -57,42 +50,28 @@ func (s *Server) setupRoutes() {
 	// SSE for real-time updates
 	s.mux.HandleFunc("/api/events", s.handleSSE)
 
-	// Static files or embedded template
+	// Static files or fallback
 	if s.staticDir != "" {
 		// Serve static files from directory
 		if _, err := os.Stat(s.staticDir); err == nil {
 			s.mux.Handle("/", http.FileServer(http.Dir(s.staticDir)))
 		} else {
-			fmt.Printf("Warning: static dir not found: %s, using embedded template\n", s.staticDir)
-			s.mux.HandleFunc("/", s.handleIndex)
+			fmt.Printf("Warning: static dir not found: %s\n", s.staticDir)
+			s.mux.HandleFunc("/", s.handleFallback)
 		}
 	} else {
-		// Use embedded template
-		s.mux.HandleFunc("/", s.handleIndex)
+		s.mux.HandleFunc("/", s.handleFallback)
 	}
 }
 
-func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleFallback(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
 
-	// Get report data for template
-	var report *BenchmarkReport
-	if s.runner != nil {
-		report = s.runner.GetReport()
-	} else {
-		report = s.report
-	}
-
-	if report == nil {
-		report = &BenchmarkReport{}
-	}
-
-	if err := indexTmpl.Execute(w, report); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, fallbackHTML)
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -112,8 +91,8 @@ func (s *Server) handleProgress(w http.ResponseWriter, r *http.Request) {
 	if s.runner != nil {
 		progress := s.runner.GetProgress()
 		json.NewEncoder(w).Encode(map[string]any{
-			"status":   s.runner.GetStatus(),
-			"models":   progress,
+			"status": s.runner.GetStatus(),
+			"models": progress,
 		})
 	} else {
 		json.NewEncoder(w).Encode(map[string]string{"status": "static"})
@@ -160,9 +139,10 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	defer s.runner.Unsubscribe(ch)
 
 	// Send initial state
+	status := s.runner.GetStatus()
 	initial := ProgressUpdate{
 		Type:   "init",
-		Status: func() *RunnerStatus { s := s.runner.GetStatus(); return &s }(),
+		Status: &status,
 		Models: s.runner.GetProgress(),
 	}
 	data, _ := json.Marshal(initial)
@@ -213,3 +193,30 @@ func startServer(addr string, report *BenchmarkReport, staticDir string) error {
 	s := NewServerWithReport(addr, report, staticDir)
 	return s.Start()
 }
+
+// fallbackHTML is shown when no static directory is specified
+const fallbackHTML = `<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Benchmark</title>
+    <style>
+        :root { --bg: #0d1117; --text: #c9d1d9; --text-muted: #8b949e; --blue: #58a6ff; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 2rem; text-align: center; }
+        h1 { margin-bottom: 1rem; }
+        p { color: var(--text-muted); }
+        a { color: var(--blue); }
+        code { background: rgba(255,255,255,0.1); padding: 0.2rem 0.5rem; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🎯 Match Benchmark</h1>
+    <p>No static files directory specified.</p>
+    <p>Use <code>-serve-static</code> to specify the HTML directory:</p>
+    <p><code>-serve-static $(bazel info bazel-bin)/html/matchtest</code></p>
+    <p style="margin-top: 2rem;">API endpoints available:</p>
+    <p><a href="/api/status">/api/status</a> · <a href="/api/report">/api/report</a></p>
+</body>
+</html>
+`

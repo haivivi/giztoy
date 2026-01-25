@@ -218,13 +218,10 @@ func calcPercentiles(durations []int64) (p50, p95, p99 int64) {
 	}
 	slices.Sort(durations)
 	n := len(durations)
-	p50 = durations[n*50/100]
-	p95 = durations[n*95/100]
-	p99Idx := n * 99 / 100
-	if p99Idx >= n {
-		p99Idx = n - 1
-	}
-	p99 = durations[p99Idx]
+	// Use (n-1)*P/100 for more accurate percentile calculation
+	p50 = durations[(n-1)*50/100]
+	p95 = durations[(n-1)*95/100]
+	p99 = durations[(n-1)*99/100]
 	return
 }
 
