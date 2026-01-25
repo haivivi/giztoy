@@ -21,6 +21,8 @@ import (
 var (
 	base    = flag.String("base", "", "Base commit/branch to compare against (required)")
 	check   = flag.String("check", "", "Check if specific target is affected (optional)")
+	output  = flag.String("output", "", "Output file path (default: stdout)")
+	oneline = flag.Bool("oneline", false, "Output targets as space-separated single line")
 	verbose = flag.Bool("v", false, "Verbose output")
 )
 
@@ -90,15 +92,38 @@ func main() {
 	}
 
 	// Output all affected targets
-	for _, target := range affectedTargets {
-		fmt.Println(target)
+	var out *os.File
+	if *output != "" {
+		f, err := os.Create(*output)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating output file: %v\n", err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		out = f
+	} else {
+		out = os.Stdout
+	}
+
+	if *oneline {
+		fmt.Fprintln(out, strings.Join(affectedTargets, " "))
+	} else {
+		for _, target := range affectedTargets {
+			fmt.Fprintln(out, target)
+		}
 	}
 }
 
-// getChangedFiles returns the list of files changed between base and HEAD.
-func getChangedFiles(base string) ([]string, error) {
+// getChangedFiles returns the list of files changed between base and head.
+// If head is empty, it defaults to HEAD.
+func getChangedFiles(base string, head ...string) ([]string, error) {
+	headRef := "HEAD"
+	if len(head) > 0 && head[0] != "" {
+		headRef = head[0]
+	}
+
 	// Use merge-base to handle divergent branches properly
-	mergeBaseCmd := exec.Command("git", "merge-base", base, "HEAD")
+	mergeBaseCmd := exec.Command("git", "merge-base", base, headRef)
 	mergeBaseOutput, err := mergeBaseCmd.Output()
 	if err != nil {
 		// If merge-base fails, fall back to using base directly
@@ -109,7 +134,7 @@ func getChangedFiles(base string) ([]string, error) {
 		base = strings.TrimSpace(string(mergeBaseOutput))
 	}
 
-	cmd := exec.Command("git", "diff", "--name-only", base+"..HEAD")
+	cmd := exec.Command("git", "diff", "--name-only", base+".."+headRef)
 	output, err := cmd.Output()
 	if err != nil {
 		// Try without range (for single commit comparisons)

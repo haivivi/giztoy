@@ -19,7 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for git diff
+          fetch-depth: 0
 
       - name: Setup Bazel
         uses: bazel-contrib/setup-bazel@0.14.0
@@ -30,43 +30,15 @@ jobs:
       - name: Find affected targets
         id: affected
         run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          echo "Base SHA: $BASE_SHA"
-          echo "Head SHA: ${{ github.sha }}"
+          bazel run //devops/tools:affected-targets -- \
+            --base="${{ github.event.pull_request.base.sha }}" \
+            --oneline \
+            --output=/tmp/targets.txt || echo "//..." > /tmp/targets.txt
           
-          # Build the affected-targets tool
-          bazel build //devops/tools:affected-targets
-          
-          # Get affected targets with proper error handling
-          set +e
-          TARGETS_OUTPUT=$(bazel run //devops/tools:affected-targets -- --base="$BASE_SHA" 2>&1)
-          EXIT_CODE=$?
-          set -e
-          
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "::warning::affected-targets failed (exit code $EXIT_CODE), falling back to full build"
-            echo "Error output: $TARGETS_OUTPUT"
-            echo "has_targets=true" >> $GITHUB_OUTPUT
-            echo "targets=//..." >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          
-          # Filter out bazel info lines (keep only lines starting with //)
-          TARGETS=$(echo "$TARGETS_OUTPUT" | grep "^//" || true)
-          
-          if [ -z "$TARGETS" ]; then
-            echo "No affected targets found"
-            echo "has_targets=false" >> $GITHUB_OUTPUT
-            echo "targets=" >> $GITHUB_OUTPUT
-          else
-            echo "Affected targets:"
-            echo "$TARGETS"
-            
-            # Convert to space-separated for bazel build
-            TARGETS_LINE=$(echo "$TARGETS" | tr '\n' ' ')
-            echo "has_targets=true" >> $GITHUB_OUTPUT
-            echo "targets=$TARGETS_LINE" >> $GITHUB_OUTPUT
-          fi
+          TARGETS=$(cat /tmp/targets.txt)
+          echo "Affected: $TARGETS"
+          echo "targets=$TARGETS" >> $GITHUB_OUTPUT
+          echo "has_targets=$([[ -n "$TARGETS" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
 
   build:
     name: Build Affected (${{ matrix.os }})
@@ -130,16 +102,13 @@ jobs:
         run: |
           TARGETS="${{ needs.affected.outputs.targets }}"
           echo "Building: $TARGETS"
-          # --build_tag_filters=-manual excludes targets with manual tag (e.g. HarmonyOS)
-          bazel build $TARGETS --action_env=PATH --build_tag_filters=-manual
+          bazel build $TARGETS
 
       - name: Test affected targets
         run: |
           TARGETS="${{ needs.affected.outputs.targets }}"
-          # Filter to only test targets
           # Exit code 4 means "no test targets found", which is OK
-          # --build_tag_filters=-manual excludes targets with manual tag
-          bazel test $TARGETS --action_env=PATH --build_tag_filters=-manual --test_tag_filters=-manual || [ $? -eq 4 ]
+          bazel test $TARGETS || [ $? -eq 4 ]
 
   skip:
     name: No Changes

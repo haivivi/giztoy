@@ -45,6 +45,12 @@ func TestFlagParsing(t *testing.T) {
 	if *check != "" {
 		t.Errorf("check flag should default to empty string, got %q", *check)
 	}
+	if *output != "" {
+		t.Errorf("output flag should default to empty string, got %q", *output)
+	}
+	if *oneline != false {
+		t.Error("oneline flag should default to false")
+	}
 	if *verbose != false {
 		t.Error("verbose flag should default to false")
 	}
@@ -321,5 +327,71 @@ func TestFindTargetsForFile_Integration(t *testing.T) {
 	// Should find some targets
 	if len(targets) == 0 {
 		t.Error("expected to find targets for docs/BUILD.bazel")
+	}
+}
+
+// =============================================================================
+// Golden Tests (compare output against known-good baseline)
+// =============================================================================
+
+// TestAffectedTargets_Golden compares affected-targets output against a golden file.
+// This ensures the tool produces consistent results for historical commits.
+func TestAffectedTargets_Golden(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping golden test in short mode")
+	}
+
+	wsDir, cleanup := setupWorkspaceDir(t)
+	if wsDir == "" {
+		return
+	}
+	defer cleanup()
+
+	if !hasBazel() {
+		t.Skip("bazel not available")
+	}
+
+	// Test case: commit b320379 (rust/minimax: remove examples)
+	// Base: b320379~1, Head: b320379
+	const baseCommit = "b320379~1"
+	const headCommit = "b320379"
+	goldenFile := filepath.Join(wsDir, "devops/tools/testdata/b320379.golden")
+
+	// Verify the commit exists
+	cmd := exec.Command("git", "rev-parse", headCommit)
+	if err := cmd.Run(); err != nil {
+		t.Skipf("commit %s not found in history", headCommit)
+	}
+
+	// Read expected output from golden file
+	expected, err := os.ReadFile(goldenFile)
+	if err != nil {
+		t.Fatalf("failed to read golden file %s: %v", goldenFile, err)
+	}
+
+	// Get changed files between commits
+	changedFiles, err := getChangedFiles(baseCommit, headCommit)
+	if err != nil {
+		t.Fatalf("getChangedFiles failed: %v", err)
+	}
+
+	if len(changedFiles) == 0 {
+		t.Fatal("expected changed files between commits")
+	}
+
+	// Find affected targets
+	affectedTargets, err := findAffectedTargets(changedFiles)
+	if err != nil {
+		t.Fatalf("findAffectedTargets failed: %v", err)
+	}
+
+	// Sort for consistent comparison
+	slices.Sort(affectedTargets)
+	actual := strings.Join(affectedTargets, "\n") + "\n"
+
+	// Compare
+	if actual != string(expected) {
+		t.Errorf("affected targets mismatch:\n--- expected (golden file) ---\n%s\n--- actual ---\n%s",
+			string(expected), actual)
 	}
 }
