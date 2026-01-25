@@ -37,6 +37,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -511,13 +512,20 @@ const (
 	ttsV2EventTTSResponse        int32 = 352
 )
 
-// generateSessionID generates a 12-char session ID
+// generateSessionID generates a 12-char cryptographically secure session ID
 func generateSessionID() string {
 	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := make([]byte, 12)
+	randomBytes := make([]byte, 12)
+	if _, err := rand.Read(randomBytes); err != nil {
+		// Fallback to time-based if crypto/rand fails (should not happen)
+		for i := range b {
+			b[i] = chars[time.Now().UnixNano()%int64(len(chars))]
+		}
+		return string(b)
+	}
 	for i := range b {
-		b[i] = chars[time.Now().UnixNano()%int64(len(chars))]
-		time.Sleep(time.Nanosecond)
+		b[i] = chars[int(randomBytes[i])%len(chars)]
 	}
 	return string(b)
 }
@@ -624,10 +632,6 @@ func (s *TTSV2Session) sendV2BinaryMessageConnect(event int32, payload any) erro
 	binary.Write(&buf, binary.BigEndian, uint32(len(jsonData)))
 	buf.Write(jsonData)
 
-	// Debug: print sent message
-	fmt.Printf("[DEBUG] Sending Connect event=%d, payload=%s\n", event, string(jsonData))
-	fmt.Printf("[DEBUG] Header: %02x %02x %02x %02x, Total size: %d\n", buf.Bytes()[0], buf.Bytes()[1], buf.Bytes()[2], buf.Bytes()[3], buf.Len())
-
 	return s.conn.WriteMessage(websocket.BinaryMessage, buf.Bytes())
 }
 
@@ -670,10 +674,6 @@ func (s *TTSV2Session) sendV2BinaryMessage(event int32, payload any) error {
 	binary.Write(&buf, binary.BigEndian, uint32(len(jsonData)))
 	buf.Write(jsonData)
 
-	// Debug: print sent message
-	fmt.Printf("[DEBUG] Sending event=%d, sessionID=%s, payload=%s\n", event, s.sessionID, string(jsonData))
-	fmt.Printf("[DEBUG] Header: %02x %02x %02x %02x, Total size: %d\n", buf.Bytes()[0], buf.Bytes()[1], buf.Bytes()[2], buf.Bytes()[3], buf.Len())
-
 	return s.conn.WriteMessage(websocket.BinaryMessage, buf.Bytes())
 }
 
@@ -689,8 +689,6 @@ func (s *TTSV2Session) receiveLoop() {
 
 		wsMsgType, data, err := s.conn.ReadMessage()
 		if err != nil {
-			// Debug: log error
-			fmt.Printf("[DEBUG] receiveLoop error: %v\n", err)
 			if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 				select {
 				case s.errChan <- err:
@@ -698,15 +696,6 @@ func (s *TTSV2Session) receiveLoop() {
 				}
 			}
 			return
-		}
-
-		// Debug: print received raw data
-		fmt.Printf("[DEBUG] Received: wsType=%d, len=%d\n", wsMsgType, len(data))
-		if len(data) >= 4 {
-			fmt.Printf("[DEBUG] Header: %02x %02x %02x %02x\n", data[0], data[1], data[2], data[3])
-		}
-		if len(data) > 4 && len(data) < 200 {
-			fmt.Printf("[DEBUG] Full data: %x\n", data)
 		}
 
 		if wsMsgType != websocket.BinaryMessage || len(data) < 4 {

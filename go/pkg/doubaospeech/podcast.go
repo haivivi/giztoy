@@ -715,7 +715,7 @@ func (s *PodcastSAMISession) sendRequestSAMI(req *PodcastSAMIRequest) error {
 	//
 	// Header:
 	//   Byte 0: 0x11 (version=1, header_size=1)
-	//   Byte 1: 0x94 (msg_type=9=Full-client-request, flags=4=with-event)
+	//   Byte 1: 0x14 (msg_type=1=Full-client, flags=4=with-event)
 	//   Byte 2: 0x10 (serialization=1=JSON, compression=0=none)
 	//   Byte 3: 0x00 (reserved)
 	var buf bytes.Buffer
