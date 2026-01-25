@@ -130,14 +130,16 @@ jobs:
         run: |
           TARGETS="${{ needs.affected.outputs.targets }}"
           echo "Building: $TARGETS"
-          bazel build $TARGETS --action_env=PATH
+          # --build_tag_filters=-manual excludes targets with manual tag (e.g. HarmonyOS)
+          bazel build $TARGETS --action_env=PATH --build_tag_filters=-manual
 
       - name: Test affected targets
         run: |
           TARGETS="${{ needs.affected.outputs.targets }}"
           # Filter to only test targets
           # Exit code 4 means "no test targets found", which is OK
-          bazel test $TARGETS --action_env=PATH || [ $? -eq 4 ]
+          # --build_tag_filters=-manual excludes targets with manual tag
+          bazel test $TARGETS --action_env=PATH --build_tag_filters=-manual --test_tag_filters=-manual || [ $? -eq 4 ]
 
   skip:
     name: No Changes

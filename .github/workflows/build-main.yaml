@@ -70,12 +70,14 @@ jobs:
 
       - name: Build all targets
         run: |
-          bazel build //... --action_env=PATH
+          # --build_tag_filters=-manual excludes targets with manual tag (e.g. HarmonyOS)
+          bazel build //... --action_env=PATH --build_tag_filters=-manual
 
       - name: Test all targets
         run: |
           # Exit code 4 means "no test targets found", which is OK
-          bazel test //... --action_env=PATH || [ $? -eq 4 ]
+          # --build_tag_filters=-manual excludes targets with manual tag
+          bazel test //... --action_env=PATH --build_tag_filters=-manual --test_tag_filters=-manual || [ $? -eq 4 ]
 
       - name: Upload build artifacts (macOS)
         if: success() && runner.os == 'macOS'
