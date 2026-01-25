@@ -1,0 +1,39 @@
+# SAMI Podcast WebSocket streaming request example
+# Usage: doubaospeech podcast sami -f podcast-sami.yaml -o output.mp3
+#
+# API: WSS /api/v3/sami/podcasttts
+# Auth: X-Api-* headers with X-Api-App-Key: aGjiRDfUWi
+# Resource ID: volc.service_type.10050
+
+# Action type
+# 0 = summary/digest generation (输入内容总结生成播客)
+# 1 = direct script generation (直接按脚本生成播客)
+action: 0
+
+# Input text (required)
+# For action=0: the content to summarize into a podcast
+# For action=1: the script to read
+input_text: |
+  人工智能（AI）正在迅速改变我们的生活方式。从智能手机上的语音助手到自动驾驶汽车，AI技术已经深入到我们日常生活的方方面面。
+
+  近年来，大型语言模型（LLM）的发展尤为引人注目。像GPT、Claude这样的模型展现出了令人惊叹的理解和生成能力，能够进行复杂的对话、写作、编程等任务。
+
+  然而，AI的发展也带来了一些挑战和担忧。隐私保护、数据安全、就业影响等问题都需要我们认真思考和应对。
+
+# Audio configuration
+audio_config:
+  format: mp3
+  sample_rate: 24000
+
+# Speaker configuration
+# IMPORTANT: SAMI Podcast requires specific voices with _v2_saturn_bigtts suffix!
+# Available speakers:
+#   - zh_male_dayixiansheng_v2_saturn_bigtts (大一先生)
+#   - zh_female_mizaitongxue_v2_saturn_bigtts (米仔同学)
+#   - zh_male_liufei_v2_saturn_bigtts (刘飞)
+#   - zh_male_xiaolei_v2_saturn_bigtts (小雷)
+speaker_info:
+  random_order: true  # Randomize speaker turns
+  speakers:
+    - zh_male_dayixiansheng_v2_saturn_bigtts
+    - zh_female_mizaitongxue_v2_saturn_bigtts

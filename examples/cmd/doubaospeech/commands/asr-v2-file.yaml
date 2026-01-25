@@ -1,0 +1,27 @@
+# ASR V2 (BigModel) file recognition request example
+# Usage: doubaospeech asr v2 file -f asr-v2-file.yaml
+#
+# API: POST /api/v3/auc/submit
+# Auth: X-Api-* headers
+# Resource ID: volc.bigasr.auc.duration
+
+# Audio URL (required)
+audio_url: https://example.com/audio.mp3
+
+# Audio format: pcm, mp3, wav
+format: mp3
+
+# Language: zh-CN, en-US, etc.
+language: zh-CN
+
+# Enable ITN (Inverse Text Normalization)
+enable_itn: true
+
+# Enable punctuation
+enable_punc: true
+
+# Enable timestamp
+enable_timestamp: true
+
+# Callback URL (optional, for async notification)
+# callback_url: https://your-callback-url.com/webhook

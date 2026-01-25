@@ -1,6 +1,17 @@
 //! TTS (Text-to-Speech) commands.
 //!
-//! Compatible with Go version's TTS commands.
+//! Supports two API versions:
+//!   - v1: Classic API (/api/v1/tts)
+//!   - v2: BigModel API (/api/v3/tts/*) - Recommended
+//!
+//! IMPORTANT: Speaker voice suffix must match Resource ID!
+//!   | Resource ID    | Speaker Suffix Required | Example                        |
+//!   |----------------|-------------------------|--------------------------------|
+//!   | seed-tts-2.0   | *_uranus_bigtts         | zh_female_xiaohe_uranus_bigtts |
+//!   | seed-tts-1.0   | *_moon_bigtts           | zh_female_shuangkuaisisi_moon_bigtts |
+//!
+//! Common Error: "resource ID is mismatched with speaker related resource"
+//! This means your speaker suffix doesn't match the resource_id!
 
 use std::pin::pin;
 
@@ -8,7 +19,7 @@ use clap::{Args, Subcommand};
 use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 
-use giztoy_doubaospeech::{AudioEncoding, Language, SampleRate, TtsRequest, TtsTextType};
+use giztoy_doubaospeech::{AudioEncoding, Language, SampleRate, TtsRequest, TtsTextType, TtsV2Request};
 
 use super::{
     create_client, format_bytes, get_context, load_request, output_bytes, output_result,
@@ -19,6 +30,7 @@ use crate::Cli;
 /// TTS (Text-to-Speech) service.
 ///
 /// Supports synchronous and streaming speech synthesis.
+/// Use `tts v1` for classic API or `tts v2` for BigModel API (recommended).
 #[derive(Args)]
 pub struct TtsCommand {
     #[command(subcommand)]
@@ -27,7 +39,25 @@ pub struct TtsCommand {
 
 #[derive(Subcommand)]
 enum TtsSubcommand {
-    /// Synthesize speech from text (default: V2 BigModel)
+    /// TTS V1 API (Classic)
+    V1(TtsV1Command),
+    /// TTS V2 API (BigModel) - Recommended
+    V2(TtsV2Command),
+}
+
+// ============================================================================
+// V1 Commands
+// ============================================================================
+
+#[derive(Args)]
+pub struct TtsV1Command {
+    #[command(subcommand)]
+    command: TtsV1Subcommand,
+}
+
+#[derive(Subcommand)]
+enum TtsV1Subcommand {
+    /// V1 synchronous synthesis
     Synthesize {
         /// Text to synthesize (alternative to -f file)
         #[arg(short = 't', long)]
@@ -41,11 +71,8 @@ enum TtsSubcommand {
         /// Cluster name (e.g., volcano_tts)
         #[arg(long)]
         cluster: Option<String>,
-        /// Use V1 classic API instead of V2 BigModel
-        #[arg(long)]
-        v1: bool,
     },
-    /// Stream speech synthesis (HTTP)
+    /// V1 streaming synthesis
     Stream {
         /// Text to synthesize (alternative to -f file)
         #[arg(short = 't', long)]
@@ -60,27 +87,53 @@ enum TtsSubcommand {
         #[arg(long)]
         cluster: Option<String>,
     },
-    /// Stream speech synthesis (WebSocket)
-    StreamWs {
+}
+
+// ============================================================================
+// V2 Commands
+// ============================================================================
+
+#[derive(Args)]
+pub struct TtsV2Command {
+    #[command(subcommand)]
+    command: TtsV2Subcommand,
+}
+
+#[derive(Subcommand)]
+enum TtsV2Subcommand {
+    /// V2 HTTP streaming synthesis (recommended)
+    Stream {
         /// Text to synthesize (alternative to -f file)
         #[arg(short = 't', long)]
         text: Option<String>,
-        /// Voice type
+        /// Speaker voice (must match resource_id suffix!)
+        #[arg(short = 'V', long)]
+        voice: Option<String>,
+        /// Audio format (pcm, mp3, ogg_opus)
+        #[arg(short = 'e', long)]
+        encoding: Option<String>,
+    },
+    /// V2 WebSocket unidirectional streaming
+    Ws {
+        /// Text to synthesize (alternative to -f file)
+        #[arg(short = 't', long)]
+        text: Option<String>,
+        /// Speaker voice
         #[arg(short = 'V', long)]
         voice: Option<String>,
     },
-    /// Bidirectional streaming synthesis
-    Duplex {
-        /// Voice type
+    /// V2 WebSocket bidirectional streaming
+    Bidirectional {
+        /// Speaker voice
         #[arg(short = 'V', long)]
         voice: Option<String>,
     },
-    /// Create async synthesis task
+    /// V2 async long text synthesis
     Async {
         /// Text to synthesize (alternative to -f file)
         #[arg(short = 't', long)]
         text: Option<String>,
-        /// Voice type
+        /// Speaker voice
         #[arg(short = 'V', long)]
         voice: Option<String>,
         /// Callback URL for task completion notification
@@ -109,6 +162,10 @@ struct TtsFileRequest {
     /// This is an alias for voice_type for compatibility with Go CLI V2 format.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     speaker: Option<String>,
+    /// Resource ID for V2 API (e.g., "seed-tts-2.0")
+    /// IMPORTANT: Must match speaker suffix!
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    resource_id: Option<String>,
     /// Audio format (mp3, pcm, ogg_opus) - V2 style
     #[serde(skip_serializing_if = "Option::is_none")]
     format: Option<String>,
@@ -196,305 +253,513 @@ impl TtsFileRequest {
 impl TtsCommand {
     pub async fn run(&self, cli: &Cli) -> anyhow::Result<()> {
         match &self.command {
-            TtsSubcommand::Synthesize {
-                text,
-                voice,
-                encoding,
-                cluster,
-                v1,
-            } => {
-                self.synthesize(cli, text.as_deref(), voice.as_deref(), encoding.as_deref(), cluster.as_deref(), *v1)
-                    .await
+            TtsSubcommand::V1(v1) => v1.run(cli).await,
+            TtsSubcommand::V2(v2) => v2.run(cli).await,
+        }
+    }
+}
+
+impl TtsV1Command {
+    pub async fn run(&self, cli: &Cli) -> anyhow::Result<()> {
+        match &self.command {
+            TtsV1Subcommand::Synthesize { text, voice, encoding, cluster } => {
+                synthesize_v1(cli, text.as_deref(), voice.as_deref(), encoding.as_deref(), cluster.as_deref()).await
             }
-            TtsSubcommand::Stream {
-                text,
-                voice,
-                encoding,
-                cluster,
-            } => {
-                self.stream(cli, text.as_deref(), voice.as_deref(), encoding.as_deref(), cluster.as_deref())
-                    .await
-            }
-            TtsSubcommand::StreamWs { text, voice } => {
-                self.stream_ws(cli, text.as_deref(), voice.as_deref()).await
-            }
-            TtsSubcommand::Duplex { voice } => {
-                self.duplex(cli, voice.as_deref()).await
-            }
-            TtsSubcommand::Async { text, voice, callback_url } => {
-                self.async_task(cli, text.as_deref(), voice.as_deref(), callback_url.as_deref()).await
-            }
-            TtsSubcommand::Status { task_id } => {
-                self.status(cli, task_id).await
+            TtsV1Subcommand::Stream { text, voice, encoding, cluster } => {
+                stream_v1(cli, text.as_deref(), voice.as_deref(), encoding.as_deref(), cluster.as_deref()).await
             }
         }
     }
+}
 
-    async fn synthesize(
-        &self,
-        cli: &Cli,
-        text: Option<&str>,
-        voice: Option<&str>,
-        encoding: Option<&str>,
-        cluster: Option<&str>,
-        _use_v1: bool,
-    ) -> anyhow::Result<()> {
-        let ctx = get_context(cli)?;
-        let client = create_client(&ctx)?;
-
-        // Build request from file or command line args
-        let req = if let Some(input_file) = cli.input.as_deref() {
-            let mut file_req: TtsFileRequest = load_request(input_file)?;
-            
-            // Override with command line args
-            if let Some(t) = text {
-                file_req.text = t.to_string();
+impl TtsV2Command {
+    pub async fn run(&self, cli: &Cli) -> anyhow::Result<()> {
+        match &self.command {
+            TtsV2Subcommand::Stream { text, voice, encoding } => {
+                stream_v2(cli, text.as_deref(), voice.as_deref(), encoding.as_deref()).await
             }
-            if let Some(v) = voice {
-                file_req.voice_type = v.to_string();
+            TtsV2Subcommand::Ws { text, voice } => {
+                ws_v2(cli, text.as_deref(), voice.as_deref()).await
             }
-            if let Some(e) = encoding {
-                file_req.encoding = Some(e.to_string());
+            TtsV2Subcommand::Bidirectional { voice } => {
+                bidirectional_v2(cli, voice.as_deref()).await
             }
-            if let Some(c) = cluster {
-                file_req.cluster = Some(c.to_string());
+            TtsV2Subcommand::Async { text, voice, callback_url } => {
+                async_v2(cli, text.as_deref(), voice.as_deref(), callback_url.as_deref()).await
             }
-            
-            // Apply default voice from context if not specified
-            if file_req.get_voice_type().is_empty() {
-                if let Some(default_voice) = ctx.get_extra("default_voice") {
-                    file_req.speaker = Some(default_voice.to_string());
-                }
-            }
-            
-            file_req.to_tts_request()
-        } else {
-            // Build from command line args only
-            let text = text.ok_or_else(|| anyhow::anyhow!("text is required, use -t flag or -f file"))?;
-            let voice_type = voice
-                .map(|v| v.to_string())
-                .or_else(|| ctx.get_extra("default_voice").map(|v| v.to_string()))
-                .ok_or_else(|| anyhow::anyhow!("voice type is required, use -V flag"))?;
-
-            TtsRequest {
-                text: text.to_string(),
-                voice_type,
-                cluster: cluster.map(|c| c.to_string()),
-                encoding: encoding.and_then(|e| match e {
-                    "pcm" => Some(AudioEncoding::Pcm),
-                    "wav" => Some(AudioEncoding::Wav),
-                    "mp3" => Some(AudioEncoding::Mp3),
-                    "ogg_opus" => Some(AudioEncoding::OggOpus),
-                    _ => None,
-                }),
-                ..Default::default()
-            }
-        };
-
-        print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Voice: {}", req.voice_type));
-        print_verbose(cli, &format!("Text length: {} characters", req.text.len()));
-
-        let resp = client.tts().synthesize(&req).await?;
-
-        // Output audio to file if specified
-        let output_path = cli.output.as_deref();
-        if let Some(path) = output_path {
-            if !resp.audio.is_empty() {
-                output_bytes(&resp.audio, path)?;
-                print_success(&format!(
-                    "Audio saved to: {} ({})",
-                    path,
-                    format_bytes(resp.audio.len())
-                ));
+            TtsV2Subcommand::Status { task_id } => {
+                status_v2(cli, task_id).await
             }
         }
+    }
+}
 
-        // Output result
-        let result = serde_json::json!({
-            "audio_size": resp.audio.len(),
-            "duration_ms": resp.duration,
-            "req_id": resp.req_id,
-            "output_file": output_path,
-        });
+// ============================================================================
+// V1 Implementation Functions
+// ============================================================================
 
-        output_result(&result, None, cli.json)
+async fn synthesize_v1(
+    cli: &Cli,
+    text: Option<&str>,
+    voice: Option<&str>,
+    encoding: Option<&str>,
+    cluster: Option<&str>,
+) -> anyhow::Result<()> {
+    let ctx = get_context(cli)?;
+    let client = create_client(&ctx)?;
+
+    // Build request from file or command line args
+    let req = if let Some(input_file) = cli.input.as_deref() {
+        let mut file_req: TtsFileRequest = load_request(input_file)?;
+        
+        // Override with command line args
+        if let Some(t) = text {
+            file_req.text = t.to_string();
+        }
+        if let Some(v) = voice {
+            file_req.voice_type = v.to_string();
+        }
+        if let Some(e) = encoding {
+            file_req.encoding = Some(e.to_string());
+        }
+        if let Some(c) = cluster {
+            file_req.cluster = Some(c.to_string());
+        }
+        
+        // Apply default voice from context if not specified
+        if file_req.get_voice_type().is_empty() {
+            if let Some(default_voice) = ctx.get_extra("default_voice") {
+                file_req.voice_type = default_voice.to_string();
+            }
+        }
+        
+        file_req.to_tts_request()
+    } else {
+        // Build from command line args only
+        let text = text.ok_or_else(|| anyhow::anyhow!("text is required, use -t flag or -f file"))?;
+        let voice_type = voice
+            .map(|v| v.to_string())
+            .or_else(|| ctx.get_extra("default_voice").map(|v| v.to_string()))
+            .ok_or_else(|| anyhow::anyhow!("voice type is required, use -V flag"))?;
+
+        TtsRequest {
+            text: text.to_string(),
+            voice_type,
+            cluster: cluster.map(|c| c.to_string()),
+            encoding: encoding.and_then(|e| match e {
+                "pcm" => Some(AudioEncoding::Pcm),
+                "wav" => Some(AudioEncoding::Wav),
+                "mp3" => Some(AudioEncoding::Mp3),
+                "ogg_opus" => Some(AudioEncoding::OggOpus),
+                _ => None,
+            }),
+            ..Default::default()
+        }
+    };
+
+    print_verbose(cli, &format!("Using V1 API (classic)"));
+    print_verbose(cli, &format!("Voice: {}", req.voice_type));
+    print_verbose(cli, &format!("Text length: {} characters", req.text.len()));
+
+    let resp = client.tts().synthesize(&req).await?;
+
+    // Output audio to file if specified
+    let output_path = cli.output.as_deref();
+    if let Some(path) = output_path {
+        if !resp.audio.is_empty() {
+            output_bytes(&resp.audio, path)?;
+            print_success(&format!(
+                "Audio saved to: {} ({})",
+                path,
+                format_bytes(resp.audio.len())
+            ));
+        }
     }
 
-    async fn stream(
-        &self,
-        cli: &Cli,
-        text: Option<&str>,
-        voice: Option<&str>,
-        encoding: Option<&str>,
-        cluster: Option<&str>,
-    ) -> anyhow::Result<()> {
-        let output_path = cli.output.as_deref().ok_or_else(|| {
-            anyhow::anyhow!("output file is required for streaming audio, use -o flag")
-        })?;
+    // Output result
+    let result = serde_json::json!({
+        "api_version": "v1",
+        "audio_size": resp.audio.len(),
+        "duration_ms": resp.duration,
+        "req_id": resp.req_id,
+        "output_file": output_path,
+    });
 
-        let ctx = get_context(cli)?;
-        let client = create_client(&ctx)?;
+    output_result(&result, None, cli.json)
+}
 
-        // Build request from file or command line args
-        let req = if let Some(input_file) = cli.input.as_deref() {
-            let mut file_req: TtsFileRequest = load_request(input_file)?;
-            
-            // Override with command line args
-            if let Some(t) = text {
-                file_req.text = t.to_string();
-            }
-            if let Some(v) = voice {
-                file_req.voice_type = v.to_string();
-            }
-            if let Some(e) = encoding {
-                file_req.encoding = Some(e.to_string());
-            }
-            if let Some(c) = cluster {
-                file_req.cluster = Some(c.to_string());
-            }
-            
-            // Apply default voice from context if not specified
-            if file_req.get_voice_type().is_empty() {
-                if let Some(default_voice) = ctx.get_extra("default_voice") {
-                    file_req.speaker = Some(default_voice.to_string());
-                }
-            }
-            
-            file_req.to_tts_request()
-        } else {
-            // Build from command line args only
-            let text = text.ok_or_else(|| anyhow::anyhow!("text is required, use -t flag or -f file"))?;
-            let voice_type = voice
-                .map(|v| v.to_string())
-                .or_else(|| ctx.get_extra("default_voice").map(|v| v.to_string()))
-                .ok_or_else(|| anyhow::anyhow!("voice type is required, use -V flag"))?;
+async fn stream_v1(
+    cli: &Cli,
+    text: Option<&str>,
+    voice: Option<&str>,
+    encoding: Option<&str>,
+    cluster: Option<&str>,
+) -> anyhow::Result<()> {
+    let output_path = cli.output.as_deref().ok_or_else(|| {
+        anyhow::anyhow!("output file is required for streaming audio, use -o flag")
+    })?;
 
-            TtsRequest {
-                text: text.to_string(),
-                voice_type,
-                cluster: cluster.map(|c| c.to_string()),
-                encoding: encoding.and_then(|e| match e {
-                    "pcm" => Some(AudioEncoding::Pcm),
-                    "wav" => Some(AudioEncoding::Wav),
-                    "mp3" => Some(AudioEncoding::Mp3),
-                    "ogg_opus" => Some(AudioEncoding::OggOpus),
-                    _ => None,
-                }),
-                ..Default::default()
-            }
-        };
+    let ctx = get_context(cli)?;
+    let client = create_client(&ctx)?;
 
-        print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Streaming to: {}", output_path));
-
-        let mut audio_buf = Vec::new();
-        let mut last_duration = 0;
-
-        let tts = client.tts();
-        let stream = tts.synthesize_stream(&req).await?;
-        let mut stream = pin!(stream);
-
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk?;
-            if !chunk.audio.is_empty() {
-                audio_buf.extend_from_slice(&chunk.audio);
-            }
-            if chunk.duration > 0 {
-                last_duration = chunk.duration;
+    // Build request from file or command line args
+    let req = if let Some(input_file) = cli.input.as_deref() {
+        let mut file_req: TtsFileRequest = load_request(input_file)?;
+        
+        // Override with command line args
+        if let Some(t) = text {
+            file_req.text = t.to_string();
+        }
+        if let Some(v) = voice {
+            file_req.voice_type = v.to_string();
+        }
+        if let Some(e) = encoding {
+            file_req.encoding = Some(e.to_string());
+        }
+        if let Some(c) = cluster {
+            file_req.cluster = Some(c.to_string());
+        }
+        
+        // Apply default voice from context if not specified
+        if file_req.get_voice_type().is_empty() {
+            if let Some(default_voice) = ctx.get_extra("default_voice") {
+                file_req.voice_type = default_voice.to_string();
             }
         }
+        
+        file_req.to_tts_request()
+    } else {
+        // Build from command line args only
+        let text = text.ok_or_else(|| anyhow::anyhow!("text is required, use -t flag or -f file"))?;
+        let voice_type = voice
+            .map(|v| v.to_string())
+            .or_else(|| ctx.get_extra("default_voice").map(|v| v.to_string()))
+            .ok_or_else(|| anyhow::anyhow!("voice type is required, use -V flag"))?;
 
-        // Write audio to file
+        TtsRequest {
+            text: text.to_string(),
+            voice_type,
+            cluster: cluster.map(|c| c.to_string()),
+            encoding: encoding.and_then(|e| match e {
+                "pcm" => Some(AudioEncoding::Pcm),
+                "wav" => Some(AudioEncoding::Wav),
+                "mp3" => Some(AudioEncoding::Mp3),
+                "ogg_opus" => Some(AudioEncoding::OggOpus),
+                _ => None,
+            }),
+            ..Default::default()
+        }
+    };
+
+    print_verbose(cli, &format!("Using V1 API (classic streaming)"));
+    print_verbose(cli, &format!("Streaming to: {}", output_path));
+
+    let mut audio_buf = Vec::new();
+    let mut last_duration = 0;
+
+    let tts = client.tts();
+    let stream = tts.synthesize_stream(&req).await?;
+    let mut stream = pin!(stream);
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        if !chunk.audio.is_empty() {
+            audio_buf.extend_from_slice(&chunk.audio);
+        }
+        if chunk.duration > 0 {
+            last_duration = chunk.duration;
+        }
+    }
+
+    // Write audio to file
+    output_bytes(&audio_buf, output_path)?;
+    print_success(&format!(
+        "Audio saved to: {} ({})",
+        output_path,
+        format_bytes(audio_buf.len())
+    ));
+
+    // Output final info
+    let result = serde_json::json!({
+        "api_version": "v1",
+        "audio_size": audio_buf.len(),
+        "duration_ms": last_duration,
+        "output_file": output_path,
+    });
+
+    output_result(&result, None, cli.json)
+}
+
+// ============================================================================
+// V2 Implementation Functions
+// ============================================================================
+
+async fn stream_v2(
+    cli: &Cli,
+    text: Option<&str>,
+    voice: Option<&str>,
+    encoding: Option<&str>,
+) -> anyhow::Result<()> {
+    let output_path = cli.output.as_deref().ok_or_else(|| {
+        anyhow::anyhow!("output file is required for streaming audio, use -o flag")
+    })?;
+
+    let ctx = get_context(cli)?;
+    let client = create_client(&ctx)?;
+
+    // Build V2 request from file or command line args
+    let req = if let Some(input_file) = cli.input.as_deref() {
+        let mut file_req: TtsFileRequest = load_request(input_file)?;
+        
+        // Override with command line args
+        if let Some(t) = text {
+            file_req.text = t.to_string();
+        }
+        if let Some(v) = voice {
+            file_req.speaker = Some(v.to_string());
+        }
+        if let Some(e) = encoding {
+            file_req.format = Some(e.to_string());
+        }
+        
+        // Apply default voice from context if not specified
+        if file_req.get_voice_type().is_empty() {
+            if let Some(default_voice) = ctx.get_extra("default_voice") {
+                file_req.speaker = Some(default_voice.to_string());
+            }
+        }
+        
+        // Convert to V2 request
+        TtsV2Request {
+            text: file_req.text.clone(),
+            speaker: file_req.get_voice_type(),
+            resource_id: file_req.resource_id.clone(),
+            format: file_req.format.clone(),
+            sample_rate: file_req.sample_rate,
+            speed_ratio: file_req.speed_ratio,
+            volume_ratio: file_req.volume_ratio,
+            pitch_ratio: file_req.pitch_ratio,
+            emotion: file_req.emotion.clone(),
+            language: file_req.language.clone(),
+            ..Default::default()
+        }
+    } else {
+        // Build from command line args only
+        let text = text.ok_or_else(|| anyhow::anyhow!("text is required, use -t flag or -f file"))?;
+        let speaker = voice
+            .map(|v| v.to_string())
+            .or_else(|| ctx.get_extra("default_voice").map(|v| v.to_string()))
+            .ok_or_else(|| anyhow::anyhow!("speaker voice is required, use -V flag"))?;
+
+        TtsV2Request {
+            text: text.to_string(),
+            speaker,
+            format: encoding.map(|e| e.to_string()),
+            ..Default::default()
+        }
+    };
+
+    print_verbose(cli, &format!("Using V2 API (BigModel HTTP streaming)"));
+    print_verbose(cli, &format!("Speaker: {}", req.speaker));
+    print_verbose(cli, &format!("Resource ID: {}", req.resource_id.as_deref().unwrap_or("seed-tts-2.0 (default)")));
+    print_verbose(cli, &format!("Streaming to: {}", output_path));
+
+    let mut audio_buf = Vec::new();
+    let mut chunk_count = 0;
+
+    // Use the new V2 TTS service
+    let tts_v2 = client.tts_v2();
+    let stream = tts_v2.stream(&req).await?;
+    let mut stream = pin!(stream);
+
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk?;
+        if !chunk.audio.is_empty() {
+            audio_buf.extend_from_slice(&chunk.audio);
+            chunk_count += 1;
+        }
+    }
+
+    // Write audio to file
+    output_bytes(&audio_buf, output_path)?;
+    print_success(&format!(
+        "Audio saved to: {} ({}, {} chunks)",
+        output_path,
+        format_bytes(audio_buf.len()),
+        chunk_count
+    ));
+
+    // Output final info
+    let result = serde_json::json!({
+        "api_version": "v2",
+        "audio_size": audio_buf.len(),
+        "chunk_count": chunk_count,
+        "output_file": output_path,
+    });
+
+    output_result(&result, None, cli.json)
+}
+
+async fn ws_v2(
+    cli: &Cli,
+    _text: Option<&str>,
+    _voice: Option<&str>,
+) -> anyhow::Result<()> {
+    let ctx = get_context(cli)?;
+    print_verbose(cli, &format!("Using context: {}", ctx.name));
+    
+    // TODO: Implement V2 WebSocket unidirectional streaming
+    eprintln!("[V2 WebSocket unidirectional streaming not implemented yet]");
+    eprintln!("Would stream speech via WebSocket");
+    
+    let result = serde_json::json!({
+        "_note": "V2 WebSocket unidirectional streaming not implemented yet",
+    });
+    output_result(&result, None, cli.json)
+}
+
+async fn bidirectional_v2(
+    cli: &Cli,
+    voice: Option<&str>,
+) -> anyhow::Result<()> {
+    let output_path = cli.output.as_deref().ok_or_else(|| {
+        anyhow::anyhow!("output file is required for streaming audio, use -o flag")
+    })?;
+
+    let ctx = get_context(cli)?;
+    let client = create_client(&ctx)?;
+    print_verbose(cli, &format!("Using V2 API (BigModel WebSocket bidirectional)"));
+
+    // Build V2 request from file or command line args
+    let (req, texts) = if let Some(input_file) = cli.input.as_deref() {
+        let file_req: TtsFileRequest = load_request(input_file)?;
+        
+        // Get voice from file or command line
+        let speaker = voice.map(|v| v.to_string())
+            .or(file_req.speaker.clone())
+            .or_else(|| ctx.get_extra("default_voice").map(|v| v.to_string()))
+            .ok_or_else(|| anyhow::anyhow!("speaker voice is required, use -V flag"))?;
+        
+        let req = TtsV2Request {
+            text: String::new(), // Will send text via SendText
+            speaker,
+            resource_id: file_req.resource_id.clone(),
+            format: file_req.format.clone(),
+            sample_rate: file_req.sample_rate,
+            speed_ratio: file_req.speed_ratio,
+            volume_ratio: file_req.volume_ratio,
+            pitch_ratio: file_req.pitch_ratio,
+            emotion: file_req.emotion.clone(),
+            language: file_req.language.clone(),
+            ..Default::default()
+        };
+        
+        // Split text into sentences for bidirectional demo
+        let text = file_req.text.clone();
+        let texts: Vec<String> = if text.contains('。') || text.contains('！') || text.contains('？') {
+            text.split(|c| c == '。' || c == '！' || c == '？')
+                .filter(|s| !s.trim().is_empty())
+                .map(|s| s.to_string())
+                .collect()
+        } else {
+            vec![text]
+        };
+        
+        (req, texts)
+    } else {
+        return Err(anyhow::anyhow!("input file is required for bidirectional mode, use -f flag"));
+    };
+
+    print_verbose(cli, &format!("Speaker: {}", req.speaker));
+    print_verbose(cli, &format!("Resource ID: {}", req.resource_id.as_deref().unwrap_or("seed-tts-2.0 (default)")));
+    print_verbose(cli, &format!("Text segments: {}", texts.len()));
+    print_verbose(cli, &format!("Streaming to: {}", output_path));
+
+    // Open bidirectional session
+    let mut session = client.tts_v2().bidirectional(&req).await?;
+    print_verbose(cli, "Session established");
+
+    // Send all text segments
+    for (i, text) in texts.iter().enumerate() {
+        let is_last = i == texts.len() - 1;
+        print_verbose(cli, &format!("Sending segment {}/{}: {}...", i + 1, texts.len(), &text[..text.len().min(30)]));
+        session.send_text(text, is_last).await?;
+    }
+
+    // Receive audio
+    let mut audio_buf = Vec::new();
+    let mut chunk_count = 0;
+
+    while let Some(result) = session.recv().await {
+        let chunk = result?;
+        if !chunk.audio.is_empty() {
+            audio_buf.extend_from_slice(&chunk.audio);
+            chunk_count += 1;
+            print_verbose(cli, &format!("Received chunk {}: {} bytes", chunk_count, chunk.audio.len()));
+        }
+        if chunk.is_last {
+            break;
+        }
+    }
+
+    session.close().await?;
+
+    // Write audio to file
+    if !audio_buf.is_empty() {
         output_bytes(&audio_buf, output_path)?;
         print_success(&format!(
-            "Audio saved to: {} ({})",
+            "Audio saved to: {} ({}, {} chunks)",
             output_path,
-            format_bytes(audio_buf.len())
+            format_bytes(audio_buf.len()),
+            chunk_count
         ));
-
-        // Output final info
-        let result = serde_json::json!({
-            "audio_size": audio_buf.len(),
-            "duration_ms": last_duration,
-            "output_file": output_path,
-        });
-
-        output_result(&result, None, cli.json)
+    } else {
+        return Err(anyhow::anyhow!("No audio data received"));
     }
 
-    async fn stream_ws(
-        &self,
-        cli: &Cli,
-        _text: Option<&str>,
-        _voice: Option<&str>,
-    ) -> anyhow::Result<()> {
-        let ctx = get_context(cli)?;
-        print_verbose(cli, &format!("Using context: {}", ctx.name));
-        
-        // TODO: Implement WebSocket streaming
-        eprintln!("[WebSocket streaming not implemented yet]");
-        eprintln!("Would stream speech via WebSocket");
-        
-        let result = serde_json::json!({
-            "_note": "WebSocket streaming not implemented yet",
-        });
-        output_result(&result, None, cli.json)
-    }
+    let result = serde_json::json!({
+        "api_version": "v2_bidirectional",
+        "audio_size": audio_buf.len(),
+        "chunk_count": chunk_count,
+        "text_segments": texts.len(),
+        "output_file": output_path,
+    });
 
-    async fn duplex(
-        &self,
-        cli: &Cli,
-        _voice: Option<&str>,
-    ) -> anyhow::Result<()> {
-        let ctx = get_context(cli)?;
-        print_verbose(cli, &format!("Using context: {}", ctx.name));
-        
-        // TODO: Implement duplex streaming
-        eprintln!("[Duplex streaming not implemented yet]");
-        eprintln!("Would duplex stream speech");
-        
-        let result = serde_json::json!({
-            "_note": "Duplex streaming not implemented yet",
-        });
-        output_result(&result, None, cli.json)
-    }
+    output_result(&result, None, cli.json)
+}
 
-    async fn async_task(
-        &self,
-        cli: &Cli,
-        _text: Option<&str>,
-        _voice: Option<&str>,
-        _callback_url: Option<&str>,
-    ) -> anyhow::Result<()> {
-        let ctx = get_context(cli)?;
-        print_verbose(cli, &format!("Using context: {}", ctx.name));
-        
-        // TODO: Implement async TTS task creation
-        eprintln!("[Async TTS not implemented yet]");
-        
-        let result = serde_json::json!({
-            "_note": "Async TTS not implemented yet",
-            "task_id": "placeholder-task-id",
-        });
-        output_result(&result, None, cli.json)
-    }
+async fn async_v2(
+    cli: &Cli,
+    _text: Option<&str>,
+    _voice: Option<&str>,
+    _callback_url: Option<&str>,
+) -> anyhow::Result<()> {
+    let ctx = get_context(cli)?;
+    print_verbose(cli, &format!("Using context: {}", ctx.name));
+    
+    // TODO: Implement V2 async TTS task creation
+    eprintln!("[V2 async TTS not implemented yet]");
+    
+    let result = serde_json::json!({
+        "_note": "V2 async TTS not implemented yet",
+        "task_id": "placeholder-task-id",
+    });
+    output_result(&result, None, cli.json)
+}
 
-    async fn status(
-        &self,
-        cli: &Cli,
-        task_id: &str,
-    ) -> anyhow::Result<()> {
-        let ctx = get_context(cli)?;
-        print_verbose(cli, &format!("Using context: {}", ctx.name));
-        print_verbose(cli, &format!("Querying task: {}", task_id));
-        
-        // TODO: Implement task status query
-        let result = serde_json::json!({
-            "_note": "Task status query not implemented yet",
-            "task_id": task_id,
-            "status": "pending",
-        });
-        output_result(&result, None, cli.json)
-    }
+async fn status_v2(
+    cli: &Cli,
+    task_id: &str,
+) -> anyhow::Result<()> {
+    let ctx = get_context(cli)?;
+    print_verbose(cli, &format!("Using context: {}", ctx.name));
+    print_verbose(cli, &format!("Querying task: {}", task_id));
+    
+    // TODO: Implement task status query
+    let result = serde_json::json!({
+        "_note": "Task status query not implemented yet",
+        "task_id": task_id,
+        "status": "pending",
+    });
+    output_result(&result, None, cli.json)
 }

@@ -1,3 +1,46 @@
+// Package doubaospeech provides a Go SDK for Volcengine Doubao Speech APIs.
+//
+// # Authentication
+//
+// V1 API (Classic):
+//
+//	client := NewClient(appID, WithBearerToken(token))
+//	// Header: Authorization: Bearer {token}
+//
+// V2/V3 API (BigModel):
+//
+//	client := NewClient(appID, WithBearerToken(token))
+//	// Headers:
+//	//   X-Api-App-Id: {app_id}
+//	//   X-Api-Access-Key: {token}
+//	//   X-Api-Resource-Id: {resource_id}  // varies by service
+//
+// # Resource ID and Speaker Matching (IMPORTANT!)
+//
+// The most common error is "resource ID is mismatched with speaker related resource".
+// This means the speaker voice suffix doesn't match the resource ID, NOT that the service
+// is not enabled.
+//
+//	| Resource ID    | Required Speaker Suffix | Example Speaker                      |
+//	|----------------|-------------------------|--------------------------------------|
+//	| seed-tts-2.0   | *_uranus_bigtts         | zh_female_xiaohe_uranus_bigtts       |
+//	| seed-tts-1.0   | *_moon_bigtts           | zh_female_shuangkuaisisi_moon_bigtts |
+//	| seed-icl-*     | *_saturn_bigtts         | (voice clone results)                |
+//	| V1 cluster     | no suffix               | zh_female_cancan                     |
+//
+// # Services
+//
+// The client provides access to both V1 (classic) and V2/V3 (BigModel) services:
+//
+//   - client.TTS: TTS V1 (classic, /api/v1/tts)
+//   - client.TTSV2: TTS V2 (BigModel, /api/v3/tts/*)
+//   - client.ASR: ASR V1 (classic, /api/v1/asr)
+//   - client.ASRV2: ASR V2 (BigModel, /api/v3/sauc/*)
+//   - client.Podcast: Podcast synthesis (V1 HTTP + V3 SAMI WebSocket)
+//   - client.Realtime: Real-time dialogue (V3 WebSocket)
+//   - client.Voice: Voice cloning
+//
+// See AGENTS.md in this package for more detailed development notes.
 package doubaospeech
 
 import (

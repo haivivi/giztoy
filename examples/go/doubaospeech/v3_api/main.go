@@ -76,7 +76,10 @@ func testTTSBidirection(client *ds.Client) {
 	defer cancel()
 
 	fmt.Println("Opening TTS V3 session...")
-	session, err := client.TTSV2.OpenSession(ctx, ds.ResourceTTSV2)
+	session, err := client.TTSV2.OpenSession(ctx, &ds.TTSV2SessionConfig{
+		Speaker:    "zh_female_cancan",
+		ResourceID: ds.ResourceTTSV2,
+	})
 	if err != nil {
 		fmt.Printf("❌ Session open failed: %v\n", err)
 		return

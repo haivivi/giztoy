@@ -45,24 +45,6 @@ V1 uses "cluster", V2 uses "resource_id" for service selection:
 
 ---
 
-### DBS-004: Rust async TTS incomplete
-
-**Description:**  
-Rust implementation for async long-text TTS may be incomplete or missing compared to Go.
-
-**Status:** ⚠️ Needs verification.
-
----
-
-### DBS-005: Rust file ASR incomplete
-
-**Description:**  
-Rust implementation for file-based ASR may be incomplete compared to Go.
-
-**Status:** ⚠️ Needs verification.
-
----
-
 ### DBS-006: Fixed app keys hardcoded
 
 **File:** `go/pkg/doubaospeech/client.go:17-24`
@@ -164,8 +146,6 @@ Console API uses Volcengine OpenAPI signature (HMAC-SHA256), not simple token. T
 | DBS-001 | 🟡 Minor | Note | Go Auth |
 | DBS-002 | 🟡 Minor | Open | Both |
 | DBS-003 | 🟡 Minor | Open | Both |
-| DBS-004 | 🟡 Minor | Open | Rust |
-| DBS-005 | 🟡 Minor | Open | Rust |
 | DBS-006 | 🟡 Minor | Note | Both |
 | DBS-007 | 🔵 Enhancement | Open | Both |
 | DBS-008 | 🔵 Enhancement | Open | Both |
@@ -176,4 +156,4 @@ Console API uses Volcengine OpenAPI signature (HMAC-SHA256), not simple token. T
 | DBS-013 | ⚪ Note | N/A | Both |
 | DBS-014 | ⚪ Note | N/A | Both |
 
-**Overall:** Comprehensive SDK with excellent API coverage. Main complexity is from Volcengine's dual API version system and multiple authentication methods. Rust implementation may have some gaps compared to Go.
+**Overall:** Comprehensive SDK with excellent API coverage. Go and Rust implementations have full feature parity. Main complexity is from Volcengine's dual API version system and multiple authentication methods.

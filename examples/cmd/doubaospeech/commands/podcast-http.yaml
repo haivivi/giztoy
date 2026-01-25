@@ -1,0 +1,29 @@
+# Podcast HTTP (V1) request example
+# Usage: doubaospeech podcast http submit -f podcast-http.yaml
+#        doubaospeech podcast http status <task_id>
+#
+# API: POST /api/v1/podcast/submit, POST /api/v1/podcast/query
+# Auth: Bearer Token
+#
+# This is the async HTTP API. Submit a task and poll for results.
+
+# Script - list of dialogue lines (required)
+script:
+  - speaker_id: zh_male_yangguang
+    text: 大家好，欢迎收听今天的节目。
+    speed_ratio: 1.0
+  - speaker_id: zh_female_cancan
+    text: 是的，今天我们要聊的话题非常有趣。
+    speed_ratio: 1.0
+  - speaker_id: zh_male_yangguang
+    text: 让我们开始吧！
+    speed_ratio: 1.0
+
+# Audio format: pcm, mp3, ogg_opus, wav
+encoding: mp3
+
+# Sample rate in Hz: 8000, 16000, 24000
+sample_rate: 24000
+
+# Callback URL (optional) - for async notification when task completes
+# callback_url: https://your-callback-url.com/webhook

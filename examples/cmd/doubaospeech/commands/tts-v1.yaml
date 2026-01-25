@@ -1,0 +1,28 @@
+# TTS V1 (Classic) request example
+# Usage: doubaospeech tts v1 synthesize -f tts-v1.yaml -o output.mp3
+#        doubaospeech tts v1 stream -f tts-v1.yaml -o output.mp3
+#
+# API: POST /api/v1/tts
+# Auth: Bearer Token
+
+# Text to synthesize (required)
+text: 你好，这是一段测试语音。欢迎使用豆包语音合成服务。
+
+# Voice type (required)
+# Classic voices without suffix
+# Examples: zh_female_cancan, zh_male_yangguang, zh_female_tianmei
+voice_type: zh_female_cancan
+
+# Audio format: pcm, mp3, ogg_opus, wav
+encoding: mp3
+
+# Sample rate in Hz: 8000, 16000, 24000
+sample_rate: 24000
+
+# Cluster (required for V1)
+cluster: volcano_tts
+
+# Speech control (optional)
+speed_ratio: 1.0    # 0.2-3.0
+volume_ratio: 1.0   # 0.1-3.0
+pitch_ratio: 1.0    # 0.1-3.0

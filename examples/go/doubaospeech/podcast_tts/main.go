@@ -1,22 +1,16 @@
-// SAMI Podcast WebSocket Example
+// Podcast TTS WebSocket Example
 //
-// Demonstrates the /api/v3/sami/podcasttts endpoint (SAMI Podcast BigModel)
-// using the doubaospeech.PodcastService.StreamSAMI() API.
+// Demonstrates the /api/v3/tts/podcast endpoint (TTS Podcast)
+// using the doubaospeech.PodcastService.Stream() API.
 //
-// Prerequisites:
-//   - Enable the service at: https://console.volcengine.com/speech/service/10028
-//   - Resource ID: volc.service_type.10050
-//
-// Note: This is the SAMI Podcast API (not TTS Podcast).
-// For TTS Podcast (/api/v3/tts/podcast), see the podcast_tts example.
-//
-// Doc: https://www.volcengine.com/docs/6561/1668014
+// Doc: https://www.volcengine.com/docs/6561/1356830
 //
 // Usage:
 //
 //	export DOUBAO_APP_ID="your_app_id"
 //	export DOUBAO_TOKEN="your_token"
-//	bazel run //go/examples/doubaospeech/podcast_ws
+//	export DOUBAO_CLUSTER="volcano_tts" # optional
+//	bazel run //examples/go/doubaospeech/podcast_tts
 package main
 
 import (
@@ -31,6 +25,10 @@ import (
 func main() {
 	appID := os.Getenv("DOUBAO_APP_ID")
 	token := os.Getenv("DOUBAO_TOKEN")
+	cluster := os.Getenv("DOUBAO_CLUSTER")
+	if cluster == "" {
+		cluster = "volcano_tts"
+	}
 
 	if appID == "" || token == "" {
 		fmt.Println("Please set DOUBAO_APP_ID and DOUBAO_TOKEN")
@@ -38,54 +36,57 @@ func main() {
 	}
 
 	fmt.Println("═══════════════════════════════════════════════════════════")
-	fmt.Println("           SAMI Podcast WebSocket Example")
-	fmt.Println("           /api/v3/sami/podcasttts")
+	fmt.Println("           Podcast TTS WebSocket Example")
+	fmt.Println("           /api/v3/tts/podcast")
 	fmt.Println("═══════════════════════════════════════════════════════════")
 	fmt.Println()
 	fmt.Printf("App ID: %s\n", appID)
-	fmt.Printf("Token: %s...\n", token[:10])
+	fmt.Printf("Token: %s...\n", token[:min(10, len(token))])
+	fmt.Printf("Cluster: %s\n", cluster)
 	fmt.Println()
-	fmt.Println("Doc: https://www.volcengine.com/docs/6561/1668014")
+	fmt.Println("Doc: https://www.volcengine.com/docs/6561/1356830")
 
-	testPodcastV3(appID, token)
+	testPodcastTTS(appID, token, cluster)
 }
 
-func testPodcastV3(appID, token string) {
+func testPodcastTTS(appID, token, cluster string) {
 	fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("📋 SAMI Podcast WebSocket Streaming")
+	fmt.Println("📋 TTS Podcast WebSocket Streaming")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	// Create client
-	client := ds.NewClient(appID, ds.WithBearerToken(token))
+	client := ds.NewClient(appID,
+		ds.WithBearerToken(token),
+		ds.WithCluster(cluster),
+	)
 
-	// Build SAMI podcast request (action=0: summary generation)
-	req := &ds.PodcastSAMIRequest{
-		Action:    0,
-		InputID:   fmt.Sprintf("test_%d", time.Now().Unix()),
-		InputText: "Analyze the current development of large language models, including the latest progress of GPT, Claude, and other models.",
-		AudioConfig: &ds.PodcastAudioConfig{
-			Format:     "mp3",
-			SampleRate: 24000,
-			SpeechRate: 0,
+	// Build podcast request with speakers and dialogues
+	req := &ds.PodcastStreamRequest{
+		Speakers: []ds.PodcastSpeaker{
+			{Name: "主持人A", VoiceType: "zh_male_yangguang"},
+			{Name: "主持人B", VoiceType: "zh_female_cancan"},
 		},
-		SpeakerInfo: &ds.PodcastSpeakerInfo{
-			RandomOrder: true,
-			Speakers: []string{
-				"zh_male_dayixiansheng_v2_saturn_bigtts",
-				"zh_female_mizaitongxue_v2_saturn_bigtts",
-			},
+		Dialogues: []ds.PodcastDialogueLine{
+			{Speaker: "主持人A", Text: "大家好，欢迎收听今天的节目。我是主持人A。"},
+			{Speaker: "主持人B", Text: "大家好，我是主持人B。今天我们要聊一个很有趣的话题。"},
+			{Speaker: "主持人A", Text: "没错，今天我们要讨论的是人工智能的最新进展。"},
+			{Speaker: "主持人B", Text: "AI技术发展真的是日新月异，让人感叹科技的力量。"},
 		},
-		UseHeadMusic: false,
-		UseTailMusic: false,
+		Encoding:   ds.EncodingMP3,
+		SampleRate: 24000,
 	}
 
 	fmt.Println("\n📡 Opening WebSocket session...")
-	fmt.Printf("   Speakers: %v\n", req.SpeakerInfo.Speakers)
+	fmt.Println("   Speakers:")
+	for _, sp := range req.Speakers {
+		fmt.Printf("     - %s (%s)\n", sp.Name, sp.VoiceType)
+	}
+	fmt.Printf("   Dialogues: %d lines\n", len(req.Dialogues))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	session, err := client.Podcast.StreamSAMI(ctx, req)
+	session, err := client.Podcast.Stream(ctx, req)
 	if err != nil {
 		fmt.Printf("❌ Failed to open session: %v\n", err)
 		return
@@ -109,36 +110,33 @@ func testPodcastV3(appID, token string) {
 
 		if len(chunk.Audio) > 0 {
 			allAudio = append(allAudio, chunk.Audio...)
-			fmt.Printf("   [%.1fs] 🔊 +%d bytes (total: %.1f KB)\n",
-				elapsed, len(chunk.Audio), float64(len(allAudio))/1024)
+			fmt.Printf("   [%.1fs] 🔊 Seq=%d Speaker=%s +%d bytes (total: %.1f KB)\n",
+				elapsed, chunk.Sequence, chunk.Speaker, len(chunk.Audio), float64(len(allAudio))/1024)
 		}
 
-		if chunk.Event != "" {
-			fmt.Printf("   [%.1fs] Event: %s", elapsed, chunk.Event)
-			if chunk.Text != "" {
-				fmt.Printf(" - %s", truncate(chunk.Text, 50))
-			}
-			if chunk.Message != "" {
-				fmt.Printf(" - %s", chunk.Message)
-			}
-			fmt.Println()
+		if chunk.Message != "" {
+			fmt.Printf("   [%.1fs] 📌 %s\n", elapsed, chunk.Message)
 		}
 
 		if chunk.IsLast {
-			fmt.Printf("   [%.1fs] ✅ Stream completed\n", elapsed)
+			fmt.Printf("   [%.1fs] ✅ Stream completed", elapsed)
+			if chunk.Duration > 0 {
+				fmt.Printf(" (duration: %dms)", chunk.Duration)
+			}
+			fmt.Println()
 			break
 		}
 	}
 
 	// Save audio
 	if len(allAudio) > 0 {
-		outputFile := "tmp/podcast_output.mp3"
+		outputFile := "tmp/podcast_tts_output.mp3"
 		os.MkdirAll("tmp", 0755)
 		if err := os.WriteFile(outputFile, allAudio, 0644); err != nil {
 			fmt.Printf("❌ Failed to save: %v\n", err)
 		} else {
 			fmt.Printf("\n✅ Podcast audio saved: %s (%.1f KB)\n", outputFile, float64(len(allAudio))/1024)
-			fmt.Println("   Play: ffplay tmp/podcast_output.mp3")
+			fmt.Println("   Play: ffplay tmp/podcast_tts_output.mp3")
 		}
 	} else {
 		fmt.Println("\n❌ No audio data received")
@@ -149,9 +147,9 @@ func testPodcastV3(appID, token string) {
 	fmt.Println("═══════════════════════════════════════════════════════════")
 }
 
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
+func min(a, b int) int {
+	if a < b {
+		return a
 	}
-	return s[:maxLen] + "..."
+	return b
 }

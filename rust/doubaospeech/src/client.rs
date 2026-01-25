@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use crate::{
     asr::AsrService,
+    asr_v2::AsrV2Service,
     error::{Error, Result},
     http::{AuthConfig, HttpClient},
     media::MediaService,
@@ -11,6 +12,7 @@ use crate::{
     podcast::PodcastService,
     translation::TranslationService,
     tts::TtsService,
+    tts_v2::TtsV2Service,
     voice_clone::VoiceCloneService,
 };
 
@@ -112,9 +114,55 @@ impl Client {
         TtsService::new(self.http.clone())
     }
 
+    /// Returns the TTS V2 (BigModel TTS) service.
+    ///
+    /// V2 uses `/api/v3/*` endpoints with `X-Api-*` headers authentication.
+    ///
+    /// # IMPORTANT: Speaker and Resource ID Matching
+    ///
+    /// The speaker voice suffix MUST match the resource ID:
+    ///
+    /// | Resource ID    | Speaker Suffix Required | Example                        |
+    /// |----------------|-------------------------|--------------------------------|
+    /// | `seed-tts-2.0` | `*_uranus_bigtts`       | `zh_female_xiaohe_uranus_bigtts` |
+    /// | `seed-tts-1.0` | `*_moon_bigtts`         | `zh_female_shuangkuaisisi_moon_bigtts` |
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use futures::StreamExt;
+    /// use giztoy_doubaospeech::{Client, TtsV2Request};
+    ///
+    /// # async fn example() -> anyhow::Result<()> {
+    /// let client = Client::builder("app-id").api_key("api-key").build()?;
+    /// let mut stream = client.tts_v2().stream(&TtsV2Request {
+    ///     text: "你好，世界！".to_string(),
+    ///     speaker: "zh_female_xiaohe_uranus_bigtts".to_string(),
+    ///     resource_id: Some("seed-tts-2.0".to_string()),
+    ///     ..Default::default()
+    /// }).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn tts_v2(&self) -> TtsV2Service {
+        TtsV2Service::new(self.http.clone())
+    }
+
     /// Returns the ASR (Automatic Speech Recognition) service (V1 Classic API).
     pub fn asr(&self) -> AsrService {
         AsrService::new(self.http.clone())
+    }
+
+    /// Returns the ASR V2 (BigModel) service.
+    ///
+    /// V2 uses `/api/v3/*` endpoints with X-Api-* headers authentication.
+    ///
+    /// # Endpoints
+    ///
+    /// - WSS `/api/v3/sauc/bigmodel` - Streaming ASR
+    /// - POST `/api/v3/sauc/bigmodel_async` - Async File ASR
+    pub fn asr_v2(&self) -> AsrV2Service {
+        AsrV2Service::new(self.http.clone())
     }
 
     /// Returns the Voice Clone service.

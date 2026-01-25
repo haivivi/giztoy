@@ -79,26 +79,47 @@ for chunk, err := range client.TTS.SynthesizeStream(ctx, req) {
 ### TTS V2 (BigModel)
 
 ```go
-// Streaming HTTP
-for chunk, err := range client.TTSV2.SynthesizeStream(ctx, &doubaospeech.TTSV2Request{
+// Streaming HTTP (recommended)
+for chunk, err := range client.TTSV2.Stream(ctx, &doubaospeech.TTSV2Request{
     Text:       "你好，世界！",
-    VoiceType:  "zh_female_cancan",
+    VoiceType:  "zh_female_xiaohe_uranus_bigtts",
     ResourceID: "seed-tts-2.0",
 }) {
     // Process chunk
 }
 
-// Async (long text)
-task, err := client.TTSV2.SubmitAsync(ctx, &doubaospeech.AsyncTTSRequest{
-    Text: longText,
+// WebSocket Bidirectional
+session, err := client.TTSV2.OpenSession(ctx, &doubaospeech.TTSV2SessionConfig{
+    VoiceType:  "zh_female_xiaohe_uranus_bigtts",
+    ResourceID: "seed-tts-2.0",
 })
-result, err := task.Wait(ctx)
+defer session.Close()
+
+session.SendText(ctx, "第一段文字", false)
+session.SendText(ctx, "第二段文字", true)
+
+for chunk, err := range session.Recv() {
+    if err != nil {
+        break
+    }
+    buf.Write(chunk.Audio)
+    if chunk.IsLast {
+        break
+    }
+}
 ```
 
-### ASR (Speech Recognition)
+**IMPORTANT:** Speaker voice must match Resource ID!
+
+| Resource ID | Speaker Suffix Required |
+|-------------|-------------------------|
+| `seed-tts-2.0` | `*_uranus_bigtts` |
+| `seed-tts-1.0` | `*_moon_bigtts` |
+
+### ASR V1 (Classic)
 
 ```go
-// One-sentence (V1)
+// One-sentence
 resp, err := client.ASR.Recognize(ctx, &doubaospeech.ASRRequest{
     Audio:    audioData,
     Format:   "pcm",
@@ -123,6 +144,47 @@ for chunk, err := range session.Recv() {
     }
     fmt.Println(chunk.Text)
 }
+```
+
+### ASR V2 (BigModel)
+
+```go
+// Streaming (recommended)
+session, err := client.ASRV2.OpenStreamSession(ctx, &doubaospeech.ASRV2Config{
+    Format:     "pcm",
+    SampleRate: 16000,
+    Language:   "zh-CN",
+    EnableITN:  true,
+    EnablePunc: true,
+})
+defer session.Close()
+
+// Send audio chunks
+session.SendAudio(ctx, audioData, false)
+session.SendAudio(ctx, lastData, true)
+
+// Receive results
+for chunk, err := range session.Recv() {
+    if err != nil {
+        break
+    }
+    fmt.Println(chunk.Text)
+    if chunk.IsFinal {
+        break
+    }
+}
+
+// Async file recognition
+result, err := client.ASRV2.SubmitAsync(ctx, &doubaospeech.ASRV2AsyncRequest{
+    AudioURL: "https://example.com/audio.mp3",
+    Format:   "mp3",
+    Language: "zh-CN",
+})
+fmt.Println("Task ID:", result.TaskID)
+
+// Query task status
+status, err := client.ASRV2.QueryAsync(ctx, result.TaskID)
+fmt.Println("Status:", status.Status, "Text:", status.Text)
 ```
 
 ### Voice Clone
