@@ -101,29 +101,36 @@ def harmonyos_application(
         product = "default",
         ability_name = "EntryAbility",
         sign = False,
+        tags = [],
         **kwargs):
-    """便捷宏：构建并可选安装 HarmonyOS 应用
-    
-    这个宏会创建以下 targets:
-    - {name}_hap: 构建 HAP 包
-    - {name}_signed: 签名的 HAP 包（如果 sign=True）
-    - {name}: 安装脚本
+    """Convenience macro: build and optionally install HarmonyOS application.
+
+    This macro creates the following targets:
+    - {name}_hap: Build HAP package
+    - {name}_signed: Signed HAP package (if sign=True)
+    - {name}: Install script
     
     Args:
-        name: Target 名称
-        project_dir: HarmonyOS 项目目录
-        bundle_name: Bundle 名称
-        srcs: 源文件
-        resources: 资源文件
-        module_name: 模块名称
-        product: 构建产品配置
-        ability_name: 启动的 Ability 名称
-        sign: 是否签名
-        **kwargs: 其他参数
+        name: Target name
+        project_dir: HarmonyOS project directory
+        bundle_name: Bundle name
+        srcs: Source files
+        resources: Resource files
+        module_name: Module name
+        product: Build product configuration
+        ability_name: Entry Ability name
+        sign: Whether to sign the HAP
+        tags: Additional tags (already includes "manual" by default)
+        **kwargs: Additional arguments
         
     Note:
-        需要设置环境变量 DEVECO_HOME 指向 DevEco Studio 安装路径
+        Requires DEVECO_HOME environment variable pointing to DevEco Studio.
+        Adds "manual" tag by default, excluded from `bazel build //...`.
+        Use explicit build: `bazel build //path:target`
     """
+    
+    # Add "manual" tag by default (requires DevEco Studio, not available in CI)
+    all_tags = ["manual"] + tags
     
     hap_target = name + "_hap"
     
@@ -136,6 +143,7 @@ def harmonyos_application(
         resources = resources,
         module_name = module_name,
         product = product,
+        tags = all_tags,
         **kwargs
     )
     
@@ -149,6 +157,7 @@ def harmonyos_application(
             hap = ":" + hap_target,
             bundle_name = bundle_name,
             module_name = module_name,
+            tags = all_tags,
         )
         install_hap = ":" + signed_target
     
@@ -158,4 +167,5 @@ def harmonyos_application(
         hap = install_hap,
         bundle_name = bundle_name,
         ability_name = ability_name,
+        tags = all_tags,
     )

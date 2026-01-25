@@ -145,6 +145,8 @@ harmonyos_hap = rule(
 可选环境变量：
 - HARMONYOS_SDK_HOME: SDK 路径
 - JAVA_HOME: Java 路径
+
+Note: This rule requires DevEco Studio. Add tags = ["manual"] to exclude from CI builds.
 """,
 )
 
