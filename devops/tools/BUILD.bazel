@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "tools_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/devops/tools",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "affected-targets",
+    embed = [":tools_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "tools_test",
+    srcs = ["main_test.go"],
+    embed = [":tools_lib"],
+    tags = ["manual"],  # Requires git history and bazel, run manually
+)

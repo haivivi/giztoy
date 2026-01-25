@@ -1,14 +1,12 @@
-name: Build and Test
+name: Main Build & Deploy
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main, master]
   push:
     branches: [main, master]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -23,6 +21,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for deploy detection
 
       - name: Setup Zig
         uses: mlugg/setup-zig@v1
@@ -104,3 +104,62 @@ jobs:
         run: |
           echo "=== Bazel Version ==="
           bazel version
+
+  deploy:
+    name: Deploy Pages
+    needs: build
+    runs-on: ubuntu-latest
+    # Only run on main branch, not on PRs
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git operations
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.14.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-deploy
+          repository-cache: true
+
+      - name: Check if pages affected
+        id: check
+        run: |
+          # Compare with previous commit
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger: always deploy
+            echo "Manual trigger, will deploy"
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            # Check if pages:deploy is affected
+            RESULT=$(bazel run //devops/tools:affected-targets -- --base=HEAD~1 --check=//pages:deploy 2>/dev/null || echo "error")
+            echo "Check result: $RESULT"
+            
+            if [ "$RESULT" = "affected" ]; then
+              echo "Pages affected, will deploy"
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
+            else
+              echo "Pages not affected, skipping deploy"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Configure Git
+        if: steps.check.outputs.should_deploy == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy to GitHub Pages
+        if: steps.check.outputs.should_deploy == 'true'
+        run: |
+          bazel run //pages:deploy
+
+      - name: Skip deploy
+        if: steps.check.outputs.should_deploy == 'false'
+        run: echo "No changes to pages, deployment skipped"
