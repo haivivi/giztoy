@@ -1,0 +1,133 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+# ============================================================================
+# Rust Version
+# ============================================================================
+
+# Run benchmark (Rust), output report.json to bazel-out
+genrule(
+    name = "run",
+    srcs = [
+        ":rules",
+        ":models",
+    ],
+    outs = ["report.json"],
+    cmd = """
+        RULES_DIR=$$(dirname $$(echo "$(locations :rules)" | cut -d' ' -f1))
+        MODELS_DIR=$$(dirname $$(echo "$(locations :models)" | cut -d' ' -f1))
+        $(location //rust/cmd/matchtest) \
+            --rules $$RULES_DIR \
+            --models $$MODELS_DIR \
+            --model qwen/turbo \
+            --output $@
+    """,
+    tools = ["//rust/cmd/matchtest"],
+    local = True,
+    tags = ["requires-network"],
+)
+
+# ============================================================================
+# Go Version
+# ============================================================================
+
+# Run benchmark (Go), output report.json to bazel-out
+genrule(
+    name = "run_go",
+    srcs = [
+        ":rules",
+        ":models",
+    ],
+    outs = ["report_go.json"],
+    cmd = """
+        RULES_DIR=$$(dirname $$(echo "$(locations :rules)" | cut -d' ' -f1))
+        MODELS_DIR=$$(dirname $$(echo "$(locations :models)" | cut -d' ' -f1))
+        $(location //go/cmd/genx/matchtest) \
+            -rules $$RULES_DIR \
+            -models $$MODELS_DIR \
+            -model qwen/turbo \
+            -o $@
+    """,
+    tools = ["//go/cmd/genx/matchtest"],
+    local = True,
+    tags = ["requires-network"],
+)
+
+# Serve results (Rust) - 依赖 :run 的输出
+sh_binary(
+    name = "serve",
+    srcs = ["serve.sh"],
+    data = [
+        "//rust/cmd/matchtest",
+        "//html/matchtest:files",
+        ":run",  # 依赖 report.json
+    ],
+    env = {
+        "MATCHTEST_BIN": "$(rootpath //rust/cmd/matchtest)",
+        "STATIC_DIR": "html/matchtest",
+        "REPORT_FILE": "$(rootpath :run)",
+    },
+)
+
+# Serve results (Go) - 依赖 :run_go 的输出
+sh_binary(
+    name = "serve_go",
+    srcs = ["serve_go.sh"],
+    data = [
+        "//go/cmd/genx/matchtest",
+        "//html/matchtest:files",
+        ":run_go",  # 依赖 report_go.json
+    ],
+    env = {
+        "MATCHTEST_BIN": "$(rootpath //go/cmd/genx/matchtest)",
+        "STATIC_DIR": "html/matchtest",
+        "REPORT_FILE": "$(rootpath :run_go)",
+    },
+)
+
+# Live mode (Rust): 不用缓存结果，直接运行 + 展示
+sh_binary(
+    name = "live",
+    srcs = ["live.sh"],
+    data = [
+        "//rust/cmd/matchtest",
+        "//html/matchtest:files",
+        ":rules",
+        ":models",
+    ],
+    env = {
+        "MATCHTEST_BIN": "$(rootpath //rust/cmd/matchtest)",
+        "STATIC_DIR": "html/matchtest",
+        "RULES_DIR": "examples/matchtest/rules",
+        "MODELS_DIR": "examples/matchtest/models",
+    },
+)
+
+# Live mode (Go): 不用缓存结果，直接运行 + 展示
+sh_binary(
+    name = "live_go",
+    srcs = ["live_go.sh"],
+    data = [
+        "//go/cmd/genx/matchtest",
+        "//html/matchtest:files",
+        ":rules",
+        ":models",
+    ],
+    env = {
+        "MATCHTEST_BIN": "$(rootpath //go/cmd/genx/matchtest)",
+        "STATIC_DIR": "html/matchtest",
+        "RULES_DIR": "examples/matchtest/rules",
+        "MODELS_DIR": "examples/matchtest/models",
+    },
+)
+
+# Test rules
+filegroup(
+    name = "rules",
+    srcs = glob(["rules/**"]),
+)
+
+# Model configs
+filegroup(
+    name = "models",
+    srcs = glob(["models/**"]),
+)

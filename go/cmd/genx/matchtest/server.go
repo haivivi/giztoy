@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"sync"
 )
 
@@ -16,38 +17,38 @@ var indexTmpl = template.Must(template.ParseFS(templatesFS, "templates/index.htm
 
 // Server wraps HTTP server with benchmark runner
 type Server struct {
-	addr   string
-	runner *BenchmarkRunner
-	report *BenchmarkReport // For static report viewing
-	mux    *http.ServeMux
+	addr      string
+	runner    *BenchmarkRunner
+	report    *BenchmarkReport // For static report viewing
+	staticDir string           // Directory for static files (html/matchtest)
+	mux       *http.ServeMux
 }
 
 // NewServer creates a server for live benchmark progress
-func NewServer(addr string, runner *BenchmarkRunner) *Server {
+func NewServer(addr string, runner *BenchmarkRunner, staticDir string) *Server {
 	s := &Server{
-		addr:   addr,
-		runner: runner,
-		mux:    http.NewServeMux(),
+		addr:      addr,
+		runner:    runner,
+		staticDir: staticDir,
+		mux:       http.NewServeMux(),
 	}
 	s.setupRoutes()
 	return s
 }
 
 // NewServerWithReport creates a server for viewing static report
-func NewServerWithReport(addr string, report *BenchmarkReport) *Server {
+func NewServerWithReport(addr string, report *BenchmarkReport, staticDir string) *Server {
 	s := &Server{
-		addr:   addr,
-		report: report,
-		mux:    http.NewServeMux(),
+		addr:      addr,
+		report:    report,
+		staticDir: staticDir,
+		mux:       http.NewServeMux(),
 	}
 	s.setupRoutes()
 	return s
 }
 
 func (s *Server) setupRoutes() {
-	// Static page
-	s.mux.HandleFunc("/", s.handleIndex)
-
 	// API endpoints
 	s.mux.HandleFunc("/api/status", s.handleStatus)
 	s.mux.HandleFunc("/api/progress", s.handleProgress)
@@ -55,6 +56,20 @@ func (s *Server) setupRoutes() {
 
 	// SSE for real-time updates
 	s.mux.HandleFunc("/api/events", s.handleSSE)
+
+	// Static files or embedded template
+	if s.staticDir != "" {
+		// Serve static files from directory
+		if _, err := os.Stat(s.staticDir); err == nil {
+			s.mux.Handle("/", http.FileServer(http.Dir(s.staticDir)))
+		} else {
+			fmt.Printf("Warning: static dir not found: %s, using embedded template\n", s.staticDir)
+			s.mux.HandleFunc("/", s.handleIndex)
+		}
+	} else {
+		// Use embedded template
+		s.mux.HandleFunc("/", s.handleIndex)
+	}
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -194,7 +209,7 @@ func (s *Server) StartAsync(wg *sync.WaitGroup) {
 }
 
 // Legacy function for backward compatibility
-func startServer(addr string, report *BenchmarkReport) error {
-	s := NewServerWithReport(addr, report)
+func startServer(addr string, report *BenchmarkReport, staticDir string) error {
+	s := NewServerWithReport(addr, report, staticDir)
 	return s.Start()
 }

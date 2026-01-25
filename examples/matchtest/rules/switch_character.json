@@ -1,0 +1,34 @@
+{
+  "name": "switch_chat_character",
+  "vars": {
+    "name": {
+      "label": "角色名",
+      "type": "string"
+    }
+  },
+  "patterns": [
+    "切换为 [name]",
+    "我想和 [name] 聊天"
+  ],
+  "examples": [
+    ["切换角色", "切换为小明", "switch_chat_character: name=小明"]
+  ],
+  "tests": [
+    {"input": "切换为小明", "args": {"name": "小明"}},
+    {"input": "我想和爱因斯坦聊天", "args": {"name": "爱因斯坦"}},
+    {"input": "切换成冰雪女王", "args": {"name": "冰雪女王"}},
+    {"input": "切换为艾莎公主", "args": {"name": "艾莎公主"}},
+    {"input": "我想和孙悟空聊天", "args": {"name": "孙悟空"}},
+    {"input": "换成汪汪队阿奇", "args": {"name": "汪汪队阿奇"}},
+    {"input": "Switch to Einstein", "args": {"name": "Einstein"}},
+    {"input": "I want to chat with Elsa", "args": {"name": "Elsa"}},
+    {"input": "アインシュタインに切り替えて", "args": {"name": "アインシュタイン"}},
+    {"input": "エルサと話したい", "args": {"name": "エルサ"}},
+    {"input": "Cambia a Einstein", "args": {"name": "Einstein"}},
+    {"input": "Quiero hablar con Elsa", "args": {"name": "Elsa"}},
+    {"input": "아인슈타인으로 바꿔줘", "args": {"name": "아인슈타인"}},
+    {"input": "엘사랑 얘기하고 싶어", "args": {"name": "엘사"}},
+    {"input": "Wechsle zu Einstein", "args": {"name": "Einstein"}},
+    {"input": "Ich möchte mit Elsa sprechen", "args": {"name": "Elsa"}}
+  ]
+}

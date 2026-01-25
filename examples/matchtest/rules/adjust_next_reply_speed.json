@@ -1,0 +1,25 @@
+{
+  "name": "adjust_next_reply_speed",
+  "vars": {
+    "factor": {"label": "倍率", "type": "float"}
+  },
+  "patterns": [
+    ["快速回复我", "adjust_next_reply_speed: factor=1.2"],
+    ["慢速回复我", "adjust_next_reply_speed: factor=0.8"],
+    ["正常速度回复我", "adjust_next_reply_speed: factor=1.0"]
+  ],
+  "tests": [
+    {"input": "快速回复我", "args": {"factor": "1.2"}},
+    {"input": "慢速回复我", "args": {"factor": "0.8"}},
+    {"input": "Reply to me faster", "args": {"factor": "1.2"}},
+    {"input": "Reply to me slower", "args": {"factor": "0.8"}},
+    {"input": "早く返事して", "args": {"factor": "1.2"}},
+    {"input": "ゆっくり返事して", "args": {"factor": "0.8"}},
+    {"input": "Respóndeme más rápido", "args": {"factor": "1.2"}},
+    {"input": "Respóndeme más lento", "args": {"factor": "0.8"}},
+    {"input": "빨리 대답해줘", "args": {"factor": "1.2"}},
+    {"input": "천천히 대답해줘", "args": {"factor": "0.8"}},
+    {"input": "Antworte mir schneller", "args": {"factor": "1.2"}},
+    {"input": "Antworte mir langsamer", "args": {"factor": "0.8"}}
+  ]
+}

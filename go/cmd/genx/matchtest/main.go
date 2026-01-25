@@ -23,17 +23,18 @@ import (
 var embeddedRules embed.FS
 
 var (
-	flagModel     = flag.String("model", "", "Model pattern (e.g. gemini/flash, sf/, all)")
-	flagList      = flag.Bool("list", false, "List all available models")
-	flagRules     = flag.String("rules", "", "Rules directory (default: embedded rules)")
-	flagTpl       = flag.String("tpl", "", "Custom prompt template file path")
-	flagOutput    = flag.String("o", "", "Output JSON report to file")
-	flagServe     = flag.String("serve", "", "Start HTTP server for live progress (e.g. :8080)")
-	flagLoad      = flag.String("load", "", "Load existing report JSON(s) and serve (comma-separated for multiple files)")
-	flagModelsDir = flag.String("models", "", "Models config directory (required)")
-	flagQuiet     = flag.Bool("q", false, "Quiet mode (less output)")
-	flagPrompt    = flag.Bool("prompt", false, "Print the generated system prompt and exit")
-	flagVerbose   = flag.Bool("verbose", false, "Print HTTP request body for debugging")
+	flagModel       = flag.String("model", "", "Model pattern (e.g. gemini/flash, sf/, all)")
+	flagList        = flag.Bool("list", false, "List all available models")
+	flagRules       = flag.String("rules", "", "Rules directory (default: embedded rules)")
+	flagTpl         = flag.String("tpl", "", "Custom prompt template file path")
+	flagOutput      = flag.String("o", "", "Output JSON report to file")
+	flagServe       = flag.String("serve", "", "Start HTTP server for live progress (e.g. :8080)")
+	flagServeStatic = flag.String("serve-static", "", "Serve static files from directory (e.g. html/matchtest)")
+	flagLoad        = flag.String("load", "", "Load existing report JSON(s) and serve (comma-separated for multiple files)")
+	flagModelsDir   = flag.String("models", "", "Models config directory (required)")
+	flagQuiet       = flag.Bool("q", false, "Quiet mode (less output)")
+	flagPrompt      = flag.Bool("prompt", false, "Print the generated system prompt and exit")
+	flagVerbose     = flag.Bool("verbose", false, "Print HTTP request body for debugging")
 )
 
 // RuleFile represents a rule file (JSON or YAML) with optional tests.
@@ -65,7 +66,7 @@ func main() {
 		if addr == "" {
 			addr = ":8080"
 		}
-		if err := startServer(addr, report); err != nil {
+		if err := startServer(addr, report, *flagServeStatic); err != nil {
 			log.Fatalf("server: %v", err)
 		}
 		return
@@ -199,7 +200,7 @@ func main() {
 
 	// If serve mode, start server first then run benchmark
 	if *flagServe != "" {
-		server := NewServer(*flagServe, runner)
+		server := NewServer(*flagServe, runner, *flagServeStatic)
 
 		// Start server in background
 		var wg sync.WaitGroup

@@ -1,0 +1,62 @@
+# =============================================================================
+# User Local Configuration
+# =============================================================================
+# Copy this file to .bazelrc.user and modify according to your environment
+
+# =============================================================================
+# LLM API Keys (for matchtest and other tools)
+# =============================================================================
+
+# build --action_env=DEEPSEEK_API_KEY=sk-xxx
+# build --action_env=DOUBAO_API_KEY=xxx
+# build --action_env=GEMINI_API_KEY=xxx
+# build --action_env=MINIMAX_API_KEY=xxx
+# build --action_env=OMG_API_KEY=sk-xxx
+# build --action_env=OPENAI_API_KEY=sk-xxx
+# build --action_env=QWEN_API_KEY=sk-xxx
+# build --action_env=SILICONFLOW_API_KEY=sk-xxx
+# build --action_env=ZHIPU_API_KEY=xxx
+
+# =============================================================================
+# ESP-IDF Configuration
+# =============================================================================
+# Required for ESP rules
+
+# ESP-IDF path (required)
+# macOS example: /Users/<username>/esp/esp-idf
+# Linux example: /home/<username>/esp/esp-idf
+# build --action_env=IDF_PATH=/path/to/esp-idf
+
+# ESP-ADF path (optional, for audio development)
+# build --action_env=ADF_PATH=/path/to/esp-adf
+
+# =============================================================================
+# ESP Board & Port Configuration
+# =============================================================================
+# Can also be specified via command line:
+#   bazel run //:flash --//bazel/esp:board=korvo2
+#   bazel run //:flash --//bazel/esp:port=/dev/cu.usbserial-xxx
+#
+# Board configs are in embed/esp/boards/<name>/:
+#   - board.json : Build settings (chip, baud rates)
+#   - board.zig  : Hardware config (GPIO, peripherals)
+#
+# Available boards:
+#   - devkit  : ESP32-S3 DevKit development board (default)
+#   - korvo2  : ESP32-S3-Korvo-2 audio development board
+#
+# To add a new board, create embed/esp/boards/<name>/ with board.json and board.zig
+
+# Default board (optional, defaults to devkit)
+# build --//bazel/esp:board=devkit
+
+# Default serial port (optional, auto-detect if not set)
+# macOS USB serial ports: /dev/cu.usbmodem* or /dev/cu.usbserial-*
+# Linux USB serial ports: /dev/ttyUSB* or /dev/ttyACM*
+# build --//bazel/esp:port=/dev/cu.usbmodem1301
+
+# Baud rate for flashing (optional, defaults to board config: 460800)
+# build --action_env=ESP_BAUD=460800
+
+# Baud rate for monitoring (optional, defaults to board config: 115200)
+# build --action_env=ESP_BAUD_MONITOR=115200

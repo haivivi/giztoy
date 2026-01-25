@@ -19,6 +19,9 @@ build --incompatible_enable_cc_toolchain_resolution
 build --action_env=PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin
 build --host_action_env=PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin
 
-
-# 加载用户本地配置（如果存在）
+# =============================================================================
+# User local config
+# =============================================================================
+# Load user local config (if exists)
+# ESP-IDF related config should be placed in .bazelrc.user, see .bazelrc.user.example
 try-import %workspace%/.bazelrc.user

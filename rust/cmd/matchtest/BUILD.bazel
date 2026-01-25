@@ -1,0 +1,24 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+rust_binary(
+    name = "matchtest",
+    srcs = glob(["src/**/*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//rust/genx:genx",
+        "@crate_index//:anyhow",
+        "@crate_index//:async-stream",
+        "@crate_index//:axum",
+        "@crate_index//:chrono",
+        "@crate_index//:clap",
+        "@crate_index//:futures",
+        "@crate_index//:once_cell",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:serde_yaml",
+        "@crate_index//:thiserror",
+        "@crate_index//:tokio",
+        "@crate_index//:tokio-stream",
+        "@crate_index//:tower-http",
+    ],
+)
