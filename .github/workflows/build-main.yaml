@@ -1,0 +1,169 @@
+name: Main Build & Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for deploy detection
+
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v1
+        with:
+          version: 0.13.0
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      # HarmonyOS targets are excluded via tags=["manual"]
+      # No need to install hvigor in CI
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install lame opus
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libmp3lame-dev libopus-dev libasound2-dev
+
+      - name: Setup Android SDK (macOS)
+        if: runner.os == 'macOS'
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.14.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-${{ matrix.os }}
+          repository-cache: true
+          external-cache: |
+            name: external
+            manifest:
+              crates: rust/Cargo.Bazel.lock
+              go: go/go.sum
+              npm: package-lock.json
+
+      - name: Build all targets
+        run: bazel build //...
+
+      - name: Test all targets
+        run: |
+          # Exit code 4 means "no test targets found", which is OK
+          bazel test //... || [ $? -eq 4 ]
+
+      - name: Upload build artifacts (macOS)
+        if: success() && runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-macos
+          path: |
+            bazel-bin/examples/bazel/harmonyos/*.hap
+            bazel-bin/examples/bazel/ios/*.ipa
+            bazel-bin/examples/bazel/android/*.apk
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload build artifacts (Linux)
+        if: success() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-linux
+          path: |
+            bazel-bin/examples/bazel/harmonyos/*.hap
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Show build info
+        if: always()
+        run: |
+          echo "=== Bazel Version ==="
+          bazel version
+
+  deploy:
+    name: Deploy Pages
+    needs: build
+    runs-on: ubuntu-latest
+    # Only run on main branch, not on PRs
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git operations
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.14.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-deploy
+          repository-cache: true
+
+      - name: Check if pages affected
+        id: check
+        run: |
+          # Compare with previous commit
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger: always deploy
+            echo "Manual trigger, will deploy"
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            # Check if pages:deploy is affected
+            # Exit codes: 0 = affected, 1 = not affected, 2+ = error
+            bazel run //devops/tools:affected-targets -- --base=HEAD~1 --check=//pages:deploy
+            EXIT_CODE=$?
+            
+            if [ $EXIT_CODE -eq 0 ]; then
+              echo "Pages affected, will deploy"
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
+            elif [ $EXIT_CODE -eq 1 ]; then
+              echo "Pages not affected, skipping deploy"
+              echo "should_deploy=false" >> $GITHUB_OUTPUT
+            else
+              # Error occurred, deploy to be safe
+              echo "::warning::affected-targets failed (exit $EXIT_CODE), deploying to be safe"
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Configure Git
+        if: steps.check.outputs.should_deploy == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Deploy to GitHub Pages
+        if: steps.check.outputs.should_deploy == 'true'
+        run: |
+          bazel run //pages:deploy
+
+      - name: Skip deploy
+        if: steps.check.outputs.should_deploy == 'false'
+        run: echo "No changes to pages, deployment skipped"

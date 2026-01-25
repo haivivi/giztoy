@@ -1,0 +1,5 @@
+//rust/cli:giztoy_cli
+//rust/cli:giztoy_cli_test
+//rust/cmd/minimax:minimax
+//rust/minimax:giztoy_minimax
+//rust/minimax:giztoy_minimax_test

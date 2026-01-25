@@ -4,6 +4,10 @@ build --enable_bzlmod
 # Test options
 test --test_output=errors
 
+# Exclude manual-tagged targets (e.g. HarmonyOS requires DevEco Studio)
+build --build_tag_filters=-manual
+test --test_tag_filters=-manual
+
 # Cache
 build --disk_cache=~/.cache/bazel
 

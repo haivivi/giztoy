@@ -6,6 +6,8 @@ package(default_visibility = ["//visibility:public"])
 # 方式 1: 使用便捷宏（推荐）
 # ============================================================================
 
+# Note: harmonyos_application includes tags = ["manual"] by default
+# Excluded from `bazel build //...`, requires explicit build
 harmonyos_application(
     name = "hello_bazel",
     srcs = glob(["HelloWorld/**/*.ets"]),
@@ -32,6 +34,7 @@ harmonyos_hap(
     product = "default",
     project_dir = "examples/bazel/harmonyos/HelloWorld",
     resources = glob(["HelloWorld/**/resources/**"]),
+    tags = ["manual"],
 )
 
 # 安装到设备
@@ -40,6 +43,7 @@ harmonyos_install(
     ability_name = "EntryAbility",
     bundle_name = "com.example.hellobazel",
     hap = ":hello_world_hap",
+    tags = ["manual"],
 )
 
 # ============================================================================
@@ -50,4 +54,5 @@ sh_binary(
     name = "build_native",
     srcs = ["build_native.sh"],
     data = glob(["HelloWorld/**"]),
+    tags = ["manual"],
 )
