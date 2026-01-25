@@ -1,0 +1,81 @@
+# 切换聊天语言规则
+name: switch_chat_language
+
+references:
+  language_code: |
+    语言使用 ISO 639-3 编码:
+        - 中文: zho
+        - 粤语: yue
+        - 英文: eng
+        - 阿拉伯语: ara
+        - 俄语: rus
+        - 西班牙语: spa
+        - 法语: fra
+        - 葡萄牙语: por
+        - 德语: deu
+        - 土耳其语: tur
+        - 荷兰语: nld
+        - 乌克兰语: ukr
+        - 越南语: vie
+        - 印尼语: ind
+        - 日语: jpn
+        - 意大利语: ita
+        - 韩语: kor
+        - 泰语: tha
+        - 波兰语: pol
+        - 罗马尼亚语: rom
+        - 希腊语: ell
+        - 捷克语: ces
+        - 芬兰语: fin
+        - 印地语: hin
+
+vars:
+  language: { label: 语言, type: string }
+
+patterns:
+  - 切换为 [language]
+  - 我们用 [language] 吧
+  - 和我说 [language] 吧
+  - 用 [language] 回复我
+
+examples:
+  - - 切换语言时使用iso639的Part3格式
+    - 切换为中文。
+    - "switch_chat_language: language=zho"
+
+tests:
+  - input: 切换为中文
+    args: { language: zho }
+  - input: 用英语回复我
+    args: { language: eng }
+  - input: 我们用日语吧
+    args: { language: jpn }
+  - input: 和我说日语吧！
+    args: { language: jpn }
+  # 英语测试
+  - input: Switch to Chinese
+    args: { language: zho }
+  - input: Let's speak English
+    args: { language: eng }
+  - input: Reply to me in Japanese
+    args: { language: jpn }
+  # 日语测试
+  - input: 中国語に切り替えて
+    args: { language: zho }
+  - input: 英語で話して
+    args: { language: eng }
+  # 西班牙语测试
+  - input: Cambia a chino
+    args: { language: zho }
+  - input: Hablemos en inglés
+    args: { language: eng }
+  # 韩语测试
+  - input: 중국어로 바꿔줘
+    args: { language: zho }
+  - input: 영어로 말해줘
+    args: { language: eng }
+  # 德语测试
+  - input: Wechsle zu Chinesisch
+    args: { language: zho }
+  - input: Lass uns Englisch sprechen
+    args: { language: eng }

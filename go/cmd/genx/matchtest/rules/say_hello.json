@@ -1,0 +1,77 @@
+{
+  "name": "say_hello",
+  "vars": {
+    "name": {
+      "label": "名字",
+      "type": "string"
+    }
+  },
+  "patterns": [
+    "你好 [name]",
+    "嗨 [name]",
+    "[name]，你还在么"
+  ],
+  "examples": [
+    [
+      "用户问候时提取名字",
+      "你好小赛。",
+      "say_hello: name=小赛"
+    ]
+  ],
+  "tests": [
+    {
+      "input": "你好小赛",
+      "args": {
+        "name": "小赛"
+      }
+    },
+    {
+      "input": "嗨爱因斯坦",
+      "args": {
+        "name": "爱因斯坦"
+      }
+    },
+    {
+      "input": "Hello Alice",
+      "args": {
+        "name": "Alice"
+      }
+    },
+    {
+      "input": "Hi Michael",
+      "args": {
+        "name": "Michael"
+      }
+    },
+    {
+      "input": "こんにちはさくら",
+      "args": {
+        "name": "さくら"
+      }
+    },
+    {
+      "input": "안녕 민준",
+      "args": {
+        "name": "민준"
+      }
+    },
+    {
+      "input": "مرحبا محمد",
+      "args": {
+        "name": "محمد"
+      }
+    },
+    {
+      "input": "สวัสดีสมชาย",
+      "args": {
+        "name": "สมชาย"
+      }
+    },
+    {
+      "input": "Xin chào Nguyễn",
+      "args": {
+        "name": "Nguyễn"
+      }
+    }
+  ]
+}

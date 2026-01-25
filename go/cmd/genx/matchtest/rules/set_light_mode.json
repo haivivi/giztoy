@@ -1,0 +1,24 @@
+{
+  "name": "set_device_light_mode",
+  "vars": {
+    "mode": {"label": "模式", "type": "string"}
+  },
+  "patterns": [
+    ["关闭灯光", "set_device_light_mode: mode=off"],
+    ["打开灯光", "set_device_light_mode: mode=on"]
+  ],
+  "tests": [
+    {"input": "关闭灯光", "args": {"mode": "off"}},
+    {"input": "打开灯光", "args": {"mode": "on"}},
+    {"input": "Turn off the light", "args": {"mode": "off"}},
+    {"input": "Turn on the light", "args": {"mode": "on"}},
+    {"input": "ライトを消して", "args": {"mode": "off"}},
+    {"input": "ライトをつけて", "args": {"mode": "on"}},
+    {"input": "Apaga la luz", "args": {"mode": "off"}},
+    {"input": "Enciende la luz", "args": {"mode": "on"}},
+    {"input": "불 꺼줘", "args": {"mode": "off"}},
+    {"input": "불 켜줘", "args": {"mode": "on"}},
+    {"input": "Licht aus", "args": {"mode": "off"}},
+    {"input": "Licht an", "args": {"mode": "on"}}
+  ]
+}

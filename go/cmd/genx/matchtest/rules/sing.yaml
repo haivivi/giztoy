@@ -1,0 +1,104 @@
+# 唱歌规则
+name: sing
+
+references:
+  sing: 唱歌是指角色演唱歌曲
+  language_code: |
+    语言使用 ISO 639-3 编码:
+        - 中文: zho
+        - 粤语: yue
+        - 英文: eng
+        - 阿拉伯语: ara
+        - 俄语: rus
+        - 西班牙语: spa
+        - 法语: fra
+        - 葡萄牙语: por
+        - 德语: deu
+        - 土耳其语: tur
+        - 荷兰语: nld
+        - 乌克兰语: ukr
+        - 越南语: vie
+        - 印尼语: ind
+        - 日语: jpn
+        - 意大利语: ita
+        - 韩语: kor
+        - 泰语: tha
+        - 波兰语: pol
+        - 罗马尼亚语: rom
+        - 希腊语: ell
+        - 捷克语: ces
+        - 芬兰语: fin
+        - 印地语: hin
+
+vars:
+  title: { label: 歌曲名, type: string }
+  artist: { label: 歌手, type: string }
+  album: { label: 专辑名, type: string }
+  subject: { label: 主题, type: string }
+  language: { label: 语言, type: string }
+
+patterns:
+  - 你会唱歌吗
+  - 给我唱首歌
+  - 唱一首 [title]
+  - 唱一首 [artist] 的歌
+  - 唱一首 [album] 的歌
+  - 唱一首 [subject] 的歌曲
+  - 唱一首 [artist] 的 [title]
+  - 唱一首 [artist] 的 [album] 的歌曲
+  - 唱一首 [artist] 的 [subject] 的歌曲
+  - 唱一首 [language] 的歌曲
+
+examples:
+  - - 简单的唱歌请求
+    - 给我唱首歌
+    - sing
+
+tests:
+  - input: 给我唱首歌
+  - input: 唱一首小星星
+    args: { title: 小星星 }
+  - input: 唱一首周杰伦的歌
+    args: { artist: 周杰伦 }
+  - input: 唱一首英文歌曲
+    args: { language: eng }
+  - input: 唱首歌
+  - input: 唱首儿歌吧！
+    args: { subject: 儿歌 }
+  - input: 唱个儿童歌曲吧！
+    args: { subject: 儿童歌曲 }
+  - input: 唱个丢手绢吧！
+    args: { title: 丢手绢 }
+  - input: 唱首歌儿吧！
+  # 英语测试
+  - input: Sing a song
+  - input: Can you sing Twinkle Twinkle Little Star?
+    args: { title: Twinkle Twinkle Little Star }
+  - input: Sing me a Taylor Swift song
+    args: { artist: Taylor Swift }
+  - input: Please sing Let It Go
+    args: { title: Let It Go }
+  # 日语测试
+  - input: 歌を歌って
+  - input: きらきら星を歌って
+    args: { title: きらきら星 }
+  - input: 嵐の曲を歌って
+    args: { artist: 嵐 }
+  # 韩语测试
+  - input: 노래 불러줘
+  - input: 아이유 노래 불러줘
+    args: { artist: 아이유 }
+  - input: 좋은 날 불러줘
+    args: { title: 좋은 날 }
+  # 阿拉伯语测试
+  - input: غني لي أغنية
+  - input: غني يا ليلي
+    args: { title: يا ليلي }
+  # 泰语测试
+  - input: ร้องเพลงให้ฟังหน่อย
+  - input: ร้องเพลงรักเธอให้ฟัง
+    args: { title: รักเธอ }
+  # 越南语测试
+  - input: Hát cho tôi nghe một bài
+  - input: Hát bài Nơi Này Có Anh đi
+    args: { title: Nơi Này Có Anh }

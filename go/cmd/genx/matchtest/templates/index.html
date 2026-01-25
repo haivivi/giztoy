@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Benchmark</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-hover: #1c2128;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --green: #3fb950;
+            --yellow: #d29922;
+            --red: #f85149;
+            --blue: #58a6ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+            color: #fff;
+        }
+
+        .meta {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Status Banner */
+        .status-banner {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .status-banner.running {
+            display: block;
+            border-color: var(--blue);
+        }
+
+        .status-banner.done {
+            display: block;
+            border-color: var(--green);
+        }
+
+        .status-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-running .status-title {
+            color: var(--blue);
+        }
+
+        .status-done .status-title {
+            color: var(--green);
+        }
+
+        /* Progress Cards */
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .progress-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+        }
+
+        .progress-card.running {
+            border-color: var(--blue);
+        }
+
+        .progress-card.done {
+            border-color: var(--green);
+        }
+
+        .progress-card.error {
+            border-color: var(--red);
+        }
+
+        .progress-model {
+            font-weight: 500;
+            color: var(--blue);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .progress-bar-bg {
+            height: 6px;
+            background: var(--bg-secondary);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--blue);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-card.done .progress-bar {
+            background: var(--green);
+        }
+
+        .progress-stats {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .progress-stats span {
+            margin-right: 0.75rem;
+        }
+
+        .progress-stats .pass {
+            color: var(--green);
+        }
+
+        .progress-stats .fail {
+            color: var(--red);
+        }
+
+        /* Overview Section */
+        .overview {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .overview-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        .overview-table th,
+        .overview-table td {
+            padding: 0.75rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .overview-table th {
+            background: rgba(0, 0, 0, 0.3);
+            font-weight: 500;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+
+        .overview-table th:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .overview-table th.sorted-asc::after {
+            content: ' ▲';
+            font-size: 0.65rem;
+        }
+
+        .overview-table th.sorted-desc::after {
+            content: ' ▼';
+            font-size: 0.65rem;
+        }
+
+        .overview-table th:first-child {
+            text-align: left;
+        }
+
+        .overview-table td:first-child {
+            text-align: left;
+            font-weight: 500;
+            color: var(--blue);
+        }
+
+        .overview-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .pass-rate {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .pass-rate.high {
+            color: var(--green);
+        }
+
+        .pass-rate.mid {
+            color: var(--yellow);
+        }
+
+        .pass-rate.low {
+            color: var(--red);
+        }
+
+        .speed {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Results Table */
+        .results {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .results-table td:first-child {
+            vertical-align: top;
+        }
+
+        .results-table th {
+            background: rgba(0, 0, 0, 0.3);
+            font-weight: 500;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .results-table th:first-child {
+            text-align: left;
+            min-width: 300px;
+        }
+
+        .results-table th:not(:first-child) {
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .results-table td:not(:first-child) {
+            text-align: center;
+        }
+
+        .results-table tr:hover td {
+            background: var(--bg-hover);
+        }
+
+        .results-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Test Case Cell */
+        .case-cell {
+            cursor: pointer;
+        }
+
+        .case-input {
+            font-family: 'SF Mono', Consolas, monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 400px;
+        }
+
+        .case-expected {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .case-expected code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.1rem 0.4rem;
+            border-radius: 3px;
+        }
+
+        /* Status Icons */
+        .status {
+            font-size: 1.1rem;
+            cursor: default;
+        }
+
+        .status-pass {
+            color: var(--green);
+        }
+
+        .status-partial {
+            color: var(--yellow);
+        }
+
+        .status-fail {
+            color: var(--red);
+        }
+
+        .status-error {
+            color: var(--text-muted);
+        }
+
+        .status-pending {
+            color: var(--text-muted);
+        }
+
+        /* Expanded Row Details */
+        .detail-row {
+            display: none;
+        }
+
+        .detail-row.expanded {
+            display: table-row;
+        }
+
+        .detail-row td {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem;
+        }
+
+        .detail-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .detail-model {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+        }
+
+        .detail-model-name {
+            font-weight: 600;
+            color: var(--blue);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-item {
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-label {
+            color: var(--text-muted);
+        }
+
+        .detail-value {
+            font-family: 'SF Mono', Consolas, monospace;
+            color: var(--text);
+        }
+
+        .detail-value.pass {
+            color: var(--green);
+        }
+
+        .detail-value.fail {
+            color: var(--red);
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎯 Match Benchmark</h1>
+        <p class="meta" id="meta">{{.Timestamp}} · {{.RuleCount}} rules · {{.TestCount}} tests</p>
+
+        <!-- Live Progress Banner -->
+        <div class="status-banner" id="status-banner">
+            <div class="status-title" id="status-title">Running...</div>
+            <div id="status-info"></div>
+            <div class="progress-grid" id="progress-grid"></div>
+        </div>
+
+        <!-- Overview Comparison -->
+        <div class="overview" id="overview-section">
+            <table class="overview-table" id="overview-table">
+                <thead>
+                    <tr>
+                        <th data-col="model" data-type="string">Model</th>
+                        <th data-col="total" data-type="number">Total</th>
+                        <th data-col="pass_rate" data-type="number">Pass Rate</th>
+                        <th data-col="passed" data-type="number">Passed</th>
+                        <th data-col="failed" data-type="number">Failed</th>
+                        <th data-col="errors" data-type="number">Errors</th>
+                        <th data-col="p50" data-type="number">P50</th>
+                        <th data-col="p95" data-type="number">P95</th>
+                        <th data-col="p99" data-type="number">P99</th>
+                    </tr>
+                </thead>
+                <tbody id="overview-body">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend" id="legend">
+            <span class="legend-item"><span class="status status-pass">✓</span> Pass</span>
+            <span class="legend-item"><span class="status status-partial">◐</span> Partial</span>
+            <span class="legend-item"><span class="status status-fail">✗</span> Fail</span>
+            <span class="legend-item"><span class="status status-error">⚠</span> Error</span>
+        </div>
+
+        <!-- Results Table -->
+        <div class="results" id="results-section">
+            <table class="results-table" id="results-table">
+                <thead id="results-thead">
+                    <tr>
+                        <th>Test Case</th>
+                        {{range .Models}}
+                        <th>{{.Model}}</th>
+                        {{end}}
+                    </tr>
+                </thead>
+                <tbody id="results-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Initial report data from server
+        let report = {{.}};
+        let models = report.models || [];
+        let testCount = report.test_count || 0;
+        let isLive = false;
+        let progressModels = [];
+
+        // Overview table sorting
+        let sortCol = 'pass_rate';
+        let sortDir = 'desc';
+
+        // SSE connection for live updates
+        function connectSSE() {
+            const eventSource = new EventSource('/api/events');
+
+            eventSource.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                handleUpdate(data);
+            };
+
+            eventSource.onerror = function () {
+                console.log('SSE connection lost, retrying...');
+                setTimeout(connectSSE, 2000);
+            };
+        }
+
+        function handleUpdate(data) {
+            if (data.type === 'init' || data.type === 'start') {
+                isLive = true;
+                progressModels = data.models || [];
+                updateProgressBanner(data.status, progressModels);
+            } else if (data.type === 'case_done' || data.type === 'model_done' || data.type === 'model_start') {
+                progressModels = data.models || progressModels;
+                updateProgressBanner(null, progressModels);
+            } else if (data.type === 'all_done') {
+                isLive = false;
+                document.getElementById('status-banner').className = 'status-banner done';
+                document.getElementById('status-title').textContent = '✓ Benchmark Complete';
+                document.getElementById('status-info').textContent = data.status?.duration || '';
+                // Refresh full report
+                fetchReport();
+            }
+        }
+
+        function updateProgressBanner(status, models) {
+            const banner = document.getElementById('status-banner');
+            const grid = document.getElementById('progress-grid');
+
+            if (status?.status === 'running') {
+                banner.className = 'status-banner running';
+                document.getElementById('status-title').textContent = '⏳ Running Benchmark...';
+            }
+
+            let html = '';
+            models.forEach(m => {
+                const statusClass = m.status === 'done' ? 'done' : (m.status === 'running' ? 'running' : '');
+                html += `
+                    <div class="progress-card ${statusClass}">
+                        <div class="progress-model">${m.model}</div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar" style="width: ${m.percent || 0}%"></div>
+                        </div>
+                        <div class="progress-stats">
+                            <span>${m.done || 0}/${m.total || 0}</span>
+                            <span class="pass">✓${m.passed || 0}</span>
+                            <span class="fail">✗${m.failed || 0}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        }
+
+        async function fetchReport() {
+            try {
+                const resp = await fetch('/api/report');
+                report = await resp.json();
+                models = report.models || [];
+                testCount = report.test_count || 0;
+                renderAll();
+            } catch (e) {
+                console.error('Failed to fetch report:', e);
+            }
+        }
+
+        function renderOverviewTable() {
+            const tbody = document.getElementById('overview-body');
+
+            if (models.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color: var(--text-muted);">Waiting for results...</td></tr>';
+                return;
+            }
+
+            // Sort models
+            const sorted = [...models].sort((a, b) => {
+                let av, bv;
+                switch (sortCol) {
+                    case 'model': av = a.model; bv = b.model; break;
+                    case 'total': av = a.total_cases; bv = b.total_cases; break;
+                    case 'pass_rate': av = a.pass_rate; bv = b.pass_rate; break;
+                    case 'passed': av = a.passed; bv = b.passed; break;
+                    case 'failed': av = a.failed; bv = b.failed; break;
+                    case 'errors': av = a.errors; bv = b.errors; break;
+                    case 'p50': av = a.p50_ms; bv = b.p50_ms; break;
+                    case 'p95': av = a.p95_ms; bv = b.p95_ms; break;
+                    case 'p99': av = a.p99_ms; bv = b.p99_ms; break;
+                    default: return 0;
+                }
+                if (typeof av === 'string') {
+                    return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+                }
+                return sortDir === 'asc' ? av - bv : bv - av;
+            });
+
+            let html = '';
+            sorted.forEach(m => {
+                const rateClass = m.pass_rate >= 80 ? 'high' : (m.pass_rate >= 50 ? 'mid' : 'low');
+                html += '<tr>';
+                html += '<td>' + m.model + '</td>';
+                html += '<td>' + (m.total_cases ?? 0) + '</td>';
+                html += '<td><span class="pass-rate ' + rateClass + '">' + (m.pass_rate || 0).toFixed(1) + '%</span></td>';
+                html += '<td style="color: var(--green);">' + (m.passed || 0) + '</td>';
+                html += '<td style="color: var(--red);">' + (m.failed || 0) + '</td>';
+                html += '<td style="color: var(--yellow);">' + (m.errors || 0) + '</td>';
+                html += '<td class="speed">' + (m.p50_ms ?? 0) + 'ms</td>';
+                html += '<td class="speed">' + (m.p95_ms ?? 0) + 'ms</td>';
+                html += '<td class="speed">' + (m.p99_ms ?? 0) + 'ms</td>';
+                html += '</tr>';
+            });
+            tbody.innerHTML = html;
+
+            // Update header sort indicators
+            document.querySelectorAll('.overview-table th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (th.dataset.col === sortCol) {
+                    th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                }
+            });
+        }
+
+        // Add click handlers for sorting
+        document.querySelectorAll('.overview-table th').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                if (sortCol === col) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortCol = col;
+                    sortDir = th.dataset.type === 'string' ? 'asc' : 'desc';
+                }
+                renderOverviewTable();
+            });
+        });
+
+        function getStatusIcon(result) {
+            if (!result) return '<span class="status status-pending">○</span>';
+            if (result.status === 'error') return '<span class="status status-error" title="Error: ' + (result.error || '') + '">⚠</span>';
+            if (result.status === 'pass') return '<span class="status status-pass">✓</span>';
+            // Check partial match (rule matches but args differ)
+            if (result.actual && result.actual.rule === result.expected.rule) {
+                return '<span class="status status-partial" title="Rule matched, args differ">◐</span>';
+            }
+            return '<span class="status status-fail">✗</span>';
+        }
+
+        function truncate(str, len) {
+            if (!str) return '';
+            return str.length > len ? str.substring(0, len) + '...' : str;
+        }
+
+        function formatArgs(args) {
+            if (!args || Object.keys(args).length === 0) return '';
+            return Object.entries(args).map(([k, v]) => k + '=' + v).join(', ');
+        }
+
+        function renderResultsTable() {
+            // Build case index: caseIdx -> model -> result
+            const caseResults = {};
+            models.forEach(m => {
+                (m.cases || []).forEach((c, idx) => {
+                    if (!caseResults[idx]) {
+                        caseResults[idx] = { input: c.input, expected: c.expected, models: {} };
+                    }
+                    caseResults[idx].models[m.model] = c;
+                });
+            });
+
+            // Update header
+            const thead = document.getElementById('results-thead');
+            let headerHtml = '<tr><th>Test Case</th>';
+            models.forEach(m => {
+                headerHtml += '<th>' + m.model + '</th>';
+            });
+            headerHtml += '</tr>';
+            thead.innerHTML = headerHtml;
+
+            // Update body
+            const tbody = document.getElementById('results-body');
+
+            if (Object.keys(caseResults).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="' + (models.length + 1) + '" style="text-align:center; color: var(--text-muted);">No results yet</td></tr>';
+                return;
+            }
+
+            let html = '';
+            Object.entries(caseResults).forEach(([idx, data]) => {
+                const rowId = 'row-' + idx;
+                const detailId = 'detail-' + idx;
+                const expectedArgs = formatArgs(data.expected?.args);
+
+                // Main row
+                html += '<tr id="' + rowId + '" onclick="toggleDetail(\'' + idx + '\')">';
+                html += '<td class="case-cell">';
+                html += '<div class="case-input">' + truncate(data.input, 50) + '</div>';
+                html += '<div class="case-expected"><code>' + (data.expected?.rule || '') + '</code>';
+                if (expectedArgs) html += ' ' + expectedArgs;
+                html += '</div>';
+                html += '</td>';
+
+                models.forEach(m => {
+                    const result = data.models[m.model];
+                    html += '<td>' + getStatusIcon(result) + '</td>';
+                });
+                html += '</tr>';
+
+                // Detail row
+                html += '<tr id="' + detailId + '" class="detail-row">';
+                html += '<td colspan="' + (models.length + 1) + '">';
+                html += '<div><strong>Input:</strong> ' + data.input + '</div>';
+                html += '<div style="margin-top: 0.5rem;"><strong>Expected:</strong> <code>' + (data.expected?.rule || '') + '</code> ' + expectedArgs + '</div>';
+                html += '<div class="detail-content" style="margin-top: 1rem;">';
+
+                models.forEach(m => {
+                    const result = data.models[m.model];
+                    if (!result) return;
+
+                    const actualArgs = formatArgs(result.actual ? result.actual.args : {});
+                    const statusClass = result.status === 'pass' ? 'pass' : 'fail';
+
+                    html += '<div class="detail-model">';
+                    html += '<div class="detail-model-name">' + m.model + '</div>';
+                    html += '<div class="detail-item"><span class="detail-label">Status:</span> <span class="detail-value ' + statusClass + '">' + result.status + '</span></div>';
+                    html += '<div class="detail-item"><span class="detail-label">Rule:</span> <span class="detail-value">' + (result.actual ? result.actual.rule : '-') + '</span></div>';
+                    if (actualArgs) {
+                        html += '<div class="detail-item"><span class="detail-label">Args:</span> <span class="detail-value">' + actualArgs + '</span></div>';
+                    }
+                    html += '<div class="detail-item"><span class="detail-label">Time:</span> <span class="detail-value">' + result.duration_ms + 'ms</span></div>';
+                    if (result.error) {
+                        html += '<div class="detail-item"><span class="detail-label">Error:</span> <span class="detail-value fail">' + result.error + '</span></div>';
+                    }
+                    html += '</div>';
+                });
+
+                html += '</div></td></tr>';
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function toggleDetail(idx) {
+            const detailRow = document.getElementById('detail-' + idx);
+            detailRow.classList.toggle('expanded');
+        }
+
+        function renderAll() {
+            renderOverviewTable();
+            renderResultsTable();
+        }
+
+        // Check if this is a live session
+        async function checkLive() {
+            try {
+                const resp = await fetch('/api/status');
+                const status = await resp.json();
+                if (status.status === 'running' || status.status === 'idle') {
+                    connectSSE();
+                }
+            } catch (e) {
+                // Static mode, no SSE
+            }
+        }
+
+        // Initial render
+        renderAll();
+        checkLive();
+    </script>
+</body>
+
+</html>

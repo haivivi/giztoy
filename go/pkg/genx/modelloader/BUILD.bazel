@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "modelloader",
+    srcs = ["config.go"],
+    importpath = "github.com/haivivi/giztoy/pkg/genx/modelloader",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+        "@com_github_goccy_go_yaml//:go-yaml",
+        "@com_github_openai_openai_go//:openai-go",
+        "@com_github_openai_openai_go//option",
+        "@org_golang_google_genai//:genai",
+    ],
+)

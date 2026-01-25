@@ -1,0 +1,26 @@
+{
+    "kind": "openai",
+    "api_key": "$SILICONFLOW_API_KEY",
+    "base_url": "https://api.siliconflow.cn/v1",
+    "models": [
+        {
+            "name": "sf/qwen2.5-32b-instruct",
+            "model": "Qwen/Qwen2.5-32B-Instruct/cm1myq61q0077djzipno9bq1n",
+            "support_tool_calls": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 0.1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            },
+            "invoke_params": {
+                "max_tokens": 2048,
+                "temperature": 0.1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            }
+        }
+    ]
+}
