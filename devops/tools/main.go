@@ -77,18 +77,20 @@ func main() {
 
 	if *check != "" {
 		// Check mode: see if specific target is affected
+		// Exit code: 0 = affected, 1 = not affected, 2+ = error
 		isAffected, err := isTargetAffected(*check, affectedTargets)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error checking target: %v\n", err)
-			os.Exit(1)
+			os.Exit(2)
 		}
 
 		if isAffected {
 			fmt.Println("affected")
+			os.Exit(0)
 		} else {
 			fmt.Println("not-affected")
+			os.Exit(1)
 		}
-		return
 	}
 
 	// Output all affected targets
@@ -137,8 +139,8 @@ func getChangedFiles(base string, head ...string) ([]string, error) {
 	cmd := exec.Command("git", "diff", "--name-only", base+".."+headRef)
 	output, err := cmd.Output()
 	if err != nil {
-		// Try without range (for single commit comparisons)
-		cmd = exec.Command("git", "diff", "--name-only", base)
+		// Try comparing base to headRef directly (for single commit comparisons)
+		cmd = exec.Command("git", "diff", "--name-only", base, headRef)
 		output, err = cmd.Output()
 		if err != nil {
 			return nil, fmt.Errorf("git diff failed: %w", err)
@@ -276,11 +278,11 @@ func findPackageForFile(file string) string {
 func findTargetsForPackage(pkg string) ([]string, error) {
 	// Query for rdeps of all targets in this package
 	// Use %q to safely quote the package path (prevents Bazel Query Injection)
-	query := fmt.Sprintf("rdeps(//..., %s:all)", pkg)
+	query := fmt.Sprintf("rdeps(//..., %q:all)", pkg)
 	targets, err := runBazelQuery(query)
 	if err != nil {
 		// Query might fail for various reasons, try simpler query
-		query = fmt.Sprintf("%s:all", pkg)
+		query = fmt.Sprintf("%q:all", pkg)
 		targets, err = runBazelQuery(query)
 		if err != nil {
 			return nil, err
@@ -376,28 +378,19 @@ func isTargetAffected(target string, affectedTargets []string) (bool, error) {
 		fmt.Fprintln(os.Stderr)
 	}
 
-	// Build sets for O(M+N) lookup instead of O(M*N)
+	// Build set for O(1) lookup
 	depSet := make(map[string]bool)
-	depPkgSet := make(map[string]bool)
 	for _, d := range deps {
 		depSet[d] = true
-		depPkgSet[extractPackage(d)] = true
 	}
 
 	for _, affected := range affectedTargets {
-		// Check for direct dependency match
+		// Check for direct dependency match only
+		// Note: We removed the package-level check as it caused false positives
+		// (e.g., //foo:lib1 and //foo:lib2 share package but are unrelated)
 		if depSet[affected] {
 			if *verbose {
 				fmt.Fprintf(os.Stderr, "Target %s is affected via dependency %s\n", target, affected)
-			}
-			return true, nil
-		}
-
-		// Check if the affected target's package is one of the dependency packages
-		affectedPkg := extractPackage(affected)
-		if depPkgSet[affectedPkg] {
-			if *verbose {
-				fmt.Fprintf(os.Stderr, "Target %s is affected via package %s\n", target, affectedPkg)
 			}
 			return true, nil
 		}

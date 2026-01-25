@@ -136,15 +136,20 @@ jobs:
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           else
             # Check if pages:deploy is affected
-            RESULT=$(bazel run //devops/tools:affected-targets -- --base=HEAD~1 --check=//pages:deploy 2>/dev/null || echo "error")
-            echo "Check result: $RESULT"
+            # Exit codes: 0 = affected, 1 = not affected, 2+ = error
+            bazel run //devops/tools:affected-targets -- --base=HEAD~1 --check=//pages:deploy
+            EXIT_CODE=$?
             
-            if [ "$RESULT" = "affected" ]; then
+            if [ $EXIT_CODE -eq 0 ]; then
               echo "Pages affected, will deploy"
               echo "should_deploy=true" >> $GITHUB_OUTPUT
-            else
+            elif [ $EXIT_CODE -eq 1 ]; then
               echo "Pages not affected, skipping deploy"
               echo "should_deploy=false" >> $GITHUB_OUTPUT
+            else
+              # Error occurred, deploy to be safe
+              echo "::warning::affected-targets failed (exit $EXIT_CODE), deploying to be safe"
+              echo "should_deploy=true" >> $GITHUB_OUTPUT
             fi
           fi
 
