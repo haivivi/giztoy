@@ -1,121 +1,152 @@
-# GenX Agent - Known Issues
+# GenX Agent - 已知问题与计划
 
-## 🔴 Major Issues
+## 🔴 重大变更计划
 
-### AGT-001: No Rust implementation
+### AGT-001: Tool 系统重构为 Luau
 
-**Description:**  
-The entire agent framework is Go-only. No Rust implementation exists.
+**状态:** 计划中
 
-**Impact:** Cannot build autonomous agents in Rust.
+**描述:**  
+当前有多种 Tool 类型（GeneratorTool、HTTPTool、CompositeTool 等），计划统一为 Luau 脚本实现。
 
-**Effort:** High - requires porting entire framework.
+**变更内容:**
+- 所有 Tool 统一用 Luau 脚本实现
+- 提供 `ctx` API：generate、http、state、emit 等
+- 现有 Tool 类型标记为 deprecated
 
----
+**好处:**
+- 统一的脚本能力
+- 支持复杂流程控制
+- 热更新友好
+- 可测试性提升
 
-## 🟡 Minor Issues
-
-### AGT-002: Some internal errors use panic
-
-**Description:**  
-Some unexpected states trigger panic instead of returning errors.
-
-**Impact:** Can crash applications on edge cases.
-
-**Suggestion:** Convert panics to error returns.
+**进度:** 见 [TODO.md](TODO.md)
 
 ---
 
-### AGT-003: Event loop complexity
+### AGT-002: Agent I/O 语义明确化
 
-**Description:**  
-The event loop pattern requires careful handling of all event types.
+**状态:** 计划中
 
-**Impact:** Easy to miss edge cases in client code.
+**描述:**  
+明确不同 Agent 类型的 I/O 语义：
 
-**Suggestion:** Add helper functions or simplified API.
+| Agent 类型 | I/O 行为 |
+|-----------|---------|
+| ReActAgent | Tool 同步阻塞，不透传 |
+| MatchAgent | 透传给子 Agent |
+| RealtimeAgent | 双向流（新增） |
 
----
+**当前问题:**
+- ReActAgent 的 "agent tool" 语义不清晰
+- 子 Agent "接管" 父 Agent I/O 的设计不够优雅
 
-### AGT-004: Tool execution is synchronous
-
-**Description:**  
-Tools execute synchronously in the event loop, blocking other processing.
-
-**Impact:** Long-running tools can delay event delivery.
-
-**Suggestion:** Consider async tool execution option.
-
----
-
-## 🔵 Enhancements
-
-### AGT-005: Add agent persistence
-
-**Description:**  
-Agents don't persist state across restarts. State is in-memory only.
-
-**Suggestion:** Add state serialization/deserialization.
+**解决方案:**
+- ReActAgent：Tool 永远是同步的，复杂流程由 Luau 脚本控制
+- MatchAgent：保持 Router 语义，透传子 Agent I/O
+- 复杂多 Agent 协作由 Luau 脚本显式编排
 
 ---
 
-### AGT-006: Add agent debugging tools
+### AGT-003: RealtimeAgent 实现
 
-**Description:**  
-Limited visibility into agent reasoning and tool selection.
+**状态:** 计划中
 
-**Suggestion:** Add verbose mode, step-through debugging.
+**描述:**  
+新增 RealtimeAgent 类型，包装 OpenAI/Gemini Realtime API。
 
----
-
-### AGT-007: Add rate limiting for tools
-
-**Description:**  
-No built-in rate limiting for tool calls.
-
-**Suggestion:** Add configurable rate limiting per tool.
+**功能:**
+- 输入：MessageChunk（text/audio）
+- 输出：AgentEvent（转换自 realtime events）
+- 支持双向流式交互
+- 支持 Interrupt
 
 ---
 
-### AGT-008: Add tool result caching
+## 🟡 已知问题
 
-**Description:**  
-Same tool calls aren't cached, even with identical inputs.
+### AGT-004: 部分内部错误使用 panic
 
-**Suggestion:** Add optional result caching.
+**描述:**  
+某些意外状态触发 panic 而非返回 error。
 
----
+**影响:** 边缘情况可能导致应用崩溃。
 
-## ⚪ Notes
-
-### AGT-009: Well-designed event system
-
-**Description:**  
-The event-based API provides excellent control:
-- Streaming output chunks
-- Tool execution visibility
-- Clean termination signals
+**建议:** 将 panic 转换为 error 返回。
 
 ---
 
-### AGT-010: Quit tool pattern
+### AGT-005: 事件循环复杂度
 
-**Description:**  
-The quit tool pattern is elegant:
+**描述:**  
+事件循环模式需要仔细处理所有事件类型。
+
+**影响:** 客户端代码容易遗漏边缘情况。
+
+**建议:** 提供 helper 函数或简化 API。
+
+---
+
+## 🔵 增强计划
+
+### AGT-006: 状态持久化
+
+**描述:**  
+Agent 状态序列化/反序列化，支持重启恢复。
+
+**当前状态:** 已实现基础的 State 接口，需要实现持久化存储。
+
+---
+
+### AGT-007: 调试工具
+
+**描述:**  
+增强对 Agent 推理和 Tool 选择的可观测性。
+
+**计划:**
+- Verbose 模式
+- Step-through 调试
+- Luau 脚本调试支持
+
+---
+
+### AGT-008: Tool 结果缓存
+
+**描述:**  
+相同输入的 Tool 调用可以缓存结果。
+
+**计划:** 在 Luau ctx 中提供 cache API。
+
+---
+
+## ⚪ 设计亮点
+
+### AGT-009: 事件系统设计良好
+
+**描述:**  
+基于事件的 API 提供了出色的控制能力：
+- 流式输出块
+- Tool 执行可见性
+- AgentStateID 支持多路分流
+
+---
+
+### AGT-010: Quit Tool 模式
+
+**描述:**  
+优雅的 Agent 终止方式：
 ```yaml
 tools:
   - $ref: tool:goodbye
     quit: true
 ```
 
-Allows explicit agent termination.
-
 ---
 
-### AGT-011: Multi-agent routing
+### AGT-011: 多 Agent 路由
 
-**Description:**  
-MatchAgent enables complex multi-skill architectures:
+**描述:**  
+MatchAgent 支持复杂的多技能架构：
 ```
 Router → Weather Agent
        → Music Agent  
@@ -124,33 +155,35 @@ Router → Weather Agent
 
 ---
 
-### AGT-012: Comprehensive tool types
+### AGT-012: Luau 脚本系统（计划中）
 
-**Description:**  
-Rich tool ecosystem:
-- FuncTool (Go functions)
-- GeneratorTool (LLM)
-- HTTPTool (API calls)
-- CompositeTool (pipelines)
-- TextProcessorTool
+**描述:**  
+统一的脚本能力，支持：
+- 调用 Generator
+- 创建子 Agent
+- HTTP 请求
+- 状态管理
+- 流式输出
+
+详见 [luau.md](luau.md)
 
 ---
 
-## Summary
+## 状态总结
 
-| ID | Severity | Status | Component |
-|----|----------|--------|-----------|
-| AGT-001 | 🔴 Major | Open | Rust |
-| AGT-002 | 🟡 Minor | Open | Go |
-| AGT-003 | 🟡 Minor | Open | Go |
-| AGT-004 | 🟡 Minor | Open | Go |
-| AGT-005 | 🔵 Enhancement | Open | Go |
-| AGT-006 | 🔵 Enhancement | Open | Go |
-| AGT-007 | 🔵 Enhancement | Open | Go |
-| AGT-008 | 🔵 Enhancement | Open | Go |
-| AGT-009 | ⚪ Note | N/A | Go |
-| AGT-010 | ⚪ Note | N/A | Go |
-| AGT-011 | ⚪ Note | N/A | Go |
-| AGT-012 | ⚪ Note | N/A | Go |
+| ID | 严重程度 | 状态 | 组件 |
+|----|---------|------|------|
+| AGT-001 | 🔴 重大 | 计划中 | Tool |
+| AGT-002 | 🔴 重大 | 计划中 | Agent I/O |
+| AGT-003 | 🔴 重大 | 计划中 | RealtimeAgent |
+| AGT-004 | 🟡 次要 | 待修复 | Go |
+| AGT-005 | 🟡 次要 | 待修复 | Go |
+| AGT-006 | 🔵 增强 | 进行中 | State |
+| AGT-007 | 🔵 增强 | 计划中 | Debug |
+| AGT-008 | 🔵 增强 | 计划中 | Cache |
+| AGT-009 | ⚪ 亮点 | N/A | Event |
+| AGT-010 | ⚪ 亮点 | N/A | Quit |
+| AGT-011 | ⚪ 亮点 | N/A | Match |
+| AGT-012 | ⚪ 亮点 | 计划中 | Luau |
 
-**Overall:** Mature Go implementation with well-designed architecture. Main limitation is Go-only - no Rust support.
+**整体状态:** 正在进行重大架构改进，统一 Tool 系统为 Luau 脚本，明确 Agent I/O 语义。
