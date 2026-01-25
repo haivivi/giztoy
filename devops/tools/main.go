@@ -144,13 +144,13 @@ func findAffectedTargets(changedFiles []string) ([]string, error) {
 	}
 
 	if len(bazelFiles) == 0 {
-		// All files were deleted, need different approach
-		// For deleted files, we need to find what used to depend on them
-		// This is tricky, so we'll return a conservative result
+		// All changed files were deleted.
+		// We do not attempt to reconstruct dependencies for deleted files,
+		// so we return no affected targets (conservative for CI speed).
 		if *verbose {
-			fmt.Fprintln(os.Stderr, "All changed files were deleted, returning //... as affected")
+			fmt.Fprintln(os.Stderr, "All changed files were deleted, returning no affected targets")
 		}
-		return []string{"//..."}, nil
+		return nil, nil
 	}
 
 	// Build the file set for bazel query
@@ -168,15 +168,31 @@ func findAffectedTargets(changedFiles []string) ([]string, error) {
 		return nil, nil
 	}
 
-	// Use rdeps query to find affected targets
-	// First, try to find which packages contain these files
-	affectedSet := make(map[string]bool)
-
+	// Optimization: deduplicate packages to avoid redundant bazel queries
+	// Multiple files in the same package should only trigger one query
+	pkgSet := make(map[string]bool)
 	for _, file := range fileLabels {
-		targets, err := findTargetsForFile(file)
+		pkg := findPackageForFile(file)
+		if pkg != "" {
+			pkgSet[pkg] = true
+		}
+	}
+
+	if *verbose {
+		fmt.Fprintf(os.Stderr, "Unique packages to query (%d):\n", len(pkgSet))
+		for pkg := range pkgSet {
+			fmt.Fprintf(os.Stderr, "  %s\n", pkg)
+		}
+		fmt.Fprintln(os.Stderr)
+	}
+
+	// Query affected targets for each unique package
+	affectedSet := make(map[string]bool)
+	for pkg := range pkgSet {
+		targets, err := findTargetsForPackage(pkg)
 		if err != nil {
 			if *verbose {
-				fmt.Fprintf(os.Stderr, "Warning: failed to find targets for %s: %v\n", file, err)
+				fmt.Fprintf(os.Stderr, "Warning: failed to find targets for package %s: %v\n", pkg, err)
 			}
 			continue
 		}
@@ -195,9 +211,8 @@ func findAffectedTargets(changedFiles []string) ([]string, error) {
 	return result, nil
 }
 
-// findTargetsForFile finds all targets affected by changes to a specific file.
-func findTargetsForFile(file string) ([]string, error) {
-	// Determine the package containing this file
+// findPackageForFile determines the Bazel package containing the given file.
+func findPackageForFile(file string) string {
 	dir := filepath.Dir(file)
 	if dir == "." {
 		dir = ""
@@ -227,24 +242,47 @@ func findTargetsForFile(file string) ([]string, error) {
 	if !hasBuild {
 		// Find the nearest parent package
 		pkg = findNearestPackage(dir)
-		if pkg == "" {
-			return nil, nil
-		}
 	}
 
+	return pkg
+}
+
+// findTargetsForPackage finds all targets affected by changes to a package.
+func findTargetsForPackage(pkg string) ([]string, error) {
 	// Query for rdeps of all targets in this package
+	// Use %q to safely quote the package path (prevents Bazel Query Injection)
 	query := fmt.Sprintf("rdeps(//..., %s:all)", pkg)
-	cmd := exec.Command("bazel", "query", query, "--keep_going", "--noshow_progress")
-	cmd.Stderr = nil // Suppress bazel query stderr
-	output, err := cmd.Output()
+	targets, err := runBazelQuery(query)
 	if err != nil {
 		// Query might fail for various reasons, try simpler query
 		query = fmt.Sprintf("%s:all", pkg)
-		cmd = exec.Command("bazel", "query", query, "--keep_going", "--noshow_progress")
-		output, err = cmd.Output()
+		targets, err = runBazelQuery(query)
 		if err != nil {
 			return nil, err
 		}
+	}
+	return targets, nil
+}
+
+// runBazelQuery executes a bazel query and returns the results.
+func runBazelQuery(query string) ([]string, error) {
+	cmd := exec.Command("bazel", "query", query, "--keep_going", "--noshow_progress")
+
+	// Capture stderr for debugging instead of suppressing it
+	var stderrBuf bytes.Buffer
+	if *verbose {
+		cmd.Stderr = os.Stderr
+	} else {
+		cmd.Stderr = &stderrBuf
+	}
+
+	output, err := cmd.Output()
+	if err != nil {
+		// Log stderr on error for debugging
+		if stderr := stderrBuf.String(); stderr != "" && *verbose {
+			fmt.Fprintf(os.Stderr, "bazel query stderr: %s\n", stderr)
+		}
+		return nil, err
 	}
 
 	var targets []string
@@ -313,13 +351,16 @@ func isTargetAffected(target string, affectedTargets []string) (bool, error) {
 		fmt.Fprintln(os.Stderr)
 	}
 
-	// Check if any dependency is affected
+	// Build sets for O(M+N) lookup instead of O(M*N)
 	depSet := make(map[string]bool)
+	depPkgSet := make(map[string]bool)
 	for _, d := range deps {
 		depSet[d] = true
+		depPkgSet[extractPackage(d)] = true
 	}
 
 	for _, affected := range affectedTargets {
+		// Check for direct dependency match
 		if depSet[affected] {
 			if *verbose {
 				fmt.Fprintf(os.Stderr, "Target %s is affected via dependency %s\n", target, affected)
@@ -327,16 +368,13 @@ func isTargetAffected(target string, affectedTargets []string) (bool, error) {
 			return true, nil
 		}
 
-		// Also check if the affected target's package overlaps with any dependency
-		// This handles cases where the query returns package-level results
+		// Check if the affected target's package is one of the dependency packages
 		affectedPkg := extractPackage(affected)
-		for _, d := range deps {
-			if extractPackage(d) == affectedPkg {
-				if *verbose {
-					fmt.Fprintf(os.Stderr, "Target %s is affected via package %s\n", target, affectedPkg)
-				}
-				return true, nil
+		if depPkgSet[affectedPkg] {
+			if *verbose {
+				fmt.Fprintf(os.Stderr, "Target %s is affected via package %s\n", target, affectedPkg)
 			}
+			return true, nil
 		}
 	}
 
@@ -345,11 +383,23 @@ func isTargetAffected(target string, affectedTargets []string) (bool, error) {
 
 // getTargetDeps returns all dependencies of a target.
 func getTargetDeps(target string) ([]string, error) {
-	query := fmt.Sprintf("deps(%s)", target)
+	// Use %q to safely quote the target (prevents Bazel Query Injection)
+	query := fmt.Sprintf("deps(%q)", target)
 	cmd := exec.Command("bazel", "query", query, "--keep_going", "--noshow_progress")
-	cmd.Stderr = nil
+
+	// Capture stderr for debugging
+	var stderrBuf bytes.Buffer
+	if *verbose {
+		cmd.Stderr = os.Stderr
+	} else {
+		cmd.Stderr = &stderrBuf
+	}
+
 	output, err := cmd.Output()
 	if err != nil {
+		if stderr := stderrBuf.String(); stderr != "" {
+			return nil, fmt.Errorf("bazel query deps failed: %w (stderr: %s)", err, stderr)
+		}
 		return nil, fmt.Errorf("bazel query deps failed: %w", err)
 	}
 

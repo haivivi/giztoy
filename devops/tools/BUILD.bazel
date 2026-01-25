@@ -17,5 +17,6 @@ go_test(
     name = "tools_test",
     srcs = ["main_test.go"],
     embed = [":tools_lib"],
-    tags = ["manual"],  # Requires git history and bazel, run manually
+    # Unit tests run automatically; integration tests skip gracefully
+    # Use -short flag to skip slow integration tests: bazel test --test_arg=-test.short
 )
