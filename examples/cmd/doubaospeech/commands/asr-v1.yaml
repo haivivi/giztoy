@@ -1,0 +1,23 @@
+# ASR V1 (Classic) request example
+# Usage: doubaospeech asr v1 recognize -f asr-v1.yaml
+#
+# API: POST /api/v1/asr
+# Auth: Bearer Token
+
+# Audio URL (required)
+audio_url: https://example.com/audio.mp3
+
+# Audio format: pcm, mp3, wav
+format: mp3
+
+# Sample rate in Hz: 8000, 16000
+sample_rate: 16000
+
+# Language: zh-CN, en-US, etc.
+language: zh-CN
+
+# Enable ITN (Inverse Text Normalization)
+enable_itn: true
+
+# Enable punctuation
+enable_punc: true

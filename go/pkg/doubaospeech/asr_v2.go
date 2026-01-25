@@ -184,7 +184,7 @@ func (s *ASRServiceV2) OpenStreamSession(ctx context.Context, config *ASRV2Confi
 		client:    s.client,
 		config:    config,
 		reqID:     connectID,
-		proto:     &binaryProtocol{},
+		proto:     newBinaryProtocol(),
 		recvChan:  make(chan *ASRV2Result, 100),
 		errChan:   make(chan error, 1),
 		closeChan: make(chan struct{}),
@@ -210,22 +210,15 @@ func (s *ASRServiceV2) OpenStreamSession(ctx context.Context, config *ASRV2Confi
 // unlike the server->client responses which do include sequence numbers.
 // This asymmetry is intentional per the SAUC protocol specification.
 func (s *ASRV2Session) SendAudio(ctx context.Context, audio []byte, isLast bool) error {
-	// Build binary message with audio data per SAUC protocol:
-	// Byte 0: version (4 bits) + header_size (4 bits) = 0x11
-	// Byte 1: message_type (4 bits) + flags (4 bits) = 0x20 (Audio only) or 0x22 (last audio)
-	// Byte 2: serialization (4 bits) + compression (4 bits) = 0x00 (raw bytes, no compression)
-	// Byte 3: reserved = 0x00
-	header := []byte{0x11, 0x20, 0x00, 0x00}
-	if isLast {
-		header[1] = 0x22 // Set last audio flag
+	// 使用统一的二进制协议构建音频消息
+	// SAUC 协议中 flags=2 表示最后一帧，但不包含 sequence
+	msg := newAudioOnlyMessage(audio, isLast)
+	binData, err := s.proto.marshalAudioOnly(msg)
+	if err != nil {
+		return fmt.Errorf("marshal audio message: %w", err)
 	}
 
-	var buf bytes.Buffer
-	buf.Write(header)
-	binary.Write(&buf, binary.BigEndian, uint32(len(audio)))
-	buf.Write(audio)
-
-	return s.conn.WriteMessage(websocket.BinaryMessage, buf.Bytes())
+	return s.conn.WriteMessage(websocket.BinaryMessage, binData)
 }
 
 // Recv returns an iterator for receiving ASR results
@@ -336,19 +329,14 @@ func (s *ASRV2Session) sendBinaryMessage(data any) error {
 		return err
 	}
 
-	// Build binary header per SAUC protocol:
-	// Byte 0: version (4 bits) + header_size (4 bits) = 0x11
-	// Byte 1: message_type (4 bits) + flags (4 bits) = 0x10 (Full client request)
-	// Byte 2: serialization (4 bits) + compression (4 bits) = 0x10 (JSON, no compression)
-	// Byte 3: reserved = 0x00
-	header := []byte{0x11, 0x10, 0x10, 0x00}
+	// 使用统一的二进制协议构建消息
+	msg := newFullClientMessage(jsonData)
+	binData, err := s.proto.marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal message: %w", err)
+	}
 
-	var buf bytes.Buffer
-	buf.Write(header)
-	binary.Write(&buf, binary.BigEndian, uint32(len(jsonData)))
-	buf.Write(jsonData)
-
-	return s.conn.WriteMessage(websocket.BinaryMessage, buf.Bytes())
+	return s.conn.WriteMessage(websocket.BinaryMessage, binData)
 }
 
 func (s *ASRV2Session) receiveLoop() {
@@ -409,7 +397,7 @@ func (s *ASRV2Session) receiveLoop() {
 		payload := data[12 : 12+payloadSize]
 		
 		// Decompress if needed
-		if compression == 1 { // Gzip
+		if compression == byte(compressionGzip) {
 			reader, err := gzip.NewReader(bytes.NewReader(payload))
 			if err != nil {
 				continue
@@ -425,7 +413,7 @@ func (s *ASRV2Session) receiveLoop() {
 		// SAUC response format:
 		// message_type = 9 (Full server response)
 		// flags = 1 (interim), 3 (final)
-		if messageType == 9 { // Full server response
+		if messageType == byte(msgTypeFullServer) {
 			var resp struct {
 				AudioInfo struct {
 					Duration int `json:"duration"`
@@ -494,7 +482,7 @@ func (s *ASRV2Session) receiveLoop() {
 			if isFinal {
 				return
 			}
-		} else if messageType == 15 { // Error response
+		} else if messageType == byte(msgTypeError) {
 			var errResp struct {
 				Code    int    `json:"code"`
 				Message string `json:"message"`

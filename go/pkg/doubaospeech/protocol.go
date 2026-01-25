@@ -283,6 +283,56 @@ func (msg *message) isFrontend() bool {
 	return msg.msgType == msgTypeFrontEndResult
 }
 
+// ================== 便捷方法 ==================
+
+// newFullClientMessage 创建一个 Full Client Request 消息
+// 这是最常用的消息类型，用于发送 JSON payload 到服务端
+func newFullClientMessage(payload []byte) *message {
+	return &message{
+		msgType: msgTypeFullClient,
+		flags:   msgFlagNoSequence,
+		payload: payload,
+	}
+}
+
+// newAudioOnlyMessage 创建一个 Audio Only Client 消息
+// isLast 表示是否为最后一帧音频
+// 注意：对于 SAUC 协议，flags=2 表示最后一帧，但不包含 sequence
+func newAudioOnlyMessage(payload []byte, isLast bool) *message {
+	flags := msgFlagNoSequence
+	if isLast {
+		// SAUC 协议使用 flags=2 表示最后一帧音频
+		// 这里的语义与 msgFlagNegSequence 不同，不会写入 sequence
+		flags = msgFlagNegSequence
+	}
+	return &message{
+		msgType: msgTypeAudioOnlyClient,
+		flags:   flags,
+		payload: payload,
+	}
+}
+
+// marshalAudioOnly 序列化音频消息（不包含 sequence）
+// 这是一个特殊方法，用于 SAUC 协议的音频帧发送
+// SAUC 协议中 flags=2 表示最后一帧，但不需要 sequence 字段
+func (p *binaryProtocol) marshalAudioOnly(msg *message) ([]byte, error) {
+	buf := new(bytes.Buffer)
+
+	// Header (4 bytes)
+	buf.WriteByte(byte(p.version<<4) | p.headerSize)
+	buf.WriteByte(byte(msg.msgType<<4) | byte(msg.flags))
+	buf.WriteByte(byte(serializationNone<<4) | byte(compressionNone))
+	buf.WriteByte(0x00) // reserved
+
+	// Payload (no sequence for audio-only messages in SAUC)
+	if err := binary.Write(buf, binary.BigEndian, uint32(len(msg.payload))); err != nil {
+		return nil, fmt.Errorf("write payload size: %w", err)
+	}
+	buf.Write(msg.payload)
+
+	return buf.Bytes(), nil
+}
+
 // gzipCompress gzip 压缩
 func gzipCompress(data []byte) ([]byte, error) {
 	var buf bytes.Buffer

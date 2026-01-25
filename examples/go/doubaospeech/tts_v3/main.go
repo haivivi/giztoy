@@ -3,6 +3,13 @@
 // Demonstrates the /api/v3/tts/bidirection endpoint (TTS 2.0 BigModel)
 // using the doubaospeech.TTSServiceV2.OpenSession() API.
 //
+// Prerequisites:
+//   - Enable BigModel TTS bidirectional streaming service
+//   - Resource ID: seed-tts-2.0 or seed-tts-1.0
+//
+// Note: For simple TTS synthesis, use the HTTP streaming API (TTSV2.Stream())
+// which is simpler and doesn't require WebSocket bidirectional setup.
+//
 // Doc: https://www.volcengine.com/docs/6561/1329505
 //
 // Usage:
@@ -47,9 +54,29 @@ func testTTSV3(appID, token string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	// Open bidirectional session
+	// Open bidirectional session with speaker configuration
+	// Note: seed-tts-2.0 requires "_uranus_bigtts" suffix voices
+	// seed-tts-1.0 can use "_moon_bigtts" suffix voices
+	resourceID := os.Getenv("DOUBAO_RESOURCE_ID")
+	if resourceID == "" {
+		resourceID = "seed-tts-2.0" // Default to 2.0
+	}
+
+	// Choose speaker based on resource ID
+	speaker := "zh_female_xiaohe_uranus_bigtts" // Works with seed-tts-2.0
+	if resourceID == "seed-tts-1.0" {
+		speaker = "zh_female_shuangkuaisisi_moon_bigtts" // Works with seed-tts-1.0
+	}
+
 	fmt.Println("[1] Opening TTS V3 session...")
-	session, err := client.TTSV2.OpenSession(ctx, ds.ResourceTTSV2)
+	fmt.Printf("   Resource ID: %s\n", resourceID)
+	fmt.Printf("   Speaker: %s\n", speaker)
+	session, err := client.TTSV2.OpenSession(ctx, &ds.TTSV2SessionConfig{
+		Speaker:    speaker,
+		ResourceID: resourceID,
+		Format:     "mp3",
+		SampleRate: 24000,
+	})
 	if err != nil {
 		fmt.Printf("❌ Failed to open session: %v\n", err)
 		return
@@ -70,14 +97,23 @@ func testTTSV3(appID, token string) {
 	fmt.Println("\n[3] Receiving audio data...")
 	var audioData []byte
 	startTime := time.Now()
+	chunkCount := 0
 
 	for chunk, err := range session.Recv() {
+		chunkCount++
 		if err != nil {
 			fmt.Printf("❌ Receive error: %v\n", err)
 			break
 		}
 
 		elapsed := time.Since(startTime).Seconds()
+
+		// Debug: show all received chunks
+		fmt.Printf("   [%.1fs] Chunk #%d: audio=%d bytes, isLast=%v, reqID=%s\n",
+			elapsed, chunkCount, len(chunk.Audio), chunk.IsLast, chunk.ReqID)
+		if len(chunk.Payload) > 0 && len(chunk.Payload) < 200 {
+			fmt.Printf("            Payload: %s\n", string(chunk.Payload))
+		}
 
 		if len(chunk.Audio) > 0 {
 			audioData = append(audioData, chunk.Audio...)
@@ -90,6 +126,8 @@ func testTTSV3(appID, token string) {
 			break
 		}
 	}
+
+	fmt.Printf("\n   Total chunks received: %d\n", chunkCount)
 
 	// Save audio
 	if len(audioData) > 0 {

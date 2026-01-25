@@ -1,7 +1,14 @@
-// Podcast WebSocket V3 Example
+// SAMI Podcast WebSocket Example
 //
-// Demonstrates the /api/v3/sami/podcasttts endpoint (Podcast BigModel)
-// using the doubaospeech.PodcastService.StreamV3() API.
+// Demonstrates the /api/v3/sami/podcasttts endpoint (SAMI Podcast BigModel)
+// using the doubaospeech.PodcastService.StreamSAMI() API.
+//
+// Prerequisites:
+//   - Enable the service at: https://console.volcengine.com/speech/service/10028
+//   - Resource ID: volc.service_type.10050
+//
+// Note: This is the SAMI Podcast API (not TTS Podcast).
+// For TTS Podcast (/api/v3/tts/podcast), see the podcast_tts example.
 //
 // Doc: https://www.volcengine.com/docs/6561/1668014
 //
@@ -31,8 +38,8 @@ func main() {
 	}
 
 	fmt.Println("═══════════════════════════════════════════════════════════")
-	fmt.Println("           Podcast WebSocket V3 Example")
-	fmt.Println("           Doubao Podcast BigModel")
+	fmt.Println("           SAMI Podcast WebSocket Example")
+	fmt.Println("           /api/v3/sami/podcasttts")
 	fmt.Println("═══════════════════════════════════════════════════════════")
 	fmt.Println()
 	fmt.Printf("App ID: %s\n", appID)
@@ -45,14 +52,14 @@ func main() {
 
 func testPodcastV3(appID, token string) {
 	fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println("📋 Podcast V3 WebSocket Streaming")
+	fmt.Println("📋 SAMI Podcast WebSocket Streaming")
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	// Create client
 	client := ds.NewClient(appID, ds.WithBearerToken(token))
 
-	// Build podcast request (action=0: summary generation)
-	req := &ds.PodcastV3Request{
+	// Build SAMI podcast request (action=0: summary generation)
+	req := &ds.PodcastSAMIRequest{
 		Action:    0,
 		InputID:   fmt.Sprintf("test_%d", time.Now().Unix()),
 		InputText: "Analyze the current development of large language models, including the latest progress of GPT, Claude, and other models.",
@@ -78,7 +85,7 @@ func testPodcastV3(appID, token string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	session, err := client.Podcast.StreamV3(ctx, req)
+	session, err := client.Podcast.StreamSAMI(ctx, req)
 	if err != nil {
 		fmt.Printf("❌ Failed to open session: %v\n", err)
 		return

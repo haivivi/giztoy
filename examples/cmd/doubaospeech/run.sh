@@ -9,7 +9,7 @@
 #   Bazel:    bazel run //examples/cmd/doubaospeech:run -- [runtime] [test_level]
 #
 #   runtime: go | rust | both (默认: go)
-#   test_level: 1-6, all, quick
+#   test_level: 1-9, all, quick
 #
 # 前置条件: 需要先配置 context
 #   doubaospeech config add-context test --app-id YOUR_APP_ID --api-key YOUR_API_KEY
@@ -108,15 +108,19 @@ show_help() {
     echo "  both       - 同时测试 Go 和 Rust (默认)"
     echo ""
     echo "test_level:"
-    echo "  1          - TTS 基础测试 (同步合成)"
-    echo "  2          - TTS 流式测试"
-    echo "  3          - ASR 测试 (单句识别)"
-    echo "  4          - 会议转写测试"
-    echo "  5          - 播客合成测试"
-    echo "  6          - 字幕提取测试"
-    echo "  7          - Realtime 测试 (仅 Rust)"
+    echo "  1          - TTS V1 测试 (classic)"
+    echo "  2          - TTS V2 HTTP 流式测试 (BigModel)"
+    echo "  3          - TTS V2 双向 WebSocket 测试"
+    echo "  4          - ASR V1 测试 (单句识别)"
+    echo "  5          - ASR V2 测试 (BigModel)"
+    echo "  6          - Podcast SAMI 测试 (WebSocket)"
+    echo "  7          - 会议转写测试"
+    echo "  8          - 字幕提取测试"
+    echo "  9          - Realtime 测试 (仅 Rust)"
     echo "  all        - 全部测试 (默认)"
-    echo "  quick      - 快速测试 (TTS + ASR)"
+    echo "  quick      - 快速测试 (TTS V2 + ASR V1)"
+    echo "  tts        - 所有 TTS 测试"
+    echo "  asr        - 所有 ASR 测试"
     echo "  realtime   - Realtime 测试"
     echo ""
     echo "环境变量:"
@@ -195,88 +199,118 @@ setup_context() {
 }
 
 # =====================================
-# 阶段 1: TTS 基础测试
+# 阶段 1: TTS V1 测试
 # =====================================
 test_level_1() {
-    log_info "=== 阶段 1: TTS 基础测试 ==="
+    log_info "=== 阶段 1: TTS V1 测试 (Classic) ==="
     
-    run_test_verbose "TTS 语音合成 (同步)" \
-        "$DOUBAO_CMD -c $CONTEXT_NAME tts synthesize -f $COMMANDS_DIR/tts.yaml -o $OUTPUT_DIR/tts_${RUNTIME}.mp3"
+    run_test_verbose "TTS V1 同步合成" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME tts v1 synthesize -f $COMMANDS_DIR/tts-v1.yaml -o $OUTPUT_DIR/tts_v1_${RUNTIME}.mp3"
+    
+    run_test_verbose "TTS V1 流式合成" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME tts v1 stream -f $COMMANDS_DIR/tts-v1.yaml -o $OUTPUT_DIR/tts_v1_stream_${RUNTIME}.mp3"
     
     log_success "阶段 1 完成"
     echo ""
 }
 
 # =====================================
-# 阶段 2: TTS 流式测试
+# 阶段 2: TTS V2 HTTP 流式测试
 # =====================================
 test_level_2() {
-    log_info "=== 阶段 2: TTS 流式测试 ==="
+    log_info "=== 阶段 2: TTS V2 HTTP 流式测试 (BigModel) ==="
     
-    run_test_verbose "TTS 流式合成" \
-        "$DOUBAO_CMD -c $CONTEXT_NAME tts stream -f $COMMANDS_DIR/tts.yaml -o $OUTPUT_DIR/tts_stream_${RUNTIME}.mp3"
+    run_test_verbose "TTS V2 HTTP 流式合成" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME tts v2 stream -f $COMMANDS_DIR/tts-v2.yaml -o $OUTPUT_DIR/tts_v2_stream_${RUNTIME}.mp3"
     
     log_success "阶段 2 完成"
     echo ""
 }
 
 # =====================================
-# 阶段 3: ASR 测试
+# 阶段 3: TTS V2 双向 WebSocket 测试
 # =====================================
 test_level_3() {
-    log_info "=== 阶段 3: ASR 测试 ==="
+    log_info "=== 阶段 3: TTS V2 双向 WebSocket 测试 ==="
     
-    run_test_verbose "ASR 单句识别" \
-        "$DOUBAO_CMD -c $CONTEXT_NAME asr one-sentence -f $COMMANDS_DIR/asr-one-sentence.yaml --json"
+    run_test_verbose "TTS V2 双向 WebSocket" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME tts v2 bidirectional -f $COMMANDS_DIR/tts-v2.yaml -o $OUTPUT_DIR/tts_v2_bidi_${RUNTIME}.mp3"
     
     log_success "阶段 3 完成"
     echo ""
 }
 
 # =====================================
-# 阶段 4: 会议转写测试
+# 阶段 4: ASR V1 测试
 # =====================================
 test_level_4() {
-    log_info "=== 阶段 4: 会议转写测试 ==="
+    log_info "=== 阶段 4: ASR V1 测试 (Classic) ==="
     
-    run_test_verbose "会议转写任务创建" \
-        "$DOUBAO_CMD -c $CONTEXT_NAME meeting create -f $COMMANDS_DIR/meeting.yaml --json"
+    run_test_verbose "ASR V1 单句识别" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME asr v1 recognize -f $COMMANDS_DIR/asr-v1.yaml --json"
     
     log_success "阶段 4 完成"
     echo ""
 }
 
 # =====================================
-# 阶段 5: 播客合成测试
+# 阶段 5: ASR V2 测试
 # =====================================
 test_level_5() {
-    log_info "=== 阶段 5: 播客合成测试 ==="
+    log_info "=== 阶段 5: ASR V2 测试 (BigModel) ==="
     
-    run_test_verbose "播客合成任务创建" \
-        "$DOUBAO_CMD -c $CONTEXT_NAME podcast create -f $COMMANDS_DIR/podcast.yaml --json"
+    # Note: V2 streaming requires audio file input
+    run_test_verbose "ASR V2 文件识别" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME asr v2 file -f $COMMANDS_DIR/asr-v2-file.yaml --json"
     
     log_success "阶段 5 完成"
     echo ""
 }
 
 # =====================================
-# 阶段 6: 字幕提取测试
+# 阶段 6: Podcast SAMI 测试
 # =====================================
 test_level_6() {
-    log_info "=== 阶段 6: 字幕提取测试 ==="
+    log_info "=== 阶段 6: Podcast SAMI 测试 (WebSocket) ==="
     
-    run_test_verbose "字幕提取任务创建" \
-        "$DOUBAO_CMD -c $CONTEXT_NAME media subtitle -f $COMMANDS_DIR/subtitle.yaml --json"
+    run_test_verbose "Podcast SAMI WebSocket 流式合成" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME podcast sami -f $COMMANDS_DIR/podcast-sami.yaml -o $OUTPUT_DIR/podcast_sami_${RUNTIME}.mp3"
     
     log_success "阶段 6 完成"
     echo ""
 }
 
 # =====================================
-# 阶段 7: Realtime 测试 (仅 Rust)
+# 阶段 7: 会议转写测试
 # =====================================
 test_level_7() {
-    log_info "=== 阶段 7: Realtime 测试 ==="
+    log_info "=== 阶段 7: 会议转写测试 ==="
+    
+    run_test_verbose "会议转写任务创建" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME meeting create -f $COMMANDS_DIR/meeting.yaml --json"
+    
+    log_success "阶段 7 完成"
+    echo ""
+}
+
+# =====================================
+# 阶段 8: 字幕提取测试
+# =====================================
+test_level_8() {
+    log_info "=== 阶段 8: 字幕提取测试 ==="
+    
+    run_test_verbose "字幕提取任务创建" \
+        "$DOUBAO_CMD -c $CONTEXT_NAME media subtitle -f $COMMANDS_DIR/subtitle.yaml --json"
+    
+    log_success "阶段 8 完成"
+    echo ""
+}
+
+# =====================================
+# 阶段 9: Realtime 测试 (仅 Rust)
+# =====================================
+test_level_9() {
+    log_info "=== 阶段 9: Realtime 测试 ==="
     
     # Realtime 目前只在 Rust CLI 实现
     if [ "$RUNTIME" = "rust" ]; then
@@ -286,7 +320,7 @@ test_level_7() {
         log_warn "Realtime 测试仅支持 Rust CLI (Go CLI 暂未实现)"
     fi
     
-    log_success "阶段 7 完成"
+    log_success "阶段 9 完成"
     echo ""
 }
 
@@ -304,6 +338,8 @@ run_tests() {
         5) test_level_5 ;;
         6) test_level_6 ;;
         7) test_level_7 ;;
+        8) test_level_8 ;;
+        9) test_level_9 ;;
         all)
             test_level_1
             test_level_2
@@ -312,13 +348,24 @@ run_tests() {
             test_level_5
             test_level_6
             test_level_7
+            test_level_8
+            test_level_9
             ;;
         quick)
-            test_level_1
-            test_level_3
+            test_level_2  # TTS V2 HTTP stream
+            test_level_4  # ASR V1
+            ;;
+        tts)
+            test_level_1  # TTS V1
+            test_level_2  # TTS V2 HTTP stream
+            test_level_3  # TTS V2 bidirectional
+            ;;
+        asr)
+            test_level_4  # ASR V1
+            test_level_5  # ASR V2
             ;;
         realtime)
-            test_level_7
+            test_level_9
             ;;
         *)
             return 1

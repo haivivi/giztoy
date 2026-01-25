@@ -744,6 +744,7 @@ dependencies = [
  "futures",
  "giztoy-cli",
  "giztoy-doubaospeech",
+ "rustls 0.23.36",
  "serde",
  "serde_json",
  "serde_yaml",
