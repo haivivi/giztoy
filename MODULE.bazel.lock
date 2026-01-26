@@ -308,7 +308,7 @@
     },
     "//:extensions.bzl%luau": {
       "general": {
-        "bzlTransitiveDigest": "di2w5ecW08WnBCIerKS1SZLj+y38Kw3yi6ZLK4QNHU0=",
+        "bzlTransitiveDigest": "j/aWnS4kKr2vqME+luoOWMXy1WabqSEKfI7SyCrJtSA=",
         "usagesDigest": "fjbt5lB2jzJkQQzLHOFOgBIrHmMvtmXX51ABnEALqAw=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

@@ -60,8 +60,8 @@ Implement `RegisterFunc` to allow Go/Rust functions to be called from Luau scrip
 | `test_register_table_arg` | [x] | [x] |
 | `test_register_overwrite` | [x] | [x] |
 | `test_nested_call` | [x] | [x] |
-| `test_error_handling` | [x] | - |
-| `test_nil_callback` | [x] | - |
+| `test_error_handling` | [x] | [x] (via `test_do_string_error`) |
+| `test_nil_callback` | [x] | N/A (Rust type system prevents nil) |
 
 ### Phase 5: Memory Management Tests ✅
 

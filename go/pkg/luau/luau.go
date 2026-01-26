@@ -12,6 +12,8 @@ import "C"
 import (
 	"errors"
 	"fmt"
+	"os"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -370,7 +372,10 @@ func (s *State) PushString(str string) {
 		C.luau_pushstring(s.L, cstr)
 		return
 	}
-	C.luau_pushlstring(s.L, (*C.char)(unsafe.Pointer(&[]byte(str)[0])), C.size_t(len(str)))
+	// Use unsafe.StringData to avoid allocation from string->[]byte conversion
+	ptr := unsafe.StringData(str)
+	C.luau_pushlstring(s.L, (*C.char)(unsafe.Pointer(ptr)), C.size_t(len(str)))
+	runtime.KeepAlive(str)
 }
 
 // PushBytes pushes a byte slice as a string onto the stack.
@@ -538,8 +543,7 @@ func goExternalCallback(L *C.LuauState, callbackID C.uint64_t) C.int {
 			// We intentionally do NOT push an error string onto the stack because
 			// returning 0 means "no values returned" - pushing a string would
 			// pollute the stack since Lua won't read it.
-			// The panic is logged but not propagated to Lua.
-			_ = r // Suppress "recovered panic" - we handle it by returning 0
+			fmt.Fprintf(os.Stderr, "luau: panic in go callback: %v\n", r)
 			result = 0
 		}
 	}()

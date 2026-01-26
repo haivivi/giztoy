@@ -564,11 +564,12 @@ extern "C" fn rust_external_callback(l: *mut ffi::LuauState, callback_id: u64) -
     
     match result {
         Ok(n) => n,
-        Err(_) => {
+        Err(payload) => {
             // On panic, we return 0 (no return values) and let the caller handle it.
             // We intentionally do NOT push an error string onto the stack because
             // returning 0 means "no values returned" - pushing a string would
             // pollute the stack since Lua won't read it.
+            eprintln!("luau: panic in rust callback: {:?}", payload);
             0
         }
     }
