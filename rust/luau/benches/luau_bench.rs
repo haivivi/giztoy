@@ -538,6 +538,146 @@ criterion_group!(
     bench_iteration_throughput,
 );
 
+// =============================================================================
+// RegisterFunc Benchmarks
+// =============================================================================
+
+fn bench_register_func(c: &mut Criterion) {
+    c.bench_function("register_func", |b| {
+        b.iter_batched(
+            || State::new().unwrap(),
+            |mut state| {
+                state
+                    .register_func(black_box("test_func"), |s| {
+                        s.push_number(42.0);
+                        1
+                    })
+                    .unwrap();
+            },
+            criterion::BatchSize::SmallInput,
+        )
+    });
+}
+
+fn bench_call_registered_no_args(c: &mut Criterion) {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+    state
+        .register_func("rust_no_args", |s| {
+            s.push_number(42.0);
+            1
+        })
+        .unwrap();
+
+    let bytecode = state.compile("return rust_no_args()", OptLevel::O2).unwrap();
+
+    c.bench_function("call_registered_no_args", |b| {
+        b.iter(|| {
+            state.load_bytecode(black_box(&bytecode), "bench").unwrap();
+            state.pcall(0, 1).unwrap();
+            state.pop(1);
+        })
+    });
+}
+
+fn bench_call_registered_with_args(c: &mut Criterion) {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+    state
+        .register_func("rust_add", |s| {
+            let a = s.to_number(1);
+            let b = s.to_number(2);
+            s.push_number(a + b);
+            1
+        })
+        .unwrap();
+
+    let bytecode = state.compile("return rust_add(10, 20)", OptLevel::O2).unwrap();
+
+    c.bench_function("call_registered_with_args", |b| {
+        b.iter(|| {
+            state.load_bytecode(black_box(&bytecode), "bench").unwrap();
+            state.pcall(0, 1).unwrap();
+            state.pop(1);
+        })
+    });
+}
+
+fn bench_call_registered_return_string(c: &mut Criterion) {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+    state
+        .register_func("rust_string", |s| {
+            s.push_string("hello world from Rust!").unwrap();
+            1
+        })
+        .unwrap();
+
+    let bytecode = state.compile("return rust_string()", OptLevel::O2).unwrap();
+
+    c.bench_function("call_registered_return_string", |b| {
+        b.iter(|| {
+            state.load_bytecode(black_box(&bytecode), "bench").unwrap();
+            state.pcall(0, 1).unwrap();
+            state.pop(1);
+        })
+    });
+}
+
+fn bench_register_1000_funcs(c: &mut Criterion) {
+    c.bench_function("register_1000_funcs", |b| {
+        b.iter(|| {
+            let mut state = State::new().unwrap();
+            for i in 0..1000 {
+                let name = format!("func_{}", i);
+                state.register_func(&name, |_| 0).unwrap();
+            }
+            drop(state);
+        })
+    });
+}
+
+fn bench_registered_memory_pressure(c: &mut Criterion) {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+    state
+        .register_func("allocate", |s| {
+            s.new_table();
+            for i in 0..100 {
+                s.push_number(i as f64);
+                s.set_field(-2, &format!("key{}", i)).unwrap();
+            }
+            1
+        })
+        .unwrap();
+
+    let bytecode = state
+        .compile("local t = allocate(); t = nil", OptLevel::O2)
+        .unwrap();
+
+    c.bench_function("registered_memory_pressure", |b| {
+        let mut iter_count = 0;
+        b.iter(|| {
+            state.load_bytecode(black_box(&bytecode), "bench").unwrap();
+            state.pcall(0, 0).unwrap();
+            iter_count += 1;
+            if iter_count % 100 == 0 {
+                state.gc();
+            }
+        })
+    });
+}
+
+criterion_group!(
+    register_func,
+    bench_register_func,
+    bench_call_registered_no_args,
+    bench_call_registered_with_args,
+    bench_call_registered_return_string,
+    bench_register_1000_funcs,
+    bench_registered_memory_pressure,
+);
+
 criterion_main!(
     script_execution,
     compilation,
@@ -548,4 +688,5 @@ criterion_main!(
     state,
     realworld,
     throughput,
+    register_func,
 );

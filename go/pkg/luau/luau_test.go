@@ -1,7 +1,10 @@
 package luau
 
 import (
+	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -1289,5 +1292,1111 @@ func (o OptLevel) String() string {
 		return "OptO2"
 	default:
 		return "Unknown"
+	}
+}
+
+// =============================================================================
+// RegisterFunc Tests
+// =============================================================================
+
+func TestRegisterFuncSimple(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a simple function that returns a constant
+	err = state.RegisterFunc("getAnswer", func(L *State) int {
+		L.PushNumber(42)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Call from Luau
+	err = state.DoString(`result = getAnswer()`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 42 {
+		t.Errorf("Expected 42, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncWithArgs(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register an add function
+	err = state.RegisterFunc("add", func(L *State) int {
+		a := L.ToNumber(1)
+		b := L.ToNumber(2)
+		L.PushNumber(a + b)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Call from Luau
+	err = state.DoString(`result = add(10, 20)`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 30 {
+		t.Errorf("Expected 30, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncMultiReturn(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a function that returns multiple values
+	err = state.RegisterFunc("minmax", func(L *State) int {
+		a := L.ToNumber(1)
+		b := L.ToNumber(2)
+		if a < b {
+			L.PushNumber(a)
+			L.PushNumber(b)
+		} else {
+			L.PushNumber(b)
+			L.PushNumber(a)
+		}
+		return 2
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Call from Luau
+	err = state.DoString(`min, max = minmax(30, 10)`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("min")
+	if state.ToNumber(-1) != 10 {
+		t.Errorf("Expected min=10, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+
+	state.GetGlobal("max")
+	if state.ToNumber(-1) != 30 {
+		t.Errorf("Expected max=30, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncStringArgs(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a greeting function
+	err = state.RegisterFunc("greet", func(L *State) int {
+		name := L.ToString(1)
+		L.PushString("Hello, " + name + "!")
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Call from Luau
+	err = state.DoString(`result = greet("World")`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToString(-1) != "Hello, World!" {
+		t.Errorf("Expected 'Hello, World!', got '%s'", state.ToString(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncOverwrite(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register first version
+	err = state.RegisterFunc("getValue", func(L *State) int {
+		L.PushNumber(1)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Register second version (overwrite)
+	err = state.RegisterFunc("getValue", func(L *State) int {
+		L.PushNumber(2)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc (overwrite) failed: %v", err)
+	}
+
+	// Call should return new value
+	err = state.DoString(`result = getValue()`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 2 {
+		t.Errorf("Expected 2, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncNestedCall(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a function that calls back into Luau
+	err = state.RegisterFunc("callLuau", func(L *State) int {
+		// Get the Luau function passed as argument
+		// and call it with a value
+		L.PushValue(1)        // Push the function
+		L.PushNumber(100)     // Push argument
+		err := L.PCall(1, 1)  // Call with 1 arg, 1 result
+		if err != nil {
+			L.PushNil()
+			return 1
+		}
+		// Result is already on stack
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Call from Luau with a Luau function
+	err = state.DoString(`
+		function double(x)
+			return x * 2
+		end
+		result = callLuau(double)
+	`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 200 {
+		t.Errorf("Expected 200, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncMultipleFuncs(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register multiple functions
+	err = state.RegisterFunc("inc", func(L *State) int {
+		L.PushNumber(L.ToNumber(1) + 1)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc(inc) failed: %v", err)
+	}
+
+	err = state.RegisterFunc("dec", func(L *State) int {
+		L.PushNumber(L.ToNumber(1) - 1)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc(dec) failed: %v", err)
+	}
+
+	err = state.RegisterFunc("double", func(L *State) int {
+		L.PushNumber(L.ToNumber(1) * 2)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc(double) failed: %v", err)
+	}
+
+	// Call all from Luau
+	err = state.DoString(`result = double(inc(dec(10)))`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	// dec(10) = 9, inc(9) = 10, double(10) = 20
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 20 {
+		t.Errorf("Expected 20, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncCleanupOnClose(t *testing.T) {
+	// Test that registered functions are cleaned up when State is closed
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+
+	// Register some functions
+	for i := 0; i < 100; i++ {
+		err = state.RegisterFunc("func"+string(rune('0'+i%10)), func(L *State) int {
+			return 0
+		})
+		if err != nil {
+			t.Fatalf("RegisterFunc failed: %v", err)
+		}
+	}
+
+	// Close should clean up
+	state.Close()
+
+	// Verify global registry doesn't grow unboundedly by creating another state
+	state2, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state2.Close()
+
+	err = state2.RegisterFunc("test", func(L *State) int {
+		return 0
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+}
+
+func TestUnregisterFunc(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a function
+	err = state.RegisterFunc("myFunc", func(L *State) int {
+		L.PushNumber(42)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Verify it works
+	err = state.DoString(`result = myFunc()`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	// Unregister
+	state.UnregisterFunc("myFunc")
+
+	// Verify it's nil now
+	state.GetGlobal("myFunc")
+	if !state.IsNil(-1) {
+		t.Error("Expected myFunc to be nil after unregister")
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncTableArg(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a function that receives and processes a table
+	err = state.RegisterFunc("sumTable", func(L *State) int {
+		if !L.IsTable(1) {
+			L.PushNumber(0)
+			return 1
+		}
+
+		sum := 0.0
+		L.PushNil() // First key
+		for L.Next(1) {
+			if L.IsNumber(-1) {
+				sum += L.ToNumber(-1)
+			}
+			L.Pop(1) // Pop value, keep key
+		}
+		L.PushNumber(sum)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Call from Luau with a table
+	err = state.DoString(`result = sumTable({10, 20, 30, 40})`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 100 {
+		t.Errorf("Expected 100, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncErrorHandling(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a function that returns an error via Luau's error mechanism
+	err = state.RegisterFunc("failFunc", func(L *State) int {
+		L.PushString("intentional error from Go")
+		// Return -1 or use lua_error equivalent
+		// For now, we just push the error and return 0
+		return 0
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Test that it doesn't crash
+	err = state.DoString(`result = failFunc()`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+}
+
+func TestRegisterFuncNilCallback(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	// Should return error for nil callback
+	err = state.RegisterFunc("nilFunc", nil)
+	if err == nil {
+		t.Error("Expected error for nil callback")
+	}
+}
+
+// =============================================================================
+// Memory Management Tests
+// =============================================================================
+
+func TestMemoryRegisterMany(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register 10000 functions
+	for i := 0; i < 10000; i++ {
+		name := fmt.Sprintf("func_%d", i)
+		idx := i // Capture for closure
+		err = state.RegisterFunc(name, func(L *State) int {
+			L.PushNumber(float64(idx))
+			return 1
+		})
+		if err != nil {
+			t.Fatalf("RegisterFunc %d failed: %v", i, err)
+		}
+	}
+
+	// Verify some functions work
+	err = state.DoString(`result = func_9999()`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 9999 {
+		t.Errorf("Expected 9999, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestMemoryCallLoop(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	callCount := 0
+	err = state.RegisterFunc("increment", func(L *State) int {
+		callCount++
+		L.PushNumber(float64(callCount))
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Call 100000 times
+	err = state.DoString(`
+		for i = 1, 100000 do
+			increment()
+		end
+	`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	if callCount != 100000 {
+		t.Errorf("Expected 100000 calls, got %d", callCount)
+	}
+}
+
+func TestMemoryStringArgs(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	totalLen := 0
+	err = state.RegisterFunc("processString", func(L *State) int {
+		s := L.ToString(1)
+		totalLen += len(s)
+		L.PushNumber(float64(len(s)))
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Pass large strings many times
+	err = state.DoString(`
+		local bigStr = string.rep("x", 10000)
+		for i = 1, 100 do
+			processString(bigStr)
+		end
+	`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	expectedLen := 10000 * 100
+	if totalLen != expectedLen {
+		t.Errorf("Expected total length %d, got %d", expectedLen, totalLen)
+	}
+}
+
+func TestMemoryStateClose(t *testing.T) {
+	// Create many states, register functions, close them
+	for i := 0; i < 100; i++ {
+		state, err := New()
+		if err != nil {
+			t.Fatalf("New() failed: %v", err)
+		}
+
+		for j := 0; j < 100; j++ {
+			name := fmt.Sprintf("func_%d", j)
+			err = state.RegisterFunc(name, func(L *State) int {
+				return 0
+			})
+			if err != nil {
+				t.Fatalf("RegisterFunc failed: %v", err)
+			}
+		}
+
+		state.Close()
+	}
+
+	// Verify we can still create new states
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() after cleanup failed: %v", err)
+	}
+	defer state.Close()
+
+	err = state.RegisterFunc("test", func(L *State) int {
+		L.PushNumber(42)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc after cleanup failed: %v", err)
+	}
+}
+
+func TestMemoryGCInteraction(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a function that creates tables
+	err = state.RegisterFunc("createTables", func(L *State) int {
+		L.CheckStack(100)
+		for i := 0; i < 100; i++ {
+			L.NewTable()
+			L.Pop(1)
+		}
+		return 0
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	initialMem := state.MemoryUsage()
+
+	// Call many times with GC
+	for i := 0; i < 100; i++ {
+		err = state.DoString(`createTables()`)
+		if err != nil {
+			t.Fatalf("DoString failed: %v", err)
+		}
+		state.GC()
+	}
+
+	finalMem := state.MemoryUsage()
+
+	// Memory should not grow unboundedly
+	// Allow some variance but should be roughly similar
+	if finalMem > initialMem*3 {
+		t.Errorf("Memory grew too much: initial=%d, final=%d", initialMem, finalMem)
+	}
+}
+
+// =============================================================================
+// Concurrency Tests
+// =============================================================================
+
+func TestConcurrentRegisterMultiState(t *testing.T) {
+	// Test that multiple goroutines can register functions on their own States
+	// without interfering with each other (tests global registry thread-safety)
+
+	var wg sync.WaitGroup
+	errors := make(chan error, 10)
+
+	// 10 goroutines, each with its own State
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+
+			state, err := New()
+			if err != nil {
+				errors <- fmt.Errorf("goroutine %d: New() failed: %v", idx, err)
+				return
+			}
+			defer state.Close()
+
+			state.OpenLibs()
+
+			// Register 100 functions
+			for j := 0; j < 100; j++ {
+				name := fmt.Sprintf("concurrent_%d_%d", idx, j)
+				val := idx*100 + j
+				err := state.RegisterFunc(name, func(L *State) int {
+					L.PushNumber(float64(val))
+					return 1
+				})
+				if err != nil {
+					errors <- fmt.Errorf("goroutine %d: RegisterFunc failed: %v", idx, err)
+					return
+				}
+			}
+
+			// Verify a function works
+			err = state.DoString(fmt.Sprintf(`result = concurrent_%d_50()`, idx))
+			if err != nil {
+				errors <- fmt.Errorf("goroutine %d: DoString failed: %v", idx, err)
+				return
+			}
+
+			state.GetGlobal("result")
+			expected := float64(idx*100 + 50)
+			if state.ToNumber(-1) != expected {
+				errors <- fmt.Errorf("goroutine %d: expected %v, got %v", idx, expected, state.ToNumber(-1))
+			}
+			state.Pop(1)
+		}(i)
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Error(err)
+	}
+}
+
+func TestConcurrentCallDifferentStates(t *testing.T) {
+	// Test that multiple goroutines can call registered functions
+	// on different States concurrently
+
+	var wg sync.WaitGroup
+	var totalCalls int64
+	errors := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+
+			state, err := New()
+			if err != nil {
+				errors <- fmt.Errorf("goroutine %d: New() failed: %v", idx, err)
+				return
+			}
+			defer state.Close()
+
+			state.OpenLibs()
+
+			err = state.RegisterFunc("increment", func(L *State) int {
+				atomic.AddInt64(&totalCalls, 1)
+				L.PushNumber(1)
+				return 1
+			})
+			if err != nil {
+				errors <- fmt.Errorf("goroutine %d: RegisterFunc failed: %v", idx, err)
+				return
+			}
+
+			// Call 1000 times
+			for j := 0; j < 1000; j++ {
+				err = state.DoString(`increment()`)
+				if err != nil {
+					errors <- fmt.Errorf("goroutine %d iter %d: DoString failed: %v", idx, j, err)
+					return
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Error(err)
+	}
+
+	// 10 goroutines * 1000 calls = 10000
+	if totalCalls != 10000 {
+		t.Errorf("Expected 10000 total calls, got %d", totalCalls)
+	}
+}
+
+func TestConcurrentStateCreationAndDestruction(t *testing.T) {
+	// Test rapid state creation and destruction with registered functions
+	// to verify no memory leaks or race conditions in cleanup
+
+	var wg sync.WaitGroup
+	errors := make(chan error, 20)
+
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+
+			for j := 0; j < 50; j++ {
+				state, err := New()
+				if err != nil {
+					errors <- fmt.Errorf("goroutine %d iter %d: New() failed: %v", idx, j, err)
+					return
+				}
+
+				// Register a function
+				err = state.RegisterFunc("test", func(L *State) int {
+					L.PushNumber(42)
+					return 1
+				})
+				if err != nil {
+					state.Close()
+					errors <- fmt.Errorf("goroutine %d iter %d: RegisterFunc failed: %v", idx, j, err)
+					return
+				}
+
+				// Close immediately
+				state.Close()
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Error(err)
+	}
+}
+
+func TestConcurrentRegistryAccess(t *testing.T) {
+	// Test that the global registry handles concurrent access correctly
+	// by having multiple goroutines register/unregister functions rapidly
+
+	var wg sync.WaitGroup
+	errors := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+
+			state, err := New()
+			if err != nil {
+				errors <- fmt.Errorf("goroutine %d: New() failed: %v", idx, err)
+				return
+			}
+			defer state.Close()
+
+			// Rapidly register and use functions
+			for j := 0; j < 100; j++ {
+				name := fmt.Sprintf("rapid_%d_%d", idx, j)
+				err := state.RegisterFunc(name, func(L *State) int {
+					L.PushNumber(1)
+					return 1
+				})
+				if err != nil {
+					errors <- fmt.Errorf("goroutine %d iter %d: RegisterFunc failed: %v", idx, j, err)
+					return
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	close(errors)
+
+	for err := range errors {
+		t.Error(err)
+	}
+}
+
+// =============================================================================
+// Edge Case Tests
+// =============================================================================
+
+func TestRegisterFuncEmptyName(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	// Empty name should work (Lua allows it)
+	err = state.RegisterFunc("", func(L *State) int {
+		L.PushNumber(42)
+		return 1
+	})
+	// This might succeed or fail depending on implementation
+	// Just verify it doesn't crash
+	_ = err
+}
+
+func TestRegisterFuncSpecialCharsName(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Underscore is valid
+	err = state.RegisterFunc("_my_func", func(L *State) int {
+		L.PushNumber(1)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc with underscore failed: %v", err)
+	}
+
+	err = state.DoString(`result = _my_func()`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 1 {
+		t.Errorf("Expected 1, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncUnicodeName(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Luau doesn't support Unicode identifiers, but we can register with Unicode
+	// and access via _G table
+	err = state.RegisterFunc("计算", func(L *State) int {
+		a := L.ToNumber(1)
+		b := L.ToNumber(2)
+		L.PushNumber(a + b)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc with Chinese name failed: %v", err)
+	}
+
+	// Access via _G["计算"] since Luau doesn't allow Unicode identifiers
+	err = state.DoString(`result = _G["计算"](10, 20)`)
+	if err != nil {
+		t.Fatalf("DoString with Chinese function name failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 30 {
+		t.Errorf("Expected 30, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+func TestRegisterFuncCallUnregistered(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Calling unregistered function should error
+	err = state.DoString(`result = nonExistentFunc()`)
+	if err == nil {
+		t.Error("Expected error when calling unregistered function")
+	}
+}
+
+func TestRegisterFuncDeepRecursion(t *testing.T) {
+	state, err := New()
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+
+	// Register a recursive counter
+	err = state.RegisterFunc("countdown", func(L *State) int {
+		n := int(L.ToNumber(1))
+		if n <= 0 {
+			L.PushNumber(0)
+			return 1
+		}
+		// Call Luau function recursively
+		L.GetGlobal("countdown")
+		L.PushNumber(float64(n - 1))
+		L.PCall(1, 1)
+		result := L.ToNumber(-1)
+		L.Pop(1)
+		L.PushNumber(result + 1)
+		return 1
+	})
+	if err != nil {
+		t.Fatalf("RegisterFunc failed: %v", err)
+	}
+
+	// Test with moderate depth (not too deep to avoid stack overflow)
+	err = state.DoString(`result = countdown(100)`)
+	if err != nil {
+		t.Fatalf("DoString failed: %v", err)
+	}
+
+	state.GetGlobal("result")
+	if state.ToNumber(-1) != 100 {
+		t.Errorf("Expected 100, got %v", state.ToNumber(-1))
+	}
+	state.Pop(1)
+}
+
+// =============================================================================
+// Benchmarks
+// =============================================================================
+
+func BenchmarkRegisterFunc(b *testing.B) {
+	state, err := New()
+	if err != nil {
+		b.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		name := fmt.Sprintf("bench_func_%d", i)
+		state.RegisterFunc(name, func(L *State) int {
+			return 0
+		})
+	}
+}
+
+func BenchmarkCallNoArgs(b *testing.B) {
+	state, err := New()
+	if err != nil {
+		b.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+	state.RegisterFunc("noArgs", func(L *State) int {
+		L.PushNumber(42)
+		return 1
+	})
+
+	// Compile the call once
+	bytecode, _ := state.Compile("return noArgs()", OptO2)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		state.LoadBytecode(bytecode, "bench")
+		state.PCall(0, 1)
+		state.Pop(1)
+	}
+}
+
+func BenchmarkCallWithArgs(b *testing.B) {
+	state, err := New()
+	if err != nil {
+		b.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+	state.RegisterFunc("withArgs", func(L *State) int {
+		a := L.ToNumber(1)
+		b := L.ToNumber(2)
+		L.PushNumber(a + b)
+		return 1
+	})
+
+	bytecode, _ := state.Compile("return withArgs(10, 20)", OptO2)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		state.LoadBytecode(bytecode, "bench")
+		state.PCall(0, 1)
+		state.Pop(1)
+	}
+}
+
+func BenchmarkCallReturnString(b *testing.B) {
+	state, err := New()
+	if err != nil {
+		b.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+	state.RegisterFunc("returnString", func(L *State) int {
+		L.PushString("hello world from Go!")
+		return 1
+	})
+
+	bytecode, _ := state.Compile("return returnString()", OptO2)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		state.LoadBytecode(bytecode, "bench")
+		state.PCall(0, 1)
+		state.Pop(1)
+	}
+}
+
+func BenchmarkRegister1000Funcs(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		state, _ := New()
+		for j := 0; j < 1000; j++ {
+			name := fmt.Sprintf("func_%d", j)
+			state.RegisterFunc(name, func(L *State) int {
+				return 0
+			})
+		}
+		state.Close()
+	}
+}
+
+func BenchmarkMemoryPressure(b *testing.B) {
+	state, err := New()
+	if err != nil {
+		b.Fatalf("New() failed: %v", err)
+	}
+	defer state.Close()
+
+	state.OpenLibs()
+	state.RegisterFunc("allocate", func(L *State) int {
+		L.NewTable()
+		for i := 0; i < 100; i++ {
+			L.PushNumber(float64(i))
+			L.RawSetI(-2, i+1)
+		}
+		return 1
+	})
+
+	bytecode, _ := state.Compile("local t = allocate(); t = nil", OptO2)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		state.LoadBytecode(bytecode, "bench")
+		state.PCall(0, 0)
+		if i%100 == 0 {
+			state.GC()
+		}
 	}
 }

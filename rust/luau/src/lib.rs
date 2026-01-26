@@ -15,9 +15,28 @@
 
 mod ffi;
 
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::RwLock;
 use thiserror::Error;
+
+// Global function registry
+static GLOBAL_FUNCS: RwLock<Option<HashMap<u64, RustFuncEntry>>> = RwLock::new(None);
+static GLOBAL_FUNC_NEXT_ID: AtomicU64 = AtomicU64::new(1);
+
+/// Entry in the global function registry
+struct RustFuncEntry {
+    func: Box<dyn Fn(&State) -> i32 + Send + Sync>,
+    state_ptr: *mut ffi::LuauState,
+}
+
+// Safety: RustFuncEntry is Send+Sync because:
+// - func is Box<dyn Fn + Send + Sync>
+// - state_ptr is only used for comparison, not dereferenced across threads
+unsafe impl Send for RustFuncEntry {}
+unsafe impl Sync for RustFuncEntry {}
 
 /// Error types returned by Luau operations.
 #[derive(Error, Debug, Clone)]
@@ -87,6 +106,8 @@ pub enum OptLevel {
 /// Represents a Luau virtual machine state.
 pub struct State {
     ptr: *mut ffi::LuauState,
+    func_ids: Vec<u64>,
+    callback_set: AtomicBool,
 }
 
 // State is Send but not Sync (not thread-safe)
@@ -99,7 +120,20 @@ impl State {
         if ptr.is_null() {
             return Err(Error::Memory);
         }
-        Ok(State { ptr })
+        
+        // Initialize global registry if needed
+        {
+            let mut guard = GLOBAL_FUNCS.write().unwrap();
+            if guard.is_none() {
+                *guard = Some(HashMap::new());
+            }
+        }
+        
+        Ok(State {
+            ptr,
+            func_ids: Vec::new(),
+            callback_set: AtomicBool::new(false),
+        })
     }
 
     /// Open standard libraries.
@@ -378,6 +412,67 @@ impl State {
         unsafe { CStr::from_ptr(v) }.to_str().unwrap_or("unknown")
     }
 
+    // Function registration
+
+    /// Register a Rust function as a global Luau function.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use giztoy_luau::State;
+    ///
+    /// let state = State::new().unwrap();
+    /// state.register_func("add", |s| {
+    ///     let a = s.to_number(1);
+    ///     let b = s.to_number(2);
+    ///     s.push_number(a + b);
+    ///     1
+    /// }).unwrap();
+    /// state.do_string("result = add(1, 2)").unwrap();
+    /// ```
+    pub fn register_func<F>(&mut self, name: &str, func: F) -> Result<()>
+    where
+        F: Fn(&State) -> i32 + Send + Sync + 'static,
+    {
+        // Ensure callback is set
+        if self.callback_set.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_ok() {
+            unsafe {
+                ffi::luau_setexternalcallback(self.ptr, Some(rust_external_callback));
+            }
+        }
+
+        // Generate unique ID
+        let id = GLOBAL_FUNC_NEXT_ID.fetch_add(1, Ordering::SeqCst);
+
+        // Register in global map
+        {
+            let mut guard = GLOBAL_FUNCS.write().map_err(|_| Error::Invalid)?;
+            if let Some(map) = guard.as_mut() {
+                map.insert(id, RustFuncEntry {
+                    func: Box::new(func),
+                    state_ptr: self.ptr,
+                });
+            }
+        }
+
+        // Track for cleanup
+        self.func_ids.push(id);
+
+        // Register in Luau
+        let c_name = CString::new(name).map_err(|_| Error::Invalid)?;
+        unsafe {
+            ffi::luau_registerexternal(self.ptr, c_name.as_ptr(), id);
+        }
+
+        Ok(())
+    }
+
+    /// Unregister a function by name.
+    pub fn unregister_func(&self, name: &str) -> Result<()> {
+        self.push_nil();
+        self.set_global(name)
+    }
+
     // Helper methods
 
     fn check_error(&self, result: i32) -> Result<()> {
@@ -404,9 +499,76 @@ impl State {
 
 impl Drop for State {
     fn drop(&mut self) {
+        // Clean up registered functions
+        if !self.func_ids.is_empty() {
+            if let Ok(mut guard) = GLOBAL_FUNCS.write() {
+                if let Some(map) = guard.as_mut() {
+                    for id in &self.func_ids {
+                        map.remove(id);
+                    }
+                }
+            }
+        }
+        
         if !self.ptr.is_null() {
             unsafe { ffi::luau_close(self.ptr) };
             self.ptr = std::ptr::null_mut();
+        }
+    }
+}
+
+// External callback function called from C when Luau invokes a registered Rust function
+extern "C" fn rust_external_callback(l: *mut ffi::LuauState, callback_id: u64) -> i32 {
+    // Look up the function
+    let func_result = {
+        let guard = match GLOBAL_FUNCS.read() {
+            Ok(g) => g,
+            Err(_) => return 0,
+        };
+        
+        match guard.as_ref() {
+            Some(map) => map.get(&callback_id).map(|entry| {
+                // Create a temporary State wrapper for the callback
+                // Note: we don't track func_ids here since this is temporary
+                (entry.func.as_ref() as *const dyn Fn(&State) -> i32, entry.state_ptr)
+            }),
+            None => None,
+        }
+    };
+    
+    let (func_ptr, state_ptr) = match func_result {
+        Some(x) => x,
+        None => return 0,
+    };
+    
+    // Verify the state pointer matches
+    if state_ptr != l {
+        return 0;
+    }
+    
+    // Create temporary State for callback (without ownership)
+    let temp_state = State {
+        ptr: l,
+        func_ids: Vec::new(),
+        callback_set: AtomicBool::new(true),
+    };
+    
+    // Call the function with panic recovery
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let func = unsafe { &*func_ptr };
+        func(&temp_state)
+    }));
+    
+    // Forget the temp state so it doesn't clean up
+    std::mem::forget(temp_state);
+    
+    match result {
+        Ok(n) => n,
+        Err(_) => {
+            // Panic occurred - push error string
+            let msg = CString::new("Rust function panicked").unwrap();
+            unsafe { ffi::luau_pushlstring(l, msg.as_ptr(), msg.as_bytes().len()) };
+            0
         }
     }
 }

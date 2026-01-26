@@ -472,3 +472,583 @@ fn test_coroutine() {
     state.get_global("d").unwrap();
     assert_eq!(state.to_string(-1), Some("done".to_string()));
 }
+
+// =============================================================================
+// RegisterFunc Tests
+// =============================================================================
+
+#[test]
+fn test_register_func_simple() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("get_answer", |s| {
+            s.push_number(42.0);
+            1
+        })
+        .unwrap();
+
+    state.do_string("result = get_answer()").unwrap();
+
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 42.0);
+}
+
+#[test]
+fn test_register_func_with_args() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("add", |s| {
+            let a = s.to_number(1);
+            let b = s.to_number(2);
+            s.push_number(a + b);
+            1
+        })
+        .unwrap();
+
+    state.do_string("result = add(10, 20)").unwrap();
+
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 30.0);
+}
+
+#[test]
+fn test_register_func_multi_return() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("minmax", |s| {
+            let a = s.to_number(1);
+            let b = s.to_number(2);
+            if a < b {
+                s.push_number(a);
+                s.push_number(b);
+            } else {
+                s.push_number(b);
+                s.push_number(a);
+            }
+            2
+        })
+        .unwrap();
+
+    state.do_string("min, max = minmax(30, 10)").unwrap();
+
+    state.get_global("min").unwrap();
+    assert_eq!(state.to_number(-1), 10.0);
+    state.pop(1);
+
+    state.get_global("max").unwrap();
+    assert_eq!(state.to_number(-1), 30.0);
+}
+
+#[test]
+fn test_register_func_string_args() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("greet", |s| {
+            let name = s.to_string(1).unwrap_or_default();
+            let greeting = format!("Hello, {}!", name);
+            s.push_string(&greeting).unwrap();
+            1
+        })
+        .unwrap();
+
+    state.do_string(r#"result = greet("World")"#).unwrap();
+
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_string(-1), Some("Hello, World!".to_string()));
+}
+
+#[test]
+fn test_register_func_overwrite() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("get_value", |s| {
+            s.push_number(1.0);
+            1
+        })
+        .unwrap();
+
+    state
+        .register_func("get_value", |s| {
+            s.push_number(2.0);
+            1
+        })
+        .unwrap();
+
+    state.do_string("result = get_value()").unwrap();
+
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 2.0);
+}
+
+#[test]
+fn test_register_func_multiple() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("inc", |s| {
+            s.push_number(s.to_number(1) + 1.0);
+            1
+        })
+        .unwrap();
+
+    state
+        .register_func("dec", |s| {
+            s.push_number(s.to_number(1) - 1.0);
+            1
+        })
+        .unwrap();
+
+    state
+        .register_func("double", |s| {
+            s.push_number(s.to_number(1) * 2.0);
+            1
+        })
+        .unwrap();
+
+    // dec(10) = 9, inc(9) = 10, double(10) = 20
+    state.do_string("result = double(inc(dec(10)))").unwrap();
+
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 20.0);
+}
+
+#[test]
+fn test_register_func_cleanup_on_drop() {
+    // Create and drop a state with registered functions
+    {
+        let mut state = State::new().unwrap();
+        for i in 0..100 {
+            state
+                .register_func(&format!("func{}", i), |_| 0)
+                .unwrap();
+        }
+    }
+
+    // Create another state - should work fine
+    let mut state2 = State::new().unwrap();
+    state2.register_func("test", |_| 0).unwrap();
+}
+
+#[test]
+fn test_unregister_func() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("my_func", |s| {
+            s.push_number(42.0);
+            1
+        })
+        .unwrap();
+
+    // Verify it works
+    state.do_string("result = my_func()").unwrap();
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 42.0);
+    state.pop(1);
+
+    // Unregister
+    state.unregister_func("my_func").unwrap();
+
+    // Verify it's nil
+    state.get_global("my_func").unwrap();
+    assert!(state.is_nil(-1));
+}
+
+// =============================================================================
+// Table Argument Tests
+// =============================================================================
+
+#[test]
+fn test_register_func_table_arg() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("sum_table", |s| {
+            if !s.is_table(1) {
+                s.push_number(0.0);
+                return 1;
+            }
+
+            let mut sum = 0.0;
+            s.push_nil();
+            while s.next(1) {
+                if s.is_number(-1) {
+                    sum += s.to_number(-1);
+                }
+                s.pop(1);
+            }
+            s.push_number(sum);
+            1
+        })
+        .unwrap();
+
+    state.do_string("result = sum_table({10, 20, 30, 40})").unwrap();
+
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 100.0);
+}
+
+// =============================================================================
+// Memory Management Tests
+// =============================================================================
+
+#[test]
+fn test_memory_register_many() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    // Register 1000 functions
+    for i in 0..1000 {
+        let name = format!("func_{}", i);
+        let val = i as f64;
+        state
+            .register_func(&name, move |s| {
+                s.push_number(val);
+                1
+            })
+            .unwrap();
+    }
+
+    // Verify some functions work
+    state.do_string("result = func_999()").unwrap();
+
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 999.0);
+}
+
+#[test]
+fn test_memory_call_loop() {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Arc;
+
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    let counter = Arc::new(AtomicU64::new(0));
+    let counter_clone = counter.clone();
+
+    state
+        .register_func("increment", move |s| {
+            let val = counter_clone.fetch_add(1, Ordering::SeqCst) + 1;
+            s.push_number(val as f64);
+            1
+        })
+        .unwrap();
+
+    // Call 10000 times
+    state
+        .do_string(
+            r#"
+        for i = 1, 10000 do
+            increment()
+        end
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(counter.load(Ordering::SeqCst), 10000);
+}
+
+#[test]
+fn test_memory_string_args() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    let total_len = Arc::new(AtomicUsize::new(0));
+    let total_len_clone = total_len.clone();
+
+    state
+        .register_func("process_string", move |s| {
+            if let Some(str) = s.to_string(1) {
+                total_len_clone.fetch_add(str.len(), Ordering::SeqCst);
+                s.push_number(str.len() as f64);
+            } else {
+                s.push_number(0.0);
+            }
+            1
+        })
+        .unwrap();
+
+    // Pass large strings many times
+    state
+        .do_string(
+            r#"
+        local bigStr = string.rep("x", 10000)
+        for i = 1, 100 do
+            process_string(bigStr)
+        end
+    "#,
+        )
+        .unwrap();
+
+    assert_eq!(total_len.load(Ordering::SeqCst), 10000 * 100);
+}
+
+#[test]
+fn test_memory_state_close() {
+    // Create many states, register functions, drop them
+    for _ in 0..100 {
+        let mut state = State::new().unwrap();
+        for j in 0..100 {
+            let name = format!("func_{}", j);
+            state.register_func(&name, |_| 0).unwrap();
+        }
+        drop(state);
+    }
+
+    // Verify we can still create new states
+    let mut state = State::new().unwrap();
+    state
+        .register_func("test", |s| {
+            s.push_number(42.0);
+            1
+        })
+        .unwrap();
+}
+
+#[test]
+fn test_memory_gc_interaction() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("create_tables", |s| {
+            s.check_stack(100);
+            for _ in 0..100 {
+                s.new_table();
+                s.pop(1);
+            }
+            0
+        })
+        .unwrap();
+
+    let initial_mem = state.memory_usage();
+
+    // Call many times with GC
+    for i in 0..100 {
+        state.do_string("create_tables()").unwrap();
+        if i % 10 == 0 {
+            state.gc();
+        }
+    }
+
+    let final_mem = state.memory_usage();
+
+    // Memory should not grow unboundedly
+    assert!(final_mem < initial_mem * 3, "Memory grew too much");
+}
+
+// =============================================================================
+// Concurrency Tests (using threads)
+// =============================================================================
+
+#[test]
+fn test_concurrent_multi_state() {
+    use std::thread;
+
+    let handles: Vec<_> = (0..10)
+        .map(|idx| {
+            thread::spawn(move || {
+                let mut state = State::new().unwrap();
+                state.open_libs();
+
+                // Register functions
+                for j in 0..100 {
+                    let name = format!("func_{}", j);
+                    let val = j as f64;
+                    state
+                        .register_func(&name, move |s| {
+                            s.push_number(val);
+                            1
+                        })
+                        .unwrap();
+                }
+
+                // Call a function
+                state.do_string("result = func_50()").unwrap();
+                state.get_global("result").unwrap();
+                let result = state.to_number(-1);
+                assert_eq!(result, 50.0, "Thread {} got wrong result", idx);
+            })
+        })
+        .collect();
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
+#[test]
+fn test_concurrent_state_creation_destruction() {
+    use std::thread;
+
+    let handles: Vec<_> = (0..20)
+        .map(|_| {
+            thread::spawn(|| {
+                for _ in 0..50 {
+                    let mut state = State::new().unwrap();
+                    state
+                        .register_func("test", |s| {
+                            s.push_number(42.0);
+                            1
+                        })
+                        .unwrap();
+                    drop(state);
+                }
+            })
+        })
+        .collect();
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+}
+
+#[test]
+fn test_concurrent_registry_access() {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Arc;
+    use std::thread;
+
+    let total_calls = Arc::new(AtomicU64::new(0));
+
+    let handles: Vec<_> = (0..10)
+        .map(|_| {
+            let total_calls = total_calls.clone();
+            thread::spawn(move || {
+                let mut state = State::new().unwrap();
+                state.open_libs();
+
+                let counter = total_calls.clone();
+                state
+                    .register_func("increment", move |s| {
+                        counter.fetch_add(1, Ordering::SeqCst);
+                        s.push_number(1.0);
+                        1
+                    })
+                    .unwrap();
+
+                // Call 1000 times
+                for _ in 0..1000 {
+                    state.do_string("increment()").unwrap();
+                }
+            })
+        })
+        .collect();
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    // 10 threads * 1000 calls = 10000
+    assert_eq!(total_calls.load(Ordering::SeqCst), 10000);
+}
+
+// =============================================================================
+// Edge Case Tests
+// =============================================================================
+
+#[test]
+fn test_register_func_empty_name() {
+    let mut state = State::new().unwrap();
+
+    // Empty name - just verify it doesn't crash
+    let _ = state.register_func("", |s| {
+        s.push_number(42.0);
+        1
+    });
+}
+
+#[test]
+fn test_register_func_special_chars_name() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    // Underscore is valid
+    state
+        .register_func("_my_func", |s| {
+            s.push_number(1.0);
+            1
+        })
+        .unwrap();
+
+    state.do_string("result = _my_func()").unwrap();
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 1.0);
+}
+
+#[test]
+fn test_register_func_unicode_name() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    // Register with Unicode name
+    state
+        .register_func("计算", |s| {
+            let a = s.to_number(1);
+            let b = s.to_number(2);
+            s.push_number(a + b);
+            1
+        })
+        .unwrap();
+
+    // Access via _G["计算"]
+    state.do_string(r#"result = _G["计算"](10, 20)"#).unwrap();
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 30.0);
+}
+
+#[test]
+fn test_register_func_call_unregistered() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    // Calling unregistered function should error
+    let result = state.do_string("result = nonExistentFunc()");
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_register_func_deep_recursion() {
+    let mut state = State::new().unwrap();
+    state.open_libs();
+
+    state
+        .register_func("countdown", |s| {
+            let n = s.to_number(1) as i32;
+            if n <= 0 {
+                s.push_number(0.0);
+                return 1;
+            }
+            // Call Luau function recursively
+            s.get_global("countdown").unwrap();
+            s.push_number((n - 1) as f64);
+            s.pcall(1, 1).unwrap();
+            let result = s.to_number(-1);
+            s.pop(1);
+            s.push_number(result + 1.0);
+            1
+        })
+        .unwrap();
+
+    // Test with moderate depth
+    state.do_string("result = countdown(100)").unwrap();
+    state.get_global("result").unwrap();
+    assert_eq!(state.to_number(-1), 100.0);
+}

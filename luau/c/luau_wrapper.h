@@ -51,6 +51,16 @@ typedef enum {
 /* C function callback type */
 typedef int (*LuauCFunction)(LuauState* L);
 
+/**
+ * External callback type for Go/Rust integration.
+ * Called when a registered function is invoked from Luau.
+ *
+ * @param L The Luau state
+ * @param callback_id The unique ID identifying which function to call
+ * @return Number of return values pushed onto the stack
+ */
+typedef int (*LuauExternalCallback)(LuauState* L, uint64_t callback_id);
+
 /* ==========================================================================
  * State Management
  * ========================================================================== */
@@ -404,6 +414,45 @@ void luau_register(LuauState* L, const LuauReg* funcs);
  * Register C functions into a table at stack top.
  */
 void luau_setfuncs(LuauState* L, const LuauReg* funcs);
+
+/**
+ * Set the external callback handler for this state.
+ * This callback will be invoked when functions registered with
+ * luau_pushexternalfunc are called from Luau.
+ *
+ * @param L The Luau state
+ * @param callback The callback function (NULL to disable)
+ */
+void luau_setexternalcallback(LuauState* L, LuauExternalCallback callback);
+
+/**
+ * Push an external function onto the stack.
+ * When called from Luau, this will invoke the external callback
+ * with the given callback_id.
+ *
+ * @param L The Luau state
+ * @param callback_id Unique ID to identify this function
+ * @param debugname Name for debugging (can be NULL)
+ */
+void luau_pushexternalfunc(LuauState* L, uint64_t callback_id, const char* debugname);
+
+/**
+ * Register an external function as a global.
+ *
+ * @param L The Luau state
+ * @param name Global name for the function
+ * @param callback_id Unique ID to identify this function
+ */
+void luau_registerexternal(LuauState* L, const char* name, uint64_t callback_id);
+
+/**
+ * Get the callback ID from an upvalue (for use in external callbacks).
+ * Call this from within an external callback to get the callback_id.
+ *
+ * @param L The Luau state
+ * @return The callback ID
+ */
+uint64_t luau_getcallbackid(LuauState* L);
 
 /* ==========================================================================
  * Error Handling

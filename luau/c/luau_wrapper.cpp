@@ -16,6 +16,8 @@
 struct LuauState {
     lua_State* L;
     std::string lastError;
+    LuauExternalCallback externalCallback;
+    uint64_t currentCallbackId;  // Set during external callback execution
 };
 
 /* ==========================================================================
@@ -33,6 +35,13 @@ LuauState* luau_new(void) {
         delete state;
         return nullptr;
     }
+
+    state->externalCallback = nullptr;
+    state->currentCallbackId = 0;
+
+    // Store the LuauState pointer in registry for callbacks
+    lua_pushlightuserdata(state->L, state);
+    lua_setfield(state->L, LUA_REGISTRYINDEX, "_luau_state");
 
     return state;
 }
@@ -369,10 +378,6 @@ static int cfunc_wrapper(lua_State* L) {
 void luau_pushcfunction(LuauState* L, LuauCFunction fn, const char* debugname) {
     if (!L || !L->L || !fn) return;
 
-    // Store the LuauState pointer in registry for C function callbacks
-    lua_pushlightuserdata(L->L, L);
-    lua_setfield(L->L, LUA_REGISTRYINDEX, "_luau_state");
-
     // Push the function pointer as light userdata (upvalue)
     lua_pushlightuserdata(L->L, reinterpret_cast<void*>(fn));
     lua_pushcclosure(L->L, cfunc_wrapper, debugname, 1);
@@ -513,6 +518,69 @@ void luau_setfuncs(LuauState* L, const LuauReg* funcs) {
         luau_pushcfunction(L, f->func, f->name);
         lua_setfield(L->L, -2, f->name);
     }
+}
+
+/* ==========================================================================
+ * External Callback Support (Go/Rust integration)
+ * ========================================================================== */
+
+void luau_setexternalcallback(LuauState* L, LuauExternalCallback callback) {
+    if (!L) return;
+    L->externalCallback = callback;
+}
+
+/* Helper: get LuauState from lua_State registry */
+static LuauState* get_luau_state(lua_State* L) {
+    lua_getfield(L, LUA_REGISTRYINDEX, "_luau_state");
+    LuauState* state = static_cast<LuauState*>(lua_touserdata(L, -1));
+    lua_pop(L, 1);
+    return state;
+}
+
+/* External function wrapper - called when Luau invokes a registered external function */
+static int external_func_wrapper(lua_State* L) {
+    LuauState* state = get_luau_state(L);
+    if (!state || !state->externalCallback) {
+        return 0;
+    }
+
+    // Get callback_id from upvalues (stored as two 32-bit integers for portability)
+    uint32_t id_low = static_cast<uint32_t>(lua_tointeger(L, lua_upvalueindex(1)));
+    uint32_t id_high = static_cast<uint32_t>(lua_tointeger(L, lua_upvalueindex(2)));
+    uint64_t callback_id = (static_cast<uint64_t>(id_high) << 32) | id_low;
+
+    // Store current callback ID for luau_getcallbackid
+    state->currentCallbackId = callback_id;
+
+    // Call the external callback
+    int result = state->externalCallback(state, callback_id);
+
+    state->currentCallbackId = 0;
+    return result;
+}
+
+void luau_pushexternalfunc(LuauState* L, uint64_t callback_id, const char* debugname) {
+    if (!L || !L->L) return;
+
+    // Push callback_id as two integers (for 32-bit compatibility)
+    uint32_t id_low = static_cast<uint32_t>(callback_id & 0xFFFFFFFF);
+    uint32_t id_high = static_cast<uint32_t>(callback_id >> 32);
+    
+    lua_pushinteger(L->L, static_cast<int>(id_low));
+    lua_pushinteger(L->L, static_cast<int>(id_high));
+    lua_pushcclosure(L->L, external_func_wrapper, debugname, 2);
+}
+
+void luau_registerexternal(LuauState* L, const char* name, uint64_t callback_id) {
+    if (!L || !L->L || !name) return;
+
+    luau_pushexternalfunc(L, callback_id, name);
+    lua_setglobal(L->L, name);
+}
+
+uint64_t luau_getcallbackid(LuauState* L) {
+    if (!L) return 0;
+    return L->currentCallbackId;
 }
 
 /* ==========================================================================

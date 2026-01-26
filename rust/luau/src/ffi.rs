@@ -97,4 +97,13 @@ extern "C" {
     // Error handling
     pub fn luau_clearerror(L: *mut LuauState);
     pub fn luau_geterror(L: *mut LuauState) -> *const c_char;
+
+    // External callback support
+    pub fn luau_setexternalcallback(
+        L: *mut LuauState,
+        callback: Option<extern "C" fn(*mut LuauState, u64) -> c_int>,
+    );
+    pub fn luau_pushexternalfunc(L: *mut LuauState, callback_id: u64, debugname: *const c_char);
+    pub fn luau_registerexternal(L: *mut LuauState, name: *const c_char, callback_id: u64);
+    pub fn luau_getcallbackid(L: *mut LuauState) -> u64;
 }

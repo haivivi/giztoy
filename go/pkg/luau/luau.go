@@ -4,11 +4,16 @@ package luau
 #cgo CXXFLAGS: -std=c++17 -fno-exceptions -fno-rtti
 #include "luau_wrapper.h"
 #include <stdlib.h>
+
+// Forward declaration for Go callback
+extern int goExternalCallback(LuauState* L, uint64_t callback_id);
 */
 import "C"
 import (
 	"errors"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -74,13 +79,29 @@ const (
 )
 
 // GoFunc is the signature for Go functions callable from Luau.
+// The function receives the Luau state and returns the number of return values
+// pushed onto the stack.
 type GoFunc func(*State) int
+
+// Global function registry for all States
+var (
+	globalFuncsMu    sync.RWMutex
+	globalFuncs      = make(map[uint64]goFuncEntry)
+	globalFuncNextID uint64
+)
+
+// goFuncEntry stores a registered function and its associated state
+type goFuncEntry struct {
+	fn    GoFunc
+	state *State
+}
 
 // State represents a Luau virtual machine state.
 type State struct {
-	L       *C.LuauState
-	funcs   map[uintptr]GoFunc
-	funcIdx uintptr
+	L           *C.LuauState
+	funcIDs     []uint64 // Track registered function IDs for cleanup
+	funcIDsMu   sync.Mutex
+	callbackSet atomic.Bool // Whether external callback is set
 }
 
 // New creates a new Luau state.
@@ -91,8 +112,8 @@ func New() (*State, error) {
 	}
 
 	s := &State{
-		L:     L,
-		funcs: make(map[uintptr]GoFunc),
+		L:       L,
+		funcIDs: make([]uint64, 0),
 	}
 
 	// Note: We intentionally don't set a finalizer here because:
@@ -108,7 +129,20 @@ func (s *State) Close() {
 		C.luau_close(s.L)
 		s.L = nil
 	}
-	s.funcs = nil
+
+	// Clean up registered functions from global registry
+	s.funcIDsMu.Lock()
+	funcIDs := s.funcIDs
+	s.funcIDs = nil
+	s.funcIDsMu.Unlock()
+
+	if len(funcIDs) > 0 {
+		globalFuncsMu.Lock()
+		for _, id := range funcIDs {
+			delete(globalFuncs, id)
+		}
+		globalFuncsMu.Unlock()
+	}
 }
 
 // OpenLibs opens the standard Luau libraries.
@@ -479,25 +513,103 @@ func (s *State) SetGlobal(name string) {
 // Function Registration
 // =============================================================================
 
-// goFuncWrapper is the CGO callback for Go functions.
+// goExternalCallback is the CGO callback invoked when Luau calls a registered Go function.
+// This function is called from C and looks up the actual Go function to execute.
 //
-//export goFuncWrapper
-func goFuncWrapper(L *C.LuauState, idx C.uintptr_t) C.int {
-	// This is a placeholder - actual implementation requires more complex setup
-	return 0
+//export goExternalCallback
+func goExternalCallback(L *C.LuauState, callbackID C.uint64_t) C.int {
+	id := uint64(callbackID)
+
+	// Look up the function in the global registry
+	globalFuncsMu.RLock()
+	entry, ok := globalFuncs[id]
+	globalFuncsMu.RUnlock()
+
+	if !ok || entry.fn == nil || entry.state == nil {
+		return 0
+	}
+
+	// Call the Go function with panic recovery
+	var result int
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// Push error message to Luau
+				errMsg := fmt.Sprintf("Go function panicked: %v", r)
+				cstr := C.CString(errMsg)
+				C.luau_pushstring(L, cstr)
+				C.free(unsafe.Pointer(cstr))
+				// Note: We can't call lua_error here safely from a callback,
+				// so we just return 0 and let the caller handle it
+				result = 0
+			}
+		}()
+		result = entry.fn(entry.state)
+	}()
+
+	return C.int(result)
+}
+
+// ensureCallbackSet ensures the external callback is registered for this state.
+func (s *State) ensureCallbackSet() {
+	if s.callbackSet.CompareAndSwap(false, true) {
+		C.luau_setexternalcallback(s.L, C.LuauExternalCallback(C.goExternalCallback))
+	}
 }
 
 // RegisterFunc registers a Go function as a global Luau function.
-// Note: This is a simplified implementation. Full implementation requires
-// more sophisticated callback handling.
-func (s *State) RegisterFunc(name string, fn GoFunc) {
-	// Store the function
-	s.funcIdx++
-	s.funcs[s.funcIdx] = fn
+// The function can be called from Luau scripts by name.
+//
+// Example:
+//
+//	state.RegisterFunc("add", func(L *luau.State) int {
+//	    a := L.ToNumber(1)
+//	    b := L.ToNumber(2)
+//	    L.PushNumber(a + b)
+//	    return 1
+//	})
+//	state.DoString("print(add(1, 2))") // prints 3
+func (s *State) RegisterFunc(name string, fn GoFunc) error {
+	if s.L == nil {
+		return ErrInvalid
+	}
+	if fn == nil {
+		return errors.New("luau: cannot register nil function")
+	}
 
-	// For now, we use a simple approach that stores functions in a registry
-	// A full implementation would use C function callbacks
-	// This is left as a TODO for production use
+	// Ensure the external callback is set
+	s.ensureCallbackSet()
+
+	// Generate a unique ID for this function
+	id := atomic.AddUint64(&globalFuncNextID, 1)
+
+	// Register in global map
+	globalFuncsMu.Lock()
+	globalFuncs[id] = goFuncEntry{fn: fn, state: s}
+	globalFuncsMu.Unlock()
+
+	// Track for cleanup
+	s.funcIDsMu.Lock()
+	s.funcIDs = append(s.funcIDs, id)
+	s.funcIDsMu.Unlock()
+
+	// Register in Luau
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	C.luau_registerexternal(s.L, cname, C.uint64_t(id))
+
+	return nil
+}
+
+// UnregisterFunc removes a previously registered function by name.
+// Note: This removes the global from Luau but doesn't free the Go function
+// from memory until the State is closed.
+func (s *State) UnregisterFunc(name string) {
+	if s.L == nil {
+		return
+	}
+	s.PushNil()
+	s.SetGlobal(name)
 }
 
 // =============================================================================
