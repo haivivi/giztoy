@@ -14,16 +14,16 @@ _YQ_SHA256 = {
 
 def _yq_repo_impl(ctx):
     """Implementation of yq repository rule."""
-    os = ctx.os.name
+    os = ctx.os.name.lower()
     arch = ctx.os.arch
 
-    # Map OS names
-    if os == "mac os x" or os.startswith("darwin"):
+    # Map OS names (handle various representations)
+    if os in ("mac os x", "darwin", "macos") or os.startswith("darwin"):
         os_name = "darwin"
-    elif os.startswith("linux"):
+    elif os in ("linux",) or os.startswith("linux"):
         os_name = "linux"
     else:
-        fail("Unsupported OS: " + os)
+        fail("Unsupported OS: '{}'. Supported: darwin, linux".format(os))
 
     # Map architecture
     if arch == "amd64" or arch == "x86_64":
@@ -35,6 +35,10 @@ def _yq_repo_impl(ctx):
 
     platform = "{}_{}".format(os_name, arch_name)
 
+    # Verify platform is supported
+    if platform not in _YQ_SHA256:
+        fail("Unsupported platform: {} (no SHA256 checksum available)".format(platform))
+
     # Download yq
     url = "https://github.com/mikefarah/yq/releases/download/v{}/yq_{}_{}.tar.gz".format(
         _YQ_VERSION,
@@ -44,7 +48,7 @@ def _yq_repo_impl(ctx):
 
     ctx.download_and_extract(
         url = url,
-        sha256 = _YQ_SHA256.get(platform, ""),
+        sha256 = _YQ_SHA256[platform],
         stripPrefix = "",
     )
 

@@ -14,18 +14,18 @@ _MDBOOK_SHA256 = {
 
 def _mdbook_repo_impl(ctx):
     """Implementation of mdbook repository rule."""
-    os = ctx.os.name
+    os = ctx.os.name.lower()
     arch = ctx.os.arch
 
-    # Map OS names
-    if os == "mac os x" or os.startswith("darwin"):
+    # Map OS names (handle various representations)
+    if os in ("mac os x", "darwin", "macos") or os.startswith("darwin"):
         os_name = "apple-darwin"
         os_key = "darwin"
-    elif os.startswith("linux"):
+    elif os in ("linux",) or os.startswith("linux"):
         os_name = "unknown-linux-gnu"
         os_key = "linux"
     else:
-        fail("Unsupported OS: " + os)
+        fail("Unsupported OS: '{}'. Supported: darwin, linux".format(os))
 
     # Map architecture
     if arch == "amd64" or arch == "x86_64":
@@ -40,6 +40,10 @@ def _mdbook_repo_impl(ctx):
     platform_key = "{}_{}".format(os_key, arch_key)
     platform = "{}-{}".format(arch_name, os_name)
 
+    # Verify platform is supported
+    if platform_key not in _MDBOOK_SHA256:
+        fail("Unsupported platform: {} (no SHA256 checksum available)".format(platform_key))
+
     # Download mdbook
     url = "https://github.com/rust-lang/mdBook/releases/download/v{}/mdbook-v{}-{}.tar.gz".format(
         _MDBOOK_VERSION,
@@ -49,7 +53,7 @@ def _mdbook_repo_impl(ctx):
 
     ctx.download_and_extract(
         url = url,
-        sha256 = _MDBOOK_SHA256.get(platform_key, ""),
+        sha256 = _MDBOOK_SHA256[platform_key],
         stripPrefix = "",
     )
 
