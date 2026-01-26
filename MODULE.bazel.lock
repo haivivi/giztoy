@@ -335,23 +335,18 @@
     },
     "//:extensions.bzl%mdbook": {
       "general": {
-        "bzlTransitiveDigest": "diDx1QT29qIGSbMij9MIBAEorrmCnHscOlNM3edxYus=",
+        "bzlTransitiveDigest": "Z7dXk46vZNi5aeJuZf6yd2uSbCRM9oUAF6zpkgqFyzA=",
         "usagesDigest": "DeUHDVsKK0O3cQSbS7yWpGHUDQK83IBeIMK+iIC6rHg=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
           "mdbook": {
-            "repoRuleId": "@@//:extensions.bzl%_mdbook_repo",
+            "repoRuleId": "@@//devops/tools/mdbook:defs.bzl%mdbook_repo",
             "attributes": {}
           }
         },
         "recordedRepoMappingEntries": [
-          [
-            "",
-            "bazel_tools",
-            "bazel_tools"
-          ],
           [
             "",
             "gazelle",
@@ -367,23 +362,18 @@
     },
     "//:extensions.bzl%mermaid": {
       "general": {
-        "bzlTransitiveDigest": "diDx1QT29qIGSbMij9MIBAEorrmCnHscOlNM3edxYus=",
+        "bzlTransitiveDigest": "Z7dXk46vZNi5aeJuZf6yd2uSbCRM9oUAF6zpkgqFyzA=",
         "usagesDigest": "YY1DRcld3A8Ca0vM2D3WFmnI8IJH0clI/cr5wFzy4jE=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
           "mermaid": {
-            "repoRuleId": "@@//:extensions.bzl%_mermaid_repo",
+            "repoRuleId": "@@//third_party/mermaidjs:defs.bzl%mermaid_repo",
             "attributes": {}
           }
         },
         "recordedRepoMappingEntries": [
-          [
-            "",
-            "bazel_tools",
-            "bazel_tools"
-          ],
           [
             "",
             "gazelle",
@@ -399,23 +389,18 @@
     },
     "//:extensions.bzl%yq": {
       "general": {
-        "bzlTransitiveDigest": "diDx1QT29qIGSbMij9MIBAEorrmCnHscOlNM3edxYus=",
+        "bzlTransitiveDigest": "Z7dXk46vZNi5aeJuZf6yd2uSbCRM9oUAF6zpkgqFyzA=",
         "usagesDigest": "Fth34LdLVC+iB2NfiJFRWkbRVhRG/rESzqXg9ZHMGME=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
           "yq": {
-            "repoRuleId": "@@//:extensions.bzl%_yq_repo",
+            "repoRuleId": "@@//devops/tools/yq:defs.bzl%yq_repo",
             "attributes": {}
           }
         },
         "recordedRepoMappingEntries": [
-          [
-            "",
-            "bazel_tools",
-            "bazel_tools"
-          ],
           [
             "",
             "gazelle",
