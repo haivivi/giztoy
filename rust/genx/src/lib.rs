@@ -43,6 +43,7 @@
 pub mod context;
 pub mod error;
 pub mod gemini;
+pub mod r#match;
 pub mod openai;
 pub mod stream;
 pub mod tool;

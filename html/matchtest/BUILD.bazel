@@ -1,0 +1,21 @@
+load("@rules_pkg//pkg:mappings.bzl", "pkg_files")
+
+pkg_files(
+    name = "static",
+    srcs = [
+        "index.html",
+        "app.js",
+        "style.css",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "files",
+    srcs = [
+        "index.html",
+        "app.js",
+        "style.css",
+    ],
+    visibility = ["//visibility:public"],
+)

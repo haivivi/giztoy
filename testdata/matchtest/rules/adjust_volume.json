@@ -1,0 +1,48 @@
+{
+  "name": "adjust_device_volume",
+  "vars": {
+    "delta": {
+      "label": "增减量",
+      "type": "int"
+    },
+    "pct": {
+      "label": "百分比",
+      "type": "int"
+    }
+  },
+  "patterns": [
+    ["增大音量", "adjust_device_volume: delta=10"],
+    ["大声点", "adjust_device_volume: delta=10"],
+    ["声音太小了", "adjust_device_volume: delta=10"],
+    ["减小音量", "adjust_device_volume: delta=-10"],
+    ["小声点", "adjust_device_volume: delta=-10"],
+    ["太吵啦", "adjust_device_volume: pct=50"],
+    "调整音量到 [pct]",
+    "调整音量"
+  ],
+  "examples": [
+    ["对话和指令混合时返回匹配的指令", "爱因斯坦，天为什么是蓝色的？调大音量", "adjust_device_volume: delta=10"],
+    ["其他语言翻译为中文然后判断", "Volume up and play a music", "adjust_device_volume: delta=10\nplay_music"]
+  ],
+  "tests": [
+    {"input": "声音太小了", "args": {"delta": "10"}},
+    {"input": "音量调到50", "args": {"pct": "50"}},
+    {"input": "大声点", "args": {"delta": "10"}},
+    {"input": "小声点", "args": {"delta": "-10"}},
+    {"input": "把音量调到80%", "args": {"pct": "80"}},
+    {"input": "把音量调整为百分之百", "args": {"pct": "100"}},
+    {"input": "把音量调到最大", "args": {"pct": "100"}},
+    {"input": "佩奇佩奇，我听不到你的声音", "args": {"delta": "10"}},
+    {"input": "Volume up", "args": {"delta": "10"}},
+    {"input": "Turn down the volume", "args": {"delta": "-10"}},
+    {"input": "Set volume to 50 percent", "args": {"pct": "50"}},
+    {"input": "音量を上げて", "args": {"delta": "10"}},
+    {"input": "音量を下げて", "args": {"delta": "-10"}},
+    {"input": "Sube el volumen", "args": {"delta": "10"}},
+    {"input": "Baja el volumen", "args": {"delta": "-10"}},
+    {"input": "볼륨 올려줘", "args": {"delta": "10"}},
+    {"input": "볼륨 낮춰줘", "args": {"delta": "-10"}},
+    {"input": "Lauter bitte", "args": {"delta": "10"}},
+    {"input": "Leiser bitte", "args": {"delta": "-10"}}
+  ]
+}

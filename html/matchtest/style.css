@@ -1,0 +1,418 @@
+:root {
+    --bg: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-hover: #1c2128;
+    --border: #30363d;
+    --text: #c9d1d9;
+    --text-muted: #8b949e;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --blue: #58a6ff;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 1.5rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+    color: #fff;
+}
+
+.meta {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Status Banner */
+.status-banner {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    display: none;
+}
+
+.status-banner.running {
+    display: block;
+    border-color: var(--blue);
+}
+
+.status-banner.done {
+    display: block;
+    border-color: var(--green);
+}
+
+.status-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.status-running .status-title {
+    color: var(--blue);
+}
+
+.status-done .status-title {
+    color: var(--green);
+}
+
+/* Progress Cards */
+.progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.progress-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.progress-card.running {
+    border-color: var(--blue);
+}
+
+.progress-card.done {
+    border-color: var(--green);
+}
+
+.progress-card.error {
+    border-color: var(--red);
+}
+
+.progress-model {
+    font-weight: 500;
+    color: var(--blue);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.progress-bar-bg {
+    height: 6px;
+    background: var(--bg-secondary);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--blue);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.progress-card.done .progress-bar {
+    background: var(--green);
+}
+
+.progress-stats {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.progress-stats span {
+    margin-right: 0.75rem;
+}
+
+.progress-stats .pass {
+    color: var(--green);
+}
+
+.progress-stats .fail {
+    color: var(--red);
+}
+
+/* Overview Section */
+.overview {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+}
+
+.overview-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.overview-table th,
+.overview-table td {
+    padding: 0.75rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.overview-table th {
+    background: rgba(0, 0, 0, 0.3);
+    font-weight: 500;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.overview-table th:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.overview-table th.sorted-asc::after {
+    content: ' ▲';
+    font-size: 0.65rem;
+}
+
+.overview-table th.sorted-desc::after {
+    content: ' ▼';
+    font-size: 0.65rem;
+}
+
+.overview-table th:first-child {
+    text-align: left;
+}
+
+.overview-table td:first-child {
+    text-align: left;
+    font-weight: 500;
+    color: var(--blue);
+}
+
+.overview-table tr:last-child td {
+    border-bottom: none;
+}
+
+.pass-rate {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.pass-rate.high {
+    color: var(--green);
+}
+
+.pass-rate.mid {
+    color: var(--yellow);
+}
+
+.pass-rate.low {
+    color: var(--red);
+}
+
+.speed {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Results Table */
+.results {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 800px;
+}
+
+.results-table th,
+.results-table td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.results-table td:first-child {
+    vertical-align: top;
+}
+
+.results-table th {
+    background: rgba(0, 0, 0, 0.3);
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.results-table th:first-child {
+    text-align: left;
+    min-width: 300px;
+}
+
+.results-table th:not(:first-child) {
+    text-align: center;
+    min-width: 100px;
+}
+
+.results-table td:not(:first-child) {
+    text-align: center;
+}
+
+.results-table tr:hover td {
+    background: var(--bg-hover);
+}
+
+.results-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Test Case Cell */
+.case-cell {
+    cursor: pointer;
+}
+
+.case-input {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 0.85rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400px;
+}
+
+.case-expected {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.case-expected code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+}
+
+/* Status Icons */
+.status {
+    font-size: 1.1rem;
+    cursor: default;
+}
+
+.status-pass {
+    color: var(--green);
+}
+
+.status-partial {
+    color: var(--yellow);
+}
+
+.status-fail {
+    color: var(--red);
+}
+
+.status-error {
+    color: var(--text-muted);
+}
+
+.status-pending {
+    color: var(--text-muted);
+}
+
+/* Expanded Row Details */
+.detail-row {
+    display: none;
+}
+
+.detail-row.expanded {
+    display: table-row;
+}
+
+.detail-row td {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+}
+
+.detail-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.detail-model {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem;
+}
+
+.detail-model-name {
+    font-weight: 600;
+    color: var(--blue);
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+.detail-item {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.detail-label {
+    color: var(--text-muted);
+}
+
+.detail-value {
+    font-family: 'SF Mono', Consolas, monospace;
+    color: var(--text);
+}
+
+.detail-value.pass {
+    color: var(--green);
+}
+
+.detail-value.fail {
+    color: var(--red);
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.hidden {
+    display: none !important;
+}

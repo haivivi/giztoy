@@ -1,0 +1,210 @@
+package modelloader
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/fs"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/goccy/go-yaml"
+	"github.com/haivivi/giztoy/pkg/genx"
+	"github.com/haivivi/giztoy/pkg/genx/generators"
+	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
+	"google.golang.org/genai"
+)
+
+// Verbose enables request body logging for debugging
+var Verbose bool
+
+type verboseTransport struct {
+	base http.RoundTripper
+}
+
+func (t *verboseTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Body != nil {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		req.Body = io.NopCloser(bytes.NewReader(body))
+
+		// Pretty print JSON
+		var prettyJSON bytes.Buffer
+		if err := json.Indent(&prettyJSON, body, "", "  "); err == nil {
+			fmt.Printf("\n=== REQUEST TO %s ===\n%s\n=== END REQUEST ===\n\n", req.URL, prettyJSON.String())
+		} else {
+			fmt.Printf("\n=== REQUEST TO %s ===\n%s\n=== END REQUEST ===\n\n", req.URL, string(body))
+		}
+	}
+	return t.base.RoundTrip(req)
+}
+
+type ConfigFile struct {
+	Kind    string  `json:"kind" yaml:"kind"`
+	APIKey  string  `json:"api_key" yaml:"api_key"`     // Can be env var name like "$OPENAI_API_KEY" or "${OPENAI_API_KEY}"
+	BaseURL string  `json:"base_url,omitzero" yaml:"base_url,omitzero"`
+	Models  []Entry `json:"models" yaml:"models"`
+}
+
+type Entry struct {
+	Name              string            `json:"name" yaml:"name"`
+	Model             string            `json:"model" yaml:"model"`
+	GenerateParams    *genx.ModelParams `json:"generate_params,omitzero" yaml:"generate_params,omitzero"`
+	InvokeParams      *genx.ModelParams `json:"invoke_params,omitzero" yaml:"invoke_params,omitzero"`
+	SupportJSONOutput bool              `json:"support_json_output,omitzero" yaml:"support_json_output,omitzero"`
+	SupportToolCalls  bool              `json:"support_tool_calls,omitzero" yaml:"support_tool_calls,omitzero"`
+	SupportTextOnly   bool              `json:"support_text_only,omitzero" yaml:"support_text_only,omitzero"`
+	UseSystemRole     bool              `json:"use_system_role,omitzero" yaml:"use_system_role,omitzero"`
+	ExtraFields       map[string]any    `json:"extra_fields,omitzero" yaml:"extra_fields,omitzero"`
+}
+
+// LoadFromDir loads model configs from dir recursively and registers generators.
+// Returns the registered model names.
+func LoadFromDir(dir string) ([]string, error) {
+	var names []string
+
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".json" && ext != ".yaml" && ext != ".yml" {
+			return nil
+		}
+		cfg, err := parseConfig(path)
+		if err != nil {
+			return fmt.Errorf("parse %s: %w", path, err)
+		}
+		fileNames, err := registerConfig(*cfg)
+		if err != nil {
+			return fmt.Errorf("register %s: %w", path, err)
+		}
+		names = append(names, fileNames...)
+		return nil
+	})
+
+	return names, err
+}
+
+func parseConfig(path string) (*ConfigFile, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	ext := strings.ToLower(filepath.Ext(path))
+	var cfg ConfigFile
+	switch ext {
+	case ".json":
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			return nil, err
+		}
+	case ".yaml", ".yml":
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unsupported extension: %s", ext)
+	}
+	return &cfg, nil
+}
+
+func registerConfig(cfg ConfigFile) ([]string, error) {
+	// Expand environment variables in API key
+	cfg.APIKey = expandEnv(cfg.APIKey)
+
+	switch strings.ToLower(cfg.Kind) {
+	case "openai":
+		return registerOpenAI(cfg)
+	case "gemini":
+		return registerGemini(cfg)
+	default:
+		return nil, fmt.Errorf("unknown kind: %s", cfg.Kind)
+	}
+}
+
+// expandEnv expands environment variables in a string.
+// Supports formats: $VAR, ${VAR}, and plain values.
+// If the value starts with $ but the env var is not set, returns empty string.
+func expandEnv(s string) string {
+	if s == "" {
+		return s
+	}
+	// Check if it looks like an env var reference
+	if strings.HasPrefix(s, "$") {
+		return os.ExpandEnv(s)
+	}
+	return s
+}
+
+func registerOpenAI(cfg ConfigFile) ([]string, error) {
+	if cfg.APIKey == "" {
+		return nil, fmt.Errorf("api_key is required for openai kind")
+	}
+	opts := []option.RequestOption{option.WithAPIKey(cfg.APIKey)}
+	if cfg.BaseURL != "" {
+		opts = append(opts, option.WithBaseURL(cfg.BaseURL))
+	}
+	if Verbose {
+		opts = append(opts, option.WithHTTPClient(&http.Client{
+			Transport: &verboseTransport{base: http.DefaultTransport},
+		}))
+	}
+	client := openai.NewClient(opts...)
+
+	var names []string
+	for _, m := range cfg.Models {
+		if m.Name == "" || m.Model == "" {
+			return nil, fmt.Errorf("model entry missing name or model")
+		}
+		generators.Handle(m.Name, &genx.OpenAIGenerator{
+			Client:            &client,
+			Model:             m.Model,
+			GenerateParams:    m.GenerateParams,
+			InvokeParams:      m.InvokeParams,
+			SupportJSONOutput: m.SupportJSONOutput,
+			SupportToolCalls:  m.SupportToolCalls,
+			SupportTextOnly:   m.SupportTextOnly,
+			UseSystemRole:     m.UseSystemRole,
+			ExtraFields:       m.ExtraFields,
+		})
+		names = append(names, m.Name)
+	}
+	return names, nil
+}
+
+func registerGemini(cfg ConfigFile) ([]string, error) {
+	if cfg.APIKey == "" {
+		return nil, fmt.Errorf("api_key is required for gemini kind")
+	}
+	client, err := genai.NewClient(context.Background(), &genai.ClientConfig{
+		APIKey: cfg.APIKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var names []string
+	for _, m := range cfg.Models {
+		if m.Name == "" || m.Model == "" {
+			return nil, fmt.Errorf("model entry missing name or model")
+		}
+		generators.Handle(m.Name, &genx.GeminiGenerator{
+			Client:         client,
+			Model:          m.Model,
+			GenerateParams: m.GenerateParams,
+			InvokeParams:   m.InvokeParams,
+		})
+		names = append(names, m.Name)
+	}
+	return names, nil
+}

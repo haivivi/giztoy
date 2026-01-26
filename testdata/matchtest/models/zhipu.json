@@ -1,0 +1,118 @@
+{
+    "kind": "openai",
+    "api_key": "$ZHIPU_API_KEY",
+    "base_url": "https://open.bigmodel.cn/api/paas/v4",
+    "models": [
+        {
+            "name": "zhipu/glm-4",
+            "model": "glm-4",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "zhipu/glm-4.5",
+            "model": "glm-4.5",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            },
+            "extra_fields": {
+                "thinking": {
+                    "type": "disabled"
+                }
+            }
+        },
+        {
+            "name": "zhipu/glm-4.6",
+            "model": "glm-4.6",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            },
+            "extra_fields": {
+                "thinking": {
+                    "type": "disabled"
+                }
+            }
+        },
+        {
+            "name": "zhipu/glm-4.7",
+            "model": "glm-4.7",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            },
+            "extra_fields": {
+                "thinking": {
+                    "type": "disabled"
+                }
+            }
+        },
+        {
+            "name": "zhipu/glm-4-air",
+            "model": "glm-4-air",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "zhipu/glm-4-flash",
+            "model": "glm-4-flash",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        }
+    ]
+}

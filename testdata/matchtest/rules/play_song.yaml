@@ -1,0 +1,92 @@
+# 播放歌曲规则
+name: play_song
+
+references:
+  song: 歌曲指有歌词的音乐作品
+  language_code: |
+    语言使用 ISO 639-3 编码:
+        - 中文: zho
+        - 粤语: yue
+        - 英文: eng
+        - 阿拉伯语: ara
+        - 俄语: rus
+        - 西班牙语: spa
+        - 法语: fra
+        - 葡萄牙语: por
+        - 德语: deu
+        - 土耳其语: tur
+        - 荷兰语: nld
+        - 乌克兰语: ukr
+        - 越南语: vie
+        - 印尼语: ind
+        - 日语: jpn
+        - 意大利语: ita
+        - 韩语: kor
+        - 泰语: tha
+        - 波兰语: pol
+        - 罗马尼亚语: rom
+        - 希腊语: ell
+        - 捷克语: ces
+        - 芬兰语: fin
+        - 印地语: hin
+
+vars:
+  title: { label: 歌曲名, type: string }
+  artist: { label: 歌手, type: string }
+  album: { label: 专辑名, type: string }
+  subject: { label: 主题, type: string }
+  language: { label: 语言, type: string }
+
+patterns:
+  - 播放歌曲
+  - 我想听歌曲
+  - 我想听 [title]
+  - 我想听 [artist] 的 [title]
+  - 我想听 [artist] 的歌
+  - 我想听 [album] 的 [title]
+  - 我想听 [album] 的歌
+  - 我想听 [artist] 的 [album] 的歌曲
+  - 我想听 [subject] 的歌曲
+  - 我想听一首 [language] 的歌曲
+
+examples:
+  - - 重复的内容只需要生成一次
+    - 千千唱虫儿飞。姐姐，虫儿飞。姐姐跳，虫儿飞。
+    - "play_song: title=虫儿飞"
+  - - 用户指定语言时使用iso639的Part3格式
+    - 我想听一首英语歌。
+    - "play_song: language=eng"
+
+tests:
+  - input: 播放周杰伦的晴天
+    args: { title: 晴天, artist: 周杰伦 }
+  - input: 我想听一首英文歌
+    args: { language: eng }
+  - input: 我想听虫儿飞
+    args: { title: 虫儿飞 }
+  # 英语测试
+  - input: I want to listen to Shape of You
+    args: { title: Shape of You }
+  - input: Play some Taylor Swift songs
+    args: { artist: Taylor Swift }
+  - input: I want to hear Perfect by Ed Sheeran
+    args: { title: Perfect, artist: Ed Sheeran }
+  # 日语测试
+  - input: さくらを聴きたい
+    args: { title: さくら }
+  - input: 宇多田ヒカルの曲を再生して
+    args: { artist: 宇多田ヒカル }
+  # 韩语测试
+  - input: 방탄소년단 노래 들려줘
+    args: { artist: 방탄소년단 }
+  - input: 봄날 듣고 싶어
+    args: { title: 봄날 }
+  # 阿拉伯语测试
+  - input: أريد أن أستمع إلى أغنية حب
+    args: { title: أغنية حب }
+  # 泰语测试
+  - input: เปิดเพลงรักให้ฟังหน่อย
+    args: { title: เพลงรัก }
+  # 越南语测试
+  - input: Tôi muốn nghe bài hát tình yêu
+    args: { title: bài hát tình yêu }

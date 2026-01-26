@@ -8,6 +8,9 @@ module(
 # Skylib (required by gazelle)
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 
+# Package rules (for static files)
+bazel_dep(name = "rules_pkg", version = "1.1.0")
+
 # Go rules
 bazel_dep(name = "rules_go", version = "0.59.0")
 bazel_dep(name = "gazelle", version = "0.47.0")
@@ -68,7 +71,6 @@ use_repo(
     "com_github_charmbracelet_bubbles",
     "com_github_charmbracelet_bubbletea",
     "com_github_charmbracelet_lipgloss",
-    "com_github_eclipse_paho_golang",
     "com_github_goccy_go_yaml",
     "com_github_google_jsonschema_go",
     "com_github_google_uuid",
@@ -76,7 +78,6 @@ use_repo(
     "com_github_gorilla_websocket",
     "com_github_itchyny_gojq",
     "com_github_kaptinlin_jsonrepair",
-    "com_github_mochi_mqtt_server_v2",
     "com_github_openai_openai_go",
     "com_github_pion_rtp",
     "com_github_pion_webrtc_v3",

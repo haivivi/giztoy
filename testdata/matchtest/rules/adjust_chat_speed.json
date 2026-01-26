@@ -1,0 +1,31 @@
+{
+  "name": "adjust_chat_speed",
+  "vars": {
+    "factor": {"label": "倍率", "type": "float"}
+  },
+  "patterns": [
+    ["你可以说慢点么", "adjust_chat_speed: factor=0.8"],
+    ["语速减慢", "adjust_chat_speed: factor=0.8"],
+    ["你可以说快点么", "adjust_chat_speed: factor=1.2"],
+    ["语速加快", "adjust_chat_speed: factor=1.2"],
+    ["说话慢点", "adjust_chat_speed: factor=0.8"],
+    ["你可以说正常速度么", "adjust_chat_speed: factor=1.0"],
+    ["语速正常", "adjust_chat_speed: factor=1.0"]
+  ],
+  "tests": [
+    {"input": "说话慢点", "args": {"factor": "0.8"}},
+    {"input": "语速加快", "args": {"factor": "1.2"}},
+    {"input": "语速正常", "args": {"factor": "1.0"}},
+    {"input": "Speak slower", "args": {"factor": "0.8"}},
+    {"input": "Speak faster", "args": {"factor": "1.2"}},
+    {"input": "Normal speed please", "args": {"factor": "1.0"}},
+    {"input": "もっとゆっくり話して", "args": {"factor": "0.8"}},
+    {"input": "もっと速く話して", "args": {"factor": "1.2"}},
+    {"input": "Habla más lento", "args": {"factor": "0.8"}},
+    {"input": "Habla más rápido", "args": {"factor": "1.2"}},
+    {"input": "천천히 말해줘", "args": {"factor": "0.8"}},
+    {"input": "빨리 말해줘", "args": {"factor": "1.2"}},
+    {"input": "Sprich langsamer", "args": {"factor": "0.8"}},
+    {"input": "Sprich schneller", "args": {"factor": "1.2"}}
+  ]
+}

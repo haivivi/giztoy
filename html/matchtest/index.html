@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Benchmark</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎯 Match Benchmark</h1>
+        <p class="meta" id="meta">- · 0 rules · 0 tests</p>
+
+        <!-- Live Progress Banner -->
+        <div class="status-banner" id="status-banner">
+            <div class="status-title" id="status-title">Running...</div>
+            <div id="status-info"></div>
+            <div class="progress-grid" id="progress-grid"></div>
+        </div>
+
+        <!-- Overview Comparison -->
+        <div class="overview" id="overview-section">
+            <table class="overview-table" id="overview-table">
+                <thead>
+                    <tr>
+                        <th data-col="model" data-type="string">Model</th>
+                        <th data-col="total" data-type="number">Total</th>
+                        <th data-col="pass_rate" data-type="number">Pass Rate</th>
+                        <th data-col="passed" data-type="number">Passed</th>
+                        <th data-col="failed" data-type="number">Failed</th>
+                        <th data-col="errors" data-type="number">Errors</th>
+                        <th data-col="p50" data-type="number">P50</th>
+                        <th data-col="p95" data-type="number">P95</th>
+                        <th data-col="p99" data-type="number">P99</th>
+                    </tr>
+                </thead>
+                <tbody id="overview-body">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend" id="legend">
+            <span class="legend-item"><span class="status status-pass">✓</span> Pass</span>
+            <span class="legend-item"><span class="status status-partial">◐</span> Partial</span>
+            <span class="legend-item"><span class="status status-fail">✗</span> Fail</span>
+            <span class="legend-item"><span class="status status-error">⚠</span> Error</span>
+        </div>
+
+        <!-- Results Table -->
+        <div class="results" id="results-section">
+            <table class="results-table" id="results-table">
+                <thead id="results-thead">
+                    <tr>
+                        <th>Test Case</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

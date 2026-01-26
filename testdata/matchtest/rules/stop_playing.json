@@ -1,0 +1,27 @@
+{
+  "name": "stop_playing",
+  "patterns": [
+    "不想听了",
+    "我不想听了",
+    "停止播放",
+    "暂停播放"
+  ],
+  "examples": [
+    ["停止播放", "停止播放。", "stop_playing"],
+    ["不想听了", "我不想听了", "stop_playing"]
+  ],
+  "tests": [
+    {"input": "停止播放"},
+    {"input": "我不想听了"},
+    {"input": "Stop playing"},
+    {"input": "I don't want to listen anymore"},
+    {"input": "再生を止めて"},
+    {"input": "もう聴きたくない"},
+    {"input": "Para la música"},
+    {"input": "No quiero escuchar más"},
+    {"input": "재생 멈춰"},
+    {"input": "더 이상 듣고 싶지 않아"},
+    {"input": "Stopp die Wiedergabe"},
+    {"input": "Ich möchte nicht mehr hören"}
+  ]
+}

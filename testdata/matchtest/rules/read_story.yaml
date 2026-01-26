@@ -1,0 +1,111 @@
+# 读故事规则
+name: read_story
+
+references:
+  language_code: |
+    语言使用 ISO 639-3 编码:
+        - 中文: zho
+        - 粤语: yue
+        - 英文: eng
+        - 阿拉伯语: ara
+        - 俄语: rus
+        - 西班牙语: spa
+        - 法语: fra
+        - 葡萄牙语: por
+        - 德语: deu
+        - 土耳其语: tur
+        - 荷兰语: nld
+        - 乌克兰语: ukr
+        - 越南语: vie
+        - 印尼语: ind
+        - 日语: jpn
+        - 意大利语: ita
+        - 韩语: kor
+        - 泰语: tha
+        - 波兰语: pol
+        - 罗马尼亚语: rom
+        - 希腊语: ell
+        - 捷克语: ces
+        - 芬兰语: fin
+        - 印地语: hin
+
+vars:
+  title: { label: 故事名, type: string }
+  series: { label: 书名, type: string }
+  subject: { label: 主题, type: string }
+  language: { label: 语言, type: string }
+
+patterns:
+  - 我想听故事
+  - 给我讲个故事
+  - 你会讲故事吗
+  - 我要听 [title] 的故事
+  - 我想听 [title]
+  - 我想听 [language] 的故事
+  - 读一本 [title]
+  - 给我讲个故事吧
+  - 给我讲个 [series] 的故事
+  - 给我讲个 [series] 的 [title] 故事
+  - 给我讲个 [subject] 的故事
+  - 讲一首 [language] 的故事
+
+examples:
+  - - 标点符号有问题的清理后返回
+    - 汪汪队，立大功之。乌龙皇室闹鬼记的故事。
+    - "read_story: series=汪汪队立大功, title=乌龙皇室闹鬼记"
+  - - 可以跳过一些内容去匹配
+    - 小赛，给我讲个60分钟的故事。
+    - read_story
+  - - 返回的故事标题仅包含标题
+    - 我想听红楼梦的故事
+    - "read_story: title=红楼梦"
+  - - 重复超过3遍只返回一个
+    - 给我讲10个故事。
+    - read_story
+
+tests:
+  - input: 给我讲个西游记的故事
+    args: { series: 西游记 }
+  - input: 我想听红楼梦
+    args: { title: 红楼梦 }
+  - input: 给我讲个汪汪队的故事
+    args: { series: 汪汪队 }
+  - input: 我想听英文故事
+    args: { language: eng }
+  - input: 我要听小猪佩奇的故事
+    args: { title: 小猪佩奇 }
+  - input: 给我讲个龟兔赛跑的故事吧！
+    args: { title: 龟兔赛跑 }
+  - input: 给我讲个白雪公主的故事！
+    args: { title: 白雪公主 }
+  - input: 给我讲个长故事吧！
+  # 英语测试
+  - input: Tell me a story
+  - input: I want to hear Snow White
+    args: { title: Snow White }
+  - input: Tell me a Cinderella story
+    args: { title: Cinderella }
+  # 日语测试
+  - input: 物語を聞かせて
+  - input: 白雪姫の話をして
+    args: { title: 白雪姫 }
+  - input: シンデレラを聞きたい
+    args: { title: シンデレラ }
+  # 西班牙语测试
+  - input: Cuéntame un cuento
+  - input: Quiero escuchar Blancanieves
+    args: { title: Blancanieves }
+  - input: Cuéntame la historia de Cenicienta
+    args: { title: Cenicienta }
+  # 韩语测试
+  - input: 이야기 해줘
+  - input: 백설공주 이야기 해줘
+    args: { title: 백설공주 }
+  - input: 신데렐라 듣고 싶어
+    args: { title: 신데렐라 }
+  # 德语测试
+  - input: Erzähl mir eine Geschichte
+  - input: Ich möchte Schneewittchen hören
+    args: { title: Schneewittchen }
+  - input: Erzähl mir die Geschichte von Aschenputtel
+    args: { title: Aschenputtel }

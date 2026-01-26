@@ -22,6 +22,8 @@ anyhow = { workspace = true }
 bytes = { workspace = true }
 reqwest = { workspace = true }
 base64 = { workspace = true }
+minijinja = { workspace = true }
+regex = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

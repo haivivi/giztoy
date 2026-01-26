@@ -1,0 +1,89 @@
+{
+    "kind": "openai",
+    "api_key": "$OPENAI_API_KEY",
+    "base_url": "https://api.openai.com/v1",
+    "models": [
+        {
+            "name": "openai/gpt-4o-mini",
+            "model": "gpt-4o-mini",
+            "support_json_output": true,
+            "support_tool_calls": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "openai/gpt-4.1-mini",
+            "model": "gpt-4.1-mini",
+            "support_json_output": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "openai/gpt-4.1-nano",
+            "model": "gpt-4.1-nano",
+            "support_json_output": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "openai/gpt-5-nano",
+            "model": "gpt-5-nano",
+            "support_json_output": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "openai/gpt-5-mini",
+            "model": "gpt-5-mini",
+            "support_json_output": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        }
+    ]
+}
