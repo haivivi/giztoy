@@ -94,6 +94,18 @@ LuauError luau_dostring(LuauState* L, const char* source, size_t source_len,
         return LUAU_ERR_COMPILE;
     }
 
+    // Check for compile error encoded in bytecode buffer (error marker at first byte)
+    if (bytecode_len > 0 && bytecode[0] == 0) {
+        if (bytecode_len > 1) {
+            // Error message is stored starting at bytecode[1]
+            L->lastError.assign(bytecode + 1, bytecode_len - 1);
+        } else {
+            L->lastError = "Compilation failed";
+        }
+        free(bytecode);
+        return LUAU_ERR_COMPILE;
+    }
+
     // Load the bytecode
     int load_result = luau_load(L->L, chunkname, bytecode, bytecode_len, 0);
     free(bytecode);
@@ -652,9 +664,15 @@ char* luau_dumpstack(LuauState* L) {
         result += "[" + std::to_string(i) + "] ";
         int t = lua_type(L->L, i);
         switch (t) {
-            case LUA_TSTRING:
-                result += "string: \"" + std::string(lua_tostring(L->L, i)) + "\"";
+            case LUA_TSTRING: {
+                const char* str = lua_tostring(L->L, i);
+                result += "string: \"";
+                if (str) {
+                    result += str;
+                }
+                result += "\"";
                 break;
+            }
             case LUA_TBOOLEAN:
                 result += lua_toboolean(L->L, i) ? "boolean: true" : "boolean: false";
                 break;

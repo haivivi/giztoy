@@ -49,7 +49,6 @@ extern "C" {
     pub fn luau_pushvalue(L: *mut LuauState, idx: c_int);
     pub fn luau_insert(L: *mut LuauState, idx: c_int);
     pub fn luau_remove(L: *mut LuauState, idx: c_int);
-    pub fn luau_replace(L: *mut LuauState, idx: c_int);
     pub fn luau_checkstack(L: *mut LuauState, size: c_int) -> c_int;
 
     // Push operations
