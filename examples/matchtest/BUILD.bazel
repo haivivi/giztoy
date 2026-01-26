@@ -97,8 +97,8 @@ sh_binary(
     env = {
         "MATCHTEST_BIN": "$(rootpath //rust/cmd/matchtest)",
         "STATIC_DIR": "html/matchtest",
-        "RULES_DIR": "examples/matchtest/rules",
-        "MODELS_DIR": "examples/matchtest/models",
+        "RULES_DIR": "testdata/matchtest/rules",
+        "MODELS_DIR": "testdata/matchtest/models",
     },
 )
 
@@ -115,19 +115,19 @@ sh_binary(
     env = {
         "MATCHTEST_BIN": "$(rootpath //go/cmd/genx/matchtest)",
         "STATIC_DIR": "html/matchtest",
-        "RULES_DIR": "examples/matchtest/rules",
-        "MODELS_DIR": "examples/matchtest/models",
+        "RULES_DIR": "testdata/matchtest/rules",
+        "MODELS_DIR": "testdata/matchtest/models",
     },
 )
 
-# Test rules
+# Test rules - shared from testdata
 filegroup(
     name = "rules",
-    srcs = glob(["rules/**"]),
+    srcs = ["//testdata/matchtest:rules"],
 )
 
-# Model configs
+# Model configs - shared from testdata
 filegroup(
     name = "models",
-    srcs = glob(["models/**"]),
+    srcs = ["//testdata/matchtest:models"],
 )

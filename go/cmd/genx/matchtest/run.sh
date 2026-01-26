@@ -41,7 +41,8 @@ fi
 SCRIPT_DIR="$PROJECT_ROOT/go/cmd/genx/matchtest"
 BINARY="$PROJECT_ROOT/bazel-bin/go/cmd/genx/matchtest/matchtest_/matchtest"
 BAZEL_TARGET="//go/cmd/genx/matchtest"
-DEFAULT_MODELS_DIR="$SCRIPT_DIR/models"
+DEFAULT_RULES_DIR="$PROJECT_ROOT/testdata/matchtest/rules"
+DEFAULT_MODELS_DIR="$PROJECT_ROOT/testdata/matchtest/models"
 
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -104,8 +105,8 @@ show_help() {
     echo "  -model all                     All registered models"
     echo ""
     echo "Options:"
-    echo "  -models <dir>                  Models config directory (default: ./models)"
-    echo "  -rules <dir>                   Rules directory (default: embedded)"
+    echo "  -rules <dir>                   Rules directory (default: testdata/matchtest/rules)"
+    echo "  -models <dir>                  Models config directory (default: testdata/matchtest/models)"
     echo "  -tpl <file.gotmpl>             Custom prompt template file"
     echo "  -o <file.json>                 Save results to JSON file"
     echo "  -serve :8080                   Start web server after test"
@@ -124,25 +125,27 @@ show_help() {
     echo "  build --action_env=SILICONFLOW_API_KEY=sk-xxx"
 }
 
-# 检查是否需要自动添加 -models 参数
-needs_models_arg() {
-    # 检查参数中是否已经有 -models
+# 检查参数中是否已有指定的 flag
+has_arg() {
+    local target="$1"
+    shift
     for arg in "$@"; do
-        if [ "$arg" = "-models" ]; then
-            return 1  # 已有 -models，不需要添加
+        if [ "$arg" = "$target" ]; then
+            return 0
         fi
     done
-    
-    # 检查是否是不需要 -models 的命令
+    return 1
+}
+
+# 检查是否是不需要自动添加 models 参数的命令
+# -load 和 -prompt 不需要 models，但 -prompt 需要 rules
+is_load_command() {
     for arg in "$@"; do
-        case "$arg" in
-            -prompt|-load|-h|--help)
-                return 1  # 这些命令不需要 -models
-                ;;
-        esac
+        if [ "$arg" = "-load" ]; then
+            return 0
+        fi
     done
-    
-    return 0  # 需要添加 -models
+    return 1
 }
 
 main() {
@@ -158,20 +161,36 @@ main() {
     # 构建
     build_if_needed
 
-    # 自动添加 -models 参数（如果需要）
-    if needs_models_arg "$@"; then
-        if [ -d "$DEFAULT_MODELS_DIR" ]; then
-            log_info "使用默认 models 目录: $DEFAULT_MODELS_DIR"
-            exec "$BINARY" -models "$DEFAULT_MODELS_DIR" "$@"
-        else
-            log_error "默认 models 目录不存在: $DEFAULT_MODELS_DIR"
-            log_info "请使用 -models <dir> 指定模型配置目录"
-            exit 1
-        fi
-    else
-        # 执行二进制（直接运行以支持 TTY/TUI）
+    # -load 命令直接执行，不需要额外参数
+    if is_load_command "$@"; then
         exec "$BINARY" "$@"
     fi
+
+    # 构建参数列表，自动添加缺失的 -rules 和 -models
+    ARGS=()
+    
+    # 始终需要 -rules
+    if ! has_arg "-rules" "$@"; then
+        if [ -d "$DEFAULT_RULES_DIR" ]; then
+            ARGS+=("-rules" "$DEFAULT_RULES_DIR")
+        else
+            log_error "默认 rules 目录不存在: $DEFAULT_RULES_DIR"
+            exit 1
+        fi
+    fi
+    
+    # -prompt 命令不需要 -models
+    if ! has_arg "-prompt" "$@" && ! has_arg "-models" "$@"; then
+        if [ -d "$DEFAULT_MODELS_DIR" ]; then
+            ARGS+=("-models" "$DEFAULT_MODELS_DIR")
+        else
+            log_error "默认 models 目录不存在: $DEFAULT_MODELS_DIR"
+            exit 1
+        fi
+    fi
+    
+    # 执行二进制（直接运行以支持 TTY/TUI）
+    exec "$BINARY" "${ARGS[@]}" "$@"
 }
 
 main "$@"

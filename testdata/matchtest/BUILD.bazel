@@ -1,0 +1,16 @@
+# Shared test data for matchtest benchmark tool.
+# Used by both Go and Rust implementations.
+
+# Test rules (intent patterns)
+filegroup(
+    name = "rules",
+    srcs = glob(["rules/**"]),
+    visibility = ["//visibility:public"],
+)
+
+# Model configurations (API keys, endpoints)
+filegroup(
+    name = "models",
+    srcs = glob(["models/**"]),
+    visibility = ["//visibility:public"],
+)

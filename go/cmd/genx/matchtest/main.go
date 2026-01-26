@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -19,13 +18,10 @@ import (
 	"github.com/haivivi/giztoy/pkg/genx/modelloader"
 )
 
-//go:embed rules/*
-var embeddedRules embed.FS
-
 var (
 	flagModel       = flag.String("model", "", "Model pattern (e.g. gemini/flash, sf/, all)")
 	flagList        = flag.Bool("list", false, "List all available models")
-	flagRules       = flag.String("rules", "", "Rules directory (default: embedded rules)")
+	flagRules       = flag.String("rules", "", "Rules directory (required)")
 	flagTpl         = flag.String("tpl", "", "Custom prompt template file path")
 	flagOutput      = flag.String("o", "", "Output JSON report to file")
 	flagServe       = flag.String("serve", "", "Start HTTP server for live progress (e.g. :8080)")
@@ -74,14 +70,11 @@ func main() {
 
 	// Print prompt mode - doesn't require model selection
 	if *flagPrompt {
-		// Load rules and compile to print prompt
-		var ruleFiles []RuleFile
-		var err error
-		if *flagRules != "" {
-			ruleFiles, err = loadRuleFilesFromDir(*flagRules)
-		} else {
-			ruleFiles, err = loadRuleFilesFromFS(embeddedRules, "rules")
+		if *flagRules == "" {
+			log.Fatal("-rules is required")
 		}
+		// Load rules and compile to print prompt
+		ruleFiles, err := loadRuleFilesFromDir(*flagRules)
 		if err != nil {
 			log.Fatalf("load rules: %v", err)
 		}
@@ -139,15 +132,15 @@ func main() {
 		}
 	}
 
-	// Load rules and tests from JSON/YAML files
-	var ruleFiles []RuleFile
-	if *flagRules != "" {
-		// Load from specified directory
-		ruleFiles, err = loadRuleFilesFromDir(*flagRules)
-	} else {
-		// Load from embedded FS
-		ruleFiles, err = loadRuleFilesFromFS(embeddedRules, "rules")
+	// Rules dir is required
+	if *flagRules == "" {
+		fmt.Fprintln(os.Stderr, "Error: -rules is required")
+		printUsage()
+		return
 	}
+
+	// Load rules and tests from JSON/YAML files
+	ruleFiles, err := loadRuleFilesFromDir(*flagRules)
 	if err != nil {
 		log.Fatalf("load rules: %v", err)
 	}
@@ -254,39 +247,6 @@ func loadRuleFilesFromDir(dir string) ([]RuleFile, error) {
 		}
 
 		data, err := os.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", path, err)
-		}
-
-		rf, err := parseRuleFile(data, ext)
-		if err != nil {
-			return fmt.Errorf("parse %s: %w", path, err)
-		}
-		ruleFiles = append(ruleFiles, *rf)
-		return nil
-	})
-
-	return ruleFiles, err
-}
-
-// loadRuleFilesFromFS loads rule files recursively from an embed.FS
-func loadRuleFilesFromFS(fsys embed.FS, dir string) ([]RuleFile, error) {
-	var ruleFiles []RuleFile
-
-	err := fs.WalkDir(fsys, dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".json" && ext != ".yaml" && ext != ".yml" {
-			return nil
-		}
-
-		data, err := fsys.ReadFile(path)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", path, err)
 		}

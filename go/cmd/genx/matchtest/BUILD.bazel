@@ -9,7 +9,6 @@ go_library(
         "runner.go",
         "server.go",
     ],
-    embedsrcs = glob(["rules/**"]),
     importpath = "github.com/haivivi/giztoy/cmd/genx/matchtest",
     visibility = ["//visibility:private"],
     deps = [
@@ -35,6 +34,8 @@ sh_binary(
     srcs = ["run.sh"],
     data = [
         ":matchtest",
-    ] + glob(["models/**"]),
+        "//testdata/matchtest:rules",
+        "//testdata/matchtest:models",
+    ],
     visibility = ["//visibility:public"],
 )
