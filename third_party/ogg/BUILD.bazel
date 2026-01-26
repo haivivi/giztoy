@@ -1,6 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
-# Use Zig as C compiler to build libogg
+# Build libogg container format as static library
 genrule(
     name = "ogg_static",
     srcs = [
@@ -12,11 +12,6 @@ genrule(
     outs = ["libogg.a"],
     cmd = """
         set -e
-        export HOME=/tmp
-        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
-        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
-        mkdir -p /tmp/zig-cache
-        
         WORK=$$(mktemp -d)
         trap "rm -rf $$WORK" EXIT
         
@@ -46,7 +41,7 @@ genrule(
         # Compile source files
         for src in $$WORK/src/*.c; do
             base=$$(basename $$src .c)
-            zig cc -c $$src -o $$WORK/obj/$$base.o \
+            clang -c $$src -o $$WORK/obj/$$base.o \
                 -I$$WORK/include \
                 -I$$WORK/src \
                 -fPIC \
