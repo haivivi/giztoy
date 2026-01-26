@@ -1,8 +1,8 @@
 // Package luau provides Go bindings for the Luau scripting language.
 //
 // Luau is a fast, small, safe, gradually typed scripting language derived
-// from Lua. It is designed for embedding in applications and provides
-// built-in sandboxing for security.
+// from Lua. It is designed for embedding in applications. Luau omits
+// dangerous standard library functions (io, os.execute, loadfile) by design.
 //
 // # Basic Usage
 //

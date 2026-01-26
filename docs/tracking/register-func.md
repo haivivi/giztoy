@@ -168,8 +168,9 @@ Implement `RegisterFunc` to allow Go/Rust functions to be called from Luau scrip
    - Rationale: 32-bit compatibility for Luau VM
 
 3. **Error Propagation**
-   - Decision: Panic recovery with error message push
-   - Rationale: Prevents crashes, allows Luau to handle errors
+   - Decision: Panic recovery returns 0 (no values), no error push
+   - Rationale: Prevents crashes and stack pollution. Pushing an error string
+     but returning 0 would leave orphaned values on the Luau stack.
 
 4. **Thread Safety**
    - Decision: Global mutex (Go) / RwLock (Rust) for registry
