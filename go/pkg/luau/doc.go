@@ -12,7 +12,7 @@
 //	}
 //	defer state.Close()
 //
-//	// Open standard libraries (sandboxed)
+//	// Open standard libraries (see Security section for details)
 //	state.OpenLibs()
 //
 //	// Execute a script

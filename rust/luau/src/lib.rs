@@ -256,7 +256,7 @@ impl State {
     }
 
     /// Push a string onto the stack.
-    /// Returns an error if the string contains interior NUL bytes.
+    /// This function handles binary data correctly (including interior NUL bytes).
     pub fn push_string(&self, s: &str) -> Result<()> {
         // Use pushlstring which handles binary data correctly
         unsafe { ffi::luau_pushlstring(self.ptr, s.as_ptr() as *const c_char, s.len()) };
@@ -565,9 +565,10 @@ extern "C" fn rust_external_callback(l: *mut ffi::LuauState, callback_id: u64) -
     match result {
         Ok(n) => n,
         Err(_) => {
-            // Panic occurred - push error string
-            let msg = CString::new("Rust function panicked").unwrap();
-            unsafe { ffi::luau_pushlstring(l, msg.as_ptr(), msg.as_bytes().len()) };
+            // On panic, we return 0 (no return values) and let the caller handle it.
+            // We intentionally do NOT push an error string onto the stack because
+            // returning 0 means "no values returned" - pushing a string would
+            // pollute the stack since Lua won't read it.
             0
         }
     }

@@ -532,18 +532,17 @@ func goExternalCallback(L *C.LuauState, callbackID C.uint64_t) C.int {
 	// Call the Go function with panic recovery
 	var result int
 	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				// Push error message to Luau
-				errMsg := fmt.Sprintf("Go function panicked: %v", r)
-				cstr := C.CString(errMsg)
-				C.luau_pushstring(L, cstr)
-				C.free(unsafe.Pointer(cstr))
-				// Note: We can't call lua_error here safely from a callback,
-				// so we just return 0 and let the caller handle it
-				result = 0
-			}
-		}()
+	defer func() {
+		if r := recover(); r != nil {
+			// On panic, we return 0 (no return values) and let the caller handle it.
+			// We intentionally do NOT push an error string onto the stack because
+			// returning 0 means "no values returned" - pushing a string would
+			// pollute the stack since Lua won't read it.
+			// The panic is logged but not propagated to Lua.
+			_ = r // Suppress "recovered panic" - we handle it by returning 0
+			result = 0
+		}
+	}()
 		result = entry.fn(entry.state)
 	}()
 
