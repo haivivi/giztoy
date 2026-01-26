@@ -6,6 +6,7 @@ def _opus_repo_impl(ctx):
     """Download and setup opus source."""
     ctx.download_and_extract(
         url = "https://downloads.xiph.org/releases/opus/opus-{}.tar.gz".format(_OPUS_VERSION),
+        sha256 = "65c1d2f78b9f2fb20082c38cbe47c951ad5839345876e46941612ee87f9a7ce1",
         stripPrefix = "opus-{}".format(_OPUS_VERSION),
     )
     ctx.file("BUILD.bazel", """

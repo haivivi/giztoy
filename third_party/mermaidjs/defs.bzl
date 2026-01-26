@@ -6,6 +6,7 @@ def _mermaid_repo_impl(ctx):
     """Download mermaid.min.js from CDN."""
     ctx.download(
         url = "https://cdn.jsdelivr.net/npm/mermaid@{}/dist/mermaid.min.js".format(_MERMAID_VERSION),
+        sha256 = "a43bc1afd446f9c4cc66ac5dd45d02e8d65e26fc5344ec0ef787f88d6ddb6f9e",
         output = "mermaid.min.js",
     )
 

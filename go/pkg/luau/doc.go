@@ -69,10 +69,13 @@
 //
 // # Security
 //
-// When OpenLibs() is called, dangerous functions are removed:
-//   - os library (system access)
-//   - io library (file access)
-//   - loadfile, dofile (arbitrary code loading)
+// OpenLibs() opens the standard Luau libraries (base, math, string, table,
+// coroutine, utf8, debug, os, io). It does NOT automatically sandbox the
+// environment or restrict dangerous functions.
 //
-// The state is also sandboxed to prevent modification of global tables.
+// If you need a sandboxed environment for untrusted code, you are responsible
+// for controlling which libraries and globals are exposed. Consider:
+//   - Removing os/io globals after OpenLibs() if not needed
+//   - Using a restricted environment table
+//   - Not exposing loadfile/dofile to untrusted scripts
 package luau

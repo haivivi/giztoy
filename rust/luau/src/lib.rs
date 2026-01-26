@@ -222,9 +222,11 @@ impl State {
     }
 
     /// Push a string onto the stack.
-    pub fn push_string(&self, s: &str) {
-        let c_str = CString::new(s).unwrap_or_default();
-        unsafe { ffi::luau_pushlstring(self.ptr, c_str.as_ptr(), s.len()) };
+    /// Returns an error if the string contains interior NUL bytes.
+    pub fn push_string(&self, s: &str) -> Result<()> {
+        // Use pushlstring which handles binary data correctly
+        unsafe { ffi::luau_pushlstring(self.ptr, s.as_ptr() as *const c_char, s.len()) };
+        Ok(())
     }
 
     /// Get the type of the value at the given index.
@@ -309,27 +311,35 @@ impl State {
     }
 
     /// Get a field from a table.
-    pub fn get_field(&self, idx: i32, key: &str) {
-        let c_key = CString::new(key).unwrap_or_default();
+    /// Returns an error if the key contains interior NUL bytes.
+    pub fn get_field(&self, idx: i32, key: &str) -> Result<()> {
+        let c_key = CString::new(key).map_err(|_| Error::Invalid)?;
         unsafe { ffi::luau_getfield(self.ptr, idx, c_key.as_ptr()) };
+        Ok(())
     }
 
     /// Set a field in a table.
-    pub fn set_field(&self, idx: i32, key: &str) {
-        let c_key = CString::new(key).unwrap_or_default();
+    /// Returns an error if the key contains interior NUL bytes.
+    pub fn set_field(&self, idx: i32, key: &str) -> Result<()> {
+        let c_key = CString::new(key).map_err(|_| Error::Invalid)?;
         unsafe { ffi::luau_setfield(self.ptr, idx, c_key.as_ptr()) };
+        Ok(())
     }
 
     /// Get a global variable.
-    pub fn get_global(&self, name: &str) {
-        let c_name = CString::new(name).unwrap_or_default();
+    /// Returns an error if the name contains interior NUL bytes.
+    pub fn get_global(&self, name: &str) -> Result<()> {
+        let c_name = CString::new(name).map_err(|_| Error::Invalid)?;
         unsafe { ffi::luau_getglobal(self.ptr, c_name.as_ptr()) };
+        Ok(())
     }
 
     /// Set a global variable.
-    pub fn set_global(&self, name: &str) {
-        let c_name = CString::new(name).unwrap_or_default();
+    /// Returns an error if the name contains interior NUL bytes.
+    pub fn set_global(&self, name: &str) -> Result<()> {
+        let c_name = CString::new(name).map_err(|_| Error::Invalid)?;
         unsafe { ffi::luau_setglobal(self.ptr, c_name.as_ptr()) };
+        Ok(())
     }
 
     /// Iterate to the next element in a table.

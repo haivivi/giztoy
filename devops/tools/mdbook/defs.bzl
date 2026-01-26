@@ -6,10 +6,10 @@ _MDBOOK_VERSION = "0.4.44"
 # Get latest from: https://github.com/rust-lang/mdBook/releases
 # To update: shasum -a 256 mdbook-v<version>-<platform>.tar.gz
 _MDBOOK_SHA256 = {
-    "darwin_amd64": "",
+    "darwin_amd64": "416cd7f2d83194259a103746c2f35aef87427d9e48541397695929162e9d0557",
     "darwin_arm64": "a7e203a9b131ba045d6e4aff27f1a817059af9fe8174d86d78f79153da2e2b61",
-    "linux_amd64": "",
-    "linux_arm64": "",
+    "linux_amd64": "326973fddabd7ff501f140ab529f3ede5f3f83f1a66ecc7e20adfec78eb6fc2a",
+    "linux_arm64": "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5",
 }
 
 def _mdbook_repo_impl(ctx):

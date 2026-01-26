@@ -6,6 +6,7 @@ def _soxr_repo_impl(ctx):
     """Download and setup soxr source."""
     ctx.download_and_extract(
         url = "https://sourceforge.net/projects/soxr/files/soxr-{}-Source.tar.xz".format(_SOXR_VERSION),
+        sha256 = "b111c15fdc8c029989330ff559184198c161100a59312f5dc19ddeb9b5a15889",
         stripPrefix = "soxr-{}-Source".format(_SOXR_VERSION),
     )
     ctx.file("BUILD.bazel", """

@@ -323,7 +323,8 @@ void luau_pushnumber(LuauState* L, double n) {
 
 void luau_pushinteger(LuauState* L, int64_t n) {
     if (!L || !L->L) return;
-    lua_pushinteger(L->L, static_cast<int>(n));
+    // Use lua_Integer to avoid truncation on platforms where it's larger than int
+    lua_pushinteger(L->L, static_cast<lua_Integer>(n));
 }
 
 void luau_pushstring(LuauState* L, const char* s) {

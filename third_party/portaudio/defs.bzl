@@ -6,6 +6,7 @@ def _portaudio_repo_impl(ctx):
     """Download and setup portaudio source."""
     ctx.download_and_extract(
         url = "https://github.com/PortAudio/portaudio/archive/refs/tags/{}.tar.gz".format(_PORTAUDIO_VERSION),
+        sha256 = "5af29ba58bbdbb7bbcefaaecc77ec8fc413f0db6f4c4e286c40c3e1b83174fa0",
         stripPrefix = "portaudio-{}".format(_PORTAUDIO_VERSION.lstrip("v")),
     )
     ctx.file("BUILD.bazel", """

@@ -1,6 +1,7 @@
 load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
-# Build Luau as a static library using Zig as C++ compiler
+# Build Luau as a static library
+# Uses system C++ compiler (c++) which works on both macOS (clang++) and Linux (g++)
 genrule(
     name = "luau_static",
     srcs = [
@@ -10,11 +11,6 @@ genrule(
     outs = ["libluau.a"],
     cmd = """
         set -e
-        export HOME=/tmp
-        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
-        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
-        mkdir -p /tmp/zig-cache
-
         WORK=$$(mktemp -d)
         trap "rm -rf $$WORK" EXIT
 
@@ -26,13 +22,13 @@ genrule(
             SRCS="$$SRCS $$src"
         done
 
-        # Compile each source file
+        # Compile each source file using system C++ compiler
         for src in $$SRCS; do
             base=$$(basename $$src .cpp)
             # Use unique names to avoid conflicts
             dir=$$(dirname $$src | tr '/' '_')
             objname="$${dir}_$${base}"
-            clang++ -c $$src -o $$WORK/obj/$$objname.o \
+            c++ -c $$src -o $$WORK/obj/$$objname.o \
                 -Iexternal/+luau+luau/Common/include \
                 -Iexternal/+luau+luau/Ast/include \
                 -Iexternal/+luau+luau/Compiler/include \
@@ -41,6 +37,7 @@ genrule(
                 -Iexternal/+luau+luau/VM/src \
                 -DLUA_USE_LONGJMP=1 \
                 -std=c++17 \
+                -fPIC \
                 -O2 \
                 -w
         done

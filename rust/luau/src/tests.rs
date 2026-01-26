@@ -37,7 +37,7 @@ fn test_do_string_simple() {
     let result = state.do_string("x = 1 + 2");
     assert!(result.is_ok());
 
-    state.get_global("x");
+    state.get_global("x").unwrap();
     assert_eq!(state.to_number(-1), 3.0);
 }
 
@@ -57,7 +57,7 @@ fn test_do_string_arithmetic() {
     );
     assert!(result.is_ok());
 
-    state.get_global("e");
+    state.get_global("e").unwrap();
     assert_eq!(state.to_number(-1), 15.0);
 }
 
@@ -76,7 +76,7 @@ fn test_do_string_function() {
     );
     assert!(result.is_ok());
 
-    state.get_global("result");
+    state.get_global("result").unwrap();
     assert_eq!(state.to_number(-1), 7.0);
 }
 
@@ -96,7 +96,7 @@ fn test_do_string_table() {
     );
     assert!(result.is_ok());
 
-    state.get_global("sum");
+    state.get_global("sum").unwrap();
     assert_eq!(state.to_number(-1), 6.0);
 }
 
@@ -136,7 +136,7 @@ fn test_load_bytecode() {
     assert!(result.is_ok());
 
     // Check the result
-    state.get_global("x");
+    state.get_global("x").unwrap();
     assert_eq!(state.to_number(-1), 42.0);
 }
 
@@ -192,7 +192,7 @@ fn test_push_number() {
 #[test]
 fn test_push_string() {
     let state = State::new().unwrap();
-    state.push_string("hello world");
+    state.push_string("hello world").unwrap();
     assert!(state.is_string(-1));
     assert_eq!(state.to_string(-1), Some("hello world".to_string()));
 }
@@ -217,7 +217,7 @@ fn test_type_checking() {
     assert_eq!(state.get_type(-1), Type::Number);
     state.pop(1);
 
-    state.push_string("test");
+    state.push_string("test").unwrap();
     assert_eq!(state.get_type(-1), Type::String);
     state.pop(1);
 
@@ -242,7 +242,7 @@ fn test_type_name() {
     assert_eq!(state.type_name(-1), "number");
     state.pop(1);
 
-    state.push_string("test");
+    state.push_string("test").unwrap();
     assert_eq!(state.type_name(-1), "string");
     state.pop(1);
 }
@@ -261,10 +261,10 @@ fn test_table_operations() {
 
     // Set field
     state.push_number(42.0);
-    state.set_field(-2, "answer");
+    state.set_field(-2, "answer").unwrap();
 
     // Get field
-    state.get_field(-1, "answer");
+    state.get_field(-1, "answer").unwrap();
     assert_eq!(state.to_number(-1), 42.0);
 }
 
@@ -285,7 +285,7 @@ fn test_table_iteration() {
     let result = state.do_string("t = {a=1, b=2, c=3}");
     assert!(result.is_ok());
 
-    state.get_global("t");
+    state.get_global("t").unwrap();
 
     let mut count = 0;
     state.push_nil();
@@ -305,9 +305,9 @@ fn test_globals() {
     let state = State::new().unwrap();
 
     state.push_number(100.0);
-    state.set_global("myGlobal");
+    state.set_global("myGlobal").unwrap();
 
-    state.get_global("myGlobal");
+    state.get_global("myGlobal").unwrap();
     assert_eq!(state.to_number(-1), 100.0);
 }
 
@@ -359,7 +359,7 @@ fn test_obj_len() {
     state.open_libs();
 
     state.do_string("t = {1, 2, 3, 4, 5}").unwrap();
-    state.get_global("t");
+    state.get_global("t").unwrap();
     assert_eq!(state.obj_len(-1), 5);
 }
 
@@ -385,7 +385,7 @@ fn test_fibonacci() {
     );
     assert!(result.is_ok());
 
-    state.get_global("result");
+    state.get_global("result").unwrap();
     assert_eq!(state.to_number(-1), 55.0);
 }
 
@@ -404,15 +404,15 @@ fn test_string_manipulation() {
     );
     assert!(result.is_ok());
 
-    state.get_global("upper");
+    state.get_global("upper").unwrap();
     assert_eq!(state.to_string(-1), Some("HELLO WORLD".to_string()));
     state.pop(1);
 
-    state.get_global("len");
+    state.get_global("len").unwrap();
     assert_eq!(state.to_number(-1), 11.0);
     state.pop(1);
 
-    state.get_global("sub");
+    state.get_global("sub").unwrap();
     assert_eq!(state.to_string(-1), Some("hello".to_string()));
 }
 
@@ -439,7 +439,7 @@ fn test_closure() {
     );
     assert!(result.is_ok());
 
-    state.get_global("c_val");
+    state.get_global("c_val").unwrap();
     assert_eq!(state.to_number(-1), 3.0);
 }
 
@@ -465,10 +465,10 @@ fn test_coroutine() {
     );
     assert!(result.is_ok());
 
-    state.get_global("a");
+    state.get_global("a").unwrap();
     assert_eq!(state.to_number(-1), 1.0);
     state.pop(1);
 
-    state.get_global("d");
+    state.get_global("d").unwrap();
     assert_eq!(state.to_string(-1), Some("done".to_string()));
 }

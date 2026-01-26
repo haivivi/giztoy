@@ -6,6 +6,7 @@ def _luau_repo_impl(ctx):
     """Download and setup Luau source."""
     ctx.download_and_extract(
         url = "https://github.com/luau-lang/luau/archive/refs/tags/{}.tar.gz".format(_LUAU_VERSION),
+        sha256 = "f4968e32947f7aaf65ea66efe803918c539239f00d95eb329de7cea16573be3d",
         stripPrefix = "luau-{}".format(_LUAU_VERSION),
     )
     ctx.file("BUILD.bazel", """

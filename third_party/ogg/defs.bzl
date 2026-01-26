@@ -6,6 +6,7 @@ def _ogg_repo_impl(ctx):
     """Download and setup libogg source."""
     ctx.download_and_extract(
         url = "https://downloads.xiph.org/releases/ogg/libogg-{}.tar.gz".format(_OGG_VERSION),
+        sha256 = "83e6704730683d004d20e21b8f7f55dcb3383cdf84c0daedf30bde175f774638",
         stripPrefix = "libogg-{}".format(_OGG_VERSION),
     )
     ctx.file("BUILD.bazel", """

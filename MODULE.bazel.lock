@@ -265,7 +265,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%audio_libs": {
       "general": {
-        "bzlTransitiveDigest": "Z7dXk46vZNi5aeJuZf6yd2uSbCRM9oUAF6zpkgqFyzA=",
+        "bzlTransitiveDigest": "di2w5ecW08WnBCIerKS1SZLj+y38Kw3yi6ZLK4QNHU0=",
         "usagesDigest": "Xd+WAzFJEryUCjH03YpiXD7zp5I44G4mzlGyoeX1wGo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -308,7 +308,7 @@
     },
     "//:extensions.bzl%luau": {
       "general": {
-        "bzlTransitiveDigest": "Z7dXk46vZNi5aeJuZf6yd2uSbCRM9oUAF6zpkgqFyzA=",
+        "bzlTransitiveDigest": "di2w5ecW08WnBCIerKS1SZLj+y38Kw3yi6ZLK4QNHU0=",
         "usagesDigest": "fjbt5lB2jzJkQQzLHOFOgBIrHmMvtmXX51ABnEALqAw=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -335,7 +335,7 @@
     },
     "//:extensions.bzl%mdbook": {
       "general": {
-        "bzlTransitiveDigest": "Z7dXk46vZNi5aeJuZf6yd2uSbCRM9oUAF6zpkgqFyzA=",
+        "bzlTransitiveDigest": "di2w5ecW08WnBCIerKS1SZLj+y38Kw3yi6ZLK4QNHU0=",
         "usagesDigest": "DeUHDVsKK0O3cQSbS7yWpGHUDQK83IBeIMK+iIC6rHg=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -362,7 +362,7 @@
     },
     "//:extensions.bzl%mermaid": {
       "general": {
-        "bzlTransitiveDigest": "Z7dXk46vZNi5aeJuZf6yd2uSbCRM9oUAF6zpkgqFyzA=",
+        "bzlTransitiveDigest": "di2w5ecW08WnBCIerKS1SZLj+y38Kw3yi6ZLK4QNHU0=",
         "usagesDigest": "YY1DRcld3A8Ca0vM2D3WFmnI8IJH0clI/cr5wFzy4jE=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
@@ -389,7 +389,7 @@
     },
     "//:extensions.bzl%yq": {
       "general": {
-        "bzlTransitiveDigest": "Z7dXk46vZNi5aeJuZf6yd2uSbCRM9oUAF6zpkgqFyzA=",
+        "bzlTransitiveDigest": "di2w5ecW08WnBCIerKS1SZLj+y38Kw3yi6ZLK4QNHU0=",
         "usagesDigest": "Fth34LdLVC+iB2NfiJFRWkbRVhRG/rESzqXg9ZHMGME=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

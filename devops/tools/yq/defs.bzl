@@ -6,10 +6,10 @@ _YQ_VERSION = "4.44.3"
 # Get latest from: https://github.com/mikefarah/yq/releases
 # To update: shasum -a 256 yq_<os>_<arch>.tar.gz
 _YQ_SHA256 = {
-    "darwin_amd64": "",  # Will be verified on first download
+    "darwin_amd64": "aef272833129cd047d0574bde774d1a98857740cbcda63eeb73b524e935aa9d0",
     "darwin_arm64": "e53e12787e597e81f485a024d28e70dbe09e90e01ea08da060d8b0bc61f7fd38",
-    "linux_amd64": "",
-    "linux_arm64": "",
+    "linux_amd64": "a347ccde5e32c607670e15526e295c58a555a68cbb36d15cf18d24fd7af0e2fd",
+    "linux_arm64": "7d518dba109935819c938be9269ff9413bd1b7546c157289eb0fdf82e49616f7",
 }
 
 def _yq_repo_impl(ctx):

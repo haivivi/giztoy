@@ -68,8 +68,9 @@ LuauState* luau_new(void);
 void luau_close(LuauState* L);
 
 /**
- * Open standard libraries (math, string, table, etc.)
- * Note: os and io libraries are excluded for security.
+ * Open standard libraries (math, string, table, os, io, etc.)
+ * Note: This function does not perform any sandboxing or exclude libraries.
+ * For sandboxed execution, manually restrict globals after calling this.
  */
 void luau_openlibs(LuauState* L);
 

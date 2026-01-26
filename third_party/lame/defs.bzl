@@ -6,6 +6,7 @@ def _lame_repo_impl(ctx):
     """Download and setup LAME source."""
     ctx.download_and_extract(
         url = "https://sourceforge.net/projects/lame/files/lame/{version}/lame-{version}.tar.gz".format(version = _LAME_VERSION),
+        sha256 = "ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e",
         stripPrefix = "lame-{}".format(_LAME_VERSION),
     )
     ctx.file("BUILD.bazel", """
