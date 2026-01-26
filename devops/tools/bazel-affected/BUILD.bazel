@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
+
+go_library(
+    name = "bazel-affected_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/devops/tools/bazel-affected",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "bazel-affected",
+    embed = [":bazel-affected_lib"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "bazel-affected_test",
+    srcs = ["main_test.go"],
+    data = glob(["testdata/**"]),
+    embed = [":bazel-affected_lib"],
+    # Unit tests run automatically; integration tests skip gracefully
+    # Use -short flag to skip slow integration tests: bazel test --test_arg=-test.short
+)

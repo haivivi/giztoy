@@ -1,0 +1,98 @@
+load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
+
+# Build Luau as a static library using Zig as C++ compiler
+genrule(
+    name = "luau_static",
+    srcs = [
+        "@luau//:all_srcs",
+        "@luau//:all_hdrs",
+    ],
+    outs = ["libluau.a"],
+    cmd = """
+        set -e
+        export HOME=/tmp
+        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
+        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
+        mkdir -p /tmp/zig-cache
+
+        WORK=$$(mktemp -d)
+        trap "rm -rf $$WORK" EXIT
+
+        mkdir -p $$WORK/obj
+
+        # Collect all source files
+        SRCS=""
+        for src in $(locations @luau//:all_srcs); do
+            SRCS="$$SRCS $$src"
+        done
+
+        # Compile each source file
+        for src in $$SRCS; do
+            base=$$(basename $$src .cpp)
+            # Use unique names to avoid conflicts
+            dir=$$(dirname $$src | tr '/' '_')
+            objname="$${dir}_$${base}"
+            clang++ -c $$src -o $$WORK/obj/$$objname.o \
+                -Iexternal/+luau+luau/Common/include \
+                -Iexternal/+luau+luau/Ast/include \
+                -Iexternal/+luau+luau/Compiler/include \
+                -Iexternal/+luau+luau/Compiler/src \
+                -Iexternal/+luau+luau/VM/include \
+                -Iexternal/+luau+luau/VM/src \
+                -DLUA_USE_LONGJMP=1 \
+                -std=c++17 \
+                -O2 \
+                -w
+        done
+
+        # Create static library
+        ar rcs $@ $$WORK/obj/*.o
+    """,
+    visibility = ["//visibility:public"],
+)
+
+# Generate header directory structure
+genrule(
+    name = "luau_headers",
+    srcs = ["@luau//:all_hdrs"],
+    outs = [
+        "include/lua.h",
+        "include/luaconf.h",
+        "include/lualib.h",
+        "include/luacode.h",
+        "include/Luau/Common.h",
+        "include/Luau/Bytecode.h",
+        "include/Luau/Compiler.h",
+    ],
+    cmd = """
+        mkdir -p $(@D)/include/Luau
+
+        for f in $(SRCS); do
+            base=$$(basename $$f)
+            case "$$base" in
+                lua.h) cp $$f $(@D)/include/lua.h ;;
+                luaconf.h) cp $$f $(@D)/include/luaconf.h ;;
+                lualib.h) cp $$f $(@D)/include/lualib.h ;;
+                luacode.h) cp $$f $(@D)/include/luacode.h ;;
+                Common.h) cp $$f $(@D)/include/Luau/Common.h ;;
+                Bytecode.h) cp $$f $(@D)/include/Luau/Bytecode.h ;;
+                Compiler.h) cp $$f $(@D)/include/Luau/Compiler.h ;;
+            esac
+        done
+    """,
+    visibility = ["//visibility:public"],
+)
+
+cc_import(
+    name = "luau_import",
+    static_library = ":luau_static",
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "luau",
+    hdrs = [":luau_headers"],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [":luau_import"],
+)

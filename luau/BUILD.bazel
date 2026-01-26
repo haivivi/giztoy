@@ -1,0 +1,4 @@
+# Luau language binding
+# See subdirectories for language-specific bindings:
+# - c/ - C wrapper library
+# - go/ - Go bindings (via CGO)

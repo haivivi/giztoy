@@ -1,0 +1,22 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "luau",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "giztoy_luau",
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//luau/c:luau_wrapper",
+        "@crate_index//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "luau_test",
+    size = "medium",
+    crate = ":luau",
+    deps = [
+        "//luau/c:luau_wrapper",
+    ],
+)

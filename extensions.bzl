@@ -1,85 +1,27 @@
+"""Module extensions for external tools and libraries."""
+
 load("@gazelle//:deps.bzl", "go_repository")
 
-"""Module extensions for external tools."""
+# Load repository rules from organized directories
+# DevOps tools
+load("//devops/tools/mdbook:defs.bzl", "mdbook_repo")
+load("//devops/tools/yq:defs.bzl", "yq_repo")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+# Third-party libraries
+load("//third_party/mermaidjs:defs.bzl", "mermaid_repo")
+load("//third_party/ogg:defs.bzl", "ogg_repo")
+load("//third_party/opus:defs.bzl", "opus_repo")
+load("//third_party/soxr:defs.bzl", "soxr_repo")
+load("//third_party/portaudio:defs.bzl", "portaudio_repo")
+load("//third_party/lame:defs.bzl", "lame_repo")
+load("//third_party/luau:defs.bzl", "luau_repo")
 
 # =============================================================================
 # mdBook Extension (for documentation)
 # =============================================================================
 
-_MDBOOK_VERSION = "0.4.44"
-
-# mdBook checksums for different platforms
-# Get latest from: https://github.com/rust-lang/mdBook/releases
-# To update: shasum -a 256 mdbook-v<version>-<platform>.tar.gz
-_MDBOOK_SHA256 = {
-    "darwin_amd64": "",
-    "darwin_arm64": "a7e203a9b131ba045d6e4aff27f1a817059af9fe8174d86d78f79153da2e2b61",
-    "linux_amd64": "",
-    "linux_arm64": "",
-}
-
-def _mdbook_repo_impl(ctx):
-    """Implementation of mdbook repository rule."""
-    os = ctx.os.name
-    arch = ctx.os.arch
-
-    # Map OS names
-    if os == "mac os x" or os.startswith("darwin"):
-        os_name = "apple-darwin"
-        os_key = "darwin"
-    elif os.startswith("linux"):
-        os_name = "unknown-linux-gnu"
-        os_key = "linux"
-    else:
-        fail("Unsupported OS: " + os)
-
-    # Map architecture
-    if arch == "amd64" or arch == "x86_64":
-        arch_name = "x86_64"
-        arch_key = "amd64"
-    elif arch == "aarch64" or arch == "arm64":
-        arch_name = "aarch64"
-        arch_key = "arm64"
-    else:
-        fail("Unsupported architecture: " + arch)
-
-    platform_key = "{}_{}".format(os_key, arch_key)
-    platform = "{}-{}".format(arch_name, os_name)
-
-    # Download mdbook
-    url = "https://github.com/rust-lang/mdBook/releases/download/v{}/mdbook-v{}-{}.tar.gz".format(
-        _MDBOOK_VERSION,
-        _MDBOOK_VERSION,
-        platform,
-    )
-
-    ctx.download_and_extract(
-        url = url,
-        sha256 = _MDBOOK_SHA256.get(platform_key, ""),
-        stripPrefix = "",
-    )
-
-    # Create BUILD file
-    ctx.file("BUILD.bazel", """
-package(default_visibility = ["//visibility:public"])
-
-exports_files(["mdbook"])
-
-sh_binary(
-    name = "mdbook_bin",
-    srcs = ["mdbook"],
-)
-""")
-
-_mdbook_repo = repository_rule(
-    implementation = _mdbook_repo_impl,
-    attrs = {},
-)
-
-def _mdbook_extension_impl(module_ctx):
-    _mdbook_repo(name = "mdbook")
+def _mdbook_extension_impl(_module_ctx):
+    mdbook_repo(name = "mdbook")
 
 mdbook = module_extension(
     implementation = _mdbook_extension_impl,
@@ -89,28 +31,8 @@ mdbook = module_extension(
 # Mermaid.js Extension (for documentation diagrams)
 # =============================================================================
 
-_MERMAID_VERSION = "11.4.1"
-
-def _mermaid_repo_impl(ctx):
-    """Download mermaid.min.js from CDN."""
-    ctx.download(
-        url = "https://cdn.jsdelivr.net/npm/mermaid@{}/dist/mermaid.min.js".format(_MERMAID_VERSION),
-        output = "mermaid.min.js",
-    )
-
-    ctx.file("BUILD.bazel", """
-package(default_visibility = ["//visibility:public"])
-
-exports_files(["mermaid.min.js"])
-""")
-
-_mermaid_repo = repository_rule(
-    implementation = _mermaid_repo_impl,
-    attrs = {},
-)
-
-def _mermaid_extension_impl(module_ctx):
-    _mermaid_repo(name = "mermaid")
+def _mermaid_extension_impl(_module_ctx):
+    mermaid_repo(name = "mermaid")
 
 mermaid = module_extension(
     implementation = _mermaid_extension_impl,
@@ -120,322 +42,47 @@ mermaid = module_extension(
 # yq Extension
 # =============================================================================
 
-# yq version
-_YQ_VERSION = "4.44.3"
-
-# yq checksums for different platforms (v4.44.3)
-# Get latest from: https://github.com/mikefarah/yq/releases
-# To update: shasum -a 256 yq_<os>_<arch>.tar.gz
-_YQ_SHA256 = {
-    "darwin_amd64": "",  # Will be verified on first download
-    "darwin_arm64": "e53e12787e597e81f485a024d28e70dbe09e90e01ea08da060d8b0bc61f7fd38",
-    "linux_amd64": "",
-    "linux_arm64": "",
-}
-
-def _yq_repo_impl(ctx):
-    """Implementation of yq repository rule."""
-    os = ctx.os.name
-    arch = ctx.os.arch
-
-    # Map OS names
-    if os == "mac os x" or os.startswith("darwin"):
-        os_name = "darwin"
-    elif os.startswith("linux"):
-        os_name = "linux"
-    else:
-        fail("Unsupported OS: " + os)
-
-    # Map architecture
-    if arch == "amd64" or arch == "x86_64":
-        arch_name = "amd64"
-    elif arch == "aarch64" or arch == "arm64":
-        arch_name = "arm64"
-    else:
-        fail("Unsupported architecture: " + arch)
-
-    platform = "{}_{}".format(os_name, arch_name)
-
-    # Download yq
-    url = "https://github.com/mikefarah/yq/releases/download/v{}/yq_{}_{}.tar.gz".format(
-        _YQ_VERSION,
-        os_name,
-        arch_name,
-    )
-
-    ctx.download_and_extract(
-        url = url,
-        sha256 = _YQ_SHA256.get(platform, ""),
-        stripPrefix = "",
-    )
-
-    # Create symlink for easy access (yq -> yq_darwin_arm64)
-    ctx.symlink("yq_{}_{}".format(os_name, arch_name), "yq")
-
-    # Create BUILD file
-    ctx.file("BUILD.bazel", """
-package(default_visibility = ["//visibility:public"])
-
-exports_files(["yq_{os}_{arch}", "yq"])
-
-# Use exports_files above; filegroup would conflict with the yq symlink name
-""".format(os = os_name, arch = arch_name))
-
-_yq_repo = repository_rule(
-    implementation = _yq_repo_impl,
-    attrs = {},
-)
-
-def _yq_extension_impl(module_ctx):
-    _yq_repo(name = "yq")
+def _yq_extension_impl(_module_ctx):
+    yq_repo(name = "yq")
 
 yq = module_extension(
     implementation = _yq_extension_impl,
 )
 
 # =============================================================================
-# Audio Libraries Extension (soxr, portaudio, opus)
+# Audio Libraries Extension (soxr, portaudio, opus, lame, ogg)
 # =============================================================================
 
-_SOXR_VERSION = "0.1.3"
-_PORTAUDIO_VERSION = "v19.7.0"
-_OPUS_VERSION = "1.5.2"
-_LAME_VERSION = "3.100"
-_OGG_VERSION = "1.3.6"
-
-def _soxr_repo_impl(ctx):
-    """Download and setup soxr source."""
-    ctx.download_and_extract(
-        url = "https://sourceforge.net/projects/soxr/files/soxr-{}-Source.tar.xz".format(_SOXR_VERSION),
-        stripPrefix = "soxr-{}-Source".format(_SOXR_VERSION),
-    )
-    ctx.file("BUILD.bazel", """
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "soxr_c_srcs",
-    srcs = glob(["src/*.c"], exclude = [
-        "src/avfft*.c",
-        "src/pffft*.c",
-        "src/cr-core.c",      # Template included by cr32.c, cr64.c, etc.
-        "src/vr-core.c",      # Template included by vr32.c
-        "src/fft4g-core.c",   # Template included by fft4g32.c, fft4g64.c
-        "src/util-core.c",    # Template included by util32.c, util64.c
-        "src/util-simd.c",    # SIMD helper, not needed without SIMD
-        "src/*32s.c",         # SIMD variants (not needed)
-        "src/*64s.c",         # SIMD variants (not needed)
-    ]),
-)
-
-filegroup(
-    name = "soxr_headers",
-    srcs = glob(["src/*.h"]),
-)
-
-filegroup(
-    name = "soxr_templates",
-    srcs = glob(["src/*.c"]),
-)
-""")
-
-_soxr_repo = repository_rule(
-    implementation = _soxr_repo_impl,
-)
-
-def _portaudio_repo_impl(ctx):
-    """Download and setup portaudio source."""
-    ctx.download_and_extract(
-        url = "https://github.com/PortAudio/portaudio/archive/refs/tags/{}.tar.gz".format(_PORTAUDIO_VERSION),
-        stripPrefix = "portaudio-{}".format(_PORTAUDIO_VERSION.lstrip("v")),
-    )
-    ctx.file("BUILD.bazel", """
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "portaudio_headers",
-    srcs = glob(["include/*.h"]),
-)
-
-# Common sources for all platforms
-_COMMON_SRCS = glob([
-    "src/common/*.c",
-])
-
-# macOS-specific sources
-filegroup(
-    name = "portaudio_macos_srcs",
-    srcs = _COMMON_SRCS + glob([
-        "src/os/unix/*.c",
-        "src/hostapi/coreaudio/*.c",
-    ]),
-)
-
-filegroup(
-    name = "portaudio_macos_internal_headers",
-    srcs = glob([
-        "src/common/*.h",
-        "src/os/unix/*.h",
-        "src/hostapi/coreaudio/*.h",
-    ]),
-)
-
-# Linux-specific sources (ALSA)
-filegroup(
-    name = "portaudio_linux_srcs",
-    srcs = _COMMON_SRCS + glob([
-        "src/os/unix/*.c",
-        "src/hostapi/alsa/*.c",
-    ], allow_empty = True),
-)
-
-filegroup(
-    name = "portaudio_linux_internal_headers",
-    srcs = glob([
-        "src/common/*.h",
-        "src/os/unix/*.h",
-        "src/hostapi/alsa/*.h",
-    ], allow_empty = True),
-)
-""")
-
-_portaudio_repo = repository_rule(
-    implementation = _portaudio_repo_impl,
-)
-
-def _opus_repo_impl(ctx):
-    """Download and setup opus source."""
-    ctx.download_and_extract(
-        url = "https://downloads.xiph.org/releases/opus/opus-{}.tar.gz".format(_OPUS_VERSION),
-        stripPrefix = "opus-{}".format(_OPUS_VERSION),
-    )
-    ctx.file("BUILD.bazel", """
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "opus_public_headers",
-    srcs = glob(["include/*.h"]),
-)
-
-filegroup(
-    name = "opus_srcs",
-    srcs = glob([
-        "src/*.c",
-        "celt/*.c",
-        "silk/*.c",
-        "silk/float/*.c",
-    ], exclude = [
-        "src/opus_demo.c",
-        "src/opus_compare.c",
-        "src/repacketizer_demo.c",
-        "celt/opus_custom_demo.c",
-    ]),
-)
-
-filegroup(
-    name = "opus_internal_headers",
-    srcs = glob([
-        "src/*.h",
-        "celt/*.h",
-        "silk/*.h",
-        "silk/float/*.h",
-    ]),
-)
-""")
-
-_opus_repo = repository_rule(
-    implementation = _opus_repo_impl,
-)
-
-def _lame_repo_impl(ctx):
-    """Download and setup LAME source."""
-    ctx.download_and_extract(
-        url = "https://sourceforge.net/projects/lame/files/lame/{version}/lame-{version}.tar.gz".format(version = _LAME_VERSION),
-        stripPrefix = "lame-{}".format(_LAME_VERSION),
-    )
-    ctx.file("BUILD.bazel", """
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "lame_srcs",
-    srcs = glob([
-        "libmp3lame/*.c",
-        "libmp3lame/vector/*.c",
-    ]),
-)
-
-filegroup(
-    name = "lame_headers",
-    srcs = glob([
-        "include/*.h",
-        "libmp3lame/*.h",
-        "libmp3lame/vector/*.h",
-    ]),
-)
-
-filegroup(
-    name = "mpglib_srcs",
-    srcs = glob(["mpglib/*.c"]),
-)
-
-filegroup(
-    name = "mpglib_headers",
-    srcs = glob(["mpglib/*.h"]),
-)
-""")
-
-_lame_repo = repository_rule(
-    implementation = _lame_repo_impl,
-)
-
-def _ogg_repo_impl(ctx):
-    """Download and setup libogg source."""
-    ctx.download_and_extract(
-        url = "https://downloads.xiph.org/releases/ogg/libogg-{}.tar.gz".format(_OGG_VERSION),
-        stripPrefix = "libogg-{}".format(_OGG_VERSION),
-    )
-    ctx.file("BUILD.bazel", """
-package(default_visibility = ["//visibility:public"])
-
-filegroup(
-    name = "ogg_srcs",
-    srcs = [
-        "src/bitwise.c",
-        "src/framing.c",
-    ],
-)
-
-filegroup(
-    name = "ogg_internal_headers",
-    srcs = glob(["src/*.h"]),
-)
-
-filegroup(
-    name = "ogg_headers",
-    srcs = glob(["include/ogg/*.h"]),
-)
-
-exports_files(glob(["include/ogg/*.h"]))
-exports_files(glob(["src/*.c"]))
-exports_files(glob(["src/*.h"]))
-""")
-
-_ogg_repo = repository_rule(
-    implementation = _ogg_repo_impl,
-)
-
-def _audio_libs_impl(ctx):
+def _audio_libs_impl(_ctx):
     """Module extension for audio libraries."""
-    _soxr_repo(name = "soxr")
-    _portaudio_repo(name = "portaudio")
-    _opus_repo(name = "opus")
-    _lame_repo(name = "lame")
-    _ogg_repo(name = "ogg")
+    soxr_repo(name = "soxr")
+    portaudio_repo(name = "portaudio")
+    opus_repo(name = "opus")
+    lame_repo(name = "lame")
+    ogg_repo(name = "ogg")
 
 audio_libs = module_extension(
     implementation = _audio_libs_impl,
 )
 
+# =============================================================================
+# Luau Scripting Language Extension
+# =============================================================================
+
+def _luau_impl(_ctx):
+    """Module extension for Luau."""
+    luau_repo(name = "luau")
+
+luau = module_extension(
+    implementation = _luau_impl,
+)
+
+# =============================================================================
+# Go Dependencies
+# =============================================================================
+
 def go_dependencies():
+    """Go module dependencies managed by Gazelle."""
     go_repository(
         name = "com_github_alicebob_gopher_json",
         importpath = "github.com/alicebob/gopher-json",

@@ -3,27 +3,34 @@
 ## 阶段一：Luau 引入
 
 ### 1.1 引入 Luau 源码
-- [ ] 添加 luau-lang/luau 作为 git submodule 到 `third_party/luau/`
-- [ ] 编写 Bazel 构建规则 `third_party/luau/BUILD.bazel`
-- [ ] 验证 Luau 库编译通过
+- [x] 通过 Bazel http_archive 引入 luau-lang/luau (v0.706)
+- [x] 编写 Bazel 构建规则 `third_party/luau/BUILD.bazel`
+- [x] 编写下载规则 `extensions.bzl` 中的 `luau` extension
 
 ### 1.2 C Wrapper
-- [ ] 创建 `luau/c/luau_wrapper.h` - C 接口定义
-- [ ] 创建 `luau/c/luau_wrapper.cpp` - C++ 实现
-- [ ] 实现基础 API：new/close/dostring/dofile
-- [ ] 实现栈操作：push/to 各类型
-- [ ] 实现函数注册：register_func
-- [ ] 编写测试
+- [x] 创建 `luau/c/luau_wrapper.h` - C 接口定义
+- [x] 创建 `luau/c/luau_wrapper.cpp` - C++ 实现
+- [x] 实现基础 API：new/close/dostring/compile/loadbytecode/pcall
+- [x] 实现栈操作：push/to 各类型（nil/bool/number/string/table）
+- [x] 实现函数注册：pushcfunction/register
+- [x] 实现表操作：newtable/getfield/setfield/gettable/settable/next
+- [x] 实现全局变量：getglobal/setglobal
+- [x] 实现内存管理：memoryusage/gc
+- [x] 实现调试工具：dumpstack/version
 
 ### 1.3 Go Binding
-- [ ] 创建 `go/pkg/luau/` 包
-- [ ] CGO 绑定 C wrapper
-- [ ] 封装 Go 友好的 API
-- [ ] 编写测试
+- [x] 创建 `go/pkg/luau/` 包
+- [x] CGO 绑定 C wrapper
+- [x] 封装 Go 友好的 API（State, Type, OptLevel）
+- [x] 编写测试（40+ 测试用例，覆盖各种 Luau 脚本场景）
+- [x] 编写 benchmark（执行/编译/栈操作/表操作/内存/实际场景）
 
-### 1.4 Rust Binding (可选)
-- [ ] 评估：直接用 mlua with luau feature，还是自己绑定
-- [ ] 实现或集成
+### 1.4 Rust Binding
+- [x] 选择方案：使用 C wrapper 的 FFI 绑定（与 Go 保持一致）
+- [x] 创建 `rust/luau/` crate
+- [x] 封装统一 API（State, Type, OptLevel）与 Go 保持一致
+- [x] 编写测试（29 测试用例）
+- [ ] 编写 benchmark（使用 criterion）- 待补充
 
 ---
 
