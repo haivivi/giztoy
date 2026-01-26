@@ -111,7 +111,8 @@ func (s *State) Close() {
 	s.funcs = nil
 }
 
-// OpenLibs opens the standard Luau libraries in a sandboxed environment.
+// OpenLibs opens the standard Luau libraries.
+// Note: This does not automatically sandbox the environment.
 func (s *State) OpenLibs() {
 	C.luau_openlibs(s.L)
 }
