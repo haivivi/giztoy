@@ -4,20 +4,24 @@ load("@rules_android//android:rules.bzl", "android_binary", "android_library")
 load("@rules_kotlin//kotlin:android.bzl", "kt_android_library")
 
 # Android library containing the app source code
+# tags = ["manual"] - requires Android SDK setup
 android_library(
     name = "lib",
     srcs = glob(["java/**/*.java"]),
     custom_package = "com.example.helloworld",
     manifest = "AndroidManifest.xml",
     resource_files = glob(["res/**"]),
+    tags = ["manual"],
     visibility = ["//visibility:private"],
 )
 
 # Android application (APK)
+# tags = ["manual"] - requires Android SDK setup
 android_binary(
     name = "app",
     custom_package = "com.example.helloworld",
     manifest = "AndroidManifest.xml",
+    tags = ["manual"],
     visibility = ["//visibility:public"],
     deps = [":lib"],
 )
@@ -26,19 +30,23 @@ android_binary(
 # Alternative: Kotlin-based app
 # ============================================================================
 
+# tags = ["manual"] - requires Android SDK setup
 kt_android_library(
     name = "kotlin_lib",
     srcs = glob(["kotlin/**/*.kt"]),
     custom_package = "com.example.helloworld.kotlin",
     manifest = "kotlin/AndroidManifest.xml",
     resource_files = glob(["kotlin/res/**"]),
+    tags = ["manual"],
     visibility = ["//visibility:private"],
 )
 
+# tags = ["manual"] - requires Android SDK setup
 android_binary(
     name = "kotlin_app",
     custom_package = "com.example.helloworld.kotlin",
     manifest = "kotlin/AndroidManifest.xml",
+    tags = ["manual"],
     visibility = ["//visibility:public"],
     deps = [":kotlin_lib"],
 )

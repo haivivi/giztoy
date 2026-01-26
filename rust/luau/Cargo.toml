@@ -1,0 +1,23 @@
+[package]
+name = "giztoy-luau"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Luau scripting language bindings for giztoy"
+
+[dependencies]
+# Error handling
+thiserror = { workspace = true }
+
+[dev-dependencies]
+# Testing
+criterion = { workspace = true }
+
+[[bench]]
+name = "luau_bench"
+harness = false
+
+# Build configuration: link with C wrapper
+[build-dependencies]
+# No build deps needed - we link at runtime via Bazel

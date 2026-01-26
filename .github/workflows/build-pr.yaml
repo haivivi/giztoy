@@ -79,7 +79,7 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libmp3lame-dev libopus-dev libasound2-dev
+        run: sudo apt-get update && sudo apt-get install -y libmp3lame-dev libopus-dev libasound2-dev libc++-dev libc++abi-dev
 
       - name: Setup Android SDK (macOS)
         if: runner.os == 'macOS'

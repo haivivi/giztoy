@@ -15,6 +15,7 @@ members = [
     "trie",
     "chatgear",
     "speech",
+    "luau",
     "cmd/dashscope",
     "cmd/minimax",
     "cmd/doubaospeech",
@@ -43,6 +44,7 @@ giztoy-encoding = { path = "encoding" }
 giztoy-trie = { path = "trie" }
 giztoy-chatgear = { path = "chatgear" }
 giztoy-speech = { path = "speech" }
+giztoy-luau = { path = "luau" }
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }

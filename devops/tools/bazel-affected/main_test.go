@@ -355,7 +355,7 @@ func TestAffectedTargets_Golden(t *testing.T) {
 	// Base: b320379~1, Head: b320379
 	const baseCommit = "b320379~1"
 	const headCommit = "b320379"
-	goldenFile := filepath.Join(wsDir, "devops/tools/testdata/b320379.golden")
+	goldenFile := filepath.Join(wsDir, "devops/tools/bazel-affected/testdata/b320379.golden")
 
 	// Verify the commit exists
 	cmd := exec.Command("git", "rev-parse", headCommit)

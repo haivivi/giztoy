@@ -3,6 +3,9 @@
 load("@rules_apple//apple:ios.bzl", "ios_application", "ios_extension")
 load("@rules_swift//swift:swift.bzl", "swift_library")
 
+# All iOS targets require macOS to build
+_IOS_COMPATIBLE = ["@platforms//os:macos"]
+
 # Swift library containing the app source code
 # tags = ["manual"] prevents direct build by //... (would compile on wrong platform)
 # Only built indirectly as ios_application dependency
@@ -11,6 +14,7 @@ swift_library(
     srcs = glob(["HelloWorld/*.swift"]),
     module_name = "HelloWorld",
     tags = ["manual"],
+    target_compatible_with = _IOS_COMPATIBLE,
     visibility = ["//visibility:private"],
 )
 
@@ -24,6 +28,7 @@ ios_application(
     ],
     infoplists = ["HelloWorld/Info.plist"],
     minimum_os_version = "15.0",
+    target_compatible_with = _IOS_COMPATIBLE,
     visibility = ["//visibility:public"],
     deps = [":HelloWorldLib"],
 )
@@ -37,6 +42,7 @@ swift_library(
     srcs = glob(["SwiftUIApp/*.swift"]),
     module_name = "SwiftUIApp",
     tags = ["manual"],
+    target_compatible_with = _IOS_COMPATIBLE,
     visibility = ["//visibility:private"],
 )
 
@@ -49,6 +55,7 @@ ios_application(
     ],
     infoplists = ["SwiftUIApp/Info.plist"],
     minimum_os_version = "15.0",
+    target_compatible_with = _IOS_COMPATIBLE,
     visibility = ["//visibility:public"],
     deps = [":SwiftUIAppLib"],
 )
@@ -62,6 +69,7 @@ swift_library(
     srcs = glob(["Widget/*.swift"]),
     module_name = "BazelWidget",
     tags = ["manual"],
+    target_compatible_with = _IOS_COMPATIBLE,
     visibility = ["//visibility:private"],
 )
 
@@ -75,6 +83,7 @@ ios_extension(
     ],
     infoplists = ["Widget/Info.plist"],
     minimum_os_version = "17.0",
+    target_compatible_with = _IOS_COMPATIBLE,
     visibility = ["//visibility:public"],
     deps = [":BazelWidgetLib"],
 )
@@ -90,6 +99,7 @@ ios_application(
     ],
     infoplists = ["SwiftUIApp/Info.plist"],
     minimum_os_version = "17.0",
+    target_compatible_with = _IOS_COMPATIBLE,
     visibility = ["//visibility:public"],
     deps = [":SwiftUIAppLib"],
 )

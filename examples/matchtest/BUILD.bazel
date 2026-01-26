@@ -5,6 +5,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 # ============================================================================
 
 # Run benchmark (Rust), output report.json to bazel-out
+# tags = ["manual"] prevents automatic build by //... (requires network/API keys)
 genrule(
     name = "run",
     srcs = [
@@ -23,7 +24,7 @@ genrule(
     """,
     tools = ["//rust/cmd/matchtest"],
     local = True,
-    tags = ["requires-network"],
+    tags = ["manual", "requires-network"],
 )
 
 # ============================================================================
@@ -31,6 +32,7 @@ genrule(
 # ============================================================================
 
 # Run benchmark (Go), output report.json to bazel-out
+# tags = ["manual"] prevents automatic build by //... (requires network/API keys)
 genrule(
     name = "run_go",
     srcs = [
@@ -49,10 +51,11 @@ genrule(
     """,
     tools = ["//go/cmd/genx/matchtest"],
     local = True,
-    tags = ["requires-network"],
+    tags = ["manual", "requires-network"],
 )
 
 # Serve results (Rust) - depends on :run output
+# tags = ["manual"] because it depends on :run which requires network/API keys
 sh_binary(
     name = "serve",
     srcs = ["serve.sh"],
@@ -66,9 +69,11 @@ sh_binary(
         "STATIC_DIR": "html/matchtest",
         "REPORT_FILE": "$(rootpath :run)",
     },
+    tags = ["manual"],
 )
 
 # Serve results (Go) - depends on :run_go output
+# tags = ["manual"] because it depends on :run_go which requires network/API keys
 sh_binary(
     name = "serve_go",
     srcs = ["serve_go.sh"],
@@ -82,6 +87,7 @@ sh_binary(
         "STATIC_DIR": "html/matchtest",
         "REPORT_FILE": "$(rootpath :run_go)",
     },
+    tags = ["manual"],
 )
 
 # Live mode (Rust): run benchmark with live web UI, no caching

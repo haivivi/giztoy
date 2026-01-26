@@ -1,6 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
-# macOS build using zig cc
+# macOS build using Zig
 genrule(
     name = "portaudio_static_macos",
     srcs = [
@@ -16,10 +16,10 @@ genrule(
         export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
         export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
         mkdir -p /tmp/zig-cache
-        
+
         OUTDIR=$$(mktemp -d)
-        
         CONFIG_DIR=$$(mktemp -d)
+        trap "rm -rf $$OUTDIR $$CONFIG_DIR" EXIT
         cp $(location pa_config.h) $$CONFIG_DIR/pa_config.h
         
         for src in $(locations @portaudio//:portaudio_macos_srcs); do
@@ -37,14 +37,12 @@ genrule(
         done
         
         ar rcs $@ $$OUTDIR/*.o
-        
-        rm -rf $$OUTDIR $$CONFIG_DIR
     """,
     target_compatible_with = ["@platforms//os:macos"],
     visibility = ["//visibility:private"],
 )
 
-# Linux build using zig cc
+# Linux build using Zig
 genrule(
     name = "portaudio_static_linux",
     srcs = [
@@ -60,10 +58,10 @@ genrule(
         export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
         export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
         mkdir -p /tmp/zig-cache
-        
+
         OUTDIR=$$(mktemp -d)
-        
         CONFIG_DIR=$$(mktemp -d)
+        trap "rm -rf $$OUTDIR $$CONFIG_DIR" EXIT
         cp $(location pa_config.h) $$CONFIG_DIR/pa_config.h
         
         for src in $(locations @portaudio//:portaudio_linux_srcs); do
@@ -81,8 +79,6 @@ genrule(
         done
         
         ar rcs $@ $$OUTDIR/*.o
-        
-        rm -rf $$OUTDIR $$CONFIG_DIR
     """,
     target_compatible_with = ["@platforms//os:linux"],
     visibility = ["//visibility:private"],

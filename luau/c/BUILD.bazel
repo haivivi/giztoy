@@ -1,0 +1,16 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "luau_wrapper",
+    srcs = ["luau_wrapper.cpp"],
+    hdrs = ["luau_wrapper.h"],
+    defines = ["LUA_USE_LONGJMP=1"],
+    includes = ["."],
+    linkopts = select({
+        "@platforms//os:linux": ["-lc++", "-lc++abi"],
+        "@platforms//os:macos": ["-lc++"],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+    deps = ["//third_party/luau:luau"],
+)

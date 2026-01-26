@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "luau",
+    srcs = [
+        "doc.go",
+        "luau.go",
+    ],
+    cdeps = ["//luau/c:luau_wrapper"],
+    cgo = True,
+    importpath = "github.com/haivivi/giztoy/pkg/luau",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "luau_test",
+    size = "medium",
+    srcs = [
+        "benchmark_test.go",
+        "luau_test.go",
+    ],
+    embed = [":luau"],
+)

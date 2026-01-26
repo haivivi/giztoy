@@ -1166,6 +1166,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "giztoy-luau"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "giztoy-minimax"
 version = "0.1.0"
 dependencies = [

@@ -121,6 +121,7 @@ crate.from_cargo(
         "//rust/minimax:Cargo.toml",
         "//rust/mqtt0:Cargo.toml",
         "//rust/cli:Cargo.toml",
+        "//rust/luau:Cargo.toml",
         "//rust/cmd/dashscope:Cargo.toml",
         "//rust/cmd/minimax:Cargo.toml",
         "//examples/rust/audio:Cargo.toml",
@@ -133,6 +134,10 @@ use_repo(crate, "crate_index")
 # Audio libraries (soxr, portaudio, opus, lame, ogg)
 audio_libs = use_extension("//:extensions.bzl", "audio_libs")
 use_repo(audio_libs, "lame", "ogg", "opus", "portaudio", "soxr")
+
+# Luau scripting language
+luau_ext = use_extension("//:extensions.bzl", "luau")
+use_repo(luau_ext, "luau")
 
 # ============================================================================
 # HarmonyOS SDK (自动下载，无需安装 DevEco Studio)

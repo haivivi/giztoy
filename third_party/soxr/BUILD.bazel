@@ -1,6 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
-# Use Zig as C compiler to build soxr
+# Build soxr resampler as static library using Zig
 genrule(
     name = "soxr_static",
     srcs = [
@@ -16,9 +16,10 @@ genrule(
         export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
         export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
         mkdir -p /tmp/zig-cache
-        
+
         OUTDIR=$$(mktemp -d)
         CONFIG_DIR=$$(mktemp -d)
+        trap "rm -rf $$OUTDIR $$CONFIG_DIR" EXIT
         cp $(location soxr-config.h) $$CONFIG_DIR/soxr-config.h
         
         for src in $(locations @soxr//:soxr_c_srcs); do
@@ -34,7 +35,6 @@ genrule(
         done
         
         ar rcs $@ $$OUTDIR/*.o
-        rm -rf $$OUTDIR $$CONFIG_DIR
     """,
     visibility = ["//visibility:private"],
 )
