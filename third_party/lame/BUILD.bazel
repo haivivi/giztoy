@@ -1,6 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_import", "cc_library")
 
-# Build LAME MP3 encoder as static library
+# Build LAME MP3 encoder as static library using Zig
 genrule(
     name = "lame_static",
     srcs = [
@@ -13,6 +13,11 @@ genrule(
     outs = ["libmp3lame.a"],
     cmd = """
         set -e
+        export HOME=/tmp
+        export ZIG_LOCAL_CACHE_DIR=/tmp/zig-cache
+        export ZIG_GLOBAL_CACHE_DIR=/tmp/zig-cache
+        mkdir -p /tmp/zig-cache
+
         OUTDIR=$$(mktemp -d)
         CONFIG_DIR=$$(mktemp -d)
         trap "rm -rf $$OUTDIR $$CONFIG_DIR" EXIT
@@ -21,13 +26,14 @@ genrule(
         # Compile LAME sources
         for src in $(locations @lame//:lame_srcs); do
             base=$$(basename $$src .c)
-            clang -c $$src -o $$OUTDIR/lame_$$base.o \
+            zig cc -c $$src -o $$OUTDIR/lame_$$base.o \
                 -I$$CONFIG_DIR \
                 -Iexternal/+audio_libs+lame/include \
                 -Iexternal/+audio_libs+lame/libmp3lame \
                 -Iexternal/+audio_libs+lame/mpglib \
                 -DHAVE_CONFIG_H \
                 -DSTDC_HEADERS=1 \
+                -fno-sanitize=undefined \
                 -O2 \
                 -w
         done
@@ -35,13 +41,14 @@ genrule(
         # Compile mpglib sources
         for src in $(locations @lame//:mpglib_srcs); do
             base=$$(basename $$src .c)
-            clang -c $$src -o $$OUTDIR/mpglib_$$base.o \
+            zig cc -c $$src -o $$OUTDIR/mpglib_$$base.o \
                 -I$$CONFIG_DIR \
                 -Iexternal/+audio_libs+lame/include \
                 -Iexternal/+audio_libs+lame/libmp3lame \
                 -Iexternal/+audio_libs+lame/mpglib \
                 -DHAVE_CONFIG_H \
                 -DSTDC_HEADERS=1 \
+                -fno-sanitize=undefined \
                 -O2 \
                 -w
         done
