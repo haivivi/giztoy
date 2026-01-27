@@ -5,15 +5,14 @@ go_library(
     srcs = [
         "doc.go",
         "format.go",
+        "resampler.go",
         "sample_reader.go",
-        "soxr.go",
     ],
-    cdeps = [
-        "//third_party/soxr",
-    ],
-    cgo = True,
     importpath = "github.com/haivivi/giztoy/pkg/audio/resampler",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_tphakala_go_audio_resampling//:go-audio-resampling",
+    ],
 )
 
 go_test(
