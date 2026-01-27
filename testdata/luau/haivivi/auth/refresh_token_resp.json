@@ -1,0 +1,16 @@
+{
+  "id": "session-001",
+  "key": "test-session-key",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-token",
+  "tokenExpireAt": "2026-01-27T00:00:00Z",
+  "expireAt": "2026-02-26T00:00:00Z",
+  "user": {
+    "id": "user-001",
+    "ns": "haivivi",
+    "scope": "haivivi",
+    "nickname": "Test User",
+    "avatar": "https://example.com/avatar.png",
+    "email": "test@example.com",
+    "roles": ["user"]
+  }
+}

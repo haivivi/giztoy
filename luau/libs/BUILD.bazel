@@ -1,0 +1,5 @@
+filegroup(
+    name = "haivivi",
+    srcs = glob(["haivivi/**/*.luau"]),
+    visibility = ["//visibility:public"],
+)

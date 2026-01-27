@@ -1,0 +1,9 @@
+{
+  "id": "proj-001",
+  "key": "bubblepal.haivivi.cn",
+  "name": "BubblePal",
+  "desc": "BubblePal IoT Project",
+  "owner": "user-admin",
+  "shortId": "bp",
+  "collaborators": ["user-001", "user-002"]
+}

@@ -77,6 +77,8 @@ extern "C" {
     pub fn luau_createtable(L: *mut LuauState, narr: c_int, nrec: c_int);
     pub fn luau_getfield(L: *mut LuauState, idx: c_int, key: *const c_char);
     pub fn luau_setfield(L: *mut LuauState, idx: c_int, key: *const c_char);
+    pub fn luau_gettable(L: *mut LuauState, idx: c_int);
+    pub fn luau_settable(L: *mut LuauState, idx: c_int);
     pub fn luau_rawget(L: *mut LuauState, idx: c_int);
     pub fn luau_rawset(L: *mut LuauState, idx: c_int);
     pub fn luau_rawgeti(L: *mut LuauState, idx: c_int, n: c_int);

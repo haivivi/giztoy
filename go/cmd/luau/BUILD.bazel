@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+    name = "luau",
+    srcs = [
+        "main.go",
+        "runtime.go",
+        "builtin_env.go",
+        "builtin_http.go",
+        "builtin_json.go",
+        "builtin_kvs.go",
+        "builtin_log.go",
+        "builtin_require.go",
+    ],
+    deps = [
+        "//go/pkg/luau",
+    ],
+    visibility = ["//visibility:public"],
+)

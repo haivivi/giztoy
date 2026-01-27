@@ -1,0 +1,371 @@
+filegroup(
+    name = "haivivi_tests",
+    srcs = glob(["haivivi/**/*.luau"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "unit_tests",
+    srcs = glob(["test_*.luau"]),
+    visibility = ["//visibility:public"],
+)
+
+# Test runner script
+sh_binary(
+    name = "run_test",
+    srcs = ["run_test.sh"],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        ":haivivi_tests",
+        ":unit_tests",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# =============================================================================
+# Unit Tests (no network required, run by default)
+# =============================================================================
+
+sh_test(
+    name = "test_builtin_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location test_builtin.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_builtin.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_require_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location test_require.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_require.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_json_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location test_json.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_json.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_kvs_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location test_kvs.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_kvs.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_env_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location test_env.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_env.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_http_unit_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location test_http_unit.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_http_unit.luau",
+    ],
+    tags = ["unit"],
+)
+
+# Rust runner unit tests
+sh_test(
+    name = "test_builtin_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location test_builtin.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_builtin.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_require_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location test_require.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_require.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_json_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location test_json.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_json.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_kvs_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location test_kvs.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_kvs.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_env_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location test_env.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_env.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_http_unit_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location test_http_unit.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_http_unit.luau",
+    ],
+    tags = ["unit"],
+)
+
+# =============================================================================
+# Integration Tests (require network, manual)
+# =============================================================================
+
+# Individual test targets
+sh_test(
+    name = "test_auth_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location haivivi/test_auth.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "haivivi/test_auth.luau",
+    ],
+    env_inherit = [
+        "HAIVIVI_KEY",
+        "HAIVIVI_AUTH_URL",
+    ],
+    tags = [
+        "integration",
+        "manual",
+    ],
+)
+
+sh_test(
+    name = "test_pal_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location haivivi/test_pal.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "haivivi/test_pal.luau",
+    ],
+    env_inherit = [
+        "HAIVIVI_KEY",
+        "HAIVIVI_AUTH_URL",
+        "HAIVIVI_PAL_URL",
+    ],
+    tags = [
+        "integration",
+        "manual",
+    ],
+)
+
+sh_test(
+    name = "test_aiot_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location haivivi/test_aiot.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "haivivi/test_aiot.luau",
+    ],
+    env_inherit = [
+        "HAIVIVI_KEY",
+        "HAIVIVI_AUTH_URL",
+        "HAIVIVI_AIOT_URL",
+        "HAIVIVI_PROJECT_KEY",
+    ],
+    tags = [
+        "integration",
+        "manual",
+    ],
+)
+
+# Rust runner tests
+sh_test(
+    name = "test_auth_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location haivivi/test_auth.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "haivivi/test_auth.luau",
+    ],
+    env_inherit = [
+        "HAIVIVI_KEY",
+        "HAIVIVI_AUTH_URL",
+    ],
+    tags = [
+        "integration",
+        "manual",
+    ],
+)
+
+sh_test(
+    name = "test_pal_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location haivivi/test_pal.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "haivivi/test_pal.luau",
+    ],
+    env_inherit = [
+        "HAIVIVI_KEY",
+        "HAIVIVI_AUTH_URL",
+        "HAIVIVI_PAL_URL",
+    ],
+    tags = [
+        "integration",
+        "manual",
+    ],
+)
+
+sh_test(
+    name = "test_aiot_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location haivivi/test_aiot.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "haivivi/test_aiot.luau",
+    ],
+    env_inherit = [
+        "HAIVIVI_KEY",
+        "HAIVIVI_AUTH_URL",
+        "HAIVIVI_AIOT_URL",
+        "HAIVIVI_PROJECT_KEY",
+    ],
+    tags = [
+        "integration",
+        "manual",
+    ],
+)
