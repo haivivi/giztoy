@@ -1052,3 +1052,295 @@ fn test_register_func_deep_recursion() {
     state.get_global("result").unwrap();
     assert_eq!(state.to_number(-1), 100.0);
 }
+
+// =============================================================================
+// Thread/Coroutine API Tests
+// =============================================================================
+
+#[test]
+fn test_new_thread() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    let thread = state.new_thread();
+    assert!(thread.is_ok());
+
+    let thread = thread.unwrap();
+    assert_eq!(thread.get_top(), 0);
+}
+
+#[test]
+fn test_thread_status() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    let thread = state.new_thread().unwrap();
+
+    // New thread should be in OK status
+    assert_eq!(thread.status(), CoStatus::Ok);
+}
+
+#[test]
+fn test_thread_resume_simple() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    // Compile a simple function
+    let bytecode = state.compile("return 42", OptLevel::O2).unwrap();
+
+    // Create thread and load bytecode
+    let thread = state.new_thread().unwrap();
+    thread.load_bytecode(&bytecode, "chunk").unwrap();
+
+    // Resume - should return Ok with 1 result
+    let (status, nresults) = thread.resume(0);
+    assert_eq!(status, CoStatus::Ok);
+    assert_eq!(nresults, 1);
+    assert_eq!(thread.to_number(-1), 42.0);
+}
+
+#[test]
+fn test_thread_resume_with_args() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    // Function that adds two numbers
+    let bytecode = state
+        .compile(
+            r#"
+        local a, b = ...
+        return a + b
+    "#,
+            OptLevel::O2,
+        )
+        .unwrap();
+
+    let thread = state.new_thread().unwrap();
+    thread.load_bytecode(&bytecode, "chunk").unwrap();
+
+    // Push arguments before resume
+    thread.push_number(10.0);
+    thread.push_number(20.0);
+
+    let (status, nresults) = thread.resume(2);
+    assert_eq!(status, CoStatus::Ok);
+    assert_eq!(nresults, 1);
+    assert_eq!(thread.to_number(-1), 30.0);
+}
+
+#[test]
+fn test_thread_yield_resume() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    // Function that yields multiple times
+    let bytecode = state
+        .compile(
+            r#"
+        coroutine.yield(1)
+        coroutine.yield(2)
+        coroutine.yield(3)
+        return "done"
+    "#,
+            OptLevel::O2,
+        )
+        .unwrap();
+
+    let thread = state.new_thread().unwrap();
+    thread.load_bytecode(&bytecode, "chunk").unwrap();
+
+    // First resume - should yield 1
+    let (status, nresults) = thread.resume(0);
+    assert_eq!(status, CoStatus::Yield);
+    assert_eq!(nresults, 1);
+    assert_eq!(thread.to_number(-1), 1.0);
+    thread.pop(nresults);
+
+    // Second resume - should yield 2
+    let (status, nresults) = thread.resume(0);
+    assert_eq!(status, CoStatus::Yield);
+    assert_eq!(nresults, 1);
+    assert_eq!(thread.to_number(-1), 2.0);
+    thread.pop(nresults);
+
+    // Third resume - should yield 3
+    let (status, nresults) = thread.resume(0);
+    assert_eq!(status, CoStatus::Yield);
+    assert_eq!(nresults, 1);
+    assert_eq!(thread.to_number(-1), 3.0);
+    thread.pop(nresults);
+
+    // Fourth resume - should return "done"
+    let (status, nresults) = thread.resume(0);
+    assert_eq!(status, CoStatus::Ok);
+    assert_eq!(nresults, 1);
+    assert_eq!(thread.to_string(-1), Some("done".to_string()));
+}
+
+#[test]
+fn test_thread_is_yieldable() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    // Note: In Luau, even the main state might be considered "yieldable" in some contexts,
+    // so we don't assert on that. We just test the thread functionality.
+
+    // Compile function that yields
+    let bytecode = state
+        .compile(
+            r#"
+        -- Inside coroutine, yield
+        coroutine.yield("yieldable")
+        return "done"
+    "#,
+            OptLevel::O2,
+        )
+        .unwrap();
+
+    let thread = state.new_thread().unwrap();
+    thread.load_bytecode(&bytecode, "chunk").unwrap();
+
+    // Resume to first yield
+    let (status, nresults) = thread.resume(0);
+    assert_eq!(status, CoStatus::Yield);
+    assert_eq!(nresults, 1);
+    assert_eq!(thread.to_string(-1), Some("yieldable".to_string()));
+}
+
+#[test]
+fn test_thread_multiple_returns() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    let bytecode = state
+        .compile(
+            r#"
+        return 1, 2, 3, 4, 5
+    "#,
+            OptLevel::O2,
+        )
+        .unwrap();
+
+    let thread = state.new_thread().unwrap();
+    thread.load_bytecode(&bytecode, "chunk").unwrap();
+
+    let (status, nresults) = thread.resume(0);
+    assert_eq!(status, CoStatus::Ok);
+    assert_eq!(nresults, 5);
+
+    // Check all return values (they're in order on the stack)
+    assert_eq!(thread.to_number(-5), 1.0);
+    assert_eq!(thread.to_number(-4), 2.0);
+    assert_eq!(thread.to_number(-3), 3.0);
+    assert_eq!(thread.to_number(-2), 4.0);
+    assert_eq!(thread.to_number(-1), 5.0);
+}
+
+#[test]
+fn test_thread_error() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    let bytecode = state
+        .compile(
+            r#"
+        error("test error")
+    "#,
+            OptLevel::O2,
+        )
+        .unwrap();
+
+    let thread = state.new_thread().unwrap();
+    thread.load_bytecode(&bytecode, "chunk").unwrap();
+
+    let (status, _) = thread.resume(0);
+    assert_eq!(status, CoStatus::ErrRun);
+}
+
+#[test]
+fn test_thread_pass_values_on_resume() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    // Function that receives values via yield
+    let bytecode = state
+        .compile(
+            r#"
+        local x = coroutine.yield()  -- Receive value here
+        return x * 2
+    "#,
+            OptLevel::O2,
+        )
+        .unwrap();
+
+    let thread = state.new_thread().unwrap();
+    thread.load_bytecode(&bytecode, "chunk").unwrap();
+
+    // First resume - starts coroutine, yields
+    let (status, _) = thread.resume(0);
+    assert_eq!(status, CoStatus::Yield);
+
+    // Second resume - pass value 21, should return 42
+    thread.push_number(21.0);
+    let (status, nresults) = thread.resume(1);
+    assert_eq!(status, CoStatus::Ok);
+    assert_eq!(nresults, 1);
+    assert_eq!(thread.to_number(-1), 42.0);
+}
+
+#[test]
+fn test_costatus_display() {
+    assert_eq!(format!("{}", CoStatus::Ok), "ok");
+    assert_eq!(format!("{}", CoStatus::Yield), "yield");
+    assert_eq!(format!("{}", CoStatus::ErrRun), "errrun");
+    assert_eq!(format!("{}", CoStatus::ErrSyntax), "errsyntax");
+    assert_eq!(format!("{}", CoStatus::ErrMem), "errmem");
+    assert_eq!(format!("{}", CoStatus::ErrErr), "errerr");
+    assert_eq!(format!("{}", CoStatus::Break), "break");
+}
+
+#[test]
+fn test_thread_stack_operations() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    let thread = state.new_thread().unwrap();
+
+    // Test basic stack operations on thread
+    thread.push_number(1.0);
+    thread.push_number(2.0);
+    thread.push_string("hello").unwrap();
+    thread.push_boolean(true);
+    thread.push_nil();
+
+    assert_eq!(thread.get_top(), 5);
+    assert!(thread.is_nil(-1));
+    assert!(thread.is_boolean(-2));
+    assert!(thread.is_string(-3));
+    assert!(thread.is_number(-4));
+    assert!(thread.is_number(-5));
+
+    assert!(thread.to_boolean(-2));
+    assert_eq!(thread.to_string(-3), Some("hello".to_string()));
+    assert_eq!(thread.to_number(-4), 2.0);
+    assert_eq!(thread.to_number(-5), 1.0);
+
+    thread.pop(3);
+    assert_eq!(thread.get_top(), 2);
+}
+
+#[test]
+fn test_thread_table_operations() {
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    let thread = state.new_thread().unwrap();
+
+    // Create and manipulate table on thread stack
+    thread.new_table();
+    thread.push_number(42.0);
+    thread.set_field(-2, "answer").unwrap();
+
+    thread.get_field(-1, "answer").unwrap();
+    assert_eq!(thread.to_number(-1), 42.0);
+}

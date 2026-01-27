@@ -531,6 +531,369 @@ impl Drop for State {
     }
 }
 
+// =============================================================================
+// Coroutine/Thread Support
+// =============================================================================
+
+/// Coroutine status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CoStatus {
+    /// Running or finished successfully
+    Ok,
+    /// Yielded
+    Yield,
+    /// Runtime error
+    ErrRun,
+    /// Syntax error
+    ErrSyntax,
+    /// Memory allocation error
+    ErrMem,
+    /// Error in error handler
+    ErrErr,
+    /// Break requested
+    Break,
+}
+
+impl CoStatus {
+    /// Returns the status name as a string.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CoStatus::Ok => "ok",
+            CoStatus::Yield => "yield",
+            CoStatus::ErrRun => "errrun",
+            CoStatus::ErrSyntax => "errsyntax",
+            CoStatus::ErrMem => "errmem",
+            CoStatus::ErrErr => "errerr",
+            CoStatus::Break => "break",
+        }
+    }
+}
+
+impl From<ffi::LuauCoStatus> for CoStatus {
+    fn from(status: ffi::LuauCoStatus) -> Self {
+        match status {
+            ffi::LuauCoStatus::Ok => CoStatus::Ok,
+            ffi::LuauCoStatus::Yield => CoStatus::Yield,
+            ffi::LuauCoStatus::ErrRun => CoStatus::ErrRun,
+            ffi::LuauCoStatus::ErrSyntax => CoStatus::ErrSyntax,
+            ffi::LuauCoStatus::ErrMem => CoStatus::ErrMem,
+            ffi::LuauCoStatus::ErrErr => CoStatus::ErrErr,
+            ffi::LuauCoStatus::Break => CoStatus::Break,
+        }
+    }
+}
+
+impl std::fmt::Display for CoStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+/// Represents a Luau coroutine/thread.
+/// It wraps a State with coroutine-specific methods.
+pub struct Thread {
+    ptr: *mut ffi::LuauState,
+    parent_ptr: *mut ffi::LuauState,
+    func_ids: Vec<u64>,
+}
+
+// Thread is Send but not Sync (not thread-safe)
+unsafe impl Send for Thread {}
+
+impl Thread {
+    /// Get the number of elements on the stack.
+    pub fn get_top(&self) -> i32 {
+        unsafe { ffi::luau_gettop(self.ptr) }
+    }
+
+    /// Set the stack top to a specific index.
+    pub fn set_top(&self, idx: i32) {
+        unsafe { ffi::luau_settop(self.ptr, idx) };
+    }
+
+    /// Pop n elements from the stack.
+    pub fn pop(&self, n: i32) {
+        unsafe { ffi::luau_pop(self.ptr, n) };
+    }
+
+    /// Push nil onto the stack.
+    pub fn push_nil(&self) {
+        unsafe { ffi::luau_pushnil(self.ptr) };
+    }
+
+    /// Push a boolean onto the stack.
+    pub fn push_boolean(&self, b: bool) {
+        unsafe { ffi::luau_pushboolean(self.ptr, if b { 1 } else { 0 }) };
+    }
+
+    /// Push a number onto the stack.
+    pub fn push_number(&self, n: f64) {
+        unsafe { ffi::luau_pushnumber(self.ptr, n) };
+    }
+
+    /// Push a string onto the stack.
+    pub fn push_string(&self, s: &str) -> Result<()> {
+        unsafe { ffi::luau_pushlstring(self.ptr, s.as_ptr() as *const c_char, s.len()) };
+        Ok(())
+    }
+
+    /// Get the type of the value at the given index.
+    pub fn get_type(&self, idx: i32) -> Type {
+        let t = unsafe { ffi::luau_type(self.ptr, idx) };
+        Type::from(t)
+    }
+
+    /// Check if the value at the given index is nil.
+    pub fn is_nil(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isnil(self.ptr, idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a boolean.
+    pub fn is_boolean(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isboolean(self.ptr, idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a number.
+    pub fn is_number(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isnumber(self.ptr, idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a string.
+    pub fn is_string(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isstring(self.ptr, idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a table.
+    pub fn is_table(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_istable(self.ptr, idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a function.
+    pub fn is_function(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isfunction(self.ptr, idx) != 0 }
+    }
+
+    /// Get the boolean value at the given index.
+    pub fn to_boolean(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_toboolean(self.ptr, idx) != 0 }
+    }
+
+    /// Get the number value at the given index.
+    pub fn to_number(&self, idx: i32) -> f64 {
+        unsafe { ffi::luau_tonumber(self.ptr, idx) }
+    }
+
+    /// Get the string value at the given index.
+    pub fn to_string(&self, idx: i32) -> Option<String> {
+        let mut len: usize = 0;
+        let s = unsafe { ffi::luau_tolstring(self.ptr, idx, &mut len) };
+        if s.is_null() {
+            return None;
+        }
+        let slice = unsafe { std::slice::from_raw_parts(s as *const u8, len) };
+        String::from_utf8(slice.to_vec()).ok()
+    }
+
+    /// Create a new table and push it onto the stack.
+    pub fn new_table(&self) {
+        unsafe { ffi::luau_newtable(self.ptr) };
+    }
+
+    /// Get a field from a table.
+    pub fn get_field(&self, idx: i32, key: &str) -> Result<()> {
+        let c_key = CString::new(key).map_err(|_| Error::Invalid)?;
+        unsafe { ffi::luau_getfield(self.ptr, idx, c_key.as_ptr()) };
+        Ok(())
+    }
+
+    /// Set a field in a table.
+    pub fn set_field(&self, idx: i32, key: &str) -> Result<()> {
+        let c_key = CString::new(key).map_err(|_| Error::Invalid)?;
+        unsafe { ffi::luau_setfield(self.ptr, idx, c_key.as_ptr()) };
+        Ok(())
+    }
+
+    /// Get a value from a table using a key on the stack.
+    pub fn get_table(&self, idx: i32) {
+        unsafe { ffi::luau_gettable(self.ptr, idx) };
+    }
+
+    /// Set a value in a table using key and value on the stack.
+    pub fn set_table(&self, idx: i32) {
+        unsafe { ffi::luau_settable(self.ptr, idx) };
+    }
+
+    /// Push a copy of the value at the given index.
+    pub fn push_value(&self, idx: i32) {
+        unsafe { ffi::luau_pushvalue(self.ptr, idx) };
+    }
+
+    /// Insert the top value at the given index.
+    pub fn insert(&self, idx: i32) {
+        unsafe { ffi::luau_insert(self.ptr, idx) };
+    }
+
+    /// Remove the value at the given index.
+    pub fn remove(&self, idx: i32) {
+        unsafe { ffi::luau_remove(self.ptr, idx) };
+    }
+
+    /// Iterate to the next element in a table.
+    pub fn next(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_next(self.ptr, idx) != 0 }
+    }
+
+    /// Load compiled bytecode onto the stack (as a function).
+    pub fn load_bytecode(&self, bytecode: &[u8], chunkname: &str) -> Result<()> {
+        let c_chunkname = CString::new(chunkname).map_err(|_| Error::Invalid)?;
+        let result = unsafe {
+            ffi::luau_loadbytecode(
+                self.ptr,
+                bytecode.as_ptr() as *const c_char,
+                bytecode.len(),
+                c_chunkname.as_ptr(),
+            )
+        };
+        self.check_error(result)
+    }
+
+    /// Resume the coroutine with nargs arguments on its stack.
+    /// Returns the status and number of results.
+    ///
+    /// On first resume: the function and arguments are consumed, results are pushed.
+    /// On subsequent resume (after yield): arguments are passed to yield, results are pushed.
+    ///
+    /// After resume, the stack contains only the returned/yielded values.
+    pub fn resume(&self, nargs: i32) -> (CoStatus, i32) {
+        if self.ptr.is_null() {
+            return (CoStatus::ErrErr, 0);
+        }
+
+        let status = unsafe { ffi::luau_resume(self.ptr, self.parent_ptr, nargs) };
+        
+        // After resume, the stack contains only the results
+        // (the function and arguments are consumed)
+        let nresults = self.get_top();
+        (CoStatus::from(status), nresults)
+    }
+
+    /// Yield from a coroutine.
+    /// This should be called as: return thread.yield_results(nresults)
+    /// from within a callback that wants to yield.
+    pub fn yield_results(&self, nresults: i32) -> i32 {
+        if self.ptr.is_null() {
+            return 0;
+        }
+        unsafe { ffi::luau_yield(self.ptr, nresults) }
+    }
+
+    /// Get the status of the coroutine.
+    pub fn status(&self) -> CoStatus {
+        if self.ptr.is_null() {
+            return CoStatus::ErrErr;
+        }
+        CoStatus::from(unsafe { ffi::luau_status(self.ptr) })
+    }
+
+    /// Check if the coroutine can yield.
+    pub fn is_yieldable(&self) -> bool {
+        if self.ptr.is_null() {
+            return false;
+        }
+        unsafe { ffi::luau_isyieldable(self.ptr) != 0 }
+    }
+
+    /// Get the raw pointer to the Luau state (for advanced use).
+    pub fn as_ptr(&self) -> *mut ffi::LuauState {
+        self.ptr
+    }
+
+    fn check_error(&self, result: i32) -> Result<()> {
+        match result {
+            0 => Ok(()),
+            1 => Err(Error::Compile(self.get_last_error())),
+            2 => Err(Error::Runtime(self.get_last_error())),
+            3 => Err(Error::Memory),
+            _ => Err(Error::Invalid),
+        }
+    }
+
+    fn get_last_error(&self) -> String {
+        let err = unsafe { ffi::luau_geterror(self.ptr) };
+        if err.is_null() {
+            return String::new();
+        }
+        unsafe { CStr::from_ptr(err) }
+            .to_str()
+            .unwrap_or("")
+            .to_string()
+    }
+}
+
+impl Drop for Thread {
+    fn drop(&mut self) {
+        // Clean up registered functions
+        if !self.func_ids.is_empty() {
+            if let Ok(mut guard) = GLOBAL_FUNCS.write() {
+                if let Some(map) = guard.as_mut() {
+                    for id in &self.func_ids {
+                        map.remove(id);
+                    }
+                }
+            }
+        }
+
+        // Don't close the lua_State - it's owned by the parent
+        // Just clear our pointer
+        self.ptr = std::ptr::null_mut();
+    }
+}
+
+// Additional methods on State for coroutine support
+impl State {
+    /// Create a new coroutine (thread).
+    /// The new thread is pushed onto this state's stack.
+    pub fn new_thread(&self) -> Result<Thread> {
+        if self.ptr.is_null() {
+            return Err(Error::Invalid);
+        }
+
+        let thread_ptr = unsafe { ffi::luau_newthread(self.ptr) };
+        if thread_ptr.is_null() {
+            return Err(Error::Memory);
+        }
+
+        Ok(Thread {
+            ptr: thread_ptr,
+            parent_ptr: self.ptr,
+            func_ids: Vec::new(),
+        })
+    }
+
+    /// Yield from a coroutine.
+    /// This should be called as: return state.yield_results(nresults)
+    /// from within a callback that wants to yield.
+    pub fn yield_results(&self, nresults: i32) -> i32 {
+        if self.ptr.is_null() {
+            return 0;
+        }
+        unsafe { ffi::luau_yield(self.ptr, nresults) }
+    }
+
+    /// Check if the current state can yield.
+    pub fn is_yieldable(&self) -> bool {
+        if self.ptr.is_null() {
+            return false;
+        }
+        unsafe { ffi::luau_isyieldable(self.ptr) != 0 }
+    }
+
+    /// Get the raw pointer to the Luau state (for advanced use).
+    pub fn as_ptr(&self) -> *mut ffi::LuauState {
+        self.ptr
+    }
+}
+
 // External callback function called from C when Luau invokes a registered Rust function
 extern "C" fn rust_external_callback(l: *mut ffi::LuauState, callback_id: u64) -> i32 {
     // Look up the function
