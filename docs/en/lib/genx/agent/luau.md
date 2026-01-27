@@ -1,23 +1,23 @@
-# Luau 脚本系统
+# Luau Scripting System
 
-GenX Agent 使用 [Luau](https://luau-lang.org/) 作为 Tool 和 Agent 的脚本语言。
+GenX Agent uses [Luau](https://luau-lang.org/) as the scripting language for Tools and Agents.
 
-## 为什么选择 Luau
+## Why Luau
 
-| 特性 | Luau | 其他选项 |
-|------|------|---------|
-| **类型系统** | ✅ 渐进式类型 | Lua 5.x 无类型 |
-| **性能** | ✅ 优化的字节码解释器 | QuickJS 较慢 |
-| **嵌入设计** | ✅ 原生为嵌入设计 | TypeScript 需转译 |
-| **安全** | ✅ 天然沙盒化 | 其他需额外处理 |
-| **体积** | ~500 KB | V8 ~28MB |
-| **维护** | ✅ 活跃（Roblox 团队）| LuaJIT 停滞 |
+| Feature | Luau | Alternatives |
+|---------|------|--------------|
+| **Type System** | ✅ Gradual typing | Lua 5.x has none |
+| **Performance** | ✅ Optimized bytecode interpreter | QuickJS slower |
+| **Embedding** | ✅ Designed for embedding | TypeScript needs transpiling |
+| **Safety** | ✅ Native sandboxing | Others need extra work |
+| **Binary Size** | ~500 KB | V8 ~28MB |
+| **Maintenance** | ✅ Active (Roblox team) | LuaJIT stalled |
 
-Luau 由 Roblox 开发，支撑 7000 万+ 日活用户。
+Luau is developed by Roblox and powers 70M+ daily active users.
 
-## 两种执行模式
+## Two Execution Modes
 
-Luau 脚本有两种运行模式，具有不同的能力：
+Luau scripts run in two modes with different capabilities:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -25,7 +25,7 @@ Luau 脚本有两种运行模式，具有不同的能力：
 │                                                                  │
 │  ┌──────────────┐                  ┌──────────────┐             │
 │  │   LuaTool    │                  │  LuaAgent    │             │
-│  │   (被动)     │                  │   (主动)      │             │
+│  │  (Passive)   │                  │  (Active)    │             │
 │  │              │                  │              │             │
 │  │ invoke(ctx,  │                  │ ctx.recv()   │             │
 │  │   args)      │                  │ ctx.emit()   │             │
@@ -34,106 +34,106 @@ Luau 脚本有两种运行模式，具有不同的能力：
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Tool 模式
+### Tool Mode
 
-- **入口**：`invoke(ctx, args) -> result`
-- **I/O**：参数输入，返回值输出
-- **用途**：离散任务（天气查询、计算等）
+- **Entry**: `invoke(ctx, args) -> result`
+- **I/O**: Arguments in, return value out
+- **Use case**: Discrete tasks (weather lookup, calculations, etc.)
 
-### Agent 模式
+### Agent Mode
 
-- **入口**：`run(ctx)` 或 `on_input(ctx, input)`
-- **I/O**：`ctx.recv()` 和 `ctx.emit()`
-- **用途**：对话 Agent、流式处理器
+- **Entry**: `run(ctx)` or `on_input(ctx, input)`
+- **I/O**: `ctx.recv()` and `ctx.emit()`
+- **Use case**: Conversational agents, streaming processors
 
 ## Context API
 
-### 共享 API（Tool 和 Agent 都有）
+### Shared API (Tool + Agent)
 
 ```lua
 -- ═══════════════════════════════════════════════════════════════
--- HTTP（异步，yield）
+-- HTTP (async, yields)
 -- ═══════════════════════════════════════════════════════════════
 ctx.http.get(url, opts?)        -- ⏳ async
 ctx.http.post(url, opts?)       -- ⏳ async
 ctx.http.request(method, url, opts?)  -- ⏳ async
 
--- 响应结构
+-- Response structure
 -- {
 --   status = 200,
 --   headers = { ["Content-Type"] = "application/json" },
 --   body = "...",
---   json = { ... }  -- 自动解析 JSON
+--   json = { ... }  -- auto-parsed if JSON
 -- }
 
 -- ═══════════════════════════════════════════════════════════════
--- LLM 生成（异步，yield）
+-- LLM Generation (async, yields)
 -- ═══════════════════════════════════════════════════════════════
-ctx.generate(model, prompt, opts?)      -- ⏳ async，返回 string
-ctx.generate_json(model, prompt, schema, opts?)  -- ⏳ async，返回 table
+ctx.generate(model, prompt, opts?)      -- ⏳ async, returns string
+ctx.generate_json(model, prompt, schema, opts?)  -- ⏳ async, returns table
 
 -- ═══════════════════════════════════════════════════════════════
--- 调用 Tool（异步，yield）
+-- Tool Invocation (async, yields)
 -- ═══════════════════════════════════════════════════════════════
 ctx.invoke(tool_name, args)     -- ⏳ async
 
 -- ═══════════════════════════════════════════════════════════════
--- 子 Agent 管理
+-- Child Agent Management
 -- ═══════════════════════════════════════════════════════════════
-ctx.create_agent(name, config?) -- 🔄 sync（只创建，不等待）
+ctx.create_agent(name, config?) -- 🔄 sync (creates, doesn't wait)
 
-agent:send(contents)            -- 🔄 sync（发送到输入 channel）
-agent:iter()                    -- ⏳ async（迭代输出 chunk）
-agent:collect()                 -- ⏳ async（收集全部输出）
+agent:send(contents)            -- 🔄 sync (sends to input channel)
+agent:iter()                    -- ⏳ async (iterate output chunks)
+agent:collect()                 -- ⏳ async (collect all output)
 agent:close()                   -- 🔄 sync
 
 -- ═══════════════════════════════════════════════════════════════
--- Realtime 会话（语音/音频）
+-- Realtime Session (for voice/audio)
 -- ═══════════════════════════════════════════════════════════════
-ctx.realtime.connect(model, opts?)  -- ⏳ async（建立 WebSocket）
+ctx.realtime.connect(model, opts?)  -- ⏳ async (establish WebSocket)
 
 session:send_audio(data)        -- 🔄 sync
 session:send_text(text)         -- 🔄 sync
 session:wait_for(event_type)    -- ⏳ async
-session:events()                -- ⏳ async（迭代事件）
+session:events()                -- ⏳ async (iterate events)
 session:cancel()                -- 🔄 sync
 session:close()                 -- 🔄 sync
 
 -- ═══════════════════════════════════════════════════════════════
--- Agent State（完整访问）
+-- Agent State (full access)
 -- ═══════════════════════════════════════════════════════════════
 
--- Key-Value 状态（通过 metatable，触发 host 函数）
-ctx.agent.state.key             -- 🔄 sync（读）
-ctx.agent.state.key = value     -- 🔄 sync（写）
+-- Key-Value state (via metatable, triggers host functions)
+ctx.agent.state.key             -- 🔄 sync (read)
+ctx.agent.state.key = value     -- 🔄 sync (write)
 ctx.agent.state:keys()          -- 🔄 sync
 ctx.agent.state:clear()         -- 🔄 sync
 ctx.agent.state:all()           -- 🔄 sync
 
--- 消息历史
-ctx.agent.history:recent(n?)    -- 🔄 sync（获取最近 N 条）
-ctx.agent.history:append(msg)   -- 🔄 sync（添加消息）
-ctx.agent.history:revert()      -- 🔄 sync（撤销最后一轮）
+-- Message history
+ctx.agent.history:recent(n?)    -- 🔄 sync (get recent N messages)
+ctx.agent.history:append(msg)   -- 🔄 sync (add message)
+ctx.agent.history:revert()      -- 🔄 sync (undo last round)
 
--- 长期记忆
-ctx.agent.memory:summary()      -- 🔄 sync（获取摘要）
+-- Long-term memory
+ctx.agent.memory:summary()      -- 🔄 sync (get summary)
 ctx.agent.memory:set_summary(s) -- 🔄 sync
-ctx.agent.memory:query(q)       -- ⏳ async（RAG 查询）
+ctx.agent.memory:query(q)       -- ⏳ async (RAG query)
 
--- Agent 信息（只读）
+-- Agent info (read-only)
 ctx.agent.name                  -- 🔄 sync
 ctx.agent.model                 -- 🔄 sync
 ctx.agent.state_id              -- 🔄 sync
 
 -- ═══════════════════════════════════════════════════════════════
--- 运行时信息（只读）
+-- Runtime Info (read-only)
 -- ═══════════════════════════════════════════════════════════════
 ctx.runtime.request_id          -- 🔄 sync
 ctx.runtime.user_id             -- 🔄 sync
 ctx.runtime.trace_id            -- 🔄 sync
 
 -- ═══════════════════════════════════════════════════════════════
--- 日志
+-- Logging
 -- ═══════════════════════════════════════════════════════════════
 ctx.log.debug(...)              -- 🔄 sync
 ctx.log.info(...)               -- 🔄 sync
@@ -141,16 +141,16 @@ ctx.log.warn(...)               -- 🔄 sync
 ctx.log.error(...)              -- 🔄 sync
 ```
 
-### Tool 独有 API
+### Tool-Only API
 
 ```lua
--- 返回结果给调用者
--- 方式 1：直接 return
+-- Return result to caller
+-- Option 1: Direct return
 function invoke(ctx, args)
     return { result = "..." }
 end
 
--- 方式 2：显式输出（用于提前返回）
+-- Option 2: Explicit output (for early return)
 function invoke(ctx, args)
     if args.invalid then
         ctx.output({ error = "invalid args" })
@@ -159,10 +159,10 @@ function invoke(ctx, args)
     return { result = "..." }
 end
 
--- 方式 3：多轮交互的 Tool（等待额外输入）
+-- Option 3: Multi-turn tool (wait for additional input)
 function invoke(ctx, args)
     ctx.output({ status = "need_confirmation", data = args })
-    local confirmation = ctx.input()  -- 等待用户确认
+    local confirmation = ctx.input()  -- wait for user confirmation
     if confirmation.confirmed then
         return { result = "done" }
     end
@@ -170,22 +170,22 @@ function invoke(ctx, args)
 end
 ```
 
-### Agent 独有 API
+### Agent-Only API
 
 ```lua
 -- I/O
-ctx.recv()                      -- ⏳ async（等待输入，nil = 已关闭）
-ctx.emit(chunk)                 -- 🔄 sync（发送输出 chunk）
-                                --   chunk.eof = true 标记本轮结束
+ctx.recv()                      -- ⏳ async (wait for input, nil = closed)
+ctx.emit(chunk)                 -- 🔄 sync (send output chunk)
+                                --   chunk.eof = true marks end of turn
 ```
 
-## 异步实现
+## Async Implementation
 
-Luau 使用协程实现并发。Host 函数 yield 回 Go/Rust，I/O 完成后 resume。
+Luau uses coroutines for concurrency. Host functions yield to Go/Rust, which resumes after I/O completes.
 
 ```
-Lua 协程              Go 调度器                 Go goroutine
-─────────             ─────────                 ─────────────
+Lua Coroutine         Go Scheduler              Go Goroutine
+─────────────         ────────────              ────────────
     │
     │ ctx.http.get(url)
     │──────────────────►│
@@ -194,57 +194,57 @@ Lua 协程              Go 调度器                 Go goroutine
     │   yield           │  }()                         │
     │◄──────────────────│                              │
     │                   │                              │
-    │  (暂停)           │  select {                    │  (阻塞)
+    │  (suspended)      │  select {                    │  (blocking)
     │                   │      case <-readyChan:       │
     │                   │  }                           │
     │                   │                              │
-    │                   │                              │  HTTP 完成
+    │                   │                              │  HTTP done
     │                   │◄─────────────────────────────│
     │                   │  readyChan <- result         │
     │                   │                              │
     │ resume(result)    │
     │◄──────────────────│
     │
-    │ local resp = ...   -- 拿到结果，继续执行
+    │ local resp = ...   -- continue with result
     │
 ```
 
-### 并行执行
+### Parallel Execution
 
 ```lua
--- 多个协程可以并发执行
+-- Multiple coroutines can run concurrently
 local co1 = coroutine.create(function()
-    return ctx.http.get("https://api1.com")  -- yield
+    return ctx.http.get("https://api1.com")  -- yields
 end)
 
 local co2 = coroutine.create(function()
-    return ctx.http.get("https://api2.com")  -- yield
+    return ctx.http.get("https://api2.com")  -- yields
 end)
 
--- 两个 HTTP 请求并行执行
-coroutine.resume(co1)  -- 发起请求 1，yield
-coroutine.resume(co2)  -- 发起请求 2，yield
+-- Both HTTP requests execute in parallel
+coroutine.resume(co1)  -- starts request 1, yields
+coroutine.resume(co2)  -- starts request 2, yields
 
--- Go 调度器管理完成和 resume
+-- Go scheduler manages completion and resumes appropriately
 ```
 
-## 示例
+## Examples
 
-### Tool：天气查询
+### Tool: Weather Lookup
 
 ```lua
 function invoke(ctx, args)
-    ctx.log.info("查询天气:", args.city)
+    ctx.log.info("Querying weather for:", args.city)
     
     local resp = ctx.http.get("https://api.weather.com/v1", {
         query = { city = args.city }
     })
     
     if resp.status ~= 200 then
-        return { error = "API 请求失败" }
+        return { error = "API request failed" }
     end
     
-    -- 存储到 agent state 供后续引用
+    -- Store in agent state for future reference
     ctx.agent.state.last_weather_query = args.city
     
     return {
@@ -255,20 +255,20 @@ function invoke(ctx, args)
 end
 ```
 
-### Agent：聊天机器人
+### Agent: Chat Bot
 
 ```lua
 function run(ctx)
-    ctx.emit({ text = "你好！有什么可以帮助你的？" })
+    ctx.emit({ text = "Hello! How can I help you?" })
     ctx.emit({ eof = true })
     
     while true do
         local input = ctx.recv()
         if input == nil then break end
         
-        -- 使用 LLM 生成响应
+        -- Generate response using LLM
         local response = ctx.generate("gpt-4o", 
-            "用户说: " .. input.text .. "\n请友好地回复:")
+            "User said: " .. input.text .. "\nRespond helpfully:")
         
         ctx.emit({ text = response })
         ctx.emit({ eof = true })
@@ -276,29 +276,29 @@ function run(ctx)
 end
 ```
 
-### Agent：Realtime + Match 的聊天处理器
+### Agent: Chat Processor with Realtime + Match
 
 ```lua
--- 复杂的并行处理示例
+-- Complex parallel processing example
 function on_input(ctx, input)
     local asr_text = nil
     local match_result = nil
     
-    -- 协程 1：处理 realtime 模型
+    -- Coroutine 1: Handle realtime model
     local realtime_co = coroutine.create(function()
         local session = ctx.realtime.connect("gpt-4o-realtime")
         session:send_audio(input.audio)
         
-        -- 等待 ASR 结果
+        -- Wait for ASR result
         local event = session:wait_for("asr_done")
         asr_text = event.text
         
         return session:collect_response()
     end)
     
-    -- 协程 2：ASR 完成后做意图匹配
+    -- Coroutine 2: Do intent matching after ASR
     local match_co = coroutine.create(function()
-        -- 等待 ASR 完成
+        -- Wait for ASR to complete
         while asr_text == nil do
             coroutine.yield()
         end
@@ -306,13 +306,13 @@ function on_input(ctx, input)
         return ctx.invoke("intent_match", { text = asr_text })
     end)
     
-    -- 运行两个协程（调度器处理并行）
+    -- Run both coroutines (scheduler handles parallelism)
     coroutine.resume(realtime_co)
     coroutine.resume(match_co)
     
-    -- ... 调度器运行直到都完成 ...
+    -- ... scheduler runs until both complete ...
     
-    -- 有 match 结果用 match，否则用 realtime 响应
+    -- Use match result if available, otherwise use realtime response
     if match_result and match_result.matched then
         local agent = ctx.create_agent(match_result.agent)
         agent:send(asr_text)
@@ -330,10 +330,10 @@ function on_input(ctx, input)
 end
 ```
 
-## API 汇总
+## API Summary
 
-| API | Tool | Agent | 同步/异步 |
-|-----|:----:|:-----:|:--------:|
+| API | Tool | Agent | Sync/Async |
+|-----|:----:|:-----:|:----------:|
 | `ctx.http.*` | ✅ | ✅ | ⏳ async |
 | `ctx.generate*` | ✅ | ✅ | ⏳ async |
 | `ctx.invoke()` | ✅ | ✅ | ⏳ async |
@@ -351,49 +351,49 @@ end
 | `ctx.recv()` | ❌ | ✅ | ⏳ async |
 | `ctx.emit()` | ❌ | ✅ | 🔄 sync |
 
-**图例：**
-- ⏳ async - yield 等待 I/O 完成后 resume
-- 🔄 sync - 立即返回，不 yield
+**Legend:**
+- ⏳ async - Yields, waits for I/O completion, then resumes
+- 🔄 sync - Returns immediately, no yield
 
-## 架构
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        genx/luau 包                              │
+│                        genx/luau Package                         │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │                        Runner                             │   │
-│  │  - StatePool（Luau State 池）                             │   │
-│  │  - CompiledScripts（字节码缓存）                           │   │
-│  │  - Scheduler（协程 + I/O 管理）                           │   │
+│  │  - StatePool (pooled Luau states)                        │   │
+│  │  - CompiledScripts (bytecode cache)                      │   │
+│  │  - Scheduler (coroutine + I/O management)                │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                             │                                    │
 │                             ▼                                    │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │                    Luau State（从池中获取）                │   │
+│  │                    Luau State (from pool)                 │   │
 │  │                                                           │   │
-│  │  Host Functions（通过 CGO 注册）：                        │   │
+│  │  Host Functions (registered via CGO):                    │   │
 │  │    ctx.http.*      → HTTPGet/HTTPPost                    │   │
 │  │    ctx.generate*   → Generate/GenerateJSON               │   │
-│  │    ctx.agent.*     → AgentState 方法                     │   │
-│  │    ctx.recv/emit   → I/O channel                         │   │
+│  │    ctx.agent.*     → AgentState methods                  │   │
+│  │    ctx.recv/emit   → I/O channels                        │   │
 │  │                                                           │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                             │                                    │
 │                             ▼                                    │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │                  Luau C++ Runtime                         │   │
-│  │  - VM（字节码执行）                                        │   │
-│  │  - Compiler（源码 → 字节码）                               │   │
-│  │  - Coroutine 支持（yield/resume）                         │   │
+│  │  - VM (bytecode execution)                               │   │
+│  │  - Compiler (source → bytecode)                          │   │
+│  │  - Coroutine support (yield/resume)                      │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Go 接口
+## Go Interface
 
 ```go
-// ToolContext Tool 模式接口
+// ToolContext interface for Tool mode
 type ToolContext interface {
     Context() context.Context
     
@@ -423,18 +423,18 @@ type ToolContext interface {
     Log(level string, args ...any)
 }
 
-// AgentContext Agent 模式接口
+// AgentContext interface for Agent mode
 type AgentContext interface {
-    ToolContext  // 包含所有 Tool 能力
+    ToolContext  // includes all Tool capabilities
     
     // I/O
-    Recv() (*Contents, error)  // 阻塞等待输入或关闭
+    Recv() (*Contents, error)  // blocks until input or close
     Emit(chunk *MessageChunk) error
 }
 ```
 
-## 相关文档
+## Related
 
-- [Agent 框架概述](doc.md)
-- [Agent 配置](../agentcfg/doc.md)
-- [模式匹配](../match/doc.md)
+- [Agent Framework Overview](doc.md)
+- [Agent Configuration](../agentcfg/doc.md)
+- [Pattern Matching](../match/doc.md)
