@@ -20,4 +20,9 @@ total = 0
 for _, v in ipairs(results) do
     total = total + v
 end
+
 -- Expected: total = 150 (10 + 20 + 30 + 40 + 50)
+assert(total == 150, "Expected total 150, got " .. total)
+assert(#results == 5, "Expected 5 results, got " .. #results)
+
+print("coroutines: PASS")

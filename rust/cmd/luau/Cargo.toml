@@ -1,0 +1,11 @@
+[package]
+name = "giztoy-luau-runner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+giztoy-luau = { path = "../../luau" }
+serde_json = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }

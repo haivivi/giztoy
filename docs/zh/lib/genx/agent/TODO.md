@@ -36,76 +36,181 @@
 
 ---
 
-## 阶段二：Luau 库系统（SDK 架构）
+## 阶段二：Haivivi Luau SDK
 
-### 2.1 Luau Runner
-- [ ] **Go Runner** `go/cmd/luau/`
-  - [ ] 创建基础 Runner 结构
-  - [ ] 实现命令行参数解析
-  - [ ] 实现脚本加载和执行
-  - [ ] 实现错误处理和输出
-- [ ] **Rust Runner** `rust/cmd/luau/`
-  - [ ] 创建基础 Runner 结构
-  - [ ] 实现命令行参数解析
-  - [ ] 实现脚本加载和执行
-  - [ ] 实现错误处理和输出
-- [ ] 编写 Bazel 构建规则
+### 2.1 目录结构
 
-### 2.2 核心 Native API
-- [ ] **Go 实现**
-  - [ ] `__native.http_request(url, method, headers, body)` - HTTP 请求
-  - [ ] `__native.json_encode(value)` - JSON 编码
-  - [ ] `__native.json_decode(str)` - JSON 解码
-  - [ ] `__native.log(level, ...)` - 日志输出
-  - [ ] `__native.sleep(ms)` - 等待（如需要）
-- [ ] **Rust 实现** (与 Go 保持一致)
-  - [ ] `__native.http_request`
-  - [ ] `__native.json_encode`
-  - [ ] `__native.json_decode`
-  - [ ] `__native.log`
-  - [ ] `__native.sleep`
+```
+luau/
+├── BUILD.bazel
+├── c/                          # 现有 C wrapper
+├── libs/                       # Luau SDK 库
+│   └── haivivi/
+│       ├── init.luau           # 主入口
+│       ├── http.luau           # HTTP 客户端封装
+│       ├── auth.luau           # Auth SDK
+│       ├── pal.luau            # PAL SDK
+│       └── aiot.luau           # AIOT SDK
+└── tests/                      # 测试脚本
+    └── haivivi/
+        ├── test_auth.luau
+        ├── test_pal.luau
+        └── test_aiot.luau
 
-### 2.3 模块加载器 (`require`)
-- [ ] **Go 实现**
-  - [ ] 实现自定义 `require` 函数
-  - [ ] 支持模块缓存 (`package.loaded`)
-  - [ ] 支持目录模块 (`libs/<name>/init.luau`)
-  - [ ] 支持单文件模块 (`libs/<name>.luau`)
-  - [ ] 支持内嵌资源加载（编译时 embed）
-- [ ] **Rust 实现** (与 Go 保持一致)
+testdata/luau/haivivi/          # 测试数据（Mock request/response）
+├── auth/
+│   ├── refresh_token_req.json
+│   └── refresh_token_resp.json
+├── pal/
+│   ├── characters_list_resp.json
+│   ├── voices_list_resp.json
+│   └── virtual_devices_get_resp.json
+└── aiot/
+    ├── projects_get_resp.json
+    └── gears_list_resp.json
+```
 
-### 2.4 Luau SDK（纯 Luau 代码，Go/Rust 共用）
-- [ ] 创建 `libs/` 目录结构
-- [ ] 实现 `libs/haivivi/init.luau` - 主入口
-- [ ] 实现 `libs/haivivi/http.luau` - HTTP 客户端封装
-- [ ] 实现 `libs/haivivi/context.luau` - Model Context Provider
-- [ ] 实现 `libs/haivivi/agent.luau` - Agent 配置管理
-- [ ] 实现 `libs/haivivi/music.luau` - 音乐播放控制
-- [ ] 实现 `libs/haivivi/types.luau` - 类型定义
+### 2.2 临时 Runner（仅用于测试 SDK）
 
-### 2.5 双向测试（同一套脚本测 Go 和 Rust）
-- [ ] 创建 `tests/luau/` 目录
-- [ ] **Native API 测试**
-  - [ ] `test_native_http.luau`
-  - [ ] `test_native_json.luau`
-  - [ ] `test_native_log.luau`
-- [ ] **模块加载测试**
-  - [ ] `test_require.luau`
-  - [ ] `test_require_cache.luau`
-- [ ] **SDK 测试**
-  - [ ] `test_sdk_http.luau`
-  - [ ] `test_sdk_context.luau`
-  - [ ] `test_sdk_agent.luau`
-- [ ] **Bazel 集成**
-  - [ ] 配置 Go Runner 测试 target
-  - [ ] 配置 Rust Runner 测试 target
-  - [ ] CI 自动双向验证
+Go/Rust 仅提供最小的 builtin API，所有业务逻辑在 Luau 层实现。
+Go 和 Rust Runner 并行开发，共用同一套测试数据和 Luau SDK。
 
-### 2.6 文档和示例
-- [ ] 编写 SDK API 文档
-- [ ] 编写 Model Context Provider 示例
-- [ ] 编写 Agent 配置示例
-- [ ] 编写音乐播放示例
+- [x] **Go Runner** `go/cmd/luau/` ✅
+  - [x] 实现 `__builtin.http(request)` - HTTP 请求
+  - [x] 实现 `__builtin.json_encode(value)` - JSON 编码
+  - [x] 实现 `__builtin.json_decode(str)` - JSON 解码
+  - [x] 实现 `__builtin.kvs_get(key)` - KVS 读取
+  - [x] 实现 `__builtin.kvs_set(key, value)` - KVS 写入
+  - [x] 实现 `__builtin.kvs_del(key)` - KVS 删除
+  - [x] 实现 `__builtin.log(...)` - 日志输出
+  - [x] 实现 `__builtin.env(key)` - 环境变量读取
+  - [x] 实现 `require` 模块加载（从文件系统加载 `luau/libs/`）
+  - [x] 编写 Bazel 构建规则
+
+- [x] **Rust Runner** `rust/cmd/luau/` ✅
+  - [x] 实现 `__builtin.http(request)` - HTTP 请求 (通过 curl)
+  - [x] 实现 `__builtin.json_encode(value)` - JSON 编码
+  - [x] 实现 `__builtin.json_decode(str)` - JSON 解码
+  - [x] 实现 `__builtin.kvs_get(key)` - KVS 读取
+  - [x] 实现 `__builtin.kvs_set(key, value)` - KVS 写入
+  - [x] 实现 `__builtin.kvs_del(key)` - KVS 删除
+  - [x] 实现 `__builtin.log(...)` - 日志输出
+  - [x] 实现 `__builtin.env(key)` - 环境变量读取
+  - [x] 实现 `require` 模块加载（从文件系统加载 `luau/libs/`）
+  - [x] 编写 Bazel 构建规则
+
+### 2.3 Haivivi SDK（纯 Luau 代码）✅
+
+基于 Haivivi OpenAPI 实现的 SDK：
+
+- [x] **HTTP 客户端** `luau/libs/haivivi/http.luau`
+  - [x] 封装 `__builtin.http`
+  - [x] 支持 base_url 配置
+  - [x] 支持默认 headers
+  - [x] 支持 auth token 注入
+  - [x] 实现 GET/POST/PUT/DELETE/PATCH 方法
+  - [x] 实现 query string 编码
+  - [x] 实现错误处理
+
+- [x] **Resource 抽象** `luau/libs/haivivi/resource.luau`
+  - [x] 实现通用 ResourceCollection CRUD 封装
+  - [x] 实现 list/get/create/update/delete 方法
+  - [x] 实现 post_verb/get_verb/post_doc_verb 方法
+
+- [x] **Auth SDK** `luau/libs/haivivi/auth.luau`
+  - [x] 实现 `auth.new_client(base_url, key)`
+  - [x] 实现 token 刷新逻辑（/me/@refresh）
+  - [x] 使用 kvs 缓存 token
+  - [x] 实现 `client:http_client()` 返回带认证的 HTTP 客户端
+  - [x] Sessions 资源
+  - [x] Users 资源
+  - [x] Namespaces 资源
+
+- [x] **PAL SDK** `luau/libs/haivivi/pal.luau`
+  - [x] 实现 `pal.new_client(base_url, auth_client)`
+  - [x] 实现 `refresh_token(key)` - 设备 token 刷新
+  - [x] 实现 `setup(uat, eid, vid)` - 设备设置
+  - [x] Characters 资源
+  - [x] Voices 资源
+  - [x] ChatTopics 资源
+  - [x] VirtualDevices 资源
+  - [x] Albums 资源
+  - [x] Firmwares 资源
+  - [x] Triggers 资源
+  - [x] TTSModels 资源
+  - [x] TunedLLMs 资源
+  - [x] Memberships 资源
+  - [x] Orders 资源
+  - [x] Payments 资源
+  - [x] Plans 资源
+  - [x] Subscriptions 资源
+  - [x] Tags 资源
+  - [x] AccessPolicies 资源
+  - [x] Achievements 资源
+  - [x] AchievementTypes 资源
+  - [x] AchievementProgresses 资源
+  - [x] DeviceLogs 资源
+  - [x] DeviceGiftCards 资源
+  - [x] Campaigns 资源
+  - [x] PresetPrompts 资源
+  - [x] Reports 资源
+  - [x] Series 资源
+
+- [x] **AIOT SDK** `luau/libs/haivivi/aiot.luau`
+  - [x] 实现 `aiot.new_client(base_url, auth_client)`
+  - [x] Projects 资源（含 list/get/create/update/upsert/delete）
+  - [x] Projects.key(key) 获取项目文档
+  - [x] Gears 子资源（含 get_by_sn, sn, state, sign_token）
+  - [x] Agents 子资源（含 register）
+
+- [x] **主入口** `luau/libs/haivivi/init.luau`
+  - [x] 导出所有模块（http, auth, pal, aiot, resource）
+
+### 2.4 测试数据（Mock）✅
+
+在 `testdata/luau/haivivi/` 准备 Mock 数据，用于单元测试：
+
+- [x] **Auth Mock 数据**
+  - [x] `auth/refresh_token_req.json` - 刷新 token 请求
+  - [x] `auth/refresh_token_resp.json` - 刷新 token 响应
+
+- [x] **PAL Mock 数据**
+  - [x] `pal/characters_list_resp.json` - Characters 列表响应
+  - [x] `pal/voices_list_resp.json` - Voices 列表响应
+  - [x] `pal/virtual_devices_get_resp.json` - VirtualDevice 详情响应
+
+- [x] **AIOT Mock 数据**
+  - [x] `aiot/projects_get_resp.json` - Project 详情响应
+  - [x] `aiot/gears_list_resp.json` - Gears 列表响应
+
+### 2.5 测试（通过 Bazel 执行）✅
+
+测试分两种模式：
+1. **Mock 测试** - 使用 testdata 中的 mock 数据，不需要网络
+2. **集成测试** - 使用 stage 环境 `https://api.stage.haivivi.cn`
+
+- [x] **Auth 测试** `luau/tests/haivivi/test_auth.luau` (3/3 通过)
+  - [x] 测试 token 刷新
+  - [x] 测试 token 缓存
+  - [x] 测试 HTTP client 创建
+
+- [x] **PAL 测试** `luau/tests/haivivi/test_pal.luau` (5/5 通过)
+  - [x] 测试 Characters.List
+  - [x] 测试 Voices.List
+  - [x] 测试 VirtualDevices.List
+  - [x] 测试 ChatTopics.List
+  - [x] 测试 Plans.List
+
+- [x] **AIOT 测试** `luau/tests/haivivi/test_aiot.luau` (4/4 通过)
+  - [x] 测试 Projects.List
+  - [x] 测试 Projects.Key
+  - [x] 测试 Gears.List
+  - [x] 测试 Agents.List
+
+- [x] **Bazel 集成** ✅
+  - [x] 配置 `sh_test` 规则（Go Runner）
+  - [x] 配置 `sh_test` 规则（Rust Runner）
+  - [ ] CI 自动执行测试
 
 ---
 
@@ -114,7 +219,7 @@
 ### 3.1 设计 Context API
 - [ ] `ctx.generate(model, prompt)` - 调用 Generator
 - [ ] `ctx.generate_json(model, prompt, schema)` - 生成 JSON
-- [ ] `ctx.create_agent(name, config)` - 创建子 Agent
+- [ ] `ctx.create_agent(name, config)` - 创建 子 Agent
 - [ ] `ctx.http.get/post()` - HTTP 请求（复用阶段二的实现）
 - [ ] `ctx.state.xxx` - 状态读写
 - [ ] `ctx.emit(chunk)` - 输出 MessageChunk

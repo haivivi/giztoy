@@ -60,3 +60,20 @@
 
 # Baud rate for monitoring (optional, defaults to board config: 115200)
 # build --action_env=ESP_BAUD_MONITOR=115200
+
+# =============================================================================
+# Haivivi SDK Configuration (for Luau SDK integration tests)
+# =============================================================================
+# Required for running //luau/tests:all
+#
+# SECURITY NOTE: API keys are secrets - do not commit them to the repository.
+# The .bazelrc.user file is gitignored for this reason.
+
+# Haivivi API Key (required for integration tests)
+# test --test_env=HAIVIVI_KEY=your-api-key-here
+
+# Optional: Override default URLs (defaults to stage environment)
+# test --test_env=HAIVIVI_AUTH_URL=https://api.stage.haivivi.cn/auth/v1
+# test --test_env=HAIVIVI_PAL_URL=https://api.stage.haivivi.cn/pal/v1
+# test --test_env=HAIVIVI_AIOT_URL=https://api.stage.haivivi.cn/aiot/v1
+# test --test_env=HAIVIVI_PROJECT_KEY=bubblepal.haivivi.cn

@@ -360,6 +360,20 @@ impl State {
         Ok(())
     }
 
+    /// Get a value from a table using a key on the stack.
+    /// The key at stack top is replaced with the value.
+    /// Stack: [..., table, key] -> [..., table, value]
+    pub fn get_table(&self, idx: i32) {
+        unsafe { ffi::luau_gettable(self.ptr, idx) };
+    }
+
+    /// Set a value in a table using key and value on the stack.
+    /// Pops both key and value from the stack.
+    /// Stack: [..., table, key, value] -> [..., table]
+    pub fn set_table(&self, idx: i32) {
+        unsafe { ffi::luau_settable(self.ptr, idx) };
+    }
+
     /// Get a global variable.
     /// Returns an error if the name contains interior NUL bytes.
     pub fn get_global(&self, name: &str) -> Result<()> {

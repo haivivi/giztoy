@@ -642,6 +642,98 @@ void luau_freebytecode(char* bytecode) {
 }
 
 /* ==========================================================================
+ * Coroutine/Thread Support
+ * ========================================================================== */
+
+LuauState* luau_newthread(LuauState* L) {
+    if (!L || !L->L) return nullptr;
+
+    // Create a new thread (coroutine)
+    lua_State* thread = lua_newthread(L->L);
+    if (!thread) return nullptr;
+
+    // Create a wrapper for the new thread
+    // Note: The new thread shares the same LuauState wrapper for registry access
+    // but has its own lua_State. This is a simplified approach.
+    LuauState* wrapper = new (std::nothrow) LuauState();
+    if (!wrapper) {
+        lua_pop(L->L, 1); // Remove thread from stack
+        return nullptr;
+    }
+
+    wrapper->L = thread;
+    wrapper->externalCallback = L->externalCallback;  // Share callback
+    wrapper->currentCallbackId = 0;
+
+    // Store the parent's LuauState in the thread's registry for callbacks
+    lua_pushlightuserdata(thread, L);  // Use parent's LuauState for callback lookup
+    lua_setfield(thread, LUA_REGISTRYINDEX, "_luau_state");
+
+    return wrapper;
+}
+
+LuauCoStatus luau_resume(LuauState* L, LuauState* from, int nargs) {
+    if (!L || !L->L) return LUAU_COSTAT_ERRERR;
+
+    lua_State* from_L = from ? from->L : nullptr;
+    int result = lua_resume(L->L, from_L, nargs);
+
+    // Map Lua status to our enum
+    switch (result) {
+        case LUA_OK: return LUAU_COSTAT_OK;
+        case LUA_YIELD: return LUAU_COSTAT_YIELD;
+        case LUA_ERRRUN: return LUAU_COSTAT_ERRRUN;
+        case LUA_ERRSYNTAX: return LUAU_COSTAT_ERRSYNTAX;
+        case LUA_ERRMEM: return LUAU_COSTAT_ERRMEM;
+        case LUA_ERRERR: return LUAU_COSTAT_ERRERR;
+        case LUA_BREAK: return LUAU_COSTAT_BREAK;
+        default: return LUAU_COSTAT_ERRERR;
+    }
+}
+
+int luau_yield(LuauState* L, int nresults) {
+    if (!L || !L->L) return 0;
+    return lua_yield(L->L, nresults);
+}
+
+LuauCoStatus luau_status(LuauState* L) {
+    if (!L || !L->L) return LUAU_COSTAT_ERRERR;
+
+    int status = lua_status(L->L);
+    switch (status) {
+        case LUA_OK: return LUAU_COSTAT_OK;
+        case LUA_YIELD: return LUAU_COSTAT_YIELD;
+        case LUA_ERRRUN: return LUAU_COSTAT_ERRRUN;
+        case LUA_ERRSYNTAX: return LUAU_COSTAT_ERRSYNTAX;
+        case LUA_ERRMEM: return LUAU_COSTAT_ERRMEM;
+        case LUA_ERRERR: return LUAU_COSTAT_ERRERR;
+        case LUA_BREAK: return LUAU_COSTAT_BREAK;
+        default: return LUAU_COSTAT_ERRERR;
+    }
+}
+
+int luau_isyieldable(LuauState* L) {
+    if (!L || !L->L) return 0;
+    return lua_isyieldable(L->L);
+}
+
+LuauState* luau_mainthread(LuauState* L) {
+    if (!L || !L->L) return nullptr;
+
+    lua_State* main = lua_mainthread(L->L);
+    if (!main || main == L->L) {
+        return L;  // Already the main thread
+    }
+
+    // Get the LuauState wrapper from registry
+    lua_getfield(main, LUA_REGISTRYINDEX, "_luau_state");
+    LuauState* state = static_cast<LuauState*>(lua_touserdata(main, -1));
+    lua_pop(main, 1);
+
+    return state;
+}
+
+/* ==========================================================================
  * Debug/Utility
  * ========================================================================== */
 

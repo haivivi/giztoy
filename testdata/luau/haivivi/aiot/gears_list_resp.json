@@ -1,0 +1,22 @@
+[
+  {
+    "id": "gear-001",
+    "projectId": "proj-001",
+    "sn": "BP2024010001",
+    "eid": "eid-001",
+    "bindTo": "user-001",
+    "userScope": "haivivi",
+    "firstSeenAt": "2024-01-01T00:00:00Z",
+    "lastSeenAt": "2026-01-26T00:00:00Z"
+  },
+  {
+    "id": "gear-002",
+    "projectId": "proj-001",
+    "sn": "BP2024010002",
+    "eid": "eid-002",
+    "bindTo": "user-002",
+    "userScope": "haivivi",
+    "firstSeenAt": "2024-01-02T00:00:00Z",
+    "lastSeenAt": "2026-01-25T00:00:00Z"
+  }
+]

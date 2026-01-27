@@ -1,0 +1,20 @@
+[
+  {
+    "id": "char-001",
+    "name": "BubblePal",
+    "type": "PRESET",
+    "desc": "A friendly AI companion",
+    "avatar": "https://example.com/bubblepal.png",
+    "prompt": "You are BubblePal, a friendly AI companion.",
+    "sampleVoice": "https://example.com/voice-sample.mp3"
+  },
+  {
+    "id": "char-002",
+    "name": "StarPal",
+    "type": "PRESET",
+    "desc": "A curious explorer",
+    "avatar": "https://example.com/starpal.png",
+    "prompt": "You are StarPal, a curious explorer.",
+    "sampleVoice": "https://example.com/voice-sample2.mp3"
+  }
+]

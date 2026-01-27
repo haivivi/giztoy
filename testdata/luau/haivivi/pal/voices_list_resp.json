@@ -1,0 +1,20 @@
+[
+  {
+    "id": "voice-001",
+    "name": "Xiaoxiao",
+    "provider": "AZURE",
+    "voiceId": "zh-CN-XiaoxiaoNeural",
+    "language": "zh-CN",
+    "gender": "female",
+    "desc": "A warm female voice"
+  },
+  {
+    "id": "voice-002",
+    "name": "Yunxi",
+    "provider": "AZURE",
+    "voiceId": "zh-CN-YunxiNeural",
+    "language": "zh-CN",
+    "gender": "male",
+    "desc": "A friendly male voice"
+  }
+]
