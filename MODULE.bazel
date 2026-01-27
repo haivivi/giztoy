@@ -82,6 +82,7 @@ use_repo(
     "com_github_pion_rtp",
     "com_github_pion_webrtc_v3",
     "com_github_spf13_cobra",
+    "com_github_tphakala_go_audio_resampling",
     "com_github_vmihailenco_msgpack_v5",
     "in_gopkg_yaml_v3",
     "org_golang_google_api",
@@ -131,9 +132,9 @@ crate.from_cargo(
 )
 use_repo(crate, "crate_index")
 
-# Audio libraries (soxr, portaudio, opus, lame, ogg)
+# Audio libraries (portaudio, opus, lame, ogg)
 audio_libs = use_extension("//:extensions.bzl", "audio_libs")
-use_repo(audio_libs, "lame", "ogg", "opus", "portaudio", "soxr")
+use_repo(audio_libs, "lame", "ogg", "opus", "portaudio")
 
 # Luau scripting language
 luau_ext = use_extension("//:extensions.bzl", "luau")

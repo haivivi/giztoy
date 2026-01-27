@@ -109,6 +109,9 @@ rumqttd = "0.20"
 parking_lot = "0.12"
 url = "2"
 
+# Audio processing
+rubato = "0.16"
+
 # Dev
 tokio-test = "0.4"
 criterion = { version = "0.5", features = ["async_tokio"] }

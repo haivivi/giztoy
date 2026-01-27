@@ -8,6 +8,7 @@ description = "Audio processing utilities for PCM data"
 
 [dependencies]
 thiserror.workspace = true
+rubato.workspace = true
 
 [dev-dependencies]
 tokio-test.workspace = true

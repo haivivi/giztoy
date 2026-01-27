@@ -1,7 +1,7 @@
-//! Audio resampling using libsoxr.
+//! Audio resampling using rubato (pure Rust).
 //!
-//! This module provides high-quality sample rate conversion using the SoX
-//! Resampler library (libsoxr).
+//! This module provides high-quality sample rate conversion using the rubato
+//! library, a pure Rust implementation with no FFI dependencies.
 //!
 //! # Example
 //!
@@ -19,10 +19,9 @@
 //! let n = resampler.read(&mut output)?;
 //! ```
 
-mod ffi;
 pub mod format;
-mod soxr;
+mod rubato_impl;
 mod sample_reader;
 
 pub use format::*;
-pub use soxr::*;
+pub use rubato_impl::*;

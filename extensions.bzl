@@ -11,7 +11,6 @@ load("//devops/tools/yq:defs.bzl", "yq_repo")
 load("//third_party/mermaidjs:defs.bzl", "mermaid_repo")
 load("//third_party/ogg:defs.bzl", "ogg_repo")
 load("//third_party/opus:defs.bzl", "opus_repo")
-load("//third_party/soxr:defs.bzl", "soxr_repo")
 load("//third_party/portaudio:defs.bzl", "portaudio_repo")
 load("//third_party/lame:defs.bzl", "lame_repo")
 load("//third_party/luau:defs.bzl", "luau_repo")
@@ -50,12 +49,11 @@ yq = module_extension(
 )
 
 # =============================================================================
-# Audio Libraries Extension (soxr, portaudio, opus, lame, ogg)
+# Audio Libraries Extension (portaudio, opus, lame, ogg)
 # =============================================================================
 
 def _audio_libs_impl(_ctx):
     """Module extension for audio libraries."""
-    soxr_repo(name = "soxr")
     portaudio_repo(name = "portaudio")
     opus_repo(name = "opus")
     lame_repo(name = "lame")

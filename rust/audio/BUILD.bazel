@@ -5,7 +5,6 @@ package(default_visibility = ["//visibility:public"])
 
 # C library dependencies
 C_DEPS = [
-    "//third_party/soxr",
     "//third_party/opus",
     "//third_party/ogg",
     "//third_party/lame",
