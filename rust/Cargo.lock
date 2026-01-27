@@ -1175,6 +1175,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "giztoy-luau-runner"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "giztoy-luau",
+ "reqwest",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "giztoy-minimax"
 version = "0.1.0"
 dependencies = [

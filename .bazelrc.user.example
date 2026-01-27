@@ -65,6 +65,9 @@
 # Haivivi SDK Configuration (for Luau SDK integration tests)
 # =============================================================================
 # Required for running //luau/tests:all
+#
+# SECURITY NOTE: API keys are secrets - do not commit them to the repository.
+# The .bazelrc.user file is gitignored for this reason.
 
 # Haivivi API Key (required for integration tests)
 # test --test_env=HAIVIVI_KEY=your-api-key-here

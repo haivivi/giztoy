@@ -495,6 +495,80 @@ void luau_gc(LuauState* L);
 void luau_freebytecode(char* bytecode);
 
 /* ==========================================================================
+ * Coroutine/Thread Support
+ * ========================================================================== */
+
+/**
+ * Coroutine status codes
+ */
+typedef enum {
+    LUAU_COSTAT_OK = 0,        /* Running or finished successfully */
+    LUAU_COSTAT_YIELD = 1,     /* Yielded */
+    LUAU_COSTAT_ERRRUN = 2,    /* Runtime error */
+    LUAU_COSTAT_ERRSYNTAX = 3, /* Syntax error */
+    LUAU_COSTAT_ERRMEM = 4,    /* Memory allocation error */
+    LUAU_COSTAT_ERRERR = 5,    /* Error in error handler */
+    LUAU_COSTAT_BREAK = 6,     /* Break requested */
+} LuauCoStatus;
+
+/**
+ * Create a new coroutine (thread).
+ * Pushes the new thread onto the stack of L.
+ *
+ * @param L The parent Luau state
+ * @return The new thread's state
+ */
+LuauState* luau_newthread(LuauState* L);
+
+/**
+ * Resume a coroutine.
+ * Arguments should be pushed onto the coroutine's stack before calling.
+ *
+ * @param L The coroutine state to resume
+ * @param from The state that is resuming (can be NULL)
+ * @param nargs Number of arguments on the coroutine's stack
+ * @return Status code (LUAU_COSTAT_OK or LUAU_COSTAT_YIELD on success)
+ */
+LuauCoStatus luau_resume(LuauState* L, LuauState* from, int nargs);
+
+/**
+ * Yield from a coroutine.
+ * This function should be called as: return luau_yield(L, nresults);
+ * in a C function that wants to yield.
+ *
+ * @param L The Luau state
+ * @param nresults Number of results on stack to pass back
+ * @return This value should be returned from the C function
+ */
+int luau_yield(LuauState* L, int nresults);
+
+/**
+ * Get the status of a coroutine.
+ *
+ * @param L The coroutine state
+ * @return Status code
+ */
+LuauCoStatus luau_status(LuauState* L);
+
+/**
+ * Check if a coroutine is yieldable.
+ * A coroutine is yieldable if it's not the main thread and not in a
+ * non-yieldable C call.
+ *
+ * @param L The Luau state
+ * @return 1 if yieldable, 0 otherwise
+ */
+int luau_isyieldable(LuauState* L);
+
+/**
+ * Get the main thread from any thread.
+ *
+ * @param L Any thread state
+ * @return The main thread state
+ */
+LuauState* luau_mainthread(LuauState* L);
+
+/* ==========================================================================
  * Debug/Utility
  * ========================================================================== */
 

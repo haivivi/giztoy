@@ -220,6 +220,70 @@ sh_test(
     tags = ["unit"],
 )
 
+sh_test(
+    name = "test_time_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location test_time.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_time.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_time_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location test_time.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_time.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_coroutine_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location test_coroutine.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_coroutine.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_coroutine_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location test_coroutine.luau)",
+        "luau/libs",
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "test_coroutine.luau",
+    ],
+    tags = ["unit"],
+)
+
 # =============================================================================
 # Integration Tests (require network, manual)
 # =============================================================================

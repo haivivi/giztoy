@@ -7,3 +7,5 @@ edition = "2021"
 giztoy-luau = { path = "../../luau" }
 serde_json = { workspace = true }
 clap = { workspace = true }
+tokio = { workspace = true }
+reqwest = { workspace = true }

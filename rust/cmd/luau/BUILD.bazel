@@ -8,6 +8,8 @@ rust_binary(
         "//rust/luau",
         "@crate_index//:clap",
         "@crate_index//:serde_json",
+        "@crate_index//:tokio",
+        "@crate_index//:reqwest",
     ],
     visibility = ["//visibility:public"],
 )

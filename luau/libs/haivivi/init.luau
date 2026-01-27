@@ -9,5 +9,6 @@ haivivi.auth = require("haivivi/auth")
 haivivi.pal = require("haivivi/pal")
 haivivi.aiot = require("haivivi/aiot")
 haivivi.resource = require("haivivi/resource")
+haivivi.async = require("haivivi/async")
 
 return haivivi

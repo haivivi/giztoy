@@ -195,6 +195,26 @@ export type Series = {
     desc: string?,
 }
 
+export type Conversation = {
+    id: string,
+    virtualDeviceId: string?,
+    type: string?,
+    content: string?,
+}
+
+export type GearCheckInRecord = {
+    id: string,
+    gearId: string?,
+    virtualDeviceId: string?,
+    checkInAt: string?,
+}
+
+export type DeviceLogBackup = {
+    id: string,
+    url: string?,
+    status: string?,
+}
+
 -- PAL client type
 export type PalClient = {
     base_url: string,
@@ -230,6 +250,9 @@ export type PalClient = {
     preset_prompts: resource.ResourceCollection<PresetPrompt, any, any, any>,
     reports: resource.ResourceCollection<Report, any, any, any>,
     series: resource.ResourceCollection<Series, any, any, any>,
+    conversations: resource.ResourceCollection<Conversation, any, any, any>,
+    gear_check_in_records: resource.ResourceCollection<GearCheckInRecord, any, any, any>,
+    backups: resource.ResourceCollection<DeviceLogBackup, any, any, any>,
 }
 
 -- Create a new PAL client
@@ -270,6 +293,9 @@ function pal.new_client(base_url: string, auth_client: auth.AuthClient): PalClie
         preset_prompts = resource.new_collection(hcli, "preset-prompts"),
         reports = resource.new_collection(hcli, "reports"),
         series = resource.new_collection(hcli, "series"),
+        conversations = resource.new_collection(hcli, "conversations"),
+        gear_check_in_records = resource.new_collection(hcli, "gear-check-in-records"),
+        backups = resource.new_collection(hcli, "device-logs/backups"),
     } :: PalClient
     
     -- Refresh device token

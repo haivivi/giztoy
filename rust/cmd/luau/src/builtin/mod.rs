@@ -6,3 +6,4 @@ mod json;
 mod kvs;
 mod log;
 mod require;
+mod time;

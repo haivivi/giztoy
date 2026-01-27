@@ -1,15 +1,36 @@
-//! HTTP builtin implementation using std::process::Command to call curl.
+//! HTTP builtin implementation using reqwest + tokio.
 
 use crate::runtime::Runtime;
 use giztoy_luau::{Error, State};
 use std::collections::HashMap;
-use std::process::Command;
+use std::time::Duration;
+
+/// HTTP client timeout
+const TIMEOUT: Duration = Duration::from_secs(30);
+
+/// HTTP request for async execution
+#[derive(Debug, Clone)]
+pub struct HttpRequest {
+    pub url: String,
+    pub method: String,
+    pub headers: HashMap<String, String>,
+    pub body: Option<String>,
+}
+
+/// HTTP response result
+#[derive(Debug, Clone)]
+pub struct HttpResponse {
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub body: String,
+    pub error: Option<String>,
+}
 
 impl Runtime {
     /// Register __builtin.http
     pub fn register_http(&mut self) -> Result<(), Error> {
         self.state.register_func("__builtin_http", |state| {
-            builtin_http(state)
+            builtin_http_sync(state)
         })?;
 
         self.state.get_global("__builtin_http")?;
@@ -21,13 +42,31 @@ impl Runtime {
     }
 }
 
-fn builtin_http(state: &State) -> i32 {
-    // Check if argument is a table
+/// Synchronous HTTP builtin (for compatibility)
+fn builtin_http_sync(state: &State) -> i32 {
+    // Parse request from Luau stack
+    let request = match parse_http_request(state) {
+        Ok(req) => req,
+        Err(err) => {
+            push_http_error(state, &err);
+            return 1;
+        }
+    };
+
+    // Execute HTTP synchronously using tokio's block_on
+    // This is safe because we're in a single-threaded context
+    let response = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(execute_http_async(&request))
+    });
+
+    push_http_response(state, &response);
+    1
+}
+
+/// Parse HTTP request from Luau stack
+fn parse_http_request(state: &State) -> Result<HttpRequest, String> {
     if !state.is_table(1) {
-        state.new_table();
-        state.push_string("request must be a table").ok();
-        state.set_field(-2, "err").ok();
-        return 1;
+        return Err("request must be a table".to_string());
     }
 
     // Read URL
@@ -36,10 +75,7 @@ fn builtin_http(state: &State) -> i32 {
     state.pop(1);
 
     if url.is_empty() {
-        state.new_table();
-        state.push_string("url is required").ok();
-        state.set_field(-2, "err").ok();
-        return 1;
+        return Err("url is required".to_string());
     }
 
     // Read method
@@ -66,88 +102,132 @@ fn builtin_http(state: &State) -> i32 {
     }
     state.pop(1);
 
-    // Build and execute request using curl
-    let result = execute_curl_request(&url, &method, &headers, body.as_deref());
+    Ok(HttpRequest {
+        url,
+        method,
+        headers,
+        body,
+    })
+}
 
-    match result {
-        Ok((status, resp_body)) => {
-            // Build response table
-            state.new_table();
+/// Execute HTTP request asynchronously using reqwest
+pub async fn execute_http_async(request: &HttpRequest) -> HttpResponse {
+    let client = reqwest::Client::builder()
+        .timeout(TIMEOUT)
+        .build();
 
-            state.push_number(status as f64);
-            state.set_field(-2, "status").ok();
-
-            state.push_string(&resp_body).ok();
-            state.set_field(-2, "body").ok();
-
-            // Empty headers table (curl doesn't easily provide response headers)
-            state.new_table();
-            state.set_field(-2, "headers").ok();
-
-            1
-        }
+    let client = match client {
+        Ok(c) => c,
         Err(e) => {
-            state.new_table();
-            state.push_number(0.0);
-            state.set_field(-2, "status").ok();
-            state.push_string(&e).ok();
-            state.set_field(-2, "err").ok();
-            1
+            return HttpResponse {
+                status: 0,
+                headers: HashMap::new(),
+                body: String::new(),
+                error: Some(format!("failed to create client: {}", e)),
+            };
         }
+    };
+
+    let method = match request.method.to_uppercase().as_str() {
+        "GET" => reqwest::Method::GET,
+        "POST" => reqwest::Method::POST,
+        "PUT" => reqwest::Method::PUT,
+        "PATCH" => reqwest::Method::PATCH,
+        "DELETE" => reqwest::Method::DELETE,
+        "HEAD" => reqwest::Method::HEAD,
+        "OPTIONS" => reqwest::Method::OPTIONS,
+        _ => {
+            return HttpResponse {
+                status: 0,
+                headers: HashMap::new(),
+                body: String::new(),
+                error: Some(format!("unsupported HTTP method: {}", request.method)),
+            };
+        }
+    };
+
+    let mut req_builder = client.request(method, &request.url);
+
+    // Set headers
+    for (k, v) in &request.headers {
+        req_builder = req_builder.header(k.as_str(), v.as_str());
+    }
+
+    // Set body
+    if let Some(body) = &request.body {
+        req_builder = req_builder.body(body.clone());
+    }
+
+    // Execute request
+    match req_builder.send().await {
+        Ok(resp) => {
+            let status = resp.status().as_u16();
+
+            // Collect response headers
+            let mut resp_headers = HashMap::new();
+            for (name, value) in resp.headers() {
+                if let Ok(v) = value.to_str() {
+                    resp_headers.insert(name.to_string(), v.to_string());
+                }
+            }
+
+            // Read body
+            let body = match resp.text().await {
+                Ok(b) => b,
+                Err(e) => {
+                    eprintln!("[reqwest] warning: error reading response body: {}", e);
+                    String::new()
+                }
+            };
+
+            HttpResponse {
+                status,
+                headers: resp_headers,
+                body,
+                error: None,
+            }
+        }
+        Err(e) => HttpResponse {
+            status: 0,
+            headers: HashMap::new(),
+            body: String::new(),
+            error: Some(format!("request failed: {}", e)),
+        },
     }
 }
 
-fn execute_curl_request(
-    url: &str,
-    method: &str,
-    headers: &HashMap<String, String>,
-    body: Option<&str>,
-) -> Result<(u16, String), String> {
-    let mut cmd = Command::new("curl");
-    
-    // Silent mode but show errors, include response code
-    cmd.args(["-s", "-S", "-w", "\n%{http_code}"]);
-    
-    // Method
-    cmd.args(["-X", method]);
-    
-    // Headers
-    for (k, v) in headers {
-        cmd.args(["-H", &format!("{}: {}", k, v)]);
+/// Push HTTP error onto Luau stack
+fn push_http_error(state: &State, error: &str) {
+    state.new_table();
+    state.push_number(0.0);
+    state.set_field(-2, "status").ok();
+    state.push_string(error).ok();
+    state.set_field(-2, "err").ok();
+}
+
+/// Push HTTP response onto Luau stack
+fn push_http_response(state: &State, response: &HttpResponse) {
+    state.new_table();
+
+    if let Some(err) = &response.error {
+        state.push_number(0.0);
+        state.set_field(-2, "status").ok();
+        state.push_string(err).ok();
+        state.set_field(-2, "err").ok();
+        return;
     }
-    
-    // Body
-    if let Some(body) = body {
-        cmd.args(["-d", body]);
+
+    state.push_number(response.status as f64);
+    state.set_field(-2, "status").ok();
+
+    state.push_string(&response.body).ok();
+    state.set_field(-2, "body").ok();
+
+    // Response headers
+    state.new_table();
+    for (k, v) in &response.headers {
+        state.push_string(v).ok();
+        state.set_field(-2, k).ok();
     }
-    
-    // URL
-    cmd.arg(url);
-    
-    // Execute
-    let output = cmd.output().map_err(|e| format!("failed to execute curl: {}", e))?;
-    
-    if !output.status.success() && output.stderr.len() > 0 {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("curl error: {}", stderr));
-    }
-    
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let lines: Vec<&str> = stdout.trim().rsplit('\n').collect();
-    
-    if lines.is_empty() {
-        return Err("empty response from curl".to_string());
-    }
-    
-    // Last line is status code
-    let status: u16 = lines[0].parse().unwrap_or(0);
-    
-    // Rest is body (join back in reverse order, excluding last line)
-    let body = if lines.len() > 1 {
-        lines[1..].iter().rev().cloned().collect::<Vec<_>>().join("\n")
-    } else {
-        String::new()
-    };
-    
-    Ok((status, body))
+    state.set_field(-2, "headers").ok();
 }

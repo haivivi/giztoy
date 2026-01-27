@@ -101,7 +101,13 @@ func luaTableToGo(state *luau.State, idx int) any {
 		case luau.TypeString:
 			key = state.ToString(-2)
 		case luau.TypeNumber:
-			key = fmt.Sprintf("%g", state.ToNumber(-2))
+			num := state.ToNumber(-2)
+			// Use integer format if it's a whole number, otherwise use float
+			if num == float64(int64(num)) {
+				key = fmt.Sprintf("%d", int64(num))
+			} else {
+				key = fmt.Sprintf("%f", num)
+			}
 		default:
 			state.Pop(1)
 			continue

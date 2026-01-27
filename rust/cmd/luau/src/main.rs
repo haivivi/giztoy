@@ -20,7 +20,8 @@ struct Args {
     script: PathBuf,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
 
     // Resolve libs directory
@@ -43,6 +44,12 @@ fn main() {
     // Register builtins
     if let Err(e) = rt.register_builtins() {
         eprintln!("failed to register builtins: {}", e);
+        process::exit(1);
+    }
+
+    // Pre-compile all modules in libs directory
+    if let Err(e) = rt.precompile_modules() {
+        eprintln!("failed to precompile modules: {}", e);
         process::exit(1);
     }
 

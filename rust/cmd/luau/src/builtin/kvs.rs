@@ -3,8 +3,6 @@
 use crate::builtin::json::{json_to_lua, lua_to_json};
 use crate::runtime::Runtime;
 use giztoy_luau::Error;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 impl Runtime {
     /// Register KVS builtins
@@ -20,7 +18,7 @@ impl Runtime {
                 return 1;
             }
 
-            let kvs = kvs_get.lock().unwrap();
+            let kvs = kvs_get.lock().expect("kvs mutex poisoned");
             match kvs.get(&key) {
                 Some(value) => {
                     json_to_lua(state, value);
@@ -47,7 +45,7 @@ impl Runtime {
             }
 
             let value = lua_to_json(state, 2);
-            let mut kvs = kvs_set.lock().unwrap();
+            let mut kvs = kvs_set.lock().expect("kvs mutex poisoned");
             kvs.insert(key, value);
             0
         })?;
@@ -62,7 +60,7 @@ impl Runtime {
         self.state.register_func("__builtin_kvs_del", move |state| {
             let key = state.to_string(1).unwrap_or_default();
             if !key.is_empty() {
-                let mut kvs = kvs_del.lock().unwrap();
+                let mut kvs = kvs_del.lock().expect("kvs mutex poisoned");
                 kvs.remove(&key);
             }
             0

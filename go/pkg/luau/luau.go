@@ -647,3 +647,151 @@ func (s *State) DumpStack() string {
 	defer C.free(unsafe.Pointer(cstr))
 	return C.GoString(cstr)
 }
+
+// =============================================================================
+// Coroutine/Thread Support
+// =============================================================================
+
+// CoStatus represents the status of a coroutine.
+type CoStatus int
+
+const (
+	CoStatusOK        CoStatus = C.LUAU_COSTAT_OK      // Running or finished successfully
+	CoStatusYield     CoStatus = C.LUAU_COSTAT_YIELD   // Yielded
+	CoStatusErrRun    CoStatus = C.LUAU_COSTAT_ERRRUN  // Runtime error
+	CoStatusErrSyntax CoStatus = C.LUAU_COSTAT_ERRSYNTAX
+	CoStatusErrMem    CoStatus = C.LUAU_COSTAT_ERRMEM
+	CoStatusErrErr    CoStatus = C.LUAU_COSTAT_ERRERR
+	CoStatusBreak     CoStatus = C.LUAU_COSTAT_BREAK
+)
+
+// String returns the status name.
+func (s CoStatus) String() string {
+	switch s {
+	case CoStatusOK:
+		return "ok"
+	case CoStatusYield:
+		return "yield"
+	case CoStatusErrRun:
+		return "errrun"
+	case CoStatusErrSyntax:
+		return "errsyntax"
+	case CoStatusErrMem:
+		return "errmem"
+	case CoStatusErrErr:
+		return "errerr"
+	case CoStatusBreak:
+		return "break"
+	default:
+		return "unknown"
+	}
+}
+
+// Thread represents a Luau coroutine/thread.
+// It wraps a State with coroutine-specific methods.
+type Thread struct {
+	*State
+	parent *State // The parent state that created this thread
+}
+
+// NewThread creates a new coroutine (thread).
+// The new thread is pushed onto the parent's stack.
+func (s *State) NewThread() (*Thread, error) {
+	if s.L == nil {
+		return nil, ErrInvalid
+	}
+
+	threadL := C.luau_newthread(s.L)
+	if threadL == nil {
+		return nil, ErrMemory
+	}
+
+	// Create a wrapper State for the thread
+	threadState := &State{
+		L:       threadL,
+		funcIDs: make([]uint64, 0),
+	}
+	// Share the callback setup status
+	if s.callbackSet.Load() {
+		threadState.callbackSet.Store(true)
+	}
+
+	return &Thread{
+		State:  threadState,
+		parent: s,
+	}, nil
+}
+
+// Resume resumes the coroutine with nargs arguments on its stack.
+// Returns the status and number of results.
+func (t *Thread) Resume(nargs int) (CoStatus, int) {
+	if t.L == nil {
+		return CoStatusErrErr, 0
+	}
+
+	var fromL *C.LuauState
+	if t.parent != nil && t.parent.L != nil {
+		fromL = t.parent.L
+	}
+
+	topBefore := t.GetTop() - nargs
+	status := CoStatus(C.luau_resume(t.L, fromL, C.int(nargs)))
+	topAfter := t.GetTop()
+
+	nresults := topAfter - topBefore
+	if nresults < 0 {
+		nresults = 0
+	}
+
+	return status, nresults
+}
+
+// Yield yields from a coroutine.
+// This should be called as: return state.Yield(nresults)
+// from within a GoFunc that wants to yield.
+func (s *State) Yield(nresults int) int {
+	if s.L == nil {
+		return 0
+	}
+	return int(C.luau_yield(s.L, C.int(nresults)))
+}
+
+// Status returns the status of a coroutine.
+func (t *Thread) Status() CoStatus {
+	if t.L == nil {
+		return CoStatusErrErr
+	}
+	return CoStatus(C.luau_status(t.L))
+}
+
+// IsYieldable checks if the current state can yield.
+func (s *State) IsYieldable() bool {
+	if s.L == nil {
+		return false
+	}
+	return C.luau_isyieldable(s.L) != 0
+}
+
+// Close cleans up the thread.
+// Note: The thread's lua_State is managed by the parent, so we don't close it.
+// We only clean up the wrapper.
+func (t *Thread) Close() {
+	if t.State != nil {
+		// Don't close the lua_State - it's owned by the parent
+		// Just clean up our wrapper
+		t.funcIDsMu.Lock()
+		funcIDs := t.funcIDs
+		t.funcIDs = nil
+		t.funcIDsMu.Unlock()
+
+		if len(funcIDs) > 0 {
+			globalFuncsMu.Lock()
+			for _, id := range funcIDs {
+				delete(globalFuncs, id)
+			}
+			globalFuncsMu.Unlock()
+		}
+
+		t.L = nil
+	}
+}

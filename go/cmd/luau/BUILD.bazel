@@ -11,6 +11,7 @@ go_binary(
         "builtin_kvs.go",
         "builtin_log.go",
         "builtin_require.go",
+        "builtin_time.go",
     ],
     deps = [
         "//go/pkg/luau",
