@@ -283,6 +283,7 @@ end
 function on_input(ctx, input)
     local asr_text = nil
     local match_result = nil
+    local realtime_response = nil
     
     -- 协程 1：处理 realtime 模型
     local realtime_co = coroutine.create(function()
@@ -307,10 +308,19 @@ function on_input(ctx, input)
     end)
     
     -- 运行两个协程（调度器处理并行）
-    coroutine.resume(realtime_co)
-    coroutine.resume(match_co)
+    local ok1, result1 = coroutine.resume(realtime_co)
+    local ok2, result2 = coroutine.resume(match_co)
     
     -- ... 调度器运行直到都完成 ...
+    -- （实际实现中，调度器会在异步操作完成时 resume 协程）
+    
+    -- 协程完成后收集最终结果
+    if coroutine.status(realtime_co) == "dead" then
+        realtime_response = result1
+    end
+    if coroutine.status(match_co) == "dead" then
+        match_result = result2
+    end
     
     -- 有 match 结果用 match，否则用 realtime 响应
     if match_result and match_result.matched then
@@ -321,7 +331,7 @@ function on_input(ctx, input)
         end
         agent:close()
     else
-        for _, chunk in ipairs(realtime_response) do
+        for _, chunk in ipairs(realtime_response or {}) do
             ctx.emit(chunk)
         end
     end

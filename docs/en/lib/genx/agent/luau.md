@@ -283,6 +283,7 @@ end
 function on_input(ctx, input)
     local asr_text = nil
     local match_result = nil
+    local realtime_response = nil
     
     -- Coroutine 1: Handle realtime model
     local realtime_co = coroutine.create(function()
@@ -307,10 +308,20 @@ function on_input(ctx, input)
     end)
     
     -- Run both coroutines (scheduler handles parallelism)
-    coroutine.resume(realtime_co)
-    coroutine.resume(match_co)
+    local ok1, result1 = coroutine.resume(realtime_co)
+    local ok2, result2 = coroutine.resume(match_co)
     
     -- ... scheduler runs until both complete ...
+    -- (In a real implementation, the scheduler would resume coroutines
+    -- as their async operations complete)
+    
+    -- Collect final results after coroutines complete
+    if coroutine.status(realtime_co) == "dead" then
+        realtime_response = result1
+    end
+    if coroutine.status(match_co) == "dead" then
+        match_result = result2
+    end
     
     -- Use match result if available, otherwise use realtime response
     if match_result and match_result.matched then
@@ -321,7 +332,7 @@ function on_input(ctx, input)
         end
         agent:close()
     else
-        for _, chunk in ipairs(realtime_response) do
+        for _, chunk in ipairs(realtime_response or {}) do
             ctx.emit(chunk)
         end
     end

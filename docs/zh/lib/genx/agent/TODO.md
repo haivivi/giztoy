@@ -473,32 +473,24 @@ type AgentContext interface {
 
 ### LUAU-001: Rust Luau Binding 缺少协程/Thread API
 
-**状态**: 🔴 未修复
+**状态**: ✅ 已修复 (PR #52)
 
-**描述**: `rust/luau/` binding 没有实现 Luau 协程（Thread）相关的 API，导致 Rust runner 无法实现异步 yield/resume 机制。
+**描述**: `rust/luau/` binding 之前没有实现 Luau 协程（Thread）相关的 API，导致 Rust runner 无法实现异步 yield/resume 机制。
 
-**缺失的 API**（对比 Go binding `go/pkg/luau/`）:
+**已实现的 API**（与 Go binding `go/pkg/luau/` 对齐）:
 
 | API | Go binding | Rust binding |
 |-----|:----------:|:------------:|
-| `Thread` struct | ✅ | ❌ |
-| `NewThread()` | ✅ | ❌ |
-| `Resume(nargs)` | ✅ | ❌ |
-| `Yield(nresults)` | ✅ | ❌ |
-| `IsYieldable()` | ✅ | ❌ |
-| `Status()` / `CoStatus` | ✅ | ❌ |
+| `Thread` struct | ✅ | ✅ |
+| `NewThread()` | ✅ | ✅ |
+| `Resume(nargs)` | ✅ | ✅ |
+| `Yield(nresults)` | ✅ | ✅ |
+| `IsYieldable()` | ✅ | ✅ |
+| `Status()` / `CoStatus` | ✅ | ✅ |
 
-**影响**:
-- `rust/cmd/luau/` 的 HTTP 使用 `block_in_place` + `block_on` 同步阻塞
-- 无法实现 Luau 协程并行 HTTP 请求
-- 多个异步调用会串行执行而非并行
-
-**修复方案**:
-1. 在 `rust/luau/src/ffi.rs` 添加 FFI 绑定：
-   - `luau_newthread()`
-   - `luau_resume()`
-   - `luau_yield()`
-   - `luau_status()`
-   - `luau_isyieldable()`
-2. 在 `rust/luau/src/lib.rs` 实现 `Thread` struct 和 `CoStatus` enum
-3. 在 `rust/cmd/luau/` 实现异步调度循环（参考 Go 的 `RunAsync`）
+**修复内容**:
+1. ✅ 在 `rust/luau/src/ffi.rs` 添加 FFI 绑定
+2. ✅ 在 `rust/luau/src/lib.rs` 实现 `Thread` struct 和 `CoStatus` enum
+3. ✅ 使用 `impl_lua_stack_ops!` 宏消除 State 和 Thread 的代码重复
+4. ✅ 添加 12 个协程相关测试用例
+5. ⏳ `rust/cmd/luau/` 异步调度循环（待后续 PR 实现）
