@@ -6,8 +6,8 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
-	"github.com/haivivi/giztoy/pkg/trie"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/trie"
 )
 
 // TTSMux is the default multiplexer for TTS synthesizers.

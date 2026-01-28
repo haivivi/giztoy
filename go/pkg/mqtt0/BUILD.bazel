@@ -15,7 +15,7 @@ go_library(
         "trie.go",
         "types.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/mqtt0",
+    importpath = "github.com/haivivi/giztoy/go/pkg/mqtt0",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_gorilla_websocket//:websocket",

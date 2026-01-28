@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/codec/opus"
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/opus"
 )
 
 // EncodePCMOption is an interface for configuring EncodePCMStream behavior.

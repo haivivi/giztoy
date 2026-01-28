@@ -7,7 +7,7 @@ go_library(
         "milli.go",
         "unix.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/jsontime",
+    importpath = "github.com/haivivi/giztoy/go/pkg/jsontime",
     visibility = ["//visibility:public"],
 )
 

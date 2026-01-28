@@ -11,7 +11,7 @@ go_library(
         "track.go",
         "track_ctrl.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/audio/pcm",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/pcm",
     visibility = ["//visibility:public"],
     deps = ["//go/pkg/audio/resampler"],
 )

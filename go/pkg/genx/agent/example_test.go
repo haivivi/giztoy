@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/haivivi/giztoy/pkg/genx/agent"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx/agent"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
 )
 
 // Example_reActAgentDef demonstrates how to define a ReAct agent using JSON.

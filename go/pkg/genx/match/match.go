@@ -11,8 +11,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/generators"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/generators"
 
 	_ "embed"
 )

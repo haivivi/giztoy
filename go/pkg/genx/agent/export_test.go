@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"github.com/haivivi/giztoy/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx"
 )
 
 // NewMatchAgentGenerator creates a matchAgentGenerator for testing.

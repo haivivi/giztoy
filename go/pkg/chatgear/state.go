@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/jsontime"
+	"github.com/haivivi/giztoy/go/pkg/jsontime"
 )
 
 // GearState represents the state of a device.

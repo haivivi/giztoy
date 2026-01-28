@@ -26,8 +26,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/dashscope"
-	"github.com/haivivi/giztoy/pkg/minimax"
+	"github.com/haivivi/giztoy/go/pkg/dashscope"
+	"github.com/haivivi/giztoy/go/pkg/minimax"
 )
 
 var (

@@ -14,7 +14,7 @@ go_library(
         "tool_http.go",
         "tool_text_processor.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/genx/agent",
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/agent",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/genx",

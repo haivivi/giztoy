@@ -16,7 +16,7 @@ go_library(
         "stream_iter.go",
     ],
     embedsrcs = ["inspect_model_context.gotmpl"],
-    importpath = "github.com/haivivi/giztoy/pkg/genx",
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/buffer",

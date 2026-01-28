@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
 )
 
 // NewPipe creates a connected pair of server and client connections using channels.

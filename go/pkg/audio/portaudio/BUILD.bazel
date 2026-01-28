@@ -10,7 +10,7 @@ go_library(
         "//third_party/portaudio",
     ],
     cgo = True,
-    importpath = "github.com/haivivi/giztoy/pkg/audio/portaudio",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/portaudio",
     visibility = ["//visibility:public"],
     deps = ["//go/pkg/audio/pcm"],
 )

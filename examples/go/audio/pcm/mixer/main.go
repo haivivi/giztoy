@@ -17,7 +17,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
 )
 
 func main() {

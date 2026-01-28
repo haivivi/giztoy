@@ -3,7 +3,7 @@ package cli
 import (
 	"strings"
 
-	"github.com/haivivi/giztoy/pkg/buffer"
+	"github.com/haivivi/giztoy/go/pkg/buffer"
 )
 
 // LogBuffer is a thread-safe log buffer with max size using ring buffer.

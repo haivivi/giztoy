@@ -14,7 +14,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/haivivi/giztoy/pkg/mqtt0"
+	"github.com/haivivi/giztoy/go/pkg/mqtt0"
 )
 
 func main() {

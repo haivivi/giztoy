@@ -16,7 +16,7 @@ package main
 import (
 	"os"
 
-	"github.com/haivivi/giztoy/cmd/geartest/commands"
+	"github.com/haivivi/giztoy/go/cmd/geartest/commands"
 )
 
 func main() {

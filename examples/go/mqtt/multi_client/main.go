@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/mqtt0"
+	"github.com/haivivi/giztoy/go/pkg/mqtt0"
 )
 
 // MessageTracker tracks received messages for verification.

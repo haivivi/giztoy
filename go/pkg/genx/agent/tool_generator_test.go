@@ -5,10 +5,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/agent"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
-	"github.com/haivivi/giztoy/pkg/genx/playground"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/agent"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx/playground"
 )
 
 func setupGeneratorToolTestRuntime(t *testing.T) *playground.Runtime {

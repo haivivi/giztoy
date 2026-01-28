@@ -10,7 +10,7 @@ go_library(
     ],
     cdeps = ["//third_party/ogg"],
     cgo = True,
-    importpath = "github.com/haivivi/giztoy/pkg/audio/codec/ogg",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/codec/ogg",
     visibility = ["//visibility:public"],
 )
 

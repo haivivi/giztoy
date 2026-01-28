@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
 )
 
 var _ Agent = (*ReActAgent)(nil)

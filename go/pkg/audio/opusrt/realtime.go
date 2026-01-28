@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	pkgbuf "github.com/haivivi/giztoy/pkg/buffer"
+	pkgbuf "github.com/haivivi/giztoy/go/pkg/buffer"
 )
 
 // ErrDone is returned when the stream is exhausted.

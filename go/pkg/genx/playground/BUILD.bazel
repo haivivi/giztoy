@@ -8,7 +8,7 @@ go_library(
         "logger.go",
         "runtime.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/genx/playground",
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/playground",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/genx",

@@ -7,7 +7,7 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/haivivi/giztoy/pkg/buffer"
+	"github.com/haivivi/giztoy/go/pkg/buffer"
 )
 
 type IterElement interface {

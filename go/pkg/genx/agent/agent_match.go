@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
-	"github.com/haivivi/giztoy/pkg/genx/match"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx/match"
 )
 
 // MatchAgentPhase represents the current phase of the MatchAgent.

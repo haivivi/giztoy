@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "encoding",
     srcs = ["base64.go"],
-    importpath = "github.com/haivivi/giztoy/pkg/encoding",
+    importpath = "github.com/haivivi/giztoy/go/pkg/encoding",
     visibility = ["//visibility:public"],
 )
 

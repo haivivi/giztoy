@@ -7,11 +7,11 @@ import (
 	"io"
 	"sync"
 
-	"github.com/haivivi/giztoy/pkg/audio/codec/mp3"
-	"github.com/haivivi/giztoy/pkg/audio/codec/opus"
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
-	"github.com/haivivi/giztoy/pkg/doubaospeech"
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/mp3"
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/opus"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/doubaospeech"
 
 	"google.golang.org/api/iterator"
 )

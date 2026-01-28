@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/haivivi/giztoy/cmd/dashscope/commands"
+	"github.com/haivivi/giztoy/go/cmd/dashscope/commands"
 )
 
 func main() {

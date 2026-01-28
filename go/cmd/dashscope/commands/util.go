@@ -3,8 +3,8 @@ package commands
 import (
 	"fmt"
 
-	"github.com/haivivi/giztoy/pkg/cli"
-	"github.com/haivivi/giztoy/pkg/dashscope"
+	"github.com/haivivi/giztoy/go/pkg/cli"
+	"github.com/haivivi/giztoy/go/pkg/dashscope"
 )
 
 // OmniChatConfig is the configuration for omni chat command.

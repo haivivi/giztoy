@@ -7,7 +7,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/haivivi/giztoy/pkg/cli"
+	"github.com/haivivi/giztoy/go/pkg/cli"
 )
 
 // TUIModel is the TUI model.

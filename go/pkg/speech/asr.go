@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
-	"github.com/haivivi/giztoy/pkg/trie"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/trie"
 )
 
 // ASRMux is the default multiplexer for ASR transcribers.

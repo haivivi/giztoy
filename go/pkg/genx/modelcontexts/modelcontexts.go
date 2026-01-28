@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/trie"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/trie"
 )
 
 var _ ModelContextProvider = (*Mux)(nil)

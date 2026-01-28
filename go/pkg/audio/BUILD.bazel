@@ -8,6 +8,6 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "audio",
     srcs = ["doc.go"],
-    importpath = "github.com/haivivi/giztoy/pkg/audio",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio",
     visibility = ["//visibility:public"],
 )

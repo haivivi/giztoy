@@ -6,7 +6,7 @@ import (
 	"iter"
 	"testing"
 
-	"github.com/haivivi/giztoy/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx"
 )
 
 // mockModelContext is a simple mock implementation of genx.ModelContext for testing.

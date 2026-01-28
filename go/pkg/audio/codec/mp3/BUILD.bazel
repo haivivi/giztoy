@@ -31,7 +31,7 @@ go_library(
         ],
         "//conditions:default": [],
     }),
-    importpath = "github.com/haivivi/giztoy/pkg/audio/codec/mp3",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/codec/mp3",
     visibility = ["//visibility:public"],
 )
 

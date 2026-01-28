@@ -12,7 +12,7 @@ go_library(
         "realtime.go",
         "timestamp.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/audio/opusrt",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/opusrt",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/audio/codec/ogg",

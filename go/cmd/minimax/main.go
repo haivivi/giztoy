@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/haivivi/giztoy/cmd/minimax/commands"
+	"github.com/haivivi/giztoy/go/cmd/minimax/commands"
 )
 
 func main() {

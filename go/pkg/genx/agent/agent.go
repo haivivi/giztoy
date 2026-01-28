@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
-	"github.com/haivivi/giztoy/pkg/genx/match"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx/match"
 )
 
 // EventType represents the type of agent event.

@@ -37,10 +37,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
-	"github.com/haivivi/giztoy/pkg/audio/resampler"
-	"github.com/haivivi/giztoy/pkg/minimax"
-	openairealtime "github.com/haivivi/giztoy/pkg/openai-realtime"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/resampler"
+	"github.com/haivivi/giztoy/go/pkg/minimax"
+	openairealtime "github.com/haivivi/giztoy/go/pkg/openai-realtime"
 )
 
 var (

@@ -10,9 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
-	"github.com/haivivi/giztoy/pkg/chatgear"
-	"github.com/haivivi/giztoy/pkg/jsontime"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/chatgear"
+	"github.com/haivivi/giztoy/go/pkg/jsontime"
 )
 
 // Note: Audio is handled via WebRTC, format negotiated with browser

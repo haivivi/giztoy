@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
 )
 
 // ClientPort implements ClientPortTx and ClientPortRx as a bidirectional audio port.

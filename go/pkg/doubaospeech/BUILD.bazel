@@ -22,7 +22,7 @@ go_library(
         "types.go",
         "voice_clone.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/doubaospeech",
+    importpath = "github.com/haivivi/giztoy/go/pkg/doubaospeech",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_uuid//:uuid",

@@ -6,7 +6,7 @@ go_library(
         "pcm.go",
         "songs.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/audio/songs",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/songs",
     visibility = ["//visibility:public"],
     deps = ["//go/pkg/audio/pcm"],
 )

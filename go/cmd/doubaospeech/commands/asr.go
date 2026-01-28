@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	ds "github.com/haivivi/giztoy/pkg/doubaospeech"
+	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
 )
 
 // asrCmd is the root command for ASR services

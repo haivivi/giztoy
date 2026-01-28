@@ -22,7 +22,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/haivivi/giztoy/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 	gai "google.golang.org/genai"

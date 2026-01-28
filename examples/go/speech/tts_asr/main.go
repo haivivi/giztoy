@@ -24,11 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
-	"github.com/haivivi/giztoy/pkg/doubaospeech"
-	"github.com/haivivi/giztoy/pkg/minimax"
-	"github.com/haivivi/giztoy/pkg/speech"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/doubaospeech"
+	"github.com/haivivi/giztoy/go/pkg/minimax"
+	"github.com/haivivi/giztoy/go/pkg/speech"
 )
 
 // Test text - long enough to trigger sentence segmentation

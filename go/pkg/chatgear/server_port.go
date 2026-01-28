@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
 )
 
 // ServerPort implements ServerPortRx and ServerPortTx as a bidirectional audio port.

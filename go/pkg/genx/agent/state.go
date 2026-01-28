@@ -3,8 +3,8 @@ package agent
 import (
 	"context"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
 )
 
 // AgentState is the interface for Agent runtime state management.
