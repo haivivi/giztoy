@@ -1,2 +1,8 @@
 # DevOps tools directory
 # Each tool has its own subdirectory
+
+alias(
+    name = "affected-targets",
+    actual = "//devops/tools/bazel-affected",
+    visibility = ["//visibility:public"],
+)
