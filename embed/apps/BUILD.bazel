@@ -1,0 +1,13 @@
+# Platform-independent embedded applications
+# These apps use HAL abstraction and can run on different platforms (ESP, raysim, etc.)
+
+package(default_visibility = ["//visibility:public"])
+
+# All app source files for Bazel's esp_idf_app rule
+filegroup(
+    name = "all_apps",
+    srcs = glob(
+        ["**/*.zig", "**/*.zon"],
+        exclude = [".zig-cache/**"],
+    ),
+)
