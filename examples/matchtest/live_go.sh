@@ -3,6 +3,18 @@
 
 set -e
 
+# Check if running inside bazel
+if [[ -z "$BUILD_WORKSPACE_DIRECTORY" ]] && [[ -z "$TEST_SRCDIR" ]]; then
+    echo "ERROR: This script must be run via bazel." >&2
+    echo >&2
+    echo "Usage:" >&2
+    echo "  bazel run //examples/matchtest:live_go -- [args...]" >&2
+    echo >&2
+    echo "Example:" >&2
+    echo "  bazel run //examples/matchtest:live_go -- -model qwen/turbo" >&2
+    exit 1
+fi
+
 RUNFILES="${BASH_SOURCE[0]}.runfiles/_main"
 [[ -d "$RUNFILES" ]] || RUNFILES="$(dirname "$0")"
 

@@ -56,3 +56,16 @@ sh_binary(
     data = glob(["HelloWorld/**"]),
     tags = ["manual"],
 )
+
+sh_binary(
+    name = "run_emulator",
+    srcs = ["run_emulator.sh"],
+    data = glob(["HelloWorld/**"]),
+    tags = ["manual"],
+)
+
+sh_binary(
+    name = "sign_hap",
+    srcs = ["sign_hap.sh"],
+    tags = ["manual"],
+)
