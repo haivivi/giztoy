@@ -8,10 +8,6 @@ go_library(
         "resampler.go",
         "sample_reader.go",
     ],
-    cdeps = [
-        "//third_party/soxr",
-    ],
-    cgo = True,
     importpath = "github.com/haivivi/giztoy/go/pkg/audio/resampler",
     visibility = ["//visibility:public"],
     deps = [
