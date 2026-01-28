@@ -16,6 +16,10 @@ struct Args {
     #[arg(long)]
     libs: Option<PathBuf>,
 
+    /// Enable async HTTP mode (non-blocking with coroutines)
+    #[arg(long, short = 'a')]
+    r#async: bool,
+
     /// Script file to execute
     script: PathBuf,
 }
@@ -41,11 +45,17 @@ async fn main() {
         }
     };
 
+    // Set async mode before registering builtins
+    rt.set_async_mode(args.r#async);
+
     // Register builtins
     if let Err(e) = rt.register_builtins() {
         eprintln!("failed to register builtins: {}", e);
         process::exit(1);
     }
+
+    // Update async context after registering (for thread-local storage)
+    rt.update_async_context();
 
     // Pre-compile all modules in libs directory
     if let Err(e) = rt.precompile_modules() {
@@ -53,7 +63,7 @@ async fn main() {
         process::exit(1);
     }
 
-    // Read and execute script
+    // Read script
     let source = match std::fs::read_to_string(&args.script) {
         Ok(s) => s,
         Err(e) => {
@@ -63,8 +73,18 @@ async fn main() {
     };
 
     let script_name = args.script.to_string_lossy().to_string();
-    if let Err(e) = rt.state.do_string_opt(&source, &script_name, giztoy_luau::OptLevel::O2) {
-        eprintln!("script error: {}", e);
-        process::exit(1);
+
+    if args.r#async {
+        // Async mode: run script in a thread with event loop
+        if let Err(e) = rt.run_async(&source, &script_name).await {
+            eprintln!("script error: {}", e);
+            process::exit(1);
+        }
+    } else {
+        // Sync mode: execute script directly (blocking HTTP)
+        if let Err(e) = rt.state.do_string_opt(&source, &script_name, giztoy_luau::OptLevel::O2) {
+            eprintln!("script error: {}", e);
+            process::exit(1);
+        }
     }
 }

@@ -98,10 +98,10 @@ Go 和 Rust Runner 并行开发，共用同一套测试数据和 Luau SDK。
   - [x] 实现 `__builtin.env(key)` - 环境变量读取
   - [x] 实现 `require` 模块加载（从文件系统加载 `luau/libs/`）
   - [x] 编写 Bazel 构建规则
-  - [ ] ⚠️ **TODO: HTTP 异步模式待实现**
-    - 当前使用 `block_in_place` + `block_on` 阻塞执行
-    - ✅ 前置条件已满足：`rust/luau` Thread API 已实现（[LUAU-001](#luau-001-rust-luau-binding-缺少协程thread-api) 已修复）
-    - ⏳ 待实现：在 `rust/cmd/luau/` 中实现异步调度循环（参考 Go 版本的 `--async` 标志）
+  - [x] ✅ **HTTP 异步模式已实现**
+    - 添加 `--async` / `-a` 命令行标志启用异步模式
+    - 异步模式下 HTTP 请求使用协程 yield/resume，不阻塞其他请求
+    - 同步模式（默认）使用 `block_in_place` + `block_on` 保持兼容
 
 ### 2.3 Haivivi SDK（纯 Luau 代码）✅
 
@@ -492,4 +492,4 @@ type AgentContext interface {
 2. ✅ 在 `rust/luau/src/lib.rs` 实现 `Thread` struct 和 `CoStatus` enum
 3. ✅ 使用 `impl_lua_stack_ops!` 宏消除 State 和 Thread 的代码重复
 4. ✅ 添加 12 个协程相关测试用例
-5. ⏳ `rust/cmd/luau/` 异步调度循环（待后续 PR 实现）
+5. ✅ `rust/cmd/luau/` 异步调度循环（`--async` 标志）

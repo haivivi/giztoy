@@ -1,8 +1,9 @@
 //! HTTP builtin implementation using reqwest + tokio.
 
 use crate::runtime::Runtime;
-use giztoy_luau::{Error, State};
+use giztoy_luau::{Error, State, Thread};
 use std::collections::HashMap;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 /// HTTP client timeout
@@ -26,11 +27,26 @@ pub struct HttpResponse {
     pub error: Option<String>,
 }
 
+// Thread-local storage for async mode info
+// This is used to pass async context into the callback
+thread_local! {
+    static ASYNC_MODE: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
+    static COMPLETED_TX: std::cell::RefCell<Option<tokio::sync::mpsc::UnboundedSender<(u64, HttpResponse)>>> = const { std::cell::RefCell::new(None) };
+    static NEXT_REQ_ID: std::cell::RefCell<u64> = const { std::cell::RefCell::new(0) };
+}
+
 impl Runtime {
     /// Register __builtin.http
     pub fn register_http(&mut self) -> Result<(), Error> {
+        // Store async mode and tx in thread-local before registering
+        let async_mode = self.async_mode;
+        let completed_tx = self.completed_tx.clone();
+        
+        ASYNC_MODE.with(|am| *am.borrow_mut() = async_mode);
+        COMPLETED_TX.with(|tx| *tx.borrow_mut() = completed_tx);
+        
         self.state.register_func("__builtin_http", |state| {
-            builtin_http_sync(state)
+            builtin_http(state)
         })?;
 
         self.state.get_global("__builtin_http")?;
@@ -40,10 +56,16 @@ impl Runtime {
 
         Ok(())
     }
+    
+    /// Update async mode in thread-local storage (call after changing async_mode)
+    pub fn update_async_context(&self) {
+        ASYNC_MODE.with(|am| *am.borrow_mut() = self.async_mode);
+        COMPLETED_TX.with(|tx| *tx.borrow_mut() = self.completed_tx.clone());
+    }
 }
 
-/// Synchronous HTTP builtin (for compatibility)
-fn builtin_http_sync(state: &State) -> i32 {
+/// HTTP builtin that supports both sync and async modes
+fn builtin_http(state: &State) -> i32 {
     // Parse request from Luau stack
     let request = match parse_http_request(state) {
         Ok(req) => req,
@@ -53,8 +75,37 @@ fn builtin_http_sync(state: &State) -> i32 {
         }
     };
 
-    // Execute HTTP synchronously using tokio's block_on
-    // This is safe because we're in a single-threaded context
+    // Check if we're in async mode and can yield
+    let async_mode = ASYNC_MODE.with(|am| *am.borrow());
+    let can_yield = state.is_yieldable();
+    
+    if async_mode && can_yield {
+        // Async mode: start request in background and yield
+        let completed_tx = COMPLETED_TX.with(|tx| tx.borrow().clone());
+        
+        if let Some(tx) = completed_tx {
+            // Generate request ID
+            let req_id = NEXT_REQ_ID.with(|id| {
+                let mut id_ref = id.borrow_mut();
+                *id_ref += 1;
+                *id_ref
+            });
+            
+            // Spawn async HTTP request
+            tokio::spawn(async move {
+                let response = execute_http_async(&request).await;
+                let _ = tx.send((req_id, response));
+            });
+            
+            // Push request ID onto stack
+            state.push_number(req_id as f64);
+            
+            // Yield with 1 value (the request ID)
+            return state.yield_results(1);
+        }
+    }
+
+    // Sync mode: execute HTTP directly using tokio's block_on
     let response = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(execute_http_async(&request))
     });
@@ -230,4 +281,31 @@ fn push_http_response(state: &State, response: &HttpResponse) {
         state.set_field(-2, k).ok();
     }
     state.set_field(-2, "headers").ok();
+}
+
+/// Push HTTP response onto a Thread's stack (for async mode)
+pub fn push_http_response_to_thread(thread: &Thread, response: &HttpResponse) {
+    thread.new_table();
+
+    if let Some(err) = &response.error {
+        thread.push_number(0.0);
+        thread.set_field(-2, "status").ok();
+        thread.push_string(err).ok();
+        thread.set_field(-2, "err").ok();
+        return;
+    }
+
+    thread.push_number(response.status as f64);
+    thread.set_field(-2, "status").ok();
+
+    thread.push_string(&response.body).ok();
+    thread.set_field(-2, "body").ok();
+
+    // Response headers
+    thread.new_table();
+    for (k, v) in &response.headers {
+        thread.push_string(v).ok();
+        thread.set_field(-2, k).ok();
+    }
+    thread.set_field(-2, "headers").ok();
 }
