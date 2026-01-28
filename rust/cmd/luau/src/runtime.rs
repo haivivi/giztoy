@@ -1,18 +1,13 @@
 //! Runtime for Luau script execution.
 
-use crate::builtin::http::{HttpRequest, HttpResponse};
-use giztoy_luau::{CoStatus, Error, OptLevel, State, Thread};
+use crate::builtin::http::HttpResponse;
+use giztoy_luau::{CoStatus, Error, OptLevel, State};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc;
-
-/// Pending HTTP request with associated thread
-pub struct PendingRequest {
-    pub id: u64,
-    pub result_rx: tokio::sync::oneshot::Receiver<HttpResponse>,
-}
 
 /// Runtime holds the state for Luau script execution.
 pub struct Runtime {
@@ -24,8 +19,8 @@ pub struct Runtime {
 
     // Async HTTP support
     pub async_mode: bool,
-    pub next_request_id: AtomicU64,
-    pub pending_reqs: Arc<Mutex<HashMap<u64, PendingRequest>>>,
+    pub next_request_id: Arc<AtomicU64>,
+    pub pending_reqs: Arc<Mutex<HashSet<u64>>>,
     pub completed_tx: Option<mpsc::UnboundedSender<(u64, HttpResponse)>>,
     pub completed_rx: Option<mpsc::UnboundedReceiver<(u64, HttpResponse)>>,
 }
@@ -45,8 +40,8 @@ impl Runtime {
             loaded: Arc::new(Mutex::new(HashMap::new())),
             bytecode_cache: Arc::new(Mutex::new(HashMap::new())),
             async_mode: false,
-            next_request_id: AtomicU64::new(1),
-            pending_reqs: Arc::new(Mutex::new(HashMap::new())),
+            next_request_id: Arc::new(AtomicU64::new(1)),
+            pending_reqs: Arc::new(Mutex::new(HashSet::new())),
             completed_tx: Some(completed_tx),
             completed_rx: Some(completed_rx),
         })
@@ -57,9 +52,12 @@ impl Runtime {
         self.async_mode = enabled;
     }
 
-    /// Generate next request ID.
-    pub fn next_request_id(&self) -> u64 {
-        self.next_request_id.fetch_add(1, Ordering::SeqCst)
+    /// Generate next request ID and add to pending set.
+    pub fn start_request(&self) -> u64 {
+        let req_id = self.next_request_id.fetch_add(1, Ordering::SeqCst);
+        let mut pending = self.pending_reqs.lock().expect("pending_reqs mutex poisoned");
+        pending.insert(req_id);
+        req_id
     }
 
     /// Check if there are pending HTTP requests.
@@ -85,56 +83,62 @@ impl Runtime {
         // Initial resume (start the script)
         let (mut status, _) = thread.resume(0);
 
+        // Check for immediate error
+        if status != CoStatus::Ok && status != CoStatus::Yield {
+            let err_msg = thread.to_string(-1).unwrap_or_else(|| "unknown error".to_string());
+            return Err(format!("script error: {}", err_msg));
+        }
+
         // Take ownership of the receiver for the event loop
         let mut completed_rx = self.completed_rx.take()
             .ok_or_else(|| "completed_rx already taken".to_string())?;
 
-        // Event loop: poll for completed HTTP requests
-        while status == CoStatus::Yield || self.has_pending_requests() {
-            // Check for completed requests
+        // Event loop: process completed HTTP requests while coroutine is yielding
+        // Continue while:
+        // 1. Thread is yielding (waiting for async result), OR
+        // 2. There are pending requests that will resume the thread
+        while status == CoStatus::Yield {
+            // Wait for a completed request or check if we should exit
             tokio::select! {
+                biased;  // Prioritize completed requests
+
                 Some((req_id, response)) = completed_rx.recv() => {
-                    // Remove from pending map
+                    // Remove from pending set
                     {
                         let mut pending = self.pending_reqs.lock().expect("pending_reqs mutex poisoned");
                         pending.remove(&req_id);
                     }
 
-                    // Push result onto thread's stack
+                    // Push result onto thread's stack and resume
                     crate::builtin::http::push_http_response_to_thread(&thread, &response);
-
-                    // Resume the thread with 1 result
                     let (new_status, _) = thread.resume(1);
                     status = new_status;
 
+                    // Check for errors after resume
                     if status != CoStatus::Ok && status != CoStatus::Yield {
                         let err_msg = thread.to_string(-1).unwrap_or_else(|| "unknown error".to_string());
+                        self.completed_rx = Some(completed_rx);
                         return Err(format!("thread error: {}", err_msg));
                     }
                 }
+
+                // Small delay only if there are pending requests (avoid busy loop)
                 _ = tokio::time::sleep(tokio::time::Duration::from_millis(1)), if self.has_pending_requests() => {
-                    // Just a small delay to avoid busy loop
+                    // Continue waiting for pending requests
                 }
+
                 else => {
+                    // No pending requests and channel empty - script yielded without pending HTTP
+                    // This shouldn't happen in normal async HTTP usage, but handle gracefully
                     break;
                 }
             }
-
-            // Update status
-            status = thread.status();
-            if status == CoStatus::Ok {
-                break;
-            }
-            if status != CoStatus::Yield {
-                let err_msg = thread.to_string(-1).unwrap_or_else(|| "unknown error".to_string());
-                return Err(format!("runtime error: {}", err_msg));
-            }
         }
 
-        // Restore the receiver (though we won't use it again)
+        // Restore the receiver
         self.completed_rx = Some(completed_rx);
 
-        // Check final status
+        // Final status check
         if status != CoStatus::Ok {
             let err_msg = thread.to_string(-1).unwrap_or_else(|| "unknown error".to_string());
             return Err(format!("runtime error: {}", err_msg));

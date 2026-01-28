@@ -1253,8 +1253,18 @@ fn test_thread_error() {
     let thread = state.new_thread().unwrap();
     thread.load_bytecode(&bytecode, "chunk").unwrap();
 
-    let (status, _) = thread.resume(0);
+    let (status, nresults) = thread.resume(0);
     assert_eq!(status, CoStatus::ErrRun);
+    // When a coroutine errors, results are pushed onto the stack
+    // The number of results may vary (error message, plus possibly debug info)
+    assert!(nresults >= 1, "at least error message should be on stack");
+    // The top of the stack should contain the error message
+    let err_msg = thread.to_string(-1);
+    assert!(err_msg.is_some(), "error message should be on stack");
+    assert!(
+        err_msg.unwrap().contains("test error"),
+        "error message should contain 'test error'"
+    );
 }
 
 #[test]
@@ -1343,4 +1353,62 @@ fn test_thread_table_operations() {
 
     thread.get_field(-1, "answer").unwrap();
     assert_eq!(thread.to_number(-1), 42.0);
+}
+
+#[test]
+fn test_thread_lifecycle_correct_order() {
+    // This test demonstrates the correct lifecycle: Thread dropped before State.
+    // This pattern must be followed to avoid undefined behavior.
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    let bytecode = state
+        .compile("return 'hello from thread'", OptLevel::O2)
+        .unwrap();
+
+    // Create thread and use it
+    {
+        let thread = state.new_thread().unwrap();
+        thread.load_bytecode(&bytecode, "chunk").unwrap();
+
+        let (status, nresults) = thread.resume(0);
+        assert_eq!(status, CoStatus::Ok);
+        assert_eq!(nresults, 1);
+        assert_eq!(thread.to_string(-1), Some("hello from thread".to_string()));
+
+        // Thread is dropped here at end of scope - BEFORE state
+    }
+
+    // State can still be used after thread is dropped
+    state.push_string("state still works").unwrap();
+    assert_eq!(state.to_string(-1), Some("state still works".to_string()));
+
+    // State is dropped here
+}
+
+#[test]
+fn test_multiple_threads_lifecycle() {
+    // Test that multiple threads can be created and dropped properly
+    let state = State::new().unwrap();
+    state.open_libs();
+
+    let bytecode1 = state.compile("return 1", OptLevel::O2).unwrap();
+    let bytecode2 = state.compile("return 2", OptLevel::O2).unwrap();
+
+    // Create multiple threads
+    let thread1 = state.new_thread().unwrap();
+    let thread2 = state.new_thread().unwrap();
+
+    thread1.load_bytecode(&bytecode1, "chunk1").unwrap();
+    thread2.load_bytecode(&bytecode2, "chunk2").unwrap();
+
+    let (status1, _) = thread1.resume(0);
+    let (status2, _) = thread2.resume(0);
+
+    assert_eq!(status1, CoStatus::Ok);
+    assert_eq!(status2, CoStatus::Ok);
+    assert_eq!(thread1.to_number(-1), 1.0);
+    assert_eq!(thread2.to_number(-1), 2.0);
+
+    // Both threads dropped before state (at end of function)
 }

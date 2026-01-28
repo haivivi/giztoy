@@ -638,10 +638,16 @@ impl std::fmt::Display for CoStatus {
 ///
 /// # Safety
 ///
+/// # Safety
+///
 /// This struct holds raw pointers to Luau states. Users must ensure:
 ///
-/// 1. **Lifetime**: The `Thread` must not outlive its parent `State`. Dropping the parent
-///    `State` invalidates all `Thread` instances created from it.
+/// 1. **Lifetime**: The `Thread` **MUST NOT** outlive its parent `State`. Dropping the parent
+///    `State` invalidates all `Thread` instances created from it, leading to **undefined behavior**
+///    (use-after-free) if the `Thread` is accessed afterwards.
+///
+///    **WARNING**: Rust's type system does not enforce this constraint. It is the caller's
+///    responsibility to ensure the `Thread` is dropped before or at the same time as its parent `State`.
 ///
 /// 2. **Single-threaded access**: Luau is not thread-safe. Do not access the same `State`
 ///    or its `Thread` instances from multiple OS threads simultaneously.
@@ -765,8 +771,9 @@ impl Drop for Thread {
     fn drop(&mut self) {
         // Don't close the lua_State - it's owned by the parent.
         // The thread will be garbage collected by Luau when no longer referenced.
-        // Just clear our pointer to indicate the Thread is no longer valid.
+        // Clear both pointers to indicate the Thread is no longer valid.
         self.ptr = std::ptr::null_mut();
+        self.parent_ptr = std::ptr::null_mut();
     }
 }
 

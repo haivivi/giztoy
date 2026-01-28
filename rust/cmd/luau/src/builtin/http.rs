@@ -3,7 +3,9 @@
 use crate::runtime::Runtime;
 use giztoy_luau::{Error, State, Thread};
 use std::collections::HashMap;
-use std::sync::atomic::Ordering;
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 /// HTTP client timeout
@@ -28,22 +30,22 @@ pub struct HttpResponse {
 }
 
 // Thread-local storage for async mode info
-// This is used to pass async context into the callback
+// This is used to pass async context into the Luau callback
 thread_local! {
     static ASYNC_MODE: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
     static COMPLETED_TX: std::cell::RefCell<Option<tokio::sync::mpsc::UnboundedSender<(u64, HttpResponse)>>> = const { std::cell::RefCell::new(None) };
-    static NEXT_REQ_ID: std::cell::RefCell<u64> = const { std::cell::RefCell::new(0) };
+    static NEXT_REQ_ID: std::cell::RefCell<Option<Arc<AtomicU64>>> = const { std::cell::RefCell::new(None) };
+    static PENDING_REQS: std::cell::RefCell<Option<Arc<Mutex<HashSet<u64>>>>> = const { std::cell::RefCell::new(None) };
 }
 
 impl Runtime {
     /// Register __builtin.http
     pub fn register_http(&mut self) -> Result<(), Error> {
-        // Store async mode and tx in thread-local before registering
-        let async_mode = self.async_mode;
-        let completed_tx = self.completed_tx.clone();
-        
-        ASYNC_MODE.with(|am| *am.borrow_mut() = async_mode);
-        COMPLETED_TX.with(|tx| *tx.borrow_mut() = completed_tx);
+        // Store async context in thread-local before registering
+        ASYNC_MODE.with(|am| *am.borrow_mut() = self.async_mode);
+        COMPLETED_TX.with(|tx| *tx.borrow_mut() = self.completed_tx.clone());
+        NEXT_REQ_ID.with(|id| *id.borrow_mut() = Some(self.next_request_id.clone()));
+        PENDING_REQS.with(|pr| *pr.borrow_mut() = Some(self.pending_reqs.clone()));
         
         self.state.register_func("__builtin_http", |state| {
             builtin_http(state)
@@ -61,6 +63,8 @@ impl Runtime {
     pub fn update_async_context(&self) {
         ASYNC_MODE.with(|am| *am.borrow_mut() = self.async_mode);
         COMPLETED_TX.with(|tx| *tx.borrow_mut() = self.completed_tx.clone());
+        NEXT_REQ_ID.with(|id| *id.borrow_mut() = Some(self.next_request_id.clone()));
+        PENDING_REQS.with(|pr| *pr.borrow_mut() = Some(self.pending_reqs.clone()));
     }
 }
 
@@ -82,14 +86,16 @@ fn builtin_http(state: &State) -> i32 {
     if async_mode && can_yield {
         // Async mode: start request in background and yield
         let completed_tx = COMPLETED_TX.with(|tx| tx.borrow().clone());
+        let next_req_id = NEXT_REQ_ID.with(|id| id.borrow().clone());
+        let pending_reqs = PENDING_REQS.with(|pr| pr.borrow().clone());
         
-        if let Some(tx) = completed_tx {
-            // Generate request ID
-            let req_id = NEXT_REQ_ID.with(|id| {
-                let mut id_ref = id.borrow_mut();
-                *id_ref += 1;
-                *id_ref
-            });
+        if let (Some(tx), Some(req_id_counter), Some(pending)) = (completed_tx, next_req_id, pending_reqs) {
+            // Generate request ID and add to pending set
+            let req_id = req_id_counter.fetch_add(1, Ordering::SeqCst);
+            {
+                let mut pending_set = pending.lock().expect("pending_reqs mutex poisoned");
+                pending_set.insert(req_id);
+            }
             
             // Spawn async HTTP request
             tokio::spawn(async move {
@@ -97,7 +103,7 @@ fn builtin_http(state: &State) -> i32 {
                 let _ = tx.send((req_id, response));
             });
             
-            // Push request ID onto stack
+            // Push request ID onto stack (for debugging/tracking)
             state.push_number(req_id as f64);
             
             // Yield with 1 value (the request ID)
