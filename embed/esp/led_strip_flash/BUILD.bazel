@@ -4,8 +4,10 @@ package(default_visibility = ["//visibility:public"])
 
 # Build the LED strip flash application
 # Use --@embed_zig//bazel/esp:board=xxx and --@embed_zig//bazel/esp:chip=xxx to configure
+# Tagged as manual because ESP-IDF toolchain is not available in CI
 esp_idf_app(
     name = "app",
+    tags = ["manual"],
     srcs = glob(
         [
             "**/*.c",
@@ -37,10 +39,12 @@ esp_idf_app(
 # Flash the application to the device
 esp_flash(
     name = "flash",
+    tags = ["manual"],
     app = ":app",
 )
 
 # Monitor serial output
 esp_monitor(
     name = "monitor",
+    tags = ["manual"],
 )
