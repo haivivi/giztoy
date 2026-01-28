@@ -9,14 +9,14 @@ set -e
 
 # Check if running inside bazel
 if [[ -z "$BUILD_WORKSPACE_DIRECTORY" ]]; then
-    echo "ERROR: This script must be run via bazel."
-    echo ""
-    echo "Usage:"
-    echo "  bazel run //examples/bazel/harmonyos:run_emulator -- [hap_file]"
-    echo ""
-    echo "Example:"
-    echo "  bazel run //examples/bazel/harmonyos:run_emulator"
-    echo "  bazel run //examples/bazel/harmonyos:run_emulator -- /path/to/app.hap"
+    echo "ERROR: This script must be run via bazel." >&2
+    echo >&2
+    echo "Usage:" >&2
+    echo "  bazel run //examples/bazel/harmonyos:run_emulator -- [hap_file]" >&2
+    echo >&2
+    echo "Example:" >&2
+    echo "  bazel run //examples/bazel/harmonyos:run_emulator" >&2
+    echo "  bazel run //examples/bazel/harmonyos:run_emulator -- /path/to/app.hap" >&2
     exit 1
 fi
 
@@ -55,8 +55,8 @@ if [ -f "$DEVECO_SDK_HOME/toolchains/hdc" ]; then
 elif command -v hdc &> /dev/null; then
     HDC="hdc"
 else
-    echo "ERROR: hdc (HarmonyOS Device Connector) not found"
-    echo "Please ensure DevEco Studio is installed"
+    echo "ERROR: hdc (HarmonyOS Device Connector) not found" >&2
+    echo "Please ensure DevEco Studio is installed" >&2
     exit 1
 fi
 
@@ -68,29 +68,29 @@ echo "Available devices: $DEVICES"
 
 # Check if device is connected
 if [ "$DEVICES" = "[Empty]" ] || [ -z "$DEVICES" ]; then
-    echo ""
-    echo "ERROR: No device or emulator connected."
-    echo ""
-    echo "Please start an emulator first:"
+    echo >&2
+    echo "ERROR: No device or emulator connected." >&2
+    echo >&2
+    echo "Please start an emulator first:" >&2
     
     # List available emulator instances
     if [ -f "$EMULATOR" ]; then
         INSTANCES=$("$EMULATOR" -list 2>/dev/null | tr -d '\r' || echo "")
         if [ -n "$INSTANCES" ]; then
-            echo ""
-            echo "  Available emulators:"
+            echo >&2
+            echo "  Available emulators:" >&2
             echo "$INSTANCES" | while read -r name; do
-                echo "    - $name"
+                echo "    - $name" >&2
             done
-            echo ""
-            echo "  Start emulator via command line:"
+            echo >&2
+            echo "  Start emulator via command line:" >&2
             FIRST_INSTANCE=$(echo "$INSTANCES" | head -1)
-            echo "    $EMULATOR -hvd \"$FIRST_INSTANCE\""
-            echo ""
-            echo "  Or start from DevEco Studio: Tools -> Device Manager"
+            echo "    $EMULATOR -hvd \"$FIRST_INSTANCE\"" >&2
+            echo >&2
+            echo "  Or start from DevEco Studio: Tools -> Device Manager" >&2
         fi
     else
-        echo "  Open DevEco Studio -> Tools -> Device Manager"
+        echo "  Open DevEco Studio -> Tools -> Device Manager" >&2
     fi
     exit 1
 fi
@@ -103,13 +103,13 @@ if [ -z "$HAP_FILE" ]; then
 fi
 
 if [ -z "$HAP_FILE" ] || [ ! -f "$HAP_FILE" ]; then
-    echo ""
-    echo "ERROR: HAP file not found"
-    echo "Please build the application first:"
-    echo "  bazel run //examples/bazel/harmonyos:build_native"
-    echo ""
-    echo "Or specify HAP file path:"
-    echo "  bazel run //examples/bazel/harmonyos:run_emulator -- /path/to/app.hap"
+    echo >&2
+    echo "ERROR: HAP file not found" >&2
+    echo "Please build the application first:" >&2
+    echo "  bazel run //examples/bazel/harmonyos:build_native" >&2
+    echo >&2
+    echo "Or specify HAP file path:" >&2
+    echo "  bazel run //examples/bazel/harmonyos:run_emulator -- /path/to/app.hap" >&2
     exit 1
 fi
 
@@ -118,7 +118,7 @@ echo "Installing: $HAP_FILE"
 
 # Install HAP on device/emulator
 if ! "$HDC" install "$HAP_FILE"; then
-    echo "ERROR: Failed to install HAP"
+    echo "ERROR: Failed to install HAP" >&2
     exit 1
 fi
 
@@ -128,7 +128,7 @@ BUNDLE_NAME="com.example.hellobazel"
 echo ""
 echo "Starting application..."
 if ! "$HDC" shell aa start -a EntryAbility -b "$BUNDLE_NAME"; then
-    echo "ERROR: Failed to start application"
+    echo "ERROR: Failed to start application" >&2
     exit 1
 fi
 

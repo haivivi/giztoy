@@ -6,16 +6,16 @@ set -e
 
 # Check if running inside bazel
 if [[ -z "$BUILD_WORKSPACE_DIRECTORY" ]]; then
-    echo "ERROR: This script must be run via bazel."
-    echo ""
-    echo "Usage:"
-    echo "  bazel run //examples/bazel/harmonyos:build_native -- [command]"
-    echo ""
-    echo "Commands:"
-    echo "  clean        清理构建产物"
-    echo "  install-deps 安装依赖"
-    echo "  build        构建 HAP (默认)"
-    echo "  run          构建、安装并运行"
+    echo "ERROR: This script must be run via bazel." >&2
+    echo >&2
+    echo "Usage:" >&2
+    echo "  bazel run //examples/bazel/harmonyos:build_native -- [command]" >&2
+    echo >&2
+    echo "Commands:" >&2
+    echo "  clean        清理构建产物" >&2
+    echo "  install-deps 安装依赖" >&2
+    echo "  build        构建 HAP (默认)" >&2
+    echo "  run          构建、安装并运行" >&2
     exit 1
 fi
 

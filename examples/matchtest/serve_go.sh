@@ -5,13 +5,13 @@ set -e
 
 # Check if running inside bazel
 if [[ -z "$BUILD_WORKSPACE_DIRECTORY" ]] && [[ -z "$TEST_SRCDIR" ]]; then
-    echo "ERROR: This script must be run via bazel."
-    echo ""
-    echo "Usage:"
-    echo "  bazel run //examples/matchtest:serve_go"
-    echo ""
-    echo "Note: This target depends on :run_go which requires network/API keys."
-    echo "      Run 'bazel build //examples/matchtest:run_go' first if needed."
+    echo "ERROR: This script must be run via bazel." >&2
+    echo >&2
+    echo "Usage:" >&2
+    echo "  bazel run //examples/matchtest:serve_go" >&2
+    echo >&2
+    echo "Note: This target depends on :run_go which requires network/API keys." >&2
+    echo "      Run 'bazel build //examples/matchtest:run_go' first if needed." >&2
     exit 1
 fi
 

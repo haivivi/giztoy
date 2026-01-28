@@ -6,13 +6,13 @@ set -e
 
 # Check if running inside bazel
 if [[ -z "$BUILD_WORKSPACE_DIRECTORY" ]]; then
-    echo "ERROR: This script must be run via bazel."
-    echo ""
-    echo "Usage:"
-    echo "  bazel run //examples/bazel/harmonyos:sign_hap -- <unsigned.hap> <signed.hap> [profile.json]"
-    echo ""
-    echo "Example:"
-    echo "  bazel run //examples/bazel/harmonyos:sign_hap -- input.hap output.hap"
+    echo "ERROR: This script must be run via bazel." >&2
+    echo >&2
+    echo "Usage:" >&2
+    echo "  bazel run //examples/bazel/harmonyos:sign_hap -- <unsigned.hap> <signed.hap> [profile.json]" >&2
+    echo >&2
+    echo "Example:" >&2
+    echo "  bazel run //examples/bazel/harmonyos:sign_hap -- input.hap output.hap" >&2
     exit 1
 fi
 
