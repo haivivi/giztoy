@@ -145,11 +145,15 @@ use_repo(luau_ext, "luau")
 # ============================================================================
 bazel_dep(name = "embed_zig", version = "0.1.0")
 
-# Local development override (use local zig-bootstrap repository)
-local_path_override(
+# Use git_override to fetch from GitHub (CI compatible)
+git_override(
     module_name = "embed_zig",
-    path = "../zig-bootstrap",
+    remote = "https://github.com/haivivi/embed-zig.git",
+    commit = "93fcc1e",
 )
+
+# For local development, add to .bazelrc.user:
+#   common --override_module=embed_zig=/path/to/zig-bootstrap
 
 # ============================================================================
 # HarmonyOS SDK (自动下载，无需安装 DevEco Studio)

@@ -45,11 +45,11 @@ pub const gpio = struct {
     pub const btn_vol_up = 40;
     pub const btn_vol_down = 39;
 
-    // RGB LEDs (WS2812, directly connected LED strip)
+    // RGB LEDs (WS2812)
     pub const led_rgb = 19;
     pub const led_count = 12; // Number of LEDs on the ring
 
-    // LCD display (directly accessible, directly connect if needed)
+    // LCD display interface
     pub const lcd_cs = 5;
     pub const lcd_dc = 4;
     pub const lcd_rst = 6;
@@ -57,12 +57,12 @@ pub const gpio = struct {
     pub const lcd_sclk = 15;
     pub const lcd_mosi = 11;
 
-    // SD card (directly accessible)
+    // SD card interface
     pub const sd_cmd = 14;
     pub const sd_clk = 12;
     pub const sd_d0 = 13;
 
-    // Camera interface (directly accessible, directly configure)
+    // Camera interface
     pub const cam_pwdn = -1; // Not connected
     pub const cam_reset = -1; // Not connected
     pub const cam_xclk = 2;
@@ -195,8 +195,7 @@ pub const button = struct {
 
 /// Board initialization
 pub fn init() void {
-    power.init();
-    codec.init();
+    // speaker.init() calls power.init() and codec.init() internally
     speaker.init();
     mic.init();
     led.init();
