@@ -2,7 +2,7 @@
 
 use crate::builtin::json::{json_to_lua, lua_to_json};
 use crate::runtime::Runtime;
-use giztoy_luau::Error;
+use giztoy_luau::{Error, LuaStackOps};
 
 impl Runtime {
     /// Register KVS builtins

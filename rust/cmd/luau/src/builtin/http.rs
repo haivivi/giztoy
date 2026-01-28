@@ -1,8 +1,11 @@
 //! HTTP builtin implementation using reqwest + tokio.
 
 use crate::runtime::Runtime;
-use giztoy_luau::{Error, State};
+use giztoy_luau::{Error, LuaStackOps, State, Thread};
 use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 /// HTTP client timeout
@@ -26,11 +29,26 @@ pub struct HttpResponse {
     pub error: Option<String>,
 }
 
+// Thread-local storage for async mode info
+// This is used to pass async context into the Luau callback
+thread_local! {
+    static ASYNC_MODE: std::cell::RefCell<bool> = const { std::cell::RefCell::new(false) };
+    static COMPLETED_TX: std::cell::RefCell<Option<tokio::sync::mpsc::UnboundedSender<(u64, HttpResponse)>>> = const { std::cell::RefCell::new(None) };
+    static NEXT_REQ_ID: std::cell::RefCell<Option<Arc<AtomicU64>>> = const { std::cell::RefCell::new(None) };
+    static PENDING_REQS: std::cell::RefCell<Option<Arc<Mutex<HashSet<u64>>>>> = const { std::cell::RefCell::new(None) };
+}
+
 impl Runtime {
     /// Register __builtin.http
     pub fn register_http(&mut self) -> Result<(), Error> {
+        // Store async context in thread-local before registering
+        ASYNC_MODE.with(|am| *am.borrow_mut() = self.async_mode);
+        COMPLETED_TX.with(|tx| *tx.borrow_mut() = self.completed_tx.clone());
+        NEXT_REQ_ID.with(|id| *id.borrow_mut() = Some(self.next_request_id.clone()));
+        PENDING_REQS.with(|pr| *pr.borrow_mut() = Some(self.pending_reqs.clone()));
+        
         self.state.register_func("__builtin_http", |state| {
-            builtin_http_sync(state)
+            builtin_http(state)
         })?;
 
         self.state.get_global("__builtin_http")?;
@@ -40,10 +58,18 @@ impl Runtime {
 
         Ok(())
     }
+    
+    /// Update async mode in thread-local storage (call after changing async_mode)
+    pub fn update_async_context(&self) {
+        ASYNC_MODE.with(|am| *am.borrow_mut() = self.async_mode);
+        COMPLETED_TX.with(|tx| *tx.borrow_mut() = self.completed_tx.clone());
+        NEXT_REQ_ID.with(|id| *id.borrow_mut() = Some(self.next_request_id.clone()));
+        PENDING_REQS.with(|pr| *pr.borrow_mut() = Some(self.pending_reqs.clone()));
+    }
 }
 
-/// Synchronous HTTP builtin (for compatibility)
-fn builtin_http_sync(state: &State) -> i32 {
+/// HTTP builtin that supports both sync and async modes
+fn builtin_http(state: &State) -> i32 {
     // Parse request from Luau stack
     let request = match parse_http_request(state) {
         Ok(req) => req,
@@ -53,8 +79,45 @@ fn builtin_http_sync(state: &State) -> i32 {
         }
     };
 
-    // Execute HTTP synchronously using tokio's block_on
-    // This is safe because we're in a single-threaded context
+    // Check if we're in async mode and can yield
+    let async_mode = ASYNC_MODE.with(|am| *am.borrow());
+    let can_yield = state.is_yieldable();
+    
+    if async_mode && can_yield {
+        // Async mode: start request in background and yield
+        let completed_tx = COMPLETED_TX.with(|tx| tx.borrow().clone());
+        let next_req_id = NEXT_REQ_ID.with(|id| id.borrow().clone());
+        let pending_reqs = PENDING_REQS.with(|pr| pr.borrow().clone());
+        
+        if let (Some(tx), Some(req_id_counter), Some(pending)) = (completed_tx, next_req_id, pending_reqs) {
+            // Generate request ID and add to pending set
+            let req_id = req_id_counter.fetch_add(1, Ordering::SeqCst);
+            {
+                let mut pending_set = pending.lock().expect("pending_reqs mutex poisoned");
+                pending_set.insert(req_id);
+            }
+            
+            // Spawn async HTTP request
+            tokio::spawn(async move {
+                let response = execute_http_async(&request).await;
+                let _ = tx.send((req_id, response));
+            });
+            
+            // Push request ID onto stack (for debugging/tracking)
+            state.push_number(req_id as f64);
+            
+            // Yield with 1 value (the request ID)
+            return state.yield_results(1);
+        } else {
+            // Async mode is enabled but the async context is not fully configured;
+            // fall back to synchronous HTTP execution and log for easier debugging.
+            eprintln!(
+                "luau http: async mode enabled but context not configured; falling back to sync"
+            );
+        }
+    }
+
+    // Sync mode: execute HTTP directly using tokio's block_on
     let response = tokio::task::block_in_place(|| {
         tokio::runtime::Handle::current().block_on(execute_http_async(&request))
     });
@@ -196,38 +259,47 @@ pub async fn execute_http_async(request: &HttpRequest) -> HttpResponse {
     }
 }
 
-/// Push HTTP error onto Luau stack
-fn push_http_error(state: &State, error: &str) {
-    state.new_table();
-    state.push_number(0.0);
-    state.set_field(-2, "status").ok();
-    state.push_string(error).ok();
-    state.set_field(-2, "err").ok();
+/// Push HTTP error onto any Lua stack (State or Thread)
+fn push_http_error(lua: &impl LuaStackOps, error: &str) {
+    lua.new_table();
+    lua.push_number(0.0);
+    lua.set_field(-2, "status").ok();
+    lua.push_string(error).ok();
+    lua.set_field(-2, "err").ok();
 }
 
-/// Push HTTP response onto Luau stack
-fn push_http_response(state: &State, response: &HttpResponse) {
-    state.new_table();
+/// Push HTTP response onto any Lua stack (State or Thread)
+///
+/// This generic function works with both `State` and `Thread` thanks to the
+/// `LuaStackOps` trait, eliminating code duplication.
+pub fn push_http_response(lua: &impl LuaStackOps, response: &HttpResponse) {
+    lua.new_table();
 
     if let Some(err) = &response.error {
-        state.push_number(0.0);
-        state.set_field(-2, "status").ok();
-        state.push_string(err).ok();
-        state.set_field(-2, "err").ok();
+        lua.push_number(0.0);
+        lua.set_field(-2, "status").ok();
+        lua.push_string(err).ok();
+        lua.set_field(-2, "err").ok();
         return;
     }
 
-    state.push_number(response.status as f64);
-    state.set_field(-2, "status").ok();
+    lua.push_number(response.status as f64);
+    lua.set_field(-2, "status").ok();
 
-    state.push_string(&response.body).ok();
-    state.set_field(-2, "body").ok();
+    lua.push_string(&response.body).ok();
+    lua.set_field(-2, "body").ok();
 
     // Response headers
-    state.new_table();
+    lua.new_table();
     for (k, v) in &response.headers {
-        state.push_string(v).ok();
-        state.set_field(-2, k).ok();
+        lua.push_string(v).ok();
+        lua.set_field(-2, k).ok();
     }
-    state.set_field(-2, "headers").ok();
+    lua.set_field(-2, "headers").ok();
+}
+
+/// Push HTTP response onto a Thread's stack (for async mode)
+/// This is a convenience alias for push_http_response with Thread.
+pub fn push_http_response_to_thread(thread: &Thread, response: &HttpResponse) {
+    push_http_response(thread, response);
 }

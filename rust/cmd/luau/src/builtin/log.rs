@@ -1,7 +1,7 @@
 //! Log builtin implementation.
 
 use crate::runtime::Runtime;
-use giztoy_luau::{Error, Type};
+use giztoy_luau::{Error, LuaStackOps, Type};
 
 impl Runtime {
     /// Register __builtin.log

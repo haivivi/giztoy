@@ -88,7 +88,7 @@ Go 和 Rust Runner 并行开发，共用同一套测试数据和 Luau SDK。
   - [x] 编写 Bazel 构建规则
 
 - [x] **Rust Runner** `rust/cmd/luau/` ✅
-  - [x] 实现 `__builtin.http(request)` - HTTP 请求 (通过 curl)
+  - [x] 实现 `__builtin.http(request)` - HTTP 请求 (通过 reqwest)
   - [x] 实现 `__builtin.json_encode(value)` - JSON 编码
   - [x] 实现 `__builtin.json_decode(str)` - JSON 解码
   - [x] 实现 `__builtin.kvs_get(key)` - KVS 读取
@@ -98,6 +98,10 @@ Go 和 Rust Runner 并行开发，共用同一套测试数据和 Luau SDK。
   - [x] 实现 `__builtin.env(key)` - 环境变量读取
   - [x] 实现 `require` 模块加载（从文件系统加载 `luau/libs/`）
   - [x] 编写 Bazel 构建规则
+  - [x] ✅ **HTTP 异步模式已实现**
+    - 添加 `--async` / `-a` 命令行标志启用异步模式
+    - 异步模式下 HTTP 请求使用协程 yield/resume，不阻塞其他请求
+    - 同步模式（默认）使用 `block_in_place` + `block_on` 保持兼容
 
 ### 2.3 Haivivi SDK（纯 Luau 代码）✅
 
@@ -214,21 +218,186 @@ Go 和 Rust Runner 并行开发，共用同一套测试数据和 Luau SDK。
 
 ---
 
-## 阶段三：Lua Context API
+## 阶段三：genx/luau Context API
 
-### 3.1 设计 Context API
-- [ ] `ctx.generate(model, prompt)` - 调用 Generator
-- [ ] `ctx.generate_json(model, prompt, schema)` - 生成 JSON
-- [ ] `ctx.create_agent(name, config)` - 创建 子 Agent
-- [ ] `ctx.http.get/post()` - HTTP 请求（复用阶段二的实现）
-- [ ] `ctx.state.xxx` - 状态读写
-- [ ] `ctx.emit(chunk)` - 输出 MessageChunk
+### 3.1 两种执行模式
 
-### 3.2 实现 LuaTool
-- [ ] 创建 `go/pkg/genx/agent/tool_lua.go`
-- [ ] 实现 `LuaTool` 结构体
-- [ ] 实现 Invoke 方法（执行 Lua 脚本）
-- [ ] 实现 ctx 注入
+Luau 脚本有两种运行模式：
+
+| 模式 | 入口函数 | I/O | 用途 |
+|------|---------|-----|------|
+| **Tool** | `invoke(ctx, args) -> result` | 参数进，return 出 | 离散任务 |
+| **Agent** | `run(ctx)` 或 `on_input(ctx, input)` | `recv()/emit()` | 对话 Agent |
+
+### 3.2 共享 API（Tool 和 Agent 都有）
+
+- [ ] **HTTP**
+  - [ ] `ctx.http.get(url, opts?)` - ⏳ async
+  - [ ] `ctx.http.post(url, opts?)` - ⏳ async
+  - [ ] `ctx.http.request(method, url, opts?)` - ⏳ async
+
+- [ ] **LLM 生成**
+  - [ ] `ctx.generate(model, prompt, opts?)` - ⏳ async
+  - [ ] `ctx.generate_json(model, prompt, schema, opts?)` - ⏳ async
+
+- [ ] **Tool 调用**
+  - [ ] `ctx.invoke(tool_name, args)` - ⏳ async
+
+- [ ] **子 Agent 管理**
+  - [ ] `ctx.create_agent(name, config?)` - 🔄 sync
+  - [ ] `agent:send(contents)` - 🔄 sync
+  - [ ] `agent:iter()` - ⏳ async
+  - [ ] `agent:collect()` - ⏳ async
+  - [ ] `agent:close()` - 🔄 sync
+
+- [ ] **Realtime 会话**
+  - [ ] `ctx.realtime.connect(model, opts?)` - ⏳ async
+  - [ ] `session:send_audio(data)` - 🔄 sync
+  - [ ] `session:send_text(text)` - 🔄 sync
+  - [ ] `session:wait_for(event_type)` - ⏳ async
+  - [ ] `session:events()` - ⏳ async
+  - [ ] `session:cancel()` - 🔄 sync
+  - [ ] `session:close()` - 🔄 sync
+
+- [ ] **Agent State（完整访问）**
+  - [ ] `ctx.agent.state.key` - 🔄 sync（KV 读写，通过 metatable）
+  - [ ] `ctx.agent.state:keys()` - 🔄 sync
+  - [ ] `ctx.agent.state:clear()` - 🔄 sync
+  - [ ] `ctx.agent.state:all()` - 🔄 sync
+  - [ ] `ctx.agent.history:recent(n?)` - 🔄 sync
+  - [ ] `ctx.agent.history:append(msg)` - 🔄 sync
+  - [ ] `ctx.agent.history:revert()` - 🔄 sync
+  - [ ] `ctx.agent.memory:summary()` - 🔄 sync
+  - [ ] `ctx.agent.memory:set_summary(s)` - 🔄 sync
+  - [ ] `ctx.agent.memory:query(q)` - ⏳ async
+
+- [ ] **Agent 信息（只读）**
+  - [ ] `ctx.agent.name` - 🔄 sync
+  - [ ] `ctx.agent.model` - 🔄 sync
+  - [ ] `ctx.agent.state_id` - 🔄 sync
+
+- [ ] **运行时信息（只读）**
+  - [ ] `ctx.runtime.request_id` - 🔄 sync
+  - [ ] `ctx.runtime.user_id` - 🔄 sync
+  - [ ] `ctx.runtime.trace_id` - 🔄 sync
+
+- [ ] **日志**
+  - [ ] `ctx.log.debug(...)` - 🔄 sync
+  - [ ] `ctx.log.info(...)` - 🔄 sync
+  - [ ] `ctx.log.warn(...)` - 🔄 sync
+  - [ ] `ctx.log.error(...)` - 🔄 sync
+
+### 3.3 Tool 独有 API
+
+- [ ] `ctx.input()` - ⏳ async（等待输入，用于需要多轮交互的 Tool）
+- [ ] `ctx.output(result)` - 🔄 sync（返回结果）
+- [ ] 或直接 `return result`
+
+### 3.4 Agent 独有 API
+
+- [ ] `ctx.recv()` - ⏳ async（等待输入，nil = 已关闭）
+- [ ] `ctx.emit(chunk)` - 🔄 sync（发送输出，chunk.eof=true 标记本轮结束）
+
+### 3.5 异步实现（协程 + goroutine）
+
+Host 函数需要支持 yield/resume 实现异步：
+
+```
+Lua 协程              Go 调度器                 Go goroutine
+─────────             ─────────                 ─────────────
+    │
+    │ ctx.http.get(url)
+    │──────────────────►│
+    │                   │  go func() {
+    │                   │      http.Get(url)  ────────►│
+    │   yield           │  }()                         │
+    │◄──────────────────│                              │
+    │                   │                              │
+    │  (暂停)           │  select {                    │
+    │                   │      case <-readyChan:       │
+    │                   │  }                           │
+    │                   │                              │  HTTP 完成
+    │                   │◄─────────────────────────────│
+    │                   │  readyChan <- result         │
+    │                   │                              │
+    │ resume(result)    │
+    │◄──────────────────│
+    │
+    │ local resp = ...   -- 继续执行
+```
+
+- [ ] 实现 Scheduler（管理协程 + I/O）
+- [ ] 实现 Host 函数 yield（发起异步操作后立即 yield）
+- [ ] 实现 goroutine 完成后通知调度器 resume
+- [ ] 支持 Luau 协程并行执行（多个 HTTP 请求并行）
+
+### 3.6 Go 接口设计
+
+```go
+// ToolContext Tool 模式接口
+type ToolContext interface {
+    Context() context.Context
+    
+    // HTTP
+    HTTPGet(url string, opts *HTTPOptions) (*HTTPResponse, error)
+    HTTPPost(url string, opts *HTTPOptions) (*HTTPResponse, error)
+    
+    // LLM
+    Generate(model, prompt string, opts *GenerateOptions) (string, error)
+    GenerateJSON(model, prompt string, schema any, opts *GenerateOptions) (any, error)
+    
+    // Tool
+    Invoke(toolName string, args any) (any, error)
+    
+    // Agent State
+    AgentStateGet(key string) (any, bool)
+    AgentStateSet(key string, value any)
+    AgentHistoryRecent(n int) ([]Message, error)
+    AgentHistoryAppend(msg Message) error
+    AgentHistoryRevert() error
+    
+    // Runtime
+    RequestID() string
+    UserID() string
+    
+    // Log
+    Log(level string, args ...any)
+}
+
+// AgentContext Agent 模式接口
+type AgentContext interface {
+    ToolContext  // 包含所有 Tool 能力
+    
+    // I/O
+    Recv() (*Contents, error)  // 阻塞等待输入或关闭
+    Emit(chunk *MessageChunk) error
+}
+```
+
+- [ ] 定义 `ToolContext` 接口
+- [ ] 定义 `AgentContext` 接口
+- [ ] 实现 `runtimeToolContext`（包装 agent.Runtime + AgentState）
+- [ ] 实现 `runtimeAgentContext`
+
+### 3.7 实现 LuaTool
+
+- [ ] 创建 `go/pkg/genx/luau/` 包（独立，可单独测试）
+- [ ] 实现 `Runner` 结构体
+  - [ ] StatePool（Luau State 池化）
+  - [ ] CompiledScripts（字节码缓存）
+  - [ ] Scheduler（协程调度器）
+- [ ] 实现 Host Functions 注册
+- [ ] 实现 `Invoke(ctx, tc, script, args)` 方法
+- [ ] 编写单元测试（Mock ToolContext）
+
+### 3.8 实现 LuaAgent
+
+- [ ] 创建 `go/pkg/genx/agent/agent_lua.go`
+- [ ] 实现 `LuaAgent` 结构体
+- [ ] 实现事件驱动入口（`on_start/on_input/on_close`）
+- [ ] 实现主循环入口（`run`）
+- [ ] 实现 `recv()` yield/resume 机制
+- [ ] 实现 `emit()` channel 输出
 - [ ] 编写测试
 
 ---
@@ -294,4 +463,33 @@ Go 和 Rust Runner 并行开发，共用同一套测试数据和 Luau SDK。
 - [x] 更新 `docs/zh/lib/genx/agent/go.md` - Go 接口
 - [x] 更新 `docs/zh/lib/genx/agent/issues.md` - 问题列表
 - [x] 新增 `docs/zh/lib/genx/agent/luau.md` - Luau 脚本系统（含库系统设计）
+- [x] 新增 `docs/en/lib/genx/agent/luau.md` - Luau 脚本系统（英文版）
 - [ ] 新增 `docs/zh/lib/genx/agent/realtime.md` - RealtimeAgent（待实现后补充）
+
+---
+
+## Known Issues
+
+### LUAU-001: Rust Luau Binding 缺少协程/Thread API
+
+**状态**: ✅ 已修复 (PR #52)
+
+**描述**: `rust/luau/` binding 之前没有实现 Luau 协程（Thread）相关的 API，导致 Rust runner 无法实现异步 yield/resume 机制。
+
+**已实现的 API**（与 Go binding `go/pkg/luau/` 对齐）:
+
+| API | Go binding | Rust binding |
+|-----|:----------:|:------------:|
+| `Thread` struct | ✅ | ✅ |
+| `NewThread()` | ✅ | ✅ |
+| `Resume(nargs)` | ✅ | ✅ |
+| `Yield(nresults)` | ✅ | ✅ |
+| `IsYieldable()` | ✅ | ✅ |
+| `Status()` / `CoStatus` | ✅ | ✅ |
+
+**修复内容**:
+1. ✅ 在 `rust/luau/src/ffi.rs` 添加 FFI 绑定
+2. ✅ 在 `rust/luau/src/lib.rs` 实现 `Thread` struct 和 `CoStatus` enum
+3. ✅ 使用 `impl_lua_stack_ops!` 宏消除 State 和 Thread 的代码重复
+4. ✅ 添加 12 个协程相关测试用例
+5. ✅ `rust/cmd/luau/` 异步调度循环（`--async` 标志）

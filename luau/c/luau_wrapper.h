@@ -521,6 +521,15 @@ typedef enum {
 LuauState* luau_newthread(LuauState* L);
 
 /**
+ * Close a thread's wrapper without closing the underlying lua_State.
+ * The lua_State is owned by the parent and will be garbage collected.
+ * This only frees the C++ LuauState wrapper allocated by luau_newthread.
+ *
+ * @param L The thread state to close (must be created by luau_newthread)
+ */
+void luau_close_thread(LuauState* L);
+
+/**
  * Resume a coroutine.
  * Arguments should be pushed onto the coroutine's stack before calling.
  *

@@ -7,6 +7,19 @@ use std::os::raw::{c_char, c_int};
 /// Opaque Luau state handle
 pub enum LuauState {}
 
+/// Coroutine status codes (matches LuauCoStatus in C wrapper)
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LuauCoStatus {
+    Ok = 0,        // Running or finished successfully
+    Yield = 1,     // Yielded
+    ErrRun = 2,    // Runtime error
+    ErrSyntax = 3, // Syntax error
+    ErrMem = 4,    // Memory allocation error
+    ErrErr = 5,    // Error in error handler
+    Break = 6,     // Break requested
+}
+
 #[link(name = "luau_wrapper")]
 extern "C" {
     // State management
@@ -107,4 +120,32 @@ extern "C" {
     pub fn luau_pushexternalfunc(L: *mut LuauState, callback_id: u64, debugname: *const c_char);
     pub fn luau_registerexternal(L: *mut LuauState, name: *const c_char, callback_id: u64);
     pub fn luau_getcallbackid(L: *mut LuauState) -> u64;
+
+    // Coroutine/Thread support
+    /// Create a new coroutine (thread). Pushes the new thread onto the stack of L.
+    /// Returns the new thread's state.
+    pub fn luau_newthread(L: *mut LuauState) -> *mut LuauState;
+
+    /// Close a thread's wrapper without closing the underlying lua_State.
+    /// The lua_State is owned by the parent and will be garbage collected.
+    /// This only frees the C++ LuauState wrapper allocated by luau_newthread.
+    pub fn luau_close_thread(L: *mut LuauState);
+
+    /// Resume a coroutine. Arguments should be pushed onto the coroutine's stack before calling.
+    /// Returns status code (Ok or Yield on success).
+    pub fn luau_resume(L: *mut LuauState, from: *mut LuauState, nargs: c_int) -> LuauCoStatus;
+
+    /// Yield from a coroutine. Should be called as: return luau_yield(L, nresults);
+    /// Returns the value to be returned from the C function.
+    pub fn luau_yield(L: *mut LuauState, nresults: c_int) -> c_int;
+
+    /// Get the status of a coroutine.
+    pub fn luau_status(L: *mut LuauState) -> LuauCoStatus;
+
+    /// Check if a coroutine is yieldable.
+    /// Returns 1 if yieldable, 0 otherwise.
+    pub fn luau_isyieldable(L: *mut LuauState) -> c_int;
+
+    /// Get the main thread from any thread.
+    pub fn luau_mainthread(L: *mut LuauState) -> *mut LuauState;
 }
