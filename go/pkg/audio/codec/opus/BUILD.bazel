@@ -21,7 +21,6 @@ go_library(
         "frame.go",
         "toc.go",
     ],
-    importpath = "github.com/haivivi/giztoy/go/pkg/audio/codec/opus",
     visibility = ["//visibility:public"],
 )
 
