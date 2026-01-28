@@ -7,8 +7,8 @@
 *从嵌入式设备到云端智能体，从音频流到视频流，*  
 *连接宇宙中所有的大语言模型。*
 
-[![Build](https://github.com/haivivi/giztoy/actions/workflows/build.yaml/badge.svg)](https://github.com/haivivi/giztoy/actions/workflows/build.yaml)
-[![Pages](https://github.com/haivivi/giztoy/actions/workflows/pages.yaml/badge.svg)](https://haivivi.github.io/giztoy/)
+[![Build](https://github.com/haivivi/giztoy/actions/workflows/build-main.yaml/badge.svg)](https://github.com/haivivi/giztoy/actions/workflows/build-main.yaml)
+[![Docs](https://img.shields.io/github/deployments/haivivi/giztoy/github-pages?label=docs)](https://haivivi.github.io/giztoy/)
 
 [文档](https://haivivi.github.io/giztoy/docs/zh/) · [示例](./examples/) · [English](./README.md)
 

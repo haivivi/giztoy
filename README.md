@@ -7,8 +7,8 @@
 *From embedded devices to cloud agents, from audio streams to video feeds,*  
 *connecting every Large Language Model the universe has to offer.*
 
-[![Build](https://github.com/haivivi/giztoy/actions/workflows/build.yaml/badge.svg)](https://github.com/haivivi/giztoy/actions/workflows/build.yaml)
-[![Pages](https://github.com/haivivi/giztoy/actions/workflows/pages.yaml/badge.svg)](https://haivivi.github.io/giztoy/)
+[![Build](https://github.com/haivivi/giztoy/actions/workflows/build-main.yaml/badge.svg)](https://github.com/haivivi/giztoy/actions/workflows/build-main.yaml)
+[![Docs](https://img.shields.io/github/deployments/haivivi/giztoy/github-pages?label=docs)](https://haivivi.github.io/giztoy/)
 
 [Documentation](https://haivivi.github.io/giztoy/docs/) · [Examples](./examples/) · [中文](./README-zh.md)
 
