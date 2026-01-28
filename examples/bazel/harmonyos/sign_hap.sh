@@ -4,6 +4,18 @@
 
 set -e
 
+# Check if running inside bazel
+if [[ -z "$BUILD_WORKSPACE_DIRECTORY" ]]; then
+    echo "ERROR: This script must be run via bazel."
+    echo ""
+    echo "Usage:"
+    echo "  bazel run //examples/bazel/harmonyos:sign_hap -- <unsigned.hap> <signed.hap> [profile.json]"
+    echo ""
+    echo "Example:"
+    echo "  bazel run //examples/bazel/harmonyos:sign_hap -- input.hap output.hap"
+    exit 1
+fi
+
 # DevEco 工具路径
 DEVECO_HOME="/Applications/DevEco-Studio.app/Contents"
 JAVA="$DEVECO_HOME/jbr/Contents/Home/bin/java"

@@ -4,9 +4,23 @@
 
 set -e
 
-# 获取脚本所在目录
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$SCRIPT_DIR/HelloWorld"
+# Check if running inside bazel
+if [[ -z "$BUILD_WORKSPACE_DIRECTORY" ]]; then
+    echo "ERROR: This script must be run via bazel."
+    echo ""
+    echo "Usage:"
+    echo "  bazel run //examples/bazel/harmonyos:build_native -- [command]"
+    echo ""
+    echo "Commands:"
+    echo "  clean        清理构建产物"
+    echo "  install-deps 安装依赖"
+    echo "  build        构建 HAP (默认)"
+    echo "  run          构建、安装并运行"
+    exit 1
+fi
+
+# 获取项目目录 (使用 workspace 路径)
+PROJECT_DIR="$BUILD_WORKSPACE_DIRECTORY/examples/bazel/harmonyos/HelloWorld"
 
 # DevEco Studio 路径（从环境变量或默认值）
 DEVECO_HOME="${DEVECO_HOME:-/Applications/DevEco-Studio.app/Contents}"
