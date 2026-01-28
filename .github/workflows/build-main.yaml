@@ -137,7 +137,7 @@ jobs:
           else
             # Check if pages:deploy is affected
             # Exit codes: 0 = affected, 1 = not affected, 2+ = error
-            bazel run //devops/tools:affected-targets -- --base=HEAD~1 --check=//pages:deploy
+            bazel run //devops/tools/bazel-affected -- --base=HEAD~1 --check=//pages:deploy
             EXIT_CODE=$?
             
             if [ $EXIT_CODE -eq 0 ]; then
