@@ -98,11 +98,10 @@ Go 和 Rust Runner 并行开发，共用同一套测试数据和 Luau SDK。
   - [x] 实现 `__builtin.env(key)` - 环境变量读取
   - [x] 实现 `require` 模块加载（从文件系统加载 `luau/libs/`）
   - [x] 编写 Bazel 构建规则
-  - [ ] ⚠️ **BUG: HTTP 是同步阻塞的，没有实现 yield/resume 异步模式**
+  - [ ] ⚠️ **TODO: HTTP 异步模式待实现**
     - 当前使用 `block_in_place` + `block_on` 阻塞执行
-    - 不支持 Luau 协程并行 HTTP 请求
-    - Go 版本已实现异步模式（`--async` 标志）
-    - 根本原因：`rust/luau` binding 缺少 Thread API，详见 [LUAU-001](#luau-001-rust-luau-binding-缺少协程thread-api)
+    - ✅ 前置条件已满足：`rust/luau` Thread API 已实现（[LUAU-001](#luau-001-rust-luau-binding-缺少协程thread-api) 已修复）
+    - ⏳ 待实现：在 `rust/cmd/luau/` 中实现异步调度循环（参考 Go 版本的 `--async` 标志）
 
 ### 2.3 Haivivi SDK（纯 Luau 代码）✅
 
