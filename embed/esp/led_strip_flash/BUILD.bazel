@@ -1,0 +1,43 @@
+load("@embed_zig//bazel/esp:defs.bzl", "esp_flash", "esp_idf_app", "esp_monitor")
+
+package(default_visibility = ["//visibility:public"])
+
+# Build the LED strip flash application
+# Use --@embed_zig//bazel/esp:board=xxx and --@embed_zig//bazel/esp:chip=xxx to configure
+esp_idf_app(
+    name = "app",
+    srcs = glob(
+        [
+            "**/*.c",
+            "**/*.h",
+            "**/*.zig",
+            "**/*.cmake",
+            "**/*.txt",
+            "**/*.yml",
+            "**/*.zon",
+            "sdkconfig.defaults",
+            "**/Kconfig*",
+        ],
+        exclude = [
+            "build/**",
+            "managed_components/**",
+            ".zig-cache/**",
+            "sdkconfig",
+            "sdkconfig.old",
+        ],
+        allow_empty = True,
+    ),
+    cmake_modules = ["@embed_zig//cmake:cmake_modules"],
+    project_name = "led_strip_flash",
+)
+
+# Flash the application to the device
+esp_flash(
+    name = "flash",
+    app = ":app",
+)
+
+# Monitor serial output
+esp_monitor(
+    name = "monitor",
+)

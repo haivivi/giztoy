@@ -1,0 +1,38 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# Export all board configuration files
+exports_files(glob([
+    "*/board.json",
+    "*/board.zig",
+]))
+
+# Filegroup for all board configs (JSON)
+filegroup(
+    name = "configs",
+    srcs = glob(["*/board.json"]),
+)
+
+# Filegroup for all board Zig files
+filegroup(
+    name = "zig_files",
+    srcs = glob(["*/board.zig"]),
+)
+
+# Individual board filegroups
+filegroup(
+    name = "devkit",
+    srcs = [
+        "devkit/board.json",
+        "devkit/board.zig",
+    ],
+)
+
+filegroup(
+    name = "korvo2",
+    srcs = [
+        "korvo2/board.json",
+        "korvo2/board.zig",
+    ],
+)

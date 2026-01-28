@@ -1,0 +1,4 @@
+# ESP32 embedded examples using Zig
+# These examples use embed_zig's ESP-IDF build rules
+
+package(default_visibility = ["//visibility:public"])

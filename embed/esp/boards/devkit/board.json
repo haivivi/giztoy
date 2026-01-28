@@ -1,0 +1,7 @@
+{
+  "name": "devkit",
+  "chip": "esp32s3",
+  "description": "ESP32-S3 DevKit development board",
+  "flash_baud": "460800",
+  "monitor_baud": "115200"
+}
