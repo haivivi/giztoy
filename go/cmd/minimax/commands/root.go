@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/haivivi/giztoy/pkg/cli"
+	"github.com/haivivi/giztoy/go/pkg/cli"
 )
 
 const appName = "minimax"

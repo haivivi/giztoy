@@ -3,7 +3,7 @@ package agentcfg
 import (
 	"encoding/json"
 
-	"github.com/haivivi/giztoy/pkg/genx/match"
+	"github.com/haivivi/giztoy/go/pkg/genx/match"
 	"gopkg.in/yaml.v3"
 )
 

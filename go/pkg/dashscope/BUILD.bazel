@@ -10,7 +10,7 @@ go_library(
         "realtime.go",
         "types.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/dashscope",
+    importpath = "github.com/haivivi/giztoy/go/pkg/dashscope",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_uuid//:uuid",

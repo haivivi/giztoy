@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/match"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/match"
 )
 
 // TestCase represents a single test case with input and expected output.

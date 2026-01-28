@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/codec/ogg"
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/ogg"
 )
 
 // OggReader reads Opus frames from an OGG container.

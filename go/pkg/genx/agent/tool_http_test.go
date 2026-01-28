@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
 )
 
 // mustParseJQ creates a JQExpr from a string expression, panicking on error.

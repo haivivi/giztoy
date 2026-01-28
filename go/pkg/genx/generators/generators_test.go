@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/haivivi/giztoy/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx"
 )
 
 // mockGenerator is a simple mock implementation of genx.Generator for testing.

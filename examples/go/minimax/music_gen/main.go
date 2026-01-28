@@ -15,7 +15,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/haivivi/giztoy/pkg/minimax"
+	"github.com/haivivi/giztoy/go/pkg/minimax"
 )
 
 func main() {

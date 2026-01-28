@@ -12,7 +12,7 @@ go_library(
         "webrtc.go",
         "websocket.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/openai-realtime",
+    importpath = "github.com/haivivi/giztoy/go/pkg/openai-realtime",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_google_uuid//:uuid",

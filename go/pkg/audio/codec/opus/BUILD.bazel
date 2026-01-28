@@ -10,7 +10,7 @@ go_library(
     ],
     cdeps = ["//third_party/opus:opus"],
     cgo = True,
-    importpath = "github.com/haivivi/giztoy/pkg/audio/codec/opus",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/codec/opus",
     visibility = ["//visibility:public"],
 )
 
@@ -21,7 +21,6 @@ go_library(
         "frame.go",
         "toc.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/audio/codec/opus",
     visibility = ["//visibility:public"],
 )
 

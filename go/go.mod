@@ -1,4 +1,4 @@
-module github.com/haivivi/giztoy
+module github.com/haivivi/giztoy/go
 
 go 1.25
 

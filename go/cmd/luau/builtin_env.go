@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/haivivi/giztoy/pkg/luau"
+	"github.com/haivivi/giztoy/go/pkg/luau"
 )
 
 // builtinEnv implements __builtin.env(key) -> value

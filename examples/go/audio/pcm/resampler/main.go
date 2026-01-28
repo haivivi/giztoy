@@ -17,7 +17,7 @@ import (
 	"math"
 	"os"
 
-	"github.com/haivivi/giztoy/pkg/audio/resampler"
+	"github.com/haivivi/giztoy/go/pkg/audio/resampler"
 )
 
 func main() {

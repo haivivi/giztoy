@@ -13,7 +13,7 @@ go_library(
         "webrtc.go",
     ],
     embedsrcs = ["templates/index.html"],
-    importpath = "github.com/haivivi/giztoy/cmd/geartest/commands",
+    importpath = "github.com/haivivi/giztoy/go/cmd/geartest/commands",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/audio/opusrt",

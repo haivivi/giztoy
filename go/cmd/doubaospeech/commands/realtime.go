@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	ds "github.com/haivivi/giztoy/pkg/doubaospeech"
+	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
 )
 
 var realtimeCmd = &cobra.Command{

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/haivivi/giztoy/pkg/luau"
+	"github.com/haivivi/giztoy/go/pkg/luau"
 )
 
 // builtinLog implements __builtin.log(...)

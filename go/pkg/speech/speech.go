@@ -3,7 +3,7 @@ package speech
 import (
 	"io"
 
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
 )
 
 // Speech is a stream of speech segments.

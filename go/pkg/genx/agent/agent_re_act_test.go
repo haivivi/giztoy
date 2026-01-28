@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/agent"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
-	"github.com/haivivi/giztoy/pkg/genx/playground"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/agent"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx/playground"
 )
 
 // mockReActGenerator is a mock generator for ReAct agent tests.

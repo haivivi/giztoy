@@ -16,7 +16,7 @@ go_library(
         "types.go",
         "unmarshal.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/genx/agentcfg",
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/agentcfg",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/genx/match",

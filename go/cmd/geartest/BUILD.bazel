@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "geartest_lib",
     srcs = ["main.go"],
-    importpath = "github.com/haivivi/giztoy/cmd/geartest",
+    importpath = "github.com/haivivi/giztoy/go/cmd/geartest",
     visibility = ["//visibility:private"],
     deps = ["//go/cmd/geartest/commands"],
 )

@@ -3,8 +3,8 @@ package commands
 import (
 	"fmt"
 
-	"github.com/haivivi/giztoy/pkg/cli"
-	"github.com/haivivi/giztoy/pkg/minimax"
+	"github.com/haivivi/giztoy/go/pkg/cli"
+	"github.com/haivivi/giztoy/go/pkg/minimax"
 )
 
 // loadRequest loads a request from a YAML or JSON file

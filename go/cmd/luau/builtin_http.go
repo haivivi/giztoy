@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/luau"
+	"github.com/haivivi/giztoy/go/pkg/luau"
 )
 
 // httpClient with timeout to prevent indefinite hangs

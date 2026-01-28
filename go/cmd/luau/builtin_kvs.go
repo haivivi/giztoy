@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/haivivi/giztoy/pkg/luau"
+	"github.com/haivivi/giztoy/go/pkg/luau"
 )
 
 // builtinKVSGet implements __builtin.kvs_get(key) -> value

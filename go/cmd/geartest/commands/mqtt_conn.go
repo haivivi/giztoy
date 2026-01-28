@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
-	"github.com/haivivi/giztoy/pkg/chatgear"
-	"github.com/haivivi/giztoy/pkg/jsontime"
-	"github.com/haivivi/giztoy/pkg/mqtt0"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/chatgear"
+	"github.com/haivivi/giztoy/go/pkg/jsontime"
+	"github.com/haivivi/giztoy/go/pkg/mqtt0"
 )
 
 // mqttConn implements chatgear.UplinkTx and chatgear.DownlinkRx using mqtt0.

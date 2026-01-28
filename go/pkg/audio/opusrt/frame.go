@@ -5,7 +5,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/codec/opus"
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/opus"
 )
 
 // Frame represents a raw Opus frame.

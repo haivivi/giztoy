@@ -5,7 +5,7 @@
 package speech
 
 import (
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
 )
 
 // Voice is a stream of audio segments.

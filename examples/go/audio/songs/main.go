@@ -16,9 +16,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
-	"github.com/haivivi/giztoy/pkg/audio/portaudio"
-	"github.com/haivivi/giztoy/pkg/audio/songs"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/portaudio"
+	"github.com/haivivi/giztoy/go/pkg/audio/songs"
 )
 
 var (

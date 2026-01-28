@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"os"
 
-	ds "github.com/haivivi/giztoy/pkg/doubaospeech"
+	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
 )
 
 func main() {

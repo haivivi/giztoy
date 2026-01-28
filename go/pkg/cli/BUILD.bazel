@@ -12,7 +12,7 @@ go_library(
         "request.go",
         "tui.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/cli",
+    importpath = "github.com/haivivi/giztoy/go/pkg/cli",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/buffer",

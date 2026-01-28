@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"slices"
 
-	"github.com/haivivi/giztoy/pkg/encoding"
-	"github.com/haivivi/giztoy/pkg/jsontime"
+	"github.com/haivivi/giztoy/go/pkg/encoding"
+	"github.com/haivivi/giztoy/go/pkg/jsontime"
 )
 
 // GearStatsChanges represents changes to device statistics.

@@ -8,8 +8,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/haivivi/giztoy/pkg/cli"
-	ds "github.com/haivivi/giztoy/pkg/doubaospeech"
+	"github.com/haivivi/giztoy/go/pkg/cli"
+	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
 )
 
 // ttsCmd is the root command for TTS services

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
 )
 
 // InputStream captures audio from the default input device.

@@ -7,11 +7,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/agent"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
-	"github.com/haivivi/giztoy/pkg/genx/generators"
-	"github.com/haivivi/giztoy/pkg/genx/match"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/agent"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx/generators"
+	"github.com/haivivi/giztoy/go/pkg/genx/match"
 )
 
 // Logger is an interface for logging runtime events.

@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/haivivi/giztoy/pkg/doubaospeech"
+	"github.com/haivivi/giztoy/go/pkg/doubaospeech"
 )
 
 func main() {

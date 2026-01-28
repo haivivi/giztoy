@@ -32,7 +32,7 @@ giztoy/
 │   └── minimax/              # MiniMax API docs
 │
 ├── go/                       # Go code root directory
-│   ├── go.mod                # Go module definition (github.com/haivivi/giztoy)
+│   ├── go.mod                # Go module definition (github.com/haivivi/giztoy/go)
 │   ├── go.sum                # Go dependency checksum
 │   ├── cmd/                  # CLI executables
 │   │   ├── dashscope/        # DashScope CLI
@@ -85,7 +85,7 @@ giztoy/
 | Directory | Purpose |
 |-----------|---------|
 | `go/cmd/` | CLI executables, each subdirectory is an independent command-line tool |
-| `go/pkg/` | Public libraries, import path: `github.com/haivivi/giztoy/pkg/...` |
+| `go/pkg/` | Public libraries, import path: `github.com/haivivi/giztoy/go/pkg/...` |
 
 ## Rust Directory Description
 
@@ -107,9 +107,9 @@ module github.com/haivivi/giztoy/examples
 
 go 1.25
 
-require github.com/haivivi/giztoy v0.0.0
+require github.com/haivivi/giztoy/go v0.0.0
 
-replace github.com/haivivi/giztoy => ../../go
+replace github.com/haivivi/giztoy/go => ../../go
 ```
 
 Benefits:

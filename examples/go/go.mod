@@ -3,7 +3,7 @@ module github.com/haivivi/giztoy/examples
 go 1.25
 
 require (
-	github.com/haivivi/giztoy v0.0.0
+	github.com/haivivi/giztoy/go v0.0.0
 	github.com/openai/openai-go v1.12.0
 	google.golang.org/genai v1.42.0
 )
@@ -64,4 +64,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/haivivi/giztoy => ../../go
+replace github.com/haivivi/giztoy/go => ../../go

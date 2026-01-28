@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	ds "github.com/haivivi/giztoy/pkg/doubaospeech"
-	mm "github.com/haivivi/giztoy/pkg/minimax"
+	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
+	mm "github.com/haivivi/giztoy/go/pkg/minimax"
 )
 
 func main() {

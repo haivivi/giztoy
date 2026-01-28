@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/agent"
-	"github.com/haivivi/giztoy/pkg/genx/agentcfg"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/agent"
+	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
 )
 
 // State type constants for serialization.

@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "modelcontexts",
     srcs = ["modelcontexts.go"],
-    importpath = "github.com/haivivi/giztoy/pkg/genx/modelcontexts",
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/modelcontexts",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/genx",

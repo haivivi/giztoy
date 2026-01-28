@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/haivivi/giztoy/pkg/minimax"
+	"github.com/haivivi/giztoy/go/pkg/minimax"
 )
 
 var textCmd = &cobra.Command{

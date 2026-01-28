@@ -8,7 +8,7 @@ go_library(
         "yaml.go",
     ],
     embedsrcs = ["default.gotmpl"],
-    importpath = "github.com/haivivi/giztoy/pkg/genx/match",
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/match",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/genx",

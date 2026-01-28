@@ -13,7 +13,7 @@ go_library(
         "state.go",
         "stats.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/chatgear",
+    importpath = "github.com/haivivi/giztoy/go/pkg/chatgear",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/audio/opusrt",

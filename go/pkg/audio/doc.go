@@ -9,8 +9,8 @@
 // Example usage:
 //
 //	import (
-//	    "github.com/haivivi/giztoy/pkg/audio/pcm"
-//	    "github.com/haivivi/giztoy/pkg/buffer"
+//	    "github.com/haivivi/giztoy/go/pkg/audio/pcm"
+//	    "github.com/haivivi/giztoy/go/pkg/buffer"
 //	)
 //
 //	// Create a buffer for audio data

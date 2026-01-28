@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "doubaospeech_lib",
     srcs = ["main.go"],
-    importpath = "github.com/haivivi/giztoy/cmd/doubaospeech",
+    importpath = "github.com/haivivi/giztoy/go/cmd/doubaospeech",
     visibility = ["//visibility:private"],
     deps = ["//go/cmd/doubaospeech/commands"],
 )

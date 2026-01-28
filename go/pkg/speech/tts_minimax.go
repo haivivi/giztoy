@@ -7,9 +7,9 @@ import (
 	"io"
 	"sync"
 
-	"github.com/haivivi/giztoy/pkg/audio/codec/mp3"
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
-	"github.com/haivivi/giztoy/pkg/minimax"
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/mp3"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/minimax"
 
 	"google.golang.org/api/iterator"
 )

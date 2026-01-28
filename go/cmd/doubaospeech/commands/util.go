@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/haivivi/giztoy/pkg/cli"
-	ds "github.com/haivivi/giztoy/pkg/doubaospeech"
+	"github.com/haivivi/giztoy/go/pkg/cli"
+	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
 	"github.com/goccy/go-yaml"
 )
 

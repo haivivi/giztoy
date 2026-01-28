@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/genx"
-	"github.com/haivivi/giztoy/pkg/genx/match"
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/match"
 )
 
 // RunnerStatus represents the overall benchmark status

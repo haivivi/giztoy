@@ -3,8 +3,8 @@ package chatgear
 import (
 	"context"
 
-	"github.com/haivivi/giztoy/pkg/audio/opusrt"
-	"github.com/haivivi/giztoy/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
 )
 
 // =============================================================================

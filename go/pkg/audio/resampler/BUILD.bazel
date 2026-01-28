@@ -8,7 +8,7 @@ go_library(
         "resampler.go",
         "sample_reader.go",
     ],
-    importpath = "github.com/haivivi/giztoy/pkg/audio/resampler",
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/resampler",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_tphakala_go_audio_resampling//:go-audio-resampling",

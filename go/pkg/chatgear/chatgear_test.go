@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/jsontime"
+	"github.com/haivivi/giztoy/go/pkg/jsontime"
 )
 
 func TestGearState_String(t *testing.T) {

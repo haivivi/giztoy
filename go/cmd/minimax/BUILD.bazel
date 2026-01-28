@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "minimax_lib",
     srcs = ["main.go"],
-    importpath = "github.com/haivivi/giztoy/cmd/minimax",
+    importpath = "github.com/haivivi/giztoy/go/cmd/minimax",
     visibility = ["//visibility:private"],
     deps = ["//go/cmd/minimax/commands"],
 )
