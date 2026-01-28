@@ -1,7 +1,7 @@
 //! HTTP builtin implementation using reqwest + tokio.
 
 use crate::runtime::Runtime;
-use giztoy_luau::{Error, State, Thread};
+use giztoy_luau::{Error, LuaStackOps, State, Thread};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -253,65 +253,47 @@ pub async fn execute_http_async(request: &HttpRequest) -> HttpResponse {
     }
 }
 
-/// Push HTTP error onto Luau stack
-fn push_http_error(state: &State, error: &str) {
-    state.new_table();
-    state.push_number(0.0);
-    state.set_field(-2, "status").ok();
-    state.push_string(error).ok();
-    state.set_field(-2, "err").ok();
+/// Push HTTP error onto any Lua stack (State or Thread)
+fn push_http_error(lua: &impl LuaStackOps, error: &str) {
+    lua.new_table();
+    lua.push_number(0.0);
+    lua.set_field(-2, "status").ok();
+    lua.push_string(error).ok();
+    lua.set_field(-2, "err").ok();
 }
 
-/// Push HTTP response onto Luau stack
-fn push_http_response(state: &State, response: &HttpResponse) {
-    state.new_table();
+/// Push HTTP response onto any Lua stack (State or Thread)
+///
+/// This generic function works with both `State` and `Thread` thanks to the
+/// `LuaStackOps` trait, eliminating code duplication.
+pub fn push_http_response(lua: &impl LuaStackOps, response: &HttpResponse) {
+    lua.new_table();
 
     if let Some(err) = &response.error {
-        state.push_number(0.0);
-        state.set_field(-2, "status").ok();
-        state.push_string(err).ok();
-        state.set_field(-2, "err").ok();
+        lua.push_number(0.0);
+        lua.set_field(-2, "status").ok();
+        lua.push_string(err).ok();
+        lua.set_field(-2, "err").ok();
         return;
     }
 
-    state.push_number(response.status as f64);
-    state.set_field(-2, "status").ok();
+    lua.push_number(response.status as f64);
+    lua.set_field(-2, "status").ok();
 
-    state.push_string(&response.body).ok();
-    state.set_field(-2, "body").ok();
+    lua.push_string(&response.body).ok();
+    lua.set_field(-2, "body").ok();
 
     // Response headers
-    state.new_table();
+    lua.new_table();
     for (k, v) in &response.headers {
-        state.push_string(v).ok();
-        state.set_field(-2, k).ok();
+        lua.push_string(v).ok();
+        lua.set_field(-2, k).ok();
     }
-    state.set_field(-2, "headers").ok();
+    lua.set_field(-2, "headers").ok();
 }
 
 /// Push HTTP response onto a Thread's stack (for async mode)
+/// This is a convenience alias for push_http_response with Thread.
 pub fn push_http_response_to_thread(thread: &Thread, response: &HttpResponse) {
-    thread.new_table();
-
-    if let Some(err) = &response.error {
-        thread.push_number(0.0);
-        thread.set_field(-2, "status").ok();
-        thread.push_string(err).ok();
-        thread.set_field(-2, "err").ok();
-        return;
-    }
-
-    thread.push_number(response.status as f64);
-    thread.set_field(-2, "status").ok();
-
-    thread.push_string(&response.body).ok();
-    thread.set_field(-2, "body").ok();
-
-    // Response headers
-    thread.new_table();
-    for (k, v) in &response.headers {
-        thread.push_string(v).ok();
-        thread.set_field(-2, k).ok();
-    }
-    thread.set_field(-2, "headers").ok();
+    push_http_response(thread, response);
 }

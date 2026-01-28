@@ -1,7 +1,7 @@
 //! JSON builtin implementation.
 
 use crate::runtime::Runtime;
-use giztoy_luau::{Error, State, Type};
+use giztoy_luau::{Error, LuaStackOps, State, Type};
 use serde_json::Value;
 
 impl Runtime {

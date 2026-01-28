@@ -1,7 +1,7 @@
 //! Runtime for Luau script execution.
 
 use crate::builtin::http::HttpResponse;
-use giztoy_luau::{CoStatus, Error, OptLevel, State};
+use giztoy_luau::{CoStatus, Error, LuaStackOps, OptLevel, State};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::PathBuf;

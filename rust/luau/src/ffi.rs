@@ -126,6 +126,11 @@ extern "C" {
     /// Returns the new thread's state.
     pub fn luau_newthread(L: *mut LuauState) -> *mut LuauState;
 
+    /// Close a thread's wrapper without closing the underlying lua_State.
+    /// The lua_State is owned by the parent and will be garbage collected.
+    /// This only frees the C++ LuauState wrapper allocated by luau_newthread.
+    pub fn luau_close_thread(L: *mut LuauState);
+
     /// Resume a coroutine. Arguments should be pushed onto the coroutine's stack before calling.
     /// Returns status code (Ok or Yield on success).
     pub fn luau_resume(L: *mut LuauState, from: *mut LuauState, nargs: c_int) -> LuauCoStatus;

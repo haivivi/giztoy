@@ -23,176 +23,194 @@ use std::sync::RwLock;
 use thiserror::Error;
 
 // =============================================================================
-// Macro for common Lua stack operations
+// Trait and Macro for common Lua stack operations
 // =============================================================================
 
-/// Macro to implement common stack operations for types that have a `ptr` field
-/// pointing to a LuauState.
+/// Trait for common Lua stack operations.
+///
+/// This trait is implemented by both [`State`] and [`Thread`], allowing generic
+/// functions to operate on either type.
+///
+/// # Example
+///
+/// ```rust
+/// use giztoy_luau::{State, LuaStackOps};
+///
+/// fn push_greeting(lua: &impl LuaStackOps) {
+///     lua.push_string("Hello, Luau!").unwrap();
+/// }
+///
+/// let state = State::new().unwrap();
+/// push_greeting(&state);
+/// assert_eq!(state.to_string(-1), Some("Hello, Luau!".to_string()));
+/// ```
+pub trait LuaStackOps {
+    /// Get the raw pointer to the Luau state.
+    fn as_ptr(&self) -> *mut ffi::LuauState;
+
+    // Stack operations
+
+    /// Get the number of elements on the stack.
+    fn get_top(&self) -> i32 {
+        unsafe { ffi::luau_gettop(self.as_ptr()) }
+    }
+
+    /// Set the stack top to a specific index.
+    fn set_top(&self, idx: i32) {
+        unsafe { ffi::luau_settop(self.as_ptr(), idx) };
+    }
+
+    /// Pop n elements from the stack.
+    fn pop(&self, n: i32) {
+        unsafe { ffi::luau_pop(self.as_ptr(), n) };
+    }
+
+    /// Push nil onto the stack.
+    fn push_nil(&self) {
+        unsafe { ffi::luau_pushnil(self.as_ptr()) };
+    }
+
+    /// Push a boolean onto the stack.
+    fn push_boolean(&self, b: bool) {
+        unsafe { ffi::luau_pushboolean(self.as_ptr(), if b { 1 } else { 0 }) };
+    }
+
+    /// Push a number onto the stack.
+    fn push_number(&self, n: f64) {
+        unsafe { ffi::luau_pushnumber(self.as_ptr(), n) };
+    }
+
+    /// Push a string onto the stack.
+    fn push_string(&self, s: &str) -> Result<()> {
+        unsafe { ffi::luau_pushlstring(self.as_ptr(), s.as_ptr() as *const c_char, s.len()) };
+        Ok(())
+    }
+
+    // Type checking
+
+    /// Get the type of the value at the given index.
+    fn get_type(&self, idx: i32) -> Type {
+        let t = unsafe { ffi::luau_type(self.as_ptr(), idx) };
+        Type::from(t)
+    }
+
+    /// Check if the value at the given index is nil.
+    fn is_nil(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isnil(self.as_ptr(), idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a boolean.
+    fn is_boolean(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isboolean(self.as_ptr(), idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a number.
+    fn is_number(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isnumber(self.as_ptr(), idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a string.
+    fn is_string(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isstring(self.as_ptr(), idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a table.
+    fn is_table(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_istable(self.as_ptr(), idx) != 0 }
+    }
+
+    /// Check if the value at the given index is a function.
+    fn is_function(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_isfunction(self.as_ptr(), idx) != 0 }
+    }
+
+    // Value access
+
+    /// Get the boolean value at the given index.
+    fn to_boolean(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_toboolean(self.as_ptr(), idx) != 0 }
+    }
+
+    /// Get the number value at the given index.
+    fn to_number(&self, idx: i32) -> f64 {
+        unsafe { ffi::luau_tonumber(self.as_ptr(), idx) }
+    }
+
+    /// Get the string value at the given index.
+    fn to_string(&self, idx: i32) -> Option<String> {
+        let mut len: usize = 0;
+        let s = unsafe { ffi::luau_tolstring(self.as_ptr(), idx, &mut len) };
+        if s.is_null() {
+            return None;
+        }
+        let slice = unsafe { std::slice::from_raw_parts(s as *const u8, len) };
+        String::from_utf8(slice.to_vec()).ok()
+    }
+
+    // Table operations
+
+    /// Create a new table and push it onto the stack.
+    fn new_table(&self) {
+        unsafe { ffi::luau_newtable(self.as_ptr()) };
+    }
+
+    /// Get a field from a table.
+    fn get_field(&self, idx: i32, key: &str) -> Result<()> {
+        let c_key = CString::new(key).map_err(|_| Error::Invalid)?;
+        unsafe { ffi::luau_getfield(self.as_ptr(), idx, c_key.as_ptr()) };
+        Ok(())
+    }
+
+    /// Set a field in a table.
+    fn set_field(&self, idx: i32, key: &str) -> Result<()> {
+        let c_key = CString::new(key).map_err(|_| Error::Invalid)?;
+        unsafe { ffi::luau_setfield(self.as_ptr(), idx, c_key.as_ptr()) };
+        Ok(())
+    }
+
+    /// Get a value from a table using a key on the stack.
+    fn get_table(&self, idx: i32) {
+        unsafe { ffi::luau_gettable(self.as_ptr(), idx) };
+    }
+
+    /// Set a value in a table using key and value on the stack.
+    fn set_table(&self, idx: i32) {
+        unsafe { ffi::luau_settable(self.as_ptr(), idx) };
+    }
+
+    /// Iterate to the next element in a table.
+    fn next(&self, idx: i32) -> bool {
+        unsafe { ffi::luau_next(self.as_ptr(), idx) != 0 }
+    }
+
+    // Stack manipulation
+
+    /// Push a copy of the value at the given index.
+    fn push_value(&self, idx: i32) {
+        unsafe { ffi::luau_pushvalue(self.as_ptr(), idx) };
+    }
+
+    /// Insert the top value at the given index.
+    fn insert(&self, idx: i32) {
+        unsafe { ffi::luau_insert(self.as_ptr(), idx) };
+    }
+
+    /// Remove the value at the given index.
+    fn remove(&self, idx: i32) {
+        unsafe { ffi::luau_remove(self.as_ptr(), idx) };
+    }
+
+    /// Check if there is enough stack space.
+    fn check_stack(&self, size: i32) -> bool {
+        unsafe { ffi::luau_checkstack(self.as_ptr(), size) != 0 }
+    }
+}
+
+/// Macro to implement LuaStackOps for types that have a `ptr` field.
 macro_rules! impl_lua_stack_ops {
     ($type:ty) => {
-        impl $type {
-            // Stack operations
-
-            /// Get the number of elements on the stack.
-            pub fn get_top(&self) -> i32 {
-                unsafe { ffi::luau_gettop(self.ptr) }
-            }
-
-            /// Set the stack top to a specific index.
-            pub fn set_top(&self, idx: i32) {
-                unsafe { ffi::luau_settop(self.ptr, idx) };
-            }
-
-            /// Pop n elements from the stack.
-            pub fn pop(&self, n: i32) {
-                unsafe { ffi::luau_pop(self.ptr, n) };
-            }
-
-            /// Push nil onto the stack.
-            pub fn push_nil(&self) {
-                unsafe { ffi::luau_pushnil(self.ptr) };
-            }
-
-            /// Push a boolean onto the stack.
-            pub fn push_boolean(&self, b: bool) {
-                unsafe { ffi::luau_pushboolean(self.ptr, if b { 1 } else { 0 }) };
-            }
-
-            /// Push a number onto the stack.
-            pub fn push_number(&self, n: f64) {
-                unsafe { ffi::luau_pushnumber(self.ptr, n) };
-            }
-
-            /// Push a string onto the stack.
-            /// This function handles binary data correctly (including interior NUL bytes).
-            pub fn push_string(&self, s: &str) -> Result<()> {
-                unsafe { ffi::luau_pushlstring(self.ptr, s.as_ptr() as *const c_char, s.len()) };
-                Ok(())
-            }
-
-            // Type checking
-
-            /// Get the type of the value at the given index.
-            pub fn get_type(&self, idx: i32) -> Type {
-                let t = unsafe { ffi::luau_type(self.ptr, idx) };
-                Type::from(t)
-            }
-
-            /// Check if the value at the given index is nil.
-            pub fn is_nil(&self, idx: i32) -> bool {
-                unsafe { ffi::luau_isnil(self.ptr, idx) != 0 }
-            }
-
-            /// Check if the value at the given index is a boolean.
-            pub fn is_boolean(&self, idx: i32) -> bool {
-                unsafe { ffi::luau_isboolean(self.ptr, idx) != 0 }
-            }
-
-            /// Check if the value at the given index is a number.
-            pub fn is_number(&self, idx: i32) -> bool {
-                unsafe { ffi::luau_isnumber(self.ptr, idx) != 0 }
-            }
-
-            /// Check if the value at the given index is a string.
-            pub fn is_string(&self, idx: i32) -> bool {
-                unsafe { ffi::luau_isstring(self.ptr, idx) != 0 }
-            }
-
-            /// Check if the value at the given index is a table.
-            pub fn is_table(&self, idx: i32) -> bool {
-                unsafe { ffi::luau_istable(self.ptr, idx) != 0 }
-            }
-
-            /// Check if the value at the given index is a function.
-            pub fn is_function(&self, idx: i32) -> bool {
-                unsafe { ffi::luau_isfunction(self.ptr, idx) != 0 }
-            }
-
-            // Value access
-
-            /// Get the boolean value at the given index.
-            pub fn to_boolean(&self, idx: i32) -> bool {
-                unsafe { ffi::luau_toboolean(self.ptr, idx) != 0 }
-            }
-
-            /// Get the number value at the given index.
-            pub fn to_number(&self, idx: i32) -> f64 {
-                unsafe { ffi::luau_tonumber(self.ptr, idx) }
-            }
-
-            /// Get the string value at the given index.
-            pub fn to_string(&self, idx: i32) -> Option<String> {
-                let mut len: usize = 0;
-                let s = unsafe { ffi::luau_tolstring(self.ptr, idx, &mut len) };
-                if s.is_null() {
-                    return None;
-                }
-                let slice = unsafe { std::slice::from_raw_parts(s as *const u8, len) };
-                String::from_utf8(slice.to_vec()).ok()
-            }
-
-            // Table operations
-
-            /// Create a new table and push it onto the stack.
-            pub fn new_table(&self) {
-                unsafe { ffi::luau_newtable(self.ptr) };
-            }
-
-            /// Get a field from a table.
-            /// Returns an error if the key contains interior NUL bytes.
-            pub fn get_field(&self, idx: i32, key: &str) -> Result<()> {
-                let c_key = CString::new(key).map_err(|_| Error::Invalid)?;
-                unsafe { ffi::luau_getfield(self.ptr, idx, c_key.as_ptr()) };
-                Ok(())
-            }
-
-            /// Set a field in a table.
-            /// Returns an error if the key contains interior NUL bytes.
-            pub fn set_field(&self, idx: i32, key: &str) -> Result<()> {
-                let c_key = CString::new(key).map_err(|_| Error::Invalid)?;
-                unsafe { ffi::luau_setfield(self.ptr, idx, c_key.as_ptr()) };
-                Ok(())
-            }
-
-            /// Get a value from a table using a key on the stack.
-            pub fn get_table(&self, idx: i32) {
-                unsafe { ffi::luau_gettable(self.ptr, idx) };
-            }
-
-            /// Set a value in a table using key and value on the stack.
-            pub fn set_table(&self, idx: i32) {
-                unsafe { ffi::luau_settable(self.ptr, idx) };
-            }
-
-            /// Iterate to the next element in a table.
-            pub fn next(&self, idx: i32) -> bool {
-                unsafe { ffi::luau_next(self.ptr, idx) != 0 }
-            }
-
-            // Stack manipulation
-
-            /// Push a copy of the value at the given index.
-            pub fn push_value(&self, idx: i32) {
-                unsafe { ffi::luau_pushvalue(self.ptr, idx) };
-            }
-
-            /// Insert the top value at the given index.
-            pub fn insert(&self, idx: i32) {
-                unsafe { ffi::luau_insert(self.ptr, idx) };
-            }
-
-            /// Remove the value at the given index.
-            pub fn remove(&self, idx: i32) {
-                unsafe { ffi::luau_remove(self.ptr, idx) };
-            }
-
-            /// Check if there is enough stack space.
-            pub fn check_stack(&self, size: i32) -> bool {
-                unsafe { ffi::luau_checkstack(self.ptr, size) != 0 }
-            }
-
-            /// Get the raw pointer to the Luau state (for advanced use).
-            pub fn as_ptr(&self) -> *mut ffi::LuauState {
+        impl LuaStackOps for $type {
+            fn as_ptr(&self) -> *mut ffi::LuauState {
                 self.ptr
             }
         }
@@ -636,30 +654,22 @@ impl std::fmt::Display for CoStatus {
 /// A `Thread` is created from a parent `State` via [`State::new_thread()`] and represents
 /// a Luau coroutine that can be resumed and yielded.
 ///
-/// # Safety
+/// The lifetime parameter `'a` ensures that the `Thread` cannot outlive its parent `State`.
+/// This provides compile-time safety against use-after-free bugs.
 ///
-/// # Safety
+/// # Safety Notes
 ///
-/// This struct holds raw pointers to Luau states. Users must ensure:
-///
-/// 1. **Lifetime**: The `Thread` **MUST NOT** outlive its parent `State`. Dropping the parent
-///    `State` invalidates all `Thread` instances created from it, leading to **undefined behavior**
-///    (use-after-free) if the `Thread` is accessed afterwards.
-///
-///    **WARNING**: Rust's type system does not enforce this constraint. It is the caller's
-///    responsibility to ensure the `Thread` is dropped before or at the same time as its parent `State`.
-///
-/// 2. **Single-threaded access**: Luau is not thread-safe. Do not access the same `State`
+/// 1. **Single-threaded access**: Luau is not thread-safe. Do not access the same `State`
 ///    or its `Thread` instances from multiple OS threads simultaneously.
 ///
-/// 3. **GC safety**: The thread is pushed onto the parent's stack when created. If you pop
+/// 2. **GC safety**: The thread is pushed onto the parent's stack when created. If you pop
 ///    it from the stack, ensure it remains referenced (e.g., in a table or the registry)
 ///    to prevent garbage collection.
 ///
 /// # Example
 ///
 /// ```rust
-/// use giztoy_luau::{State, CoStatus, OptLevel};
+/// use giztoy_luau::{State, CoStatus, OptLevel, LuaStackOps};
 ///
 /// let state = State::new().unwrap();
 /// state.open_libs();
@@ -673,18 +683,24 @@ impl std::fmt::Display for CoStatus {
 /// assert_eq!(nresults, 1);
 /// assert_eq!(thread.to_number(-1), 42.0);
 /// ```
-pub struct Thread {
+pub struct Thread<'a> {
     ptr: *mut ffi::LuauState,
     parent_ptr: *mut ffi::LuauState,
+    /// Lifetime marker to ensure Thread doesn't outlive parent State
+    _marker: std::marker::PhantomData<&'a State>,
 }
 
 // Thread is Send but not Sync (not thread-safe)
-unsafe impl Send for Thread {}
+unsafe impl Send for Thread<'_> {}
 
 // Implement common stack operations via macro
-impl_lua_stack_ops!(Thread);
+impl LuaStackOps for Thread<'_> {
+    fn as_ptr(&self) -> *mut ffi::LuauState {
+        self.ptr
+    }
+}
 
-impl Thread {
+impl Thread<'_> {
     /// Load compiled bytecode onto the stack (as a function).
     pub fn load_bytecode(&self, bytecode: &[u8], chunkname: &str) -> Result<()> {
         let c_chunkname = CString::new(chunkname).map_err(|_| Error::Invalid)?;
@@ -767,11 +783,13 @@ impl Thread {
     }
 }
 
-impl Drop for Thread {
+impl Drop for Thread<'_> {
     fn drop(&mut self) {
-        // Don't close the lua_State - it's owned by the parent.
-        // The thread will be garbage collected by Luau when no longer referenced.
-        // Clear both pointers to indicate the Thread is no longer valid.
+        if !self.ptr.is_null() {
+            // Free the C++ LuauState wrapper allocated by luau_newthread.
+            // The underlying lua_State is owned by the parent and will be garbage collected.
+            unsafe { ffi::luau_close_thread(self.ptr) };
+        }
         self.ptr = std::ptr::null_mut();
         self.parent_ptr = std::ptr::null_mut();
     }
@@ -780,8 +798,26 @@ impl Drop for Thread {
 // Additional methods on State for coroutine support
 impl State {
     /// Create a new coroutine (thread).
-    /// The new thread is pushed onto this state's stack.
-    pub fn new_thread(&self) -> Result<Thread> {
+    ///
+    /// The new thread is pushed onto this state's stack. The returned `Thread`
+    /// is bound to the lifetime of `self`, ensuring it cannot outlive the parent `State`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use giztoy_luau::{State, CoStatus, OptLevel, LuaStackOps};
+    ///
+    /// let state = State::new().unwrap();
+    /// state.open_libs();
+    ///
+    /// let bytecode = state.compile("return 42", OptLevel::O2).unwrap();
+    /// let thread = state.new_thread().unwrap();  // thread is tied to state's lifetime
+    /// thread.load_bytecode(&bytecode, "chunk").unwrap();
+    ///
+    /// let (status, _) = thread.resume(0);
+    /// assert_eq!(status, CoStatus::Ok);
+    /// ```
+    pub fn new_thread(&self) -> Result<Thread<'_>> {
         if self.ptr.is_null() {
             return Err(Error::Invalid);
         }
@@ -794,6 +830,7 @@ impl State {
         Ok(Thread {
             ptr: thread_ptr,
             parent_ptr: self.ptr,
+            _marker: std::marker::PhantomData,
         })
     }
 

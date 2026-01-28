@@ -1,7 +1,7 @@
 //! Environment variable builtin implementation.
 
 use crate::runtime::Runtime;
-use giztoy_luau::Error;
+use giztoy_luau::{Error, LuaStackOps};
 
 impl Runtime {
     /// Register __builtin.env

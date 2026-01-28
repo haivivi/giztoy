@@ -1,7 +1,7 @@
 //! Time builtin implementation.
 
 use crate::runtime::Runtime;
-use giztoy_luau::Error;
+use giztoy_luau::{Error, LuaStackOps};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 impl Runtime {

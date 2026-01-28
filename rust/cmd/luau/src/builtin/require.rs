@@ -1,7 +1,7 @@
 //! Require builtin implementation.
 
 use crate::runtime::Runtime;
-use giztoy_luau::{Error, OptLevel};
+use giztoy_luau::{Error, LuaStackOps, OptLevel};
 
 impl Runtime {
     /// Register require function

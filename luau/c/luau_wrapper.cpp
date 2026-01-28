@@ -672,6 +672,15 @@ LuauState* luau_newthread(LuauState* L) {
     return wrapper;
 }
 
+void luau_close_thread(LuauState* L) {
+    if (L) {
+        // Don't close the lua_State - it's owned by the parent and will be
+        // garbage collected by Luau. Just free the C++ wrapper object.
+        L->L = nullptr;  // Clear to prevent accidental use
+        delete L;
+    }
+}
+
 LuauCoStatus luau_resume(LuauState* L, LuauState* from, int nargs) {
     if (!L || !L->L) return LUAU_COSTAT_ERRERR;
 
