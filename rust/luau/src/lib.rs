@@ -662,9 +662,21 @@ impl std::fmt::Display for CoStatus {
 /// 1. **Single-threaded access**: Luau is not thread-safe. Do not access the same `State`
 ///    or its `Thread` instances from multiple OS threads simultaneously.
 ///
-/// 2. **GC safety**: The thread is pushed onto the parent's stack when created. If you pop
-///    it from the stack, ensure it remains referenced (e.g., in a table or the registry)
-///    to prevent garbage collection.
+/// 2. **GC safety**: The thread is pushed onto the parent's stack when created. You **MUST**
+///    ensure the Lua-side reference remains alive while the Rust `Thread` wrapper exists.
+///
+///    **WARNING**: If the thread is popped from the stack and not stored elsewhere (registry
+///    or table), Luau's GC may collect the underlying `lua_State`. Accessing the Rust
+///    `Thread` wrapper after this leads to **undefined behavior**.
+///
+///    Safe patterns:
+///    - Keep the thread on the parent's stack (simplest)
+///    - Store in the Lua registry before popping
+///    - Store in a Lua table that remains referenced
+///
+/// 3. **Null pointer handling**: Methods like `resume()`, `status()`, `is_yieldable()` check
+///    for null pointers and return safe default values (error status or false). This handles
+///    edge cases gracefully but should not be relied upon - always ensure proper lifecycle.
 ///
 /// # Example
 ///
@@ -682,6 +694,7 @@ impl std::fmt::Display for CoStatus {
 /// assert_eq!(status, CoStatus::Ok);
 /// assert_eq!(nresults, 1);
 /// assert_eq!(thread.to_number(-1), 42.0);
+/// // Thread remains on parent's stack - safe to use until dropped
 /// ```
 pub struct Thread<'a> {
     ptr: *mut ffi::LuauState,
@@ -722,7 +735,13 @@ impl Thread<'_> {
     /// On subsequent resume (after yield): arguments are passed to yield, results are pushed.
     ///
     /// After resume, the stack contains only the returned/yielded values.
+    ///
+    /// # Panics (debug builds only)
+    ///
+    /// Panics if called on a dropped Thread (null pointer). In release builds,
+    /// returns `(CoStatus::ErrErr, 0)` instead.
     pub fn resume(&self, nargs: i32) -> (CoStatus, i32) {
+        debug_assert!(!self.ptr.is_null(), "Thread::resume called on dropped Thread");
         if self.ptr.is_null() {
             return (CoStatus::ErrErr, 0);
         }
@@ -738,7 +757,12 @@ impl Thread<'_> {
     /// Yield from a coroutine.
     /// This should be called as: return thread.yield_results(nresults)
     /// from within a callback that wants to yield.
+    ///
+    /// # Panics (debug builds only)
+    ///
+    /// Panics if called on a dropped Thread. In release builds, returns 0 instead.
     pub fn yield_results(&self, nresults: i32) -> i32 {
+        debug_assert!(!self.ptr.is_null(), "Thread::yield_results called on dropped Thread");
         if self.ptr.is_null() {
             return 0;
         }
@@ -746,7 +770,12 @@ impl Thread<'_> {
     }
 
     /// Get the status of the coroutine.
+    ///
+    /// # Panics (debug builds only)
+    ///
+    /// Panics if called on a dropped Thread. In release builds, returns `CoStatus::ErrErr`.
     pub fn status(&self) -> CoStatus {
+        debug_assert!(!self.ptr.is_null(), "Thread::status called on dropped Thread");
         if self.ptr.is_null() {
             return CoStatus::ErrErr;
         }
@@ -754,7 +783,12 @@ impl Thread<'_> {
     }
 
     /// Check if the coroutine can yield.
+    ///
+    /// # Panics (debug builds only)
+    ///
+    /// Panics if called on a dropped Thread. In release builds, returns false.
     pub fn is_yieldable(&self) -> bool {
+        debug_assert!(!self.ptr.is_null(), "Thread::is_yieldable called on dropped Thread");
         if self.ptr.is_null() {
             return false;
         }
@@ -785,13 +819,16 @@ impl Thread<'_> {
 
 impl Drop for Thread<'_> {
     fn drop(&mut self) {
-        if !self.ptr.is_null() {
+        // Take the pointer and replace with null BEFORE freeing to prevent
+        // double-free if Drop is somehow invoked again (defensive programming).
+        let ptr = std::mem::replace(&mut self.ptr, std::ptr::null_mut());
+        self.parent_ptr = std::ptr::null_mut();
+        
+        if !ptr.is_null() {
             // Free the C++ LuauState wrapper allocated by luau_newthread.
             // The underlying lua_State is owned by the parent and will be garbage collected.
-            unsafe { ffi::luau_close_thread(self.ptr) };
+            unsafe { ffi::luau_close_thread(ptr) };
         }
-        self.ptr = std::ptr::null_mut();
-        self.parent_ptr = std::ptr::null_mut();
     }
 }
 

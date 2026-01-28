@@ -108,6 +108,12 @@ fn builtin_http(state: &State) -> i32 {
             
             // Yield with 1 value (the request ID)
             return state.yield_results(1);
+        } else {
+            // Async mode is enabled but the async context is not fully configured;
+            // fall back to synchronous HTTP execution and log for easier debugging.
+            eprintln!(
+                "luau http: async mode enabled but context not configured; falling back to sync"
+            );
         }
     }
 
