@@ -3,6 +3,18 @@
 
 set -e
 
+# Check if running inside bazel
+if [[ -z "$BUILD_WORKSPACE_DIRECTORY" ]] && [[ -z "$TEST_SRCDIR" ]]; then
+    echo "ERROR: This script must be run via bazel."
+    echo ""
+    echo "Usage:"
+    echo "  bazel run //examples/matchtest:serve"
+    echo ""
+    echo "Note: This target depends on :run which requires network/API keys."
+    echo "      Run 'bazel build //examples/matchtest:run' first if needed."
+    exit 1
+fi
+
 RUNFILES="${BASH_SOURCE[0]}.runfiles/_main"
 [[ -d "$RUNFILES" ]] || RUNFILES="$(dirname "$0")"
 
