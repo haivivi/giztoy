@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/haivivi/giztoy/pkg/luau"
+	"github.com/haivivi/giztoy/go/pkg/luau"
 )
 
 // HTTPResult holds the result of an async HTTP request.

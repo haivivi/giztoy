@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/haivivi/giztoy/pkg/luau"
+	"github.com/haivivi/giztoy/go/pkg/luau"
 )
 
 // builtinTime implements __builtin.time() -> number

@@ -265,16 +265,12 @@
   "moduleExtensions": {
     "//:extensions.bzl%audio_libs": {
       "general": {
-        "bzlTransitiveDigest": "di2w5ecW08WnBCIerKS1SZLj+y38Kw3yi6ZLK4QNHU0=",
+        "bzlTransitiveDigest": "KdkjAUgk06rUdJYlQJ3mslz2ijguAaQxniKKCt0giHA=",
         "usagesDigest": "Xd+WAzFJEryUCjH03YpiXD7zp5I44G4mzlGyoeX1wGo=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
         "generatedRepoSpecs": {
-          "soxr": {
-            "repoRuleId": "@@//third_party/soxr:defs.bzl%soxr_repo",
-            "attributes": {}
-          },
           "portaudio": {
             "repoRuleId": "@@//third_party/portaudio:defs.bzl%portaudio_repo",
             "attributes": {}
@@ -308,7 +304,7 @@
     },
     "//:extensions.bzl%luau": {
       "general": {
-        "bzlTransitiveDigest": "j/aWnS4kKr2vqME+luoOWMXy1WabqSEKfI7SyCrJtSA=",
+        "bzlTransitiveDigest": "KdkjAUgk06rUdJYlQJ3mslz2ijguAaQxniKKCt0giHA=",
         "usagesDigest": "fjbt5lB2jzJkQQzLHOFOgBIrHmMvtmXX51ABnEALqAw=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},

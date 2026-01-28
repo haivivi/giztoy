@@ -14,8 +14,8 @@ import (
 	"sync"
 
 	"github.com/goccy/go-yaml"
-	"github.com/haivivi/giztoy/pkg/genx/match"
-	"github.com/haivivi/giztoy/pkg/genx/modelloader"
+	"github.com/haivivi/giztoy/go/pkg/genx/match"
+	"github.com/haivivi/giztoy/go/pkg/genx/modelloader"
 )
 
 var (

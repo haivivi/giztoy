@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "modelloader",
     srcs = ["config.go"],
-    importpath = "github.com/haivivi/giztoy/pkg/genx/modelloader",
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/modelloader",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/genx",
