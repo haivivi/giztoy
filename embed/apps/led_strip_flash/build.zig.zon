@@ -1,0 +1,16 @@
+.{
+    .name = "led_strip_flash_app",
+    .version = "0.1.0",
+    .dependencies = .{
+        .esp = .{ .path = "../../../../lib/esp" },
+        .hal = .{ .path = "../../../../lib/hal" },
+        .drivers = .{ .path = "../../../../lib/drivers" },
+    },
+    .paths = .{
+        "app.zig",
+        "platform.zig",
+        "boards",
+        "build.zig",
+        "build.zig.zon",
+    },
+}
