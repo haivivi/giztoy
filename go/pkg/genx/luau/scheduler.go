@@ -199,87 +199,75 @@ func (s *Scheduler) handleResumeStatus(thread *luau.Thread, status luau.CoStatus
 }
 
 // pushValue pushes a Go value onto the Luau stack.
+// This delegates to the package-level pushLuaValue function.
 func (s *Scheduler) pushValue(state *luau.State, value any) {
-	if value == nil {
-		state.PushNil()
-		return
-	}
-	
-	switch v := value.(type) {
-	case bool:
-		state.PushBoolean(v)
-	case int:
-		state.PushInteger(int64(v))
-	case int64:
-		state.PushInteger(v)
-	case float64:
-		state.PushNumber(v)
-	case string:
-		state.PushString(v)
-	case []byte:
-		state.PushBytes(v)
-	case map[string]any:
-		state.NewTable()
-		for k, val := range v {
-			state.PushString(k)
-			s.pushValue(state, val)
-			state.SetTable(-3)
-		}
-	case []any:
-		state.CreateTable(len(v), 0)
-		for i, val := range v {
-			s.pushValue(state, val)
-			state.RawSetI(-2, i+1)
-		}
-	default:
-		// For unsupported types, push as string representation
-		state.PushString(fmt.Sprintf("%v", v))
-	}
+	pushLuaValue(state, value)
 }
 
 // Run executes the main loop, processing async operations until all threads complete.
 // It processes pending operations and resumes threads with results.
 func (s *Scheduler) Run() error {
+	// Track active threads that are waiting for results
+	activeThreads := 0
+
 	for {
 		// Process any pending operations
 		s.processPending()
-		
-		// Check if we have any active operations
+
+		// Check if we have any pending operations to start
 		s.mu.Lock()
 		hasPending := len(s.pending) > 0
 		s.mu.Unlock()
-		
-		if !hasPending {
-			// No pending operations, check if we're waiting for results
+
+		if hasPending {
+			// More operations to process, continue loop
+			continue
+		}
+
+		// No pending operations - check for results or completion
+		select {
+		case result := <-s.results:
+			// Resume the thread with the result
+			status, _, err := s.ResumeWithResult(result.thread, result.value, result.err)
+			if err != nil {
+				s.logger.Log("error", "thread resume error:", err)
+			}
+			if status == luau.CoStatusOK {
+				// Thread completed
+				result.thread.Close()
+				activeThreads--
+			} else if status == luau.CoStatusYield {
+				// Thread yielded again, will submit more ops
+				activeThreads++
+			}
+		case <-s.ctx.Done():
+			return s.ctx.Err()
+		default:
+			// No results immediately available
+			// Check if there are any active goroutines still running
+			// by doing a blocking wait with context
 			select {
 			case result := <-s.results:
-				// Resume the thread with the result
 				status, _, err := s.ResumeWithResult(result.thread, result.value, result.err)
 				if err != nil {
 					s.logger.Log("error", "thread resume error:", err)
 				}
 				if status == luau.CoStatusOK {
-					// Thread completed
 					result.thread.Close()
+					activeThreads--
+				} else if status == luau.CoStatusYield {
+					activeThreads++
 				}
 			case <-s.ctx.Done():
 				return s.ctx.Err()
 			default:
-				// No results waiting, check if we're done
-				// Wait a bit for any results
-				select {
-				case result := <-s.results:
-					status, _, err := s.ResumeWithResult(result.thread, result.value, result.err)
-					if err != nil {
-						s.logger.Log("error", "thread resume error:", err)
-					}
-					if status == luau.CoStatusOK {
-						result.thread.Close()
-					}
-				case <-s.ctx.Done():
-					return s.ctx.Err()
-				default:
-					// Truly nothing to do
+				// Check pending again after processing
+				s.mu.Lock()
+				hasPendingNow := len(s.pending) > 0
+				s.mu.Unlock()
+
+				if !hasPendingNow {
+					// No pending, no results - we're done
 					return nil
 				}
 			}

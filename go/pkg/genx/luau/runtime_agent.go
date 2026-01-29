@@ -3,11 +3,11 @@ package luau
 import (
 	"context"
 	"errors"
+	"strings"
 	"sync"
 
 	"github.com/haivivi/giztoy/go/pkg/genx"
 	"github.com/haivivi/giztoy/go/pkg/genx/agent"
-	"github.com/haivivi/giztoy/go/pkg/genx/agentcfg"
 )
 
 // ErrAgentClosed is returned when Recv is called on a closed agent.
@@ -181,16 +181,23 @@ func (ar *agentRuntime) SendInput(contents genx.Contents) error {
 }
 
 // CloseInput closes the input channel (signals no more input).
+// This method is idempotent - calling it multiple times is safe.
 func (ar *agentRuntime) CloseInput() {
 	ar.mu.Lock()
 	defer ar.mu.Unlock()
-	// Only close input channel, not the whole runtime
+
+	// Check if already fully closed
 	select {
 	case <-ar.closeCh:
-		// Already closed
+		return
 	default:
-		close(ar.inputCh)
 	}
+
+	// Safely close inputCh (recover from panic if already closed)
+	defer func() {
+		_ = recover()
+	}()
+	close(ar.inputCh)
 }
 
 // --- Convenience methods for the caller ---
@@ -202,10 +209,11 @@ type AgentHandle struct {
 
 // NewAgentHandle creates a handle from an AgentRuntime.
 // This is used by callers to interact with the agent.
+// Panics if ar is not the expected *agentRuntime implementation.
 func NewAgentHandle(ar AgentRuntime) *AgentHandle {
 	impl, ok := ar.(*agentRuntime)
 	if !ok {
-		return nil
+		panic("luau: NewAgentHandle expects *agentRuntime implementation of AgentRuntime")
 	}
 	return &AgentHandle{ar: impl}
 }
@@ -238,7 +246,7 @@ func (h *AgentHandle) Collect() ([]genx.MessageChunk, error) {
 
 // CollectText collects all text output from the agent.
 func (h *AgentHandle) CollectText() (string, error) {
-	var sb stringBuilder
+	var sb strings.Builder
 	for chunk := range h.ar.outputCh {
 		if chunk.Part != nil {
 			if text, ok := chunk.Part.(genx.Text); ok {
@@ -254,49 +262,6 @@ func (h *AgentHandle) CloseInput() {
 	h.ar.CloseInput()
 }
 
-// stringBuilder is a simple string builder (avoiding import strings).
-type stringBuilder struct {
-	data []byte
-}
-
-func (sb *stringBuilder) WriteString(s string) {
-	sb.data = append(sb.data, s...)
-}
-
-func (sb *stringBuilder) String() string {
-	return string(sb.data)
-}
-
-// Ensure agentRuntime also satisfies ToolRuntime interface requirements
+// Ensure agentRuntime satisfies ToolRuntime interface requirements.
+// Methods from embedded *toolRuntime are automatically promoted.
 var _ ToolRuntime = (*agentRuntime)(nil)
-
-// Re-export ToolRuntime methods that need context from agentRuntime
-// These are inherited from toolRuntime but we ensure they use the correct context
-
-func (ar *agentRuntime) Context() context.Context {
-	return ar.toolRuntime.Context()
-}
-
-func (ar *agentRuntime) HistoryRecent(n int) ([]agentcfg.Message, error) {
-	return ar.toolRuntime.HistoryRecent(n)
-}
-
-func (ar *agentRuntime) HistoryAppend(msg agentcfg.Message) error {
-	return ar.toolRuntime.HistoryAppend(msg)
-}
-
-func (ar *agentRuntime) HistoryRevert() error {
-	return ar.toolRuntime.HistoryRevert()
-}
-
-func (ar *agentRuntime) MemorySummary() (string, error) {
-	return ar.toolRuntime.MemorySummary()
-}
-
-func (ar *agentRuntime) MemorySetSummary(summary string) error {
-	return ar.toolRuntime.MemorySetSummary(summary)
-}
-
-func (ar *agentRuntime) MemoryQuery(query string) ([]agentcfg.MemorySegment, error) {
-	return ar.toolRuntime.MemoryQuery(query)
-}

@@ -2,10 +2,12 @@ package luau
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -270,17 +272,22 @@ var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
 }
 
-func (tr *toolRuntime) HTTPGet(url string, params map[string]any) (*HTTPResponse, error) {
-	// Build query string
+func (tr *toolRuntime) HTTPGet(targetURL string, params map[string]any) (*HTTPResponse, error) {
+	// Build query string with proper URL encoding
 	if len(params) > 0 {
-		var parts []string
+		values := url.Values{}
 		for k, v := range params {
-			parts = append(parts, fmt.Sprintf("%s=%v", k, v))
+			values.Set(k, fmt.Sprintf("%v", v))
 		}
-		url = url + "?" + strings.Join(parts, "&")
+		// Handle URLs that may already have query parameters
+		if strings.Contains(targetURL, "?") {
+			targetURL = targetURL + "&" + values.Encode()
+		} else {
+			targetURL = targetURL + "?" + values.Encode()
+		}
 	}
 
-	req, err := http.NewRequestWithContext(tr.ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(tr.ctx, "GET", targetURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -318,9 +325,15 @@ func (tr *toolRuntime) HTTPPost(url string, opts *HTTPOptions) (*HTTPResponse, e
 			body = strings.NewReader(b)
 		case []byte:
 			body = strings.NewReader(string(b))
+		case map[string]any, []any:
+			// JSON encode complex types
+			data, err := json.Marshal(b)
+			if err != nil {
+				return nil, fmt.Errorf("marshal body to JSON: %w", err)
+			}
+			body = strings.NewReader(string(data))
 		default:
-			// Try JSON encoding
-			return nil, fmt.Errorf("unsupported body type: %T", opts.Body)
+			return nil, fmt.Errorf("unsupported body type: %T (expected string, []byte, or table)", opts.Body)
 		}
 	}
 
@@ -367,9 +380,19 @@ func (tr *toolRuntime) InvokeTool(toolName string, args any) (any, error) {
 	}
 
 	// Convert args to JSON string
-	argsStr, ok := args.(string)
-	if !ok {
-		return nil, fmt.Errorf("args must be a JSON string, got %T", args)
+	var argsStr string
+	switch v := args.(type) {
+	case string:
+		argsStr = v
+	case map[string]any, []any:
+		// Luau tables are converted to map or slice, serialize to JSON
+		b, err := json.Marshal(v)
+		if err != nil {
+			return nil, fmt.Errorf("marshal tool args to JSON: %w", err)
+		}
+		argsStr = string(b)
+	default:
+		return nil, fmt.Errorf("args must be a JSON string or table, got %T", args)
 	}
 
 	call := tool.NewFuncCall(argsStr)

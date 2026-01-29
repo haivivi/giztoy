@@ -128,14 +128,11 @@ func (r *Runner) Run(ctx context.Context, name string, rt agent.Runtime, state a
 
 // RunSource compiles and executes a script directly (for testing).
 func (r *Runner) RunSource(ctx context.Context, source string, rt agent.Runtime, state agent.AgentState, input any) (any, error) {
-	r.mu.Lock()
-	// Create a fresh state for this execution
+	// Create a fresh state for this execution (no lock needed - execState is independent)
 	execState, err := luau.New()
 	if err != nil {
-		r.mu.Unlock()
 		return nil, fmt.Errorf("create execution state: %w", err)
 	}
-	r.mu.Unlock()
 
 	defer execState.Close()
 	execState.OpenLibs()
@@ -629,24 +626,30 @@ func buildModelContextFromTable(table map[string]any) genx.ModelContext {
 				continue
 			}
 
-			role := fmt.Sprintf("%v", msgMap["role"])
-			content := fmt.Sprintf("%v", msgMap["content"])
-
-			switch role {
-			case "user":
-				name := ""
-				if n, ok := msgMap["name"].(string); ok {
-					name = n
-				}
-				mcb.UserText(name, content)
-			case "model", "assistant":
-				name := ""
-				if n, ok := msgMap["name"].(string); ok {
-					name = n
-				}
-				mcb.ModelText(name, content)
-			}
+		roleVal, ok := msgMap["role"].(string)
+		if !ok {
+			continue // Skip invalid message
 		}
+		contentVal, ok := msgMap["content"].(string)
+		if !ok {
+			continue // Skip invalid message
+		}
+
+		switch roleVal {
+		case "user":
+			name := ""
+			if n, ok := msgMap["name"].(string); ok {
+				name = n
+			}
+			mcb.UserText(name, contentVal)
+		case "model", "assistant":
+			name := ""
+			if n, ok := msgMap["name"].(string); ok {
+				name = n
+			}
+			mcb.ModelText(name, contentVal)
+		}
+	}
 	}
 
 	return mcb.Build()
