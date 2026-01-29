@@ -1,13 +1,7 @@
 # Platform-independent embedded applications
 # These apps use HAL abstraction and can run on different platforms (ESP, raysim, etc.)
+#
+# Each app has its own BUILD.bazel with esp_zig_app rule.
+# See led_strip_flash/BUILD.bazel for example.
 
 package(default_visibility = ["//visibility:public"])
-
-# All app source files for Bazel's esp_idf_app rule
-filegroup(
-    name = "all_apps",
-    srcs = glob(
-        ["**/*.zig", "**/*.zon"],
-        exclude = [".zig-cache/**"],
-    ),
-)
