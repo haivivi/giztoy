@@ -1,0 +1,36 @@
+# LED Strip Flash App
+
+load("@embed_zig//bazel/esp:defs.bzl", "esp_flash", "esp_zig_app")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["**/*"]),
+)
+
+esp_zig_app(
+    name = "esp",
+    app = ":srcs",
+    app_config = "//embed/esp:app",
+    extra_cmake = [
+        "include(${_ESP_LIB}/esp/src/sal/i2c.cmake)",
+    ],
+    extra_c_sources = ["I2C_C_SOURCES"],
+    extra_deps = ["hal", "drivers"],
+    force_link = [
+        "led_strip_refresh",
+        "led_strip_new_rmt_device",
+        "${I2C_FORCE_LINK}",
+    ],
+    idf_deps = ["espressif/led_strip:^3.0.0"],
+    requires = ["driver", "led_strip", "esp_driver_i2c"],
+    sdkconfig = "//embed/esp:esp32s3",
+    tags = ["manual"],  # Skip in CI - requires ESP-IDF
+)
+
+esp_flash(
+    name = "flash",
+    app = ":esp",
+    tags = ["manual"],  # Skip in CI - requires ESP-IDF
+)

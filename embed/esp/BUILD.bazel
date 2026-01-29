@@ -1,0 +1,135 @@
+# ESP sdkconfig presets (fully modular)
+
+load("@embed_zig//bazel/esp:defs.bzl", "esp_sdkconfig")
+load("@embed_zig//bazel/esp/sdkconfig:app.bzl", "esp_app")
+load("@embed_zig//bazel/esp/sdkconfig:core.bzl", "esp_core")
+load("@embed_zig//bazel/esp/sdkconfig:freertos.bzl", "esp_freertos")
+load("@embed_zig//bazel/esp/sdkconfig:log.bzl", "esp_log")
+load("@embed_zig//bazel/esp/sdkconfig:lwip.bzl", "esp_lwip")
+load("@embed_zig//bazel/esp/sdkconfig:psram.bzl", "esp_psram")
+load("@embed_zig//bazel/esp/sdkconfig:wifi.bzl", "esp_wifi")
+
+package(default_visibility = ["//visibility:public"])
+
+# =============================================================================
+# Core
+# =============================================================================
+
+esp_core(
+    name = "core",
+    idf_target = "esp32s3",
+    cpu_freq_mhz = 240,
+    flash_size_mb = 8,
+    flash_mode = "qio",
+    flash_freq = "80m",
+)
+
+# =============================================================================
+# PSRAM
+# =============================================================================
+
+esp_psram(
+    name = "psram",
+    chip = "esp32s3",
+    mode = "oct",
+    speed = "80m",
+)
+
+# =============================================================================
+# FreeRTOS
+# =============================================================================
+
+esp_freertos(
+    name = "freertos",
+    hz = 1000,
+    main_task_stack_size = 4096,
+    task_wdt_timeout_s = 30,
+    task_wdt_check_idle_cpu0 = True,
+    task_wdt_check_idle_cpu1 = False,
+)
+
+# =============================================================================
+# Log
+# =============================================================================
+
+esp_log(
+    name = "log",
+    default_level = "info",
+)
+
+# =============================================================================
+# WiFi
+# =============================================================================
+
+esp_wifi(
+    name = "wifi",
+    static_rx_buffer_num = 16,
+    dynamic_rx_buffer_num = 64,
+    rx_ba_win = 32,
+    tx_ba_win = 6,
+)
+
+# =============================================================================
+# LWIP
+# =============================================================================
+
+esp_lwip(
+    name = "lwip",
+    tcpip_task_stack_size = 8192,
+    max_sockets = 10,
+    max_active_tcp = 16,
+    tcp_snd_buf_default = 65535,
+    tcp_wnd_default = 65535,
+    tcp_recvmbox_size = 64,
+)
+
+# =============================================================================
+# App Configs
+# =============================================================================
+
+# For apps that can run in PSRAM (no flash operations during runtime)
+esp_app(
+    name = "app",
+    run_in_psram = True,
+)
+
+# For apps that need flash access (WiFi, NVS, etc.)
+esp_app(
+    name = "app_internal",
+    run_in_psram = False,
+)
+
+# FreeRTOS with larger stack for internal RAM apps
+esp_freertos(
+    name = "freertos_large",
+    hz = 1000,
+    main_task_stack_size = 16384,
+    task_wdt_timeout_s = 30,
+    task_wdt_check_idle_cpu0 = True,
+    task_wdt_check_idle_cpu1 = False,
+)
+
+# =============================================================================
+# ESP32-S3 sdkconfig
+# =============================================================================
+
+esp_sdkconfig(
+    name = "esp32s3",
+    core = ":core",
+    freertos = ":freertos",
+    log = ":log",
+    psram = ":psram",
+    wifi = ":wifi",
+    lwip = ":lwip",
+)
+
+# For WiFi apps - larger stack in internal RAM
+esp_sdkconfig(
+    name = "esp32s3_wifi",
+    core = ":core",
+    freertos = ":freertos_large",
+    log = ":log",
+    psram = ":psram",
+    wifi = ":wifi",
+    lwip = ":lwip",
+)
