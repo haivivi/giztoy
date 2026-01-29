@@ -6,8 +6,8 @@
 const hal = @import("hal");
 const build_options = @import("build_options");
 
-/// Supported board types
-pub const BoardType = build_options.@"build.BoardType";
+/// Supported board types (derived from build options)
+pub const BoardType = @TypeOf(build_options.board);
 
 /// Currently selected board (from build options)
 pub const selected_board: BoardType = build_options.board;
