@@ -1,0 +1,39 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "luau",
+    srcs = [
+        "doc.go",
+        "runner.go",
+        "runtime.go",
+        "runtime_agent.go",
+        "scheduler.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/luau",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/agent",
+        "//go/pkg/genx/agentcfg",
+        "//go/pkg/genx/match",
+        "//go/pkg/luau",
+    ],
+)
+
+go_test(
+    name = "luau_test",
+    srcs = [
+        "runner_test.go",
+        "runtime_agent_test.go",
+        "runtime_test.go",
+        "scheduler_test.go",
+        "testutil_test.go",
+    ],
+    data = ["//testdata/luau/runtime:runtime_scripts"],
+    embed = [":luau"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/agentcfg",
+        "//go/pkg/luau",
+    ],
+)
