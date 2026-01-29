@@ -26,9 +26,11 @@ esp_zig_app(
     idf_deps = ["espressif/led_strip:^3.0.0"],
     requires = ["driver", "led_strip", "esp_driver_i2c"],
     sdkconfig = "//embed/esp:esp32s3",
+    tags = ["manual"],  # Skip in CI - requires ESP-IDF
 )
 
 esp_flash(
     name = "flash",
     app = ":esp",
+    tags = ["manual"],  # Skip in CI - requires ESP-IDF
 )
