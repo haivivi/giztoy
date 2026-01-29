@@ -95,7 +95,7 @@ pub const LedDriver = struct {
 
     pub fn deinit(self: *Self) void {
         if (self.initialized) {
-            self.strip.clear() catch {};
+            self.strip.clear() catch |err| log.warn("failed to clear strip on deinit: {any}", .{err});
             self.strip.deinit();
             self.initialized = false;
         }
@@ -104,7 +104,7 @@ pub const LedDriver = struct {
     pub fn setPixel(self: *Self, index: u32, color: hal.Color) void {
         if (index >= Hardware.led_count) return;
         self.current_color = color;
-        self.strip.setPixel(index, color.r, color.g, color.b) catch {};
+        self.strip.setPixel(index, color.r, color.g, color.b) catch |err| log.err("failed to set pixel: {any}", .{err});
     }
 
     pub fn getPixelCount(_: *Self) u32 {
@@ -112,7 +112,7 @@ pub const LedDriver = struct {
     }
 
     pub fn refresh(self: *Self) void {
-        self.strip.refresh() catch {};
+        self.strip.refresh() catch |err| log.err("failed to refresh strip: {any}", .{err});
     }
 };
 

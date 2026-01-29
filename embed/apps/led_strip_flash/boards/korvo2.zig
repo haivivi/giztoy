@@ -123,8 +123,8 @@ pub const LedDriver = struct {
 
     pub fn deinit(self: *Self) void {
         if (self.initialized) {
-            self.gpio.write(RED_PIN, .high) catch {};
-            self.gpio.write(BLUE_PIN, .high) catch {};
+            self.gpio.write(RED_PIN, .high) catch |err| log.warn("failed to turn off red LED on deinit: {any}", .{err});
+            self.gpio.write(BLUE_PIN, .high) catch |err| log.warn("failed to turn off blue LED on deinit: {any}", .{err});
             self.i2c.deinit();
             self.initialized = false;
         }
@@ -156,8 +156,8 @@ pub const LedDriver = struct {
         }
 
         // Active low: .low = on, .high = off
-        self.gpio.write(RED_PIN, if (red_on) .low else .high) catch {};
-        self.gpio.write(BLUE_PIN, if (blue_on) .low else .high) catch {};
+        self.gpio.write(RED_PIN, if (red_on) .low else .high) catch |err| log.err("failed to set red LED: {any}", .{err});
+        self.gpio.write(BLUE_PIN, if (blue_on) .low else .high) catch |err| log.err("failed to set blue LED: {any}", .{err});
     }
 
     pub fn getPixelCount(_: *Self) u32 {

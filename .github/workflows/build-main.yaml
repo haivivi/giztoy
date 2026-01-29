@@ -137,7 +137,7 @@ jobs:
           else
             # Check if pages:deploy is affected
             # Exit codes: 0 = affected, 1 = not affected, 2+ = error
-            # Use || true to capture exit code without failing the step
+            # Capture exit code in EXIT_CODE without failing the step
             bazel run //devops/tools/bazel-affected -- --base=HEAD~1 --check=//pages:deploy || EXIT_CODE=$?
             EXIT_CODE=${EXIT_CODE:-0}
             
