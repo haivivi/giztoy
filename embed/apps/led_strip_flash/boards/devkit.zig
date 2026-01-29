@@ -40,8 +40,8 @@ pub const Hardware = struct {
     pub const led_type = "ws2812";
     pub const led_count: u32 = 1;
 
-    // LED GPIO
-    pub const led_gpio: u8 = hw_params.led_gpio;
+    // LED GPIO (using led_strip_gpio from embed-zig board definition)
+    pub const led_gpio: u8 = hw_params.led_strip_gpio;
 };
 
 // ============================================================================

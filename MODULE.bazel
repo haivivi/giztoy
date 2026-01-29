@@ -146,12 +146,10 @@ use_repo(luau_ext, "luau")
 bazel_dep(name = "embed_zig", version = "0.1.0")
 
 # Use git_override for CI compatibility
-# For local development, add to .bazelrc.user:
-#   common --override_module=embed_zig=/path/to/zig-bootstrap
 git_override(
     module_name = "embed_zig",
     remote = "https://github.com/haivivi/embed-zig.git",
-    commit = "fb4ee86056b65407e6ceb5a8494cf06b89763e75",
+    commit = "4e9b5bc",
 )
 
 # ============================================================================
