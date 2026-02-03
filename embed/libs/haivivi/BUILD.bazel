@@ -1,0 +1,10 @@
+# Haivivi SDK Library for Embedded Zig
+#
+# Provides Palgear API client and related utilities.
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["**/*"]),
+)

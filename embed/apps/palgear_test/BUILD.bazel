@@ -1,0 +1,148 @@
+# Palgear API Test App
+#
+# Tests Palgear API client on Korvo-2 board using event-driven WiFi and pure Zig TLS.
+# Requires WiFi and device credentials via --define flags.
+#
+# Usage:
+#   bazel build //embed/apps/palgear_test:esp \
+#     --define WIFI_SSID=HAIVIVI-MFG \
+#     --define WIFI_PASSWORD=xxx \
+#     --define DEVICE_SN=xxx \
+#     --define DEVICE_EID=xxx \
+#     --define API_HOST=api.haivivi.cn
+
+load("@embed_zig//bazel/esp:defs.bzl", "esp_flash", "esp_sdkconfig", "esp_zig_app")
+load("@embed_zig//bazel:env.bzl", "make_env_file")
+load("@embed_zig//bazel/esp/sdkconfig:app.bzl", "esp_app")
+load("@embed_zig//bazel/esp/sdkconfig:crypto.bzl", "esp_crypto")
+load("@embed_zig//bazel/esp/sdkconfig:newlib.bzl", "esp_newlib")
+load("@embed_zig//bazel/esp/sdkconfig:psram.bzl", "esp_psram")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["**/*"]),
+)
+
+# Environment from command line --define flags
+make_env_file(
+    name = "env",
+    defines = ["WIFI_SSID", "WIFI_PASSWORD", "DEVICE_SN", "DEVICE_EID", "API_HOST"],
+    defaults = {
+        "WIFI_SSID": "HAIVIVI-MFG",
+        "API_HOST": "api.haivivi.cn",
+    },
+)
+
+# =============================================================================
+# App-specific sdkconfig components
+# =============================================================================
+
+# XIP PSRAM - allows PSRAM access during WiFi/flash operations
+# Required for apps that use PSRAM task stack with WiFi
+esp_psram(
+    name = "psram_xip",
+    chip = "esp32s3",
+    mode = "oct",
+    speed = "80m",
+    xip_from_psram = True,
+)
+
+# 128KB PSRAM stack for TLS/crypto operations
+esp_app(
+    name = "app_128k",
+    run_in_psram = 131072,  # 128KB
+)
+
+# mbedTLS with hardware-accelerated crypto
+# When disable_mbedtls=False, all crypto features are enabled by default
+esp_crypto(
+    name = "crypto_mbedtls",
+    disable_mbedtls = False,
+)
+
+# Newlib nano printf - saves ~20KB
+# Note: No 64-bit int format or C99 features
+esp_newlib(
+    name = "newlib_nano",
+    nano_format = True,
+)
+
+# Combined sdkconfig for this app
+esp_sdkconfig(
+    name = "sdkconfig",
+    core = "//embed/esp:core",
+    crypto = ":crypto_mbedtls",
+    freertos = "//embed/esp:freertos",
+    log = "//embed/esp:log",
+    lwip = "//embed/esp:lwip",
+    newlib = ":newlib_nano",
+    psram = ":psram_xip",
+    wifi = "//embed/esp:wifi",
+)
+
+# =============================================================================
+# App build
+# =============================================================================
+
+esp_zig_app(
+    name = "esp",
+    app = ":srcs",
+    app_config = ":app_128k",
+    boards = ["korvo2_v3", "esp32s3_devkit"],
+    env = ":env",
+    extra_cmake = [
+        "include(${_ESP_LIB}/esp/src/sal/i2c.cmake)",
+        "include(${_ESP_LIB}/esp/idf/src/event/event.cmake)",
+        "include(${_ESP_LIB}/esp/idf/src/wifi/wifi.cmake)",
+        "include(${_ESP_LIB}/esp/idf/src/mbed_tls/mbed_tls.cmake)",
+        "include(${_ESP_LIB}/esp/idf/src/net/net.cmake)",
+    ],
+    extra_c_sources = [
+        "I2C_C_SOURCES",
+        "EVENT_SRCS",
+        "WIFI_C_SOURCES",
+        "MBED_TLS_C_SOURCES",
+        "NET_C_SOURCES",
+    ],
+    extra_deps = [
+        "hal",
+        "drivers",
+        "dns",
+        "tls",
+        "http",
+        "ntp",
+    ],
+    force_link = [
+        "led_strip_refresh",
+        "led_strip_new_rmt_device",
+        "${I2C_FORCE_LINK}",
+        "${EVENT_FORCE_LINK}",
+        "${WIFI_FORCE_LINK}",
+        "${NET_FORCE_LINK}",
+        "verify_with_esp_bundle",
+    ],
+    idf_deps = [
+        "espressif/led_strip:^3.0.0",
+    ],
+    requires = [
+        "driver",
+        "led_strip",
+        "esp_driver_i2c",
+        "esp_wifi",
+        "esp_event",
+        "esp_netif",
+        "lwip",
+        "mbedtls",
+        "nvs_flash",
+    ],
+    sdkconfig = ":sdkconfig",
+    tags = ["manual"],  # Skip in CI - requires ESP-IDF
+)
+
+esp_flash(
+    name = "flash",
+    app = ":esp",
+    tags = ["manual"],  # Skip in CI - requires ESP-IDF
+)

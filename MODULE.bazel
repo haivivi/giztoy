@@ -144,6 +144,22 @@ luau_ext = use_extension("//:extensions.bzl", "luau")
 use_repo(luau_ext, "luau")
 
 # ============================================================================
+# Embedded development (embed-zig)
+# ============================================================================
+bazel_dep(name = "embed_zig", version = "0.1.0")
+
+# Use git_override for CI compatibility
+git_override(
+    module_name = "embed_zig",
+    remote = "https://github.com/haivivi/embed-zig.git",
+    commit = "a8d5a3d",  # Fix deps external repo path + TLS recv timeout
+)
+
+# Zig toolchain with Xtensa support (from embed-zig)
+zig_toolchain = use_extension("@embed_zig//:extensions.bzl", "zig_toolchain")
+use_repo(zig_toolchain, "zig_toolchain")
+
+# ============================================================================
 # HarmonyOS SDK (自动下载，无需安装 DevEco Studio)
 # ============================================================================
 hos_sdk = use_extension("//bazel/harmonyos:extensions.bzl", "hos_sdk_extension")
