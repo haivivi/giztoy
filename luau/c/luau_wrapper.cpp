@@ -18,6 +18,8 @@ struct LuauState {
     std::string lastError;
     LuauExternalCallback externalCallback;
     uint64_t currentCallbackId;  // Set during external callback execution
+    int parentRef;               // Lua registry reference (for threads to prevent GC)
+    LuauState* parentState;      // Parent state (for threads only)
 };
 
 /* ==========================================================================
@@ -38,6 +40,8 @@ LuauState* luau_new(void) {
 
     state->externalCallback = nullptr;
     state->currentCallbackId = 0;
+    state->parentRef = LUA_NOREF;    // Not a thread, no parent reference
+    state->parentState = nullptr;    // Not a thread, no parent
 
     // Store the LuauState pointer in registry for callbacks
     lua_pushlightuserdata(state->L, state);
@@ -649,24 +653,33 @@ LuauState* luau_newthread(LuauState* L) {
     if (!L || !L->L) return nullptr;
 
     // Create a new thread (coroutine)
+    // lua_newthread pushes the thread onto L's stack
     lua_State* thread = lua_newthread(L->L);
     if (!thread) return nullptr;
 
     // Create a wrapper for the new thread
-    // Note: The new thread shares the same LuauState wrapper for registry access
-    // but has its own lua_State. This is a simplified approach.
     LuauState* wrapper = new (std::nothrow) LuauState();
     if (!wrapper) {
         lua_pop(L->L, 1); // Remove thread from stack
         return nullptr;
     }
 
+    // Store thread in registry to prevent GC.
+    // lua_ref stores the value at the given index and returns a reference.
+    // The thread is at index -1 (top of stack).
+    int ref = lua_ref(L->L, -1);
+    lua_pop(L->L, 1);  // Pop the thread from the stack
+
     wrapper->L = thread;
     wrapper->externalCallback = L->externalCallback;  // Share callback
     wrapper->currentCallbackId = 0;
+    wrapper->parentRef = ref;           // Store registry reference
+    wrapper->parentState = L;           // Store parent for later cleanup
 
-    // Store the parent's LuauState in the thread's registry for callbacks
-    lua_pushlightuserdata(thread, L);  // Use parent's LuauState for callback lookup
+    // Store the thread's LuauState wrapper in its own registry for callbacks.
+    // This ensures that when external functions are called from this thread,
+    // they receive the thread's LuauState (with correct stack) instead of the parent's.
+    lua_pushlightuserdata(thread, wrapper);
     lua_setfield(thread, LUA_REGISTRYINDEX, "_luau_state");
 
     return wrapper;
@@ -674,9 +687,17 @@ LuauState* luau_newthread(LuauState* L) {
 
 void luau_close_thread(LuauState* L) {
     if (L) {
+        // Release the registry reference to allow GC to collect the thread.
+        // The parent's lua_State must still be valid for this to work.
+        if (L->parentState && L->parentState->L && L->parentRef != LUA_NOREF) {
+            lua_unref(L->parentState->L, L->parentRef);
+            L->parentRef = LUA_NOREF;
+        }
+
         // Don't close the lua_State - it's owned by the parent and will be
         // garbage collected by Luau. Just free the C++ wrapper object.
         L->L = nullptr;  // Clear to prevent accidental use
+        L->parentState = nullptr;
         delete L;
     }
 }

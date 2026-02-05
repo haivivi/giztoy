@@ -74,6 +74,10 @@ type ASRV2Config struct {
 
 	// Hotwords for recognition boost
 	Hotwords []string `json:"hotwords,omitempty" yaml:"hotwords,omitempty"`
+
+	// ResultType: "single" (only definite results) or "full" (all results)
+	// Default is "single"
+	ResultType string `json:"result_type,omitempty" yaml:"result_type,omitempty"`
 }
 
 // ASRV2Result represents ASR V2 recognition result
@@ -129,6 +133,7 @@ type ASRV2Session struct {
 	errChan   chan error
 	closeChan chan struct{}
 	closeOnce sync.Once
+	writeMu   sync.Mutex // protects WebSocket writes
 }
 
 // OpenStreamSession opens a streaming ASR WebSocket session
@@ -218,6 +223,8 @@ func (s *ASRV2Session) SendAudio(ctx context.Context, audio []byte, isLast bool)
 		return fmt.Errorf("marshal audio message: %w", err)
 	}
 
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	return s.conn.WriteMessage(websocket.BinaryMessage, binData)
 }
 
@@ -280,11 +287,15 @@ func (s *ASRV2Session) sendSessionStart() error {
 		audio["bits"] = s.config.Bits
 	}
 
+	resultType := "single"
+	if s.config.ResultType != "" {
+		resultType = s.config.ResultType
+	}
 	request := map[string]any{
 		"reqid":           s.reqID,
 		"sequence":        1,
 		"show_utterances": true,
-		"result_type":     "single",
+		"result_type":     resultType,
 	}
 	if s.config.Language != "" {
 		request["language"] = s.config.Language
@@ -336,6 +347,8 @@ func (s *ASRV2Session) sendBinaryMessage(data any) error {
 		return fmt.Errorf("marshal message: %w", err)
 	}
 
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	return s.conn.WriteMessage(websocket.BinaryMessage, binData)
 }
 
@@ -478,10 +491,8 @@ func (s *ASRV2Session) receiveLoop() {
 			case <-s.closeChan:
 				return
 			}
-			
-			if isFinal {
-				return
-			}
+			// Don't return on isFinal - continue receiving for multi-sentence audio
+			// The caller should close the session when done
 		} else if messageType == byte(msgTypeError) {
 			var errResp struct {
 				Code    int    `json:"code"`

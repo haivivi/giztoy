@@ -1,25 +1,24 @@
 package chatgear
 
 import (
-	"context"
 	"iter"
 	"sync"
 	"time"
 
-	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/opus"
 )
 
 // NewPipe creates a connected pair of server and client connections using channels.
 // This is useful for testing and in-process communication.
 func NewPipe() (*PipeServerConn, *PipeClientConn) {
 	// Uplink channels (client -> server)
-	uplinkOpus := make(chan []byte, 1024)
-	uplinkStates := make(chan *GearStateEvent, 32)
-	uplinkStats := make(chan *GearStatsEvent, 32)
+	uplinkOpus := make(chan StampedOpusFrame, 1024)
+	uplinkStates := make(chan *StateEvent, 32)
+	uplinkStats := make(chan *StatsEvent, 32)
 
 	// Downlink channels (server -> client)
-	downlinkOpus := make(chan []byte, 1024)
-	downlinkCmds := make(chan *SessionCommandEvent, 32)
+	downlinkOpus := make(chan StampedOpusFrame, 1024)
+	downlinkCmds := make(chan *CommandEvent, 32)
 
 	// Shared error state for cross-connection error propagation
 	shared := &pipeSharedState{}
@@ -52,30 +51,32 @@ type pipeSharedState struct {
 	clientErr error // Error set by client, readable by server
 }
 
-// PipeServerConn is the server side of a pipe connection.
-// It implements UplinkRx (receive from client) and DownlinkTx (send to client).
+// =============================================================================
+// PipeServerConn: Server side of pipe connection
+// Implements UplinkRx (receive from client) and DownlinkTx (send to client)
+// =============================================================================
+
 type PipeServerConn struct {
 	// Uplink channels (receive from client)
-	uplinkOpus   chan []byte
-	uplinkStates chan *GearStateEvent
-	uplinkStats  chan *GearStatsEvent
+	uplinkOpus   chan StampedOpusFrame
+	uplinkStates chan *StateEvent
+	uplinkStats  chan *StatsEvent
 
 	// Downlink channels (send to client)
-	downlinkOpus chan []byte
-	downlinkCmds chan *SessionCommandEvent
+	downlinkOpus chan StampedOpusFrame
+	downlinkCmds chan *CommandEvent
 
 	shared *pipeSharedState
 
-	mu             sync.Mutex
-	gearStats      *GearStatsEvent
-	opusEncodeOpts []opusrt.EncodePCMOption
-	closed         bool
+	mu          sync.Mutex
+	latestStats *StatsEvent
+	closed      bool
 }
 
 // --- UplinkRx implementation (receive from client) ---
 
-func (c *PipeServerConn) OpusFrames() iter.Seq2[[]byte, error] {
-	return func(yield func([]byte, error) bool) {
+func (c *PipeServerConn) OpusFrames() iter.Seq2[StampedOpusFrame, error] {
+	return func(yield func(StampedOpusFrame, error) bool) {
 		for frame := range c.uplinkOpus {
 			if !yield(frame, nil) {
 				return
@@ -86,13 +87,13 @@ func (c *PipeServerConn) OpusFrames() iter.Seq2[[]byte, error] {
 		err := c.shared.clientErr
 		c.shared.mu.Unlock()
 		if err != nil {
-			yield(nil, err)
+			yield(StampedOpusFrame{}, err)
 		}
 	}
 }
 
-func (c *PipeServerConn) States() iter.Seq2[*GearStateEvent, error] {
-	return func(yield func(*GearStateEvent, error) bool) {
+func (c *PipeServerConn) States() iter.Seq2[*StateEvent, error] {
+	return func(yield func(*StateEvent, error) bool) {
 		for state := range c.uplinkStates {
 			if !yield(state, nil) {
 				return
@@ -107,11 +108,11 @@ func (c *PipeServerConn) States() iter.Seq2[*GearStateEvent, error] {
 	}
 }
 
-func (c *PipeServerConn) Stats() iter.Seq2[*GearStatsEvent, error] {
-	return func(yield func(*GearStatsEvent, error) bool) {
+func (c *PipeServerConn) Stats() iter.Seq2[*StatsEvent, error] {
+	return func(yield func(*StatsEvent, error) bool) {
 		for stats := range c.uplinkStats {
 			c.mu.Lock()
-			c.gearStats = stats
+			c.latestStats = stats
 			c.mu.Unlock()
 			if !yield(stats, nil) {
 				return
@@ -126,47 +127,47 @@ func (c *PipeServerConn) Stats() iter.Seq2[*GearStatsEvent, error] {
 	}
 }
 
-func (c *PipeServerConn) GearStats() *GearStatsEvent {
+func (c *PipeServerConn) LatestStats() *StatsEvent {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.gearStats
+	return c.latestStats
 }
 
 // --- DownlinkTx implementation (send to client) ---
 
-func (c *PipeServerConn) SendOpusFrames(ctx context.Context, stamp opusrt.EpochMillis, frames ...[]byte) error {
-	for _, frame := range frames {
-		stamped := opusrt.Stamp(frame, stamp)
-		select {
-		case c.downlinkOpus <- stamped:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-		stamp += opusrt.EpochMillis(opusrt.Frame(frame).Duration().Milliseconds())
+func (c *PipeServerConn) SendOpusFrame(timestamp time.Time, frame opus.Frame) error {
+	c.mu.Lock()
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
+		return nil
 	}
-	return nil
+
+	select {
+	case c.downlinkOpus <- StampedOpusFrame{Timestamp: timestamp, Frame: frame}:
+		return nil
+	default:
+		// Channel full, drop frame
+		return nil
+	}
 }
 
-func (c *PipeServerConn) IssueCommand(ctx context.Context, cmd SessionCommand, t time.Time) error {
-	evt := NewSessionCommandEvent(cmd, t)
+func (c *PipeServerConn) IssueCommand(cmd Command, t time.Time) error {
+	c.mu.Lock()
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
+		return nil
+	}
+
+	evt := NewCommandEvent(cmd, t)
 	select {
 	case c.downlinkCmds <- evt:
 		return nil
-	case <-ctx.Done():
-		return ctx.Err()
+	default:
+		// Channel full, drop command
+		return nil
 	}
-}
-
-func (c *PipeServerConn) SetOpusEncodeOptions(opts ...opusrt.EncodePCMOption) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.opusEncodeOpts = opts
-}
-
-func (c *PipeServerConn) OpusEncodeOptions() []opusrt.EncodePCMOption {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.opusEncodeOpts
 }
 
 // --- Lifecycle ---
@@ -194,17 +195,20 @@ func (c *PipeServerConn) CloseWithError(err error) error {
 	return nil
 }
 
-// PipeClientConn is the client side of a pipe connection.
-// It implements UplinkTx (send to server) and DownlinkRx (receive from server).
+// =============================================================================
+// PipeClientConn: Client side of pipe connection
+// Implements UplinkTx (send to server) and DownlinkRx (receive from server)
+// =============================================================================
+
 type PipeClientConn struct {
 	// Uplink channels (send to server)
-	uplinkOpus   chan []byte
-	uplinkStates chan *GearStateEvent
-	uplinkStats  chan *GearStatsEvent
+	uplinkOpus   chan StampedOpusFrame
+	uplinkStates chan *StateEvent
+	uplinkStats  chan *StatsEvent
 
 	// Downlink channels (receive from server)
-	downlinkOpus chan []byte
-	downlinkCmds chan *SessionCommandEvent
+	downlinkOpus chan StampedOpusFrame
+	downlinkCmds chan *CommandEvent
 
 	shared *pipeSharedState
 
@@ -214,41 +218,61 @@ type PipeClientConn struct {
 
 // --- UplinkTx implementation (send to server) ---
 
-func (c *PipeClientConn) SendOpusFrames(ctx context.Context, stamp opusrt.EpochMillis, frames ...[]byte) error {
-	for _, frame := range frames {
-		stamped := opusrt.Stamp(frame, stamp)
-		select {
-		case c.uplinkOpus <- stamped:
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-		stamp += opusrt.EpochMillis(opusrt.Frame(frame).Duration().Milliseconds())
+func (c *PipeClientConn) SendOpusFrame(timestamp time.Time, frame opus.Frame) error {
+	c.mu.Lock()
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
+		return nil
 	}
-	return nil
+
+	select {
+	case c.uplinkOpus <- StampedOpusFrame{Timestamp: timestamp, Frame: frame}:
+		return nil
+	default:
+		// Channel full, drop frame
+		return nil
+	}
 }
 
-func (c *PipeClientConn) SendState(ctx context.Context, state *GearStateEvent) error {
+func (c *PipeClientConn) SendState(state *StateEvent) error {
+	c.mu.Lock()
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
+		return nil
+	}
+
 	select {
 	case c.uplinkStates <- state:
 		return nil
-	case <-ctx.Done():
-		return ctx.Err()
+	default:
+		// Channel full, drop state
+		return nil
 	}
 }
 
-func (c *PipeClientConn) SendStats(ctx context.Context, stats *GearStatsEvent) error {
+func (c *PipeClientConn) SendStats(stats *StatsEvent) error {
+	c.mu.Lock()
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
+		return nil
+	}
+
 	select {
 	case c.uplinkStats <- stats:
 		return nil
-	case <-ctx.Done():
-		return ctx.Err()
+	default:
+		// Channel full, drop stats
+		return nil
 	}
 }
 
 // --- DownlinkRx implementation (receive from server) ---
 
-func (c *PipeClientConn) OpusFrames() iter.Seq2[[]byte, error] {
-	return func(yield func([]byte, error) bool) {
+func (c *PipeClientConn) OpusFrames() iter.Seq2[StampedOpusFrame, error] {
+	return func(yield func(StampedOpusFrame, error) bool) {
 		for frame := range c.downlinkOpus {
 			if !yield(frame, nil) {
 				return
@@ -259,13 +283,13 @@ func (c *PipeClientConn) OpusFrames() iter.Seq2[[]byte, error] {
 		err := c.shared.serverErr
 		c.shared.mu.Unlock()
 		if err != nil {
-			yield(nil, err)
+			yield(StampedOpusFrame{}, err)
 		}
 	}
 }
 
-func (c *PipeClientConn) Commands() iter.Seq2[*SessionCommandEvent, error] {
-	return func(yield func(*SessionCommandEvent, error) bool) {
+func (c *PipeClientConn) Commands() iter.Seq2[*CommandEvent, error] {
+	return func(yield func(*CommandEvent, error) bool) {
 		for cmd := range c.downlinkCmds {
 			if !yield(cmd, nil) {
 				return

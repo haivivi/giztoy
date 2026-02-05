@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "genx",
     srcs = [
+        "doc.go",
         "error.go",
         "func_tool.go",
         "gemini.go",
@@ -13,7 +14,11 @@ go_library(
         "model_context_multi.go",
         "openai.go",
         "stream_builder.go",
+        "stream_id.go",
         "stream_iter.go",
+        "stream_utils.go",
+        "tee.go",
+        "transformer.go",
     ],
     embedsrcs = ["inspect_model_context.gotmpl"],
     importpath = "github.com/haivivi/giztoy/go/pkg/genx",

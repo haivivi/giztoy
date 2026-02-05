@@ -5,6 +5,9 @@ go_library(
     srcs = [
         "encoder.go",
         "ogg.go",
+        "opus_packet.go",
+        "opus_reader.go",
+        "opus_writer.go",
         "stream.go",
         "sync.go",
     ],
@@ -12,10 +15,14 @@ go_library(
     cgo = True,
     importpath = "github.com/haivivi/giztoy/go/pkg/audio/codec/ogg",
     visibility = ["//visibility:public"],
+    deps = ["//go/pkg/audio/codec/opus"],
 )
 
 go_test(
     name = "ogg_test",
-    srcs = ["ogg_test.go"],
+    srcs = [
+        "ogg_test.go",
+        "opus_test.go",
+    ],
     embed = [":ogg"],
 )

@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "input",
+    srcs = [
+        "doc.go",
+        "jitter_buffer.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/input",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "input_test",
+    srcs = ["jitter_buffer_test.go"],
+    embed = [":input"],
+)

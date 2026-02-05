@@ -23,7 +23,7 @@ var rootCmd = &cobra.Command{
 	Short: "Chatgear device simulator",
 	Long: `geartest is a CLI tool to simulate a chatgear device.
 
-It provides a TUI interface and WebRTC-based audio I/O for testing
+It provides a web interface and WebRTC-based audio I/O for testing
 chatgear server implementations.
 
 Configuration is stored in ~/.giztoy/geartest/ and supports multiple contexts,
@@ -71,7 +71,6 @@ type GearConfig struct {
 	Namespace  string
 	WebPort    int
 	SysVersion string
-	Headless   bool
 }
 
 // DefaultGearConfig returns default configuration.
@@ -82,7 +81,6 @@ func DefaultGearConfig() *GearConfig {
 		Namespace:  "",
 		WebPort:    8088,
 		SysVersion: "0_zh",
-		Headless:   false,
 	}
 }
 
@@ -110,9 +108,6 @@ func LoadGearConfig(ctx *cli.Context) *GearConfig {
 	if v := ctx.GetExtra("sys_version"); v != "" {
 		cfg.SysVersion = v
 	}
-	if v := ctx.GetExtra("headless"); v == "true" {
-		cfg.Headless = true
-	}
 
 	return cfg
 }
@@ -124,9 +119,4 @@ func SaveGearConfig(ctx *cli.Context, cfg *GearConfig) {
 	ctx.SetExtra("namespace", cfg.Namespace)
 	ctx.SetExtra("web_port", fmt.Sprintf("%d", cfg.WebPort))
 	ctx.SetExtra("sys_version", cfg.SysVersion)
-	if cfg.Headless {
-		ctx.SetExtra("headless", "true")
-	} else {
-		ctx.SetExtra("headless", "false")
-	}
 }

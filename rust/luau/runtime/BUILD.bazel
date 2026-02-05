@@ -1,0 +1,23 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "runtime",
+    crate_name = "giztoy_luau_runtime",
+    srcs = glob(["src/**/*.rs"]),
+    edition = "2021",
+    deps = [
+        "//rust/luau",
+        "@crate_index//:serde_json",
+        "@crate_index//:tokio",
+        "@crate_index//:reqwest",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "runtime_test",
+    crate = ":runtime",
+    deps = [
+        "@crate_index//:tokio",
+    ],
+)

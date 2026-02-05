@@ -125,13 +125,13 @@ func TestBuffer_Next(t *testing.T) {
 	}
 	buf.CloseWrite()
 
-	// Next reads from the end (LIFO behavior as documented)
+	// Next reads from the beginning (FIFO order)
 	v, err := buf.Next()
 	if err != nil {
 		t.Fatalf("Next error: %v", err)
 	}
-	if v != 3 {
-		t.Fatalf("Next() = %d, want 3", v)
+	if v != 1 {
+		t.Fatalf("Next() = %d, want 1", v)
 	}
 
 	v, err = buf.Next()
@@ -146,8 +146,8 @@ func TestBuffer_Next(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Next error: %v", err)
 	}
-	if v != 1 {
-		t.Fatalf("Next() = %d, want 1", v)
+	if v != 3 {
+		t.Fatalf("Next() = %d, want 3", v)
 	}
 
 	// Next should return ErrIteratorDone

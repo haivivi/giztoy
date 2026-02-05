@@ -3,10 +3,14 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/rand/v2"
 	"sync"
+	"sync/atomic"
 
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/opus"
+	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v3"
 )
@@ -245,4 +249,179 @@ func ParseOfferRequest(data []byte) (*OfferRequest, error) {
 // MarshalAnswerResponse creates JSON answer response.
 func MarshalAnswerResponse(sdp string) ([]byte, error) {
 	return json.Marshal(AnswerResponse{SDP: sdp})
+}
+
+// =============================================================================
+// WebRTCMic - implements chatgear.Mic interface
+// =============================================================================
+
+const (
+	webrtcSampleRate = 48000
+	webrtcChannels   = 1
+	webrtcFrameMs    = 20
+	webrtcFrameSize  = webrtcSampleRate * webrtcFrameMs / 1000 // 960 samples per 20ms
+)
+
+// WebRTCMic implements chatgear.Mic interface, receiving audio from browser via WebRTC.
+type WebRTCMic struct {
+	bridge  *WebRTCBridge
+	decoder *opus.Decoder
+	format  pcm.Format
+
+	// Ring buffer for opus frames from WebRTC
+	opusChan chan []byte
+	closed   atomic.Bool
+}
+
+// NewWebRTCMic creates a new WebRTCMic.
+func NewWebRTCMic(bridge *WebRTCBridge) (*WebRTCMic, error) {
+	decoder, err := opus.NewDecoder(webrtcSampleRate, webrtcChannels)
+	if err != nil {
+		return nil, fmt.Errorf("create opus decoder: %w", err)
+	}
+
+	m := &WebRTCMic{
+		bridge:   bridge,
+		decoder:  decoder,
+		format:   pcm.L16Mono48K,
+		opusChan: make(chan []byte, 256),
+	}
+
+	// Set callback on bridge to receive audio
+	bridge.SetOnAudioReceived(m.onAudioReceived)
+
+	return m, nil
+}
+
+// onAudioReceived is called when opus data is received from WebRTC.
+func (m *WebRTCMic) onAudioReceived(opusData []byte) {
+	if m.closed.Load() {
+		return
+	}
+	select {
+	case m.opusChan <- opusData:
+		slog.Debug("WebRTCMic received opus frame", "len", len(opusData))
+	default:
+		slog.Warn("WebRTCMic buffer full, dropping frame")
+	}
+}
+
+// Read implements chatgear.Mic interface.
+// It reads opus from WebRTC, decodes to PCM, and returns.
+func (m *WebRTCMic) Read(pcmBuf []int16) (int, error) {
+	if m.closed.Load() {
+		return 0, io.EOF
+	}
+
+	// Wait for opus frame
+	opusData, ok := <-m.opusChan
+	if !ok {
+		return 0, io.EOF
+	}
+
+	// Decode opus to PCM bytes
+	pcmBytes, err := m.decoder.Decode(opusData)
+	if err != nil {
+		return 0, fmt.Errorf("decode opus: %w", err)
+	}
+
+	// Convert bytes to int16 samples
+	samples := len(pcmBytes) / 2
+	if samples > len(pcmBuf) {
+		samples = len(pcmBuf)
+	}
+
+	for i := 0; i < samples; i++ {
+		pcmBuf[i] = int16(pcmBytes[i*2]) | int16(pcmBytes[i*2+1])<<8
+	}
+
+	return samples, nil
+}
+
+// Format implements chatgear.Mic interface.
+func (m *WebRTCMic) Format() pcm.Format {
+	return m.format
+}
+
+// Close closes the mic.
+func (m *WebRTCMic) Close() error {
+	if m.closed.Swap(true) {
+		return nil
+	}
+	close(m.opusChan)
+	m.bridge.SetOnAudioReceived(nil)
+	m.decoder.Close()
+	return nil
+}
+
+// =============================================================================
+// WebRTCSpeaker - implements chatgear.Speaker interface
+// =============================================================================
+
+// WebRTCSpeaker implements chatgear.Speaker interface, sending audio to browser via WebRTC.
+type WebRTCSpeaker struct {
+	bridge  *WebRTCBridge
+	encoder *opus.Encoder
+	format  pcm.Format
+
+	// RTP sequence tracking
+	seqNum    uint32
+	timestamp uint32
+	closed    atomic.Bool
+}
+
+// NewWebRTCSpeaker creates a new WebRTCSpeaker.
+func NewWebRTCSpeaker(bridge *WebRTCBridge) (*WebRTCSpeaker, error) {
+	encoder, err := opus.NewVoIPEncoder(webrtcSampleRate, webrtcChannels)
+	if err != nil {
+		return nil, fmt.Errorf("create opus encoder: %w", err)
+	}
+
+	return &WebRTCSpeaker{
+		bridge:  bridge,
+		encoder: encoder,
+		format:  pcm.L16Mono48K,
+	}, nil
+}
+
+// Write implements chatgear.Speaker interface.
+// It encodes PCM to opus and sends to WebRTC.
+func (s *WebRTCSpeaker) Write(pcmBuf []int16) (int, error) {
+	if s.closed.Load() {
+		return 0, io.EOF
+	}
+
+	// Encode PCM to opus
+	opusData, err := s.encoder.Encode(pcmBuf, len(pcmBuf))
+	if err != nil {
+		return 0, fmt.Errorf("encode opus: %w", err)
+	}
+
+	if len(opusData) == 0 {
+		return len(pcmBuf), nil // DTX: no data to send
+	}
+
+	// Send via WebRTC
+	seqNum := uint16(atomic.AddUint32(&s.seqNum, 1))
+	timestamp := atomic.AddUint32(&s.timestamp, uint32(len(pcmBuf)))
+
+	if err := s.bridge.SendAudio(opusData, timestamp, seqNum); err != nil {
+		return 0, fmt.Errorf("send audio: %w", err)
+	}
+
+	return len(pcmBuf), nil
+}
+
+// Format implements chatgear.Speaker interface.
+func (s *WebRTCSpeaker) Format() pcm.Format {
+	return s.format
+}
+
+// Close closes the speaker.
+func (s *WebRTCSpeaker) Close() error {
+	if s.closed.Swap(true) {
+		return nil
+	}
+	s.encoder.Close()
+	return nil
 }

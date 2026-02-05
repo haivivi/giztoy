@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 giztoy-luau = { path = "../../luau" }
+giztoy-luau-runtime = { path = "../../luau/runtime" }
 serde_json = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }
-reqwest = { workspace = true }

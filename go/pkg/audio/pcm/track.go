@@ -43,7 +43,8 @@ func (tk *track) Write(chunk Chunk) error {
 
 // Read reads audio data from the track into p. It reads from input writers
 // sequentially, moving to the next input when the current one is exhausted.
-// Returns io.EOF when all inputs are exhausted.
+// Returns io.EOF when all inputs are exhausted and writing is closed.
+// Returns 0, nil when inputs are empty but writing is still open (no data yet).
 func (tk *track) Read(p []byte) (n int, err error) {
 	tk.mu.Lock()
 	defer tk.mu.Unlock()
@@ -54,7 +55,12 @@ func (tk *track) Read(p []byte) (n int, err error) {
 
 	for {
 		if len(tk.inputs) == 0 {
-			return 0, io.EOF
+			// No inputs yet - if writing is closed, return EOF; otherwise return 0, nil
+			// to indicate "no data available yet" without closing the track
+			if tk.closeWrite {
+				return 0, io.EOF
+			}
+			return 0, nil
 		}
 		head := tk.inputs[0]
 		rn, err := readFull(head, p)
@@ -94,19 +100,18 @@ func (tk *track) CloseWithError(err error) error {
 	return nil
 }
 
-// CloseWrite closes writing to the current input writer. This allows the
-// current input to be drained while preventing new data from being written
-// to it. A new input writer will be created automatically if Write is called
-// again with a different format.
+// CloseWrite closes writing to the track. This allows any remaining data
+// to be drained while preventing new data from being written.
+// After CloseWrite, Read will return io.EOF when all data is drained.
 func (tk *track) CloseWrite() error {
 	tk.mu.Lock()
 	defer tk.mu.Unlock()
-	if len(tk.inputs) == 0 {
-		return nil
+	tk.closeWrite = true
+	if len(tk.inputs) > 0 {
+		tk.inputs[len(tk.inputs)-1].CloseWrite()
 	}
-	err := tk.inputs[len(tk.inputs)-1].CloseWrite()
 	tk.mx.notifyWrite()
-	return err
+	return nil
 }
 
 // Close closes the track. It is equivalent to calling CloseWithError with

@@ -1,0 +1,17 @@
+{
+    "schema": "doubao/seed_tts/v2",
+    "type": "tts",
+    "app_id": "$bytedance_speech_app_id",
+    "token": "$bytedance_speech_access_token",
+    "voices": [
+        { "name": "doubao-pcm/xiaohe", "voice_id": "zh_female_xiaohe_uranus_bigtts", "desc": "小禾 - PCM 输出" },
+        { "name": "doubao-pcm/vv", "voice_id": "zh_female_vv_uranus_bigtts", "desc": "VV - PCM 输出" }
+    ],
+    "default_params": {
+        "format": "pcm",
+        "sample_rate": 24000,
+        "speed_ratio": 1.0,
+        "volume_ratio": 1.0,
+        "pitch_ratio": 1.0
+    }
+}

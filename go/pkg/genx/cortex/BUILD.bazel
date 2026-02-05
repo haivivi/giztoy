@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "cortex",
+    srcs = [
+        "atom.go",
+        "doc.go",
+        "stream.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/cortex",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/codec/opus",
+        "//go/pkg/audio/pcm",
+        "//go/pkg/buffer",
+        "//go/pkg/chatgear",
+        "//go/pkg/genx",
+    ],
+)

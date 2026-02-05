@@ -1,0 +1,27 @@
+{
+    "schema": "doubao/tts/v1",
+    "type": "tts",
+    "app_id": "$bytedance_speech_app_id",
+    "token": "$bytedance_speech_access_token",
+    "cluster": "volcano_tts",
+    "voices": [
+        { "name": "doubao/cancan", "voice_id": "zh_female_cancan", "desc": "灿灿 - 甜美活泼" },
+        { "name": "doubao/shuangshuang", "voice_id": "zh_female_shuangshuang", "desc": "爽爽 - 知性温柔" },
+        { "name": "doubao/qingxin", "voice_id": "zh_female_qingxin", "desc": "清新 - 清新自然" },
+        { "name": "doubao/tianmei", "voice_id": "zh_female_tianmei", "desc": "甜美 - 温柔甜美" },
+        { "name": "doubao/yangguang", "voice_id": "zh_male_yangguang", "desc": "阳光 - 阳光活力" },
+        { "name": "doubao/wenzhong", "voice_id": "zh_male_wenzhong", "desc": "稳重 - 成熟稳重" },
+        { "name": "doubao/qingsong", "voice_id": "zh_male_qingsong", "desc": "轻松 - 轻松随和" },
+        { "name": "doubao/en-sweet", "voice_id": "en_female_sweet", "desc": "Sweet - 甜美英音" },
+        { "name": "doubao/en-warm", "voice_id": "en_male_warm", "desc": "Warm - 温暖男声" },
+        { "name": "doubao/ja-warm", "voice_id": "ja_female_warm", "desc": "日语 - 温柔女声" },
+        { "name": "doubao/ko-sweet", "voice_id": "ko_female_sweet", "desc": "韩语 - 甜美女声" }
+    ],
+    "default_params": {
+        "format": "mp3",
+        "sample_rate": 16000,
+        "speed_ratio": 1.0,
+        "volume_ratio": 1.0,
+        "pitch_ratio": 1.0
+    }
+}

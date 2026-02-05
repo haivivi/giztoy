@@ -14,8 +14,8 @@ members = [
     "encoding",
     "trie",
     "chatgear",
-    "speech",
     "luau",
+    "luau/runtime",
     "cmd/dashscope",
     "cmd/minimax",
     "cmd/doubaospeech",
@@ -44,8 +44,8 @@ giztoy-jsontime = { path = "jsontime" }
 giztoy-encoding = { path = "encoding" }
 giztoy-trie = { path = "trie" }
 giztoy-chatgear = { path = "chatgear" }
-giztoy-speech = { path = "speech" }
 giztoy-luau = { path = "luau" }
+giztoy-luau-runtime = { path = "luau/runtime" }
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }

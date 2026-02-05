@@ -7,8 +7,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/haivivi/giztoy/go/pkg/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +17,6 @@ var (
 	flagNamespace  string
 	flagWebPort    int
 	flagSysVersion string
-	flagHeadless   bool
 )
 
 // runCmd represents the run command
@@ -42,7 +39,6 @@ func init() {
 	runCmd.Flags().StringVar(&flagNamespace, "namespace", "", "MQTT topic namespace")
 	runCmd.Flags().IntVar(&flagWebPort, "web", 0, "web control panel port")
 	runCmd.Flags().StringVar(&flagSysVersion, "version", "", "system version (format: version_lang)")
-	runCmd.Flags().BoolVar(&flagHeadless, "headless", false, "run without TUI (web only)")
 }
 
 func runSimulator(cmd *cobra.Command, args []string) error {
@@ -72,9 +68,6 @@ func runSimulator(cmd *cobra.Command, args []string) error {
 	if flagSysVersion != "" {
 		cfg.SysVersion = flagSysVersion
 	}
-	if flagHeadless {
-		cfg.Headless = true
-	}
 
 	// Validate required fields
 	if cfg.GearID == "" {
@@ -83,20 +76,10 @@ func runSimulator(cmd *cobra.Command, args []string) error {
 			"  geartest config context use dev")
 	}
 
-	// Create log writer for TUI (or use stdout in headless mode)
-	var logWriter *cli.LogWriter
-	if cfg.Headless {
-		// In headless mode, use slog with text handler to stdout
-		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
-		})))
-	} else {
-		logWriter = cli.NewLogWriter(100)
-		// Create a custom slog handler that writes to the LogWriter
-		slog.SetDefault(slog.New(slog.NewTextHandler(logWriter, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
-		})))
-	}
+	// Setup logging to stdout (Debug level for audio troubleshooting)
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	})))
 
 	// Create simulator
 	sim := NewSimulator(SimulatorConfig{
@@ -110,33 +93,17 @@ func runSimulator(cmd *cobra.Command, args []string) error {
 
 	// Start web control panel
 	webServer := NewWebServer(sim, cfg.WebPort)
+	sim.SetWebServer(webServer) // Connect simulator to web server for log forwarding
 	webServer.Start()
 	fmt.Printf("Web control panel: http://localhost:%d\n", cfg.WebPort)
 	fmt.Println("Device is OFF. Use web UI to power on and control.")
+	fmt.Println("Press Ctrl+C to exit")
 
 	defer sim.Stop()
 
-	if cfg.Headless {
-		// Headless mode: control via web UI only
-		fmt.Println("Running in headless mode. Use web UI to control.")
-		fmt.Println("Press Ctrl+C to exit")
-
-		// Wait for interrupt signal
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-		<-sigCh
-		return nil
-	}
-
-	// Run TUI
-	p := tea.NewProgram(
-		NewTUIModel(sim, logWriter),
-		tea.WithAltScreen(),
-	)
-
-	if _, err := p.Run(); err != nil {
-		return fmt.Errorf("run TUI: %w", err)
-	}
-
+	// Wait for interrupt signal
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
 	return nil
 }

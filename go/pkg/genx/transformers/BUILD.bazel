@@ -1,0 +1,31 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "transformers",
+    srcs = [
+        "codec_mp3_to_ogg.go",
+        "dashscope_realtime.go",
+        "doc.go",
+        "doubao_asr_sauc.go",
+        "doubao_realtime.go",
+        "doubao_tts_icl_v2.go",
+        "doubao_tts_seed_v2.go",
+        "minimax_tts.go",
+        "mux.go",
+        "mux_asr.go",
+        "mux_tts.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/transformers",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/codec/mp3",
+        "//go/pkg/audio/codec/ogg",
+        "//go/pkg/audio/codec/opus",
+        "//go/pkg/buffer",
+        "//go/pkg/dashscope",
+        "//go/pkg/doubaospeech",
+        "//go/pkg/genx",
+        "//go/pkg/minimax",
+        "//go/pkg/trie",
+    ],
+)

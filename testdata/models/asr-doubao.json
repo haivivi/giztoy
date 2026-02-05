@@ -1,0 +1,16 @@
+{
+    "schema": "doubao/sauc/v2",
+    "type": "asr",
+    "app_id": "$bytedance_speech_app_id",
+    "token": "$bytedance_speech_access_token",
+    "models": [
+        { "name": "doubao/stream", "resource_id": "volc.bigasr.sauc.duration", "desc": "流式语音识别 (时长版)" },
+        { "name": "doubao/stream-concur", "resource_id": "volc.bigasr.sauc.concurrent", "desc": "流式语音识别 (并发版)" }
+    ],
+    "default_params": {
+        "format": "pcm",
+        "sample_rate": 16000,
+        "bits": 16,
+        "channel": 1
+    }
+}

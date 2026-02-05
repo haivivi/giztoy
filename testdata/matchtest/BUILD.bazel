@@ -7,10 +7,3 @@ filegroup(
     srcs = glob(["rules/**"]),
     visibility = ["//visibility:public"],
 )
-
-# Model configurations (API keys, endpoints)
-filegroup(
-    name = "models",
-    srcs = glob(["models/**"]),
-    visibility = ["//visibility:public"],
-)

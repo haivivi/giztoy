@@ -1,0 +1,8 @@
+# LLM generator model configurations.
+# Used by matchtest benchmark and other LLM integration tests.
+
+filegroup(
+    name = "models",
+    srcs = glob(["*.json"]),
+    visibility = ["//visibility:public"],
+)

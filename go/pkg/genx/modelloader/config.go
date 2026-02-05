@@ -47,10 +47,35 @@ func (t *verboseTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 }
 
 type ConfigFile struct {
-	Kind    string  `json:"kind" yaml:"kind"`
-	APIKey  string  `json:"api_key" yaml:"api_key"`     // Can be env var name like "$OPENAI_API_KEY" or "${OPENAI_API_KEY}"
-	BaseURL string  `json:"base_url,omitzero" yaml:"base_url,omitzero"`
-	Models  []Entry `json:"models" yaml:"models"`
+	// New unified format
+	Schema string `json:"schema,omitzero" yaml:"schema,omitzero"` // e.g., "openai/chat/v1", "doubao/seed_tts/v2"
+	Type   string `json:"type,omitzero" yaml:"type,omitzero"`     // "generator", "tts", "asr", "realtime"
+
+	// Legacy format (for backward compatibility)
+	Kind string `json:"kind,omitzero" yaml:"kind,omitzero"` // "openai", "gemini"
+
+	// Common fields
+	APIKey  string `json:"api_key,omitzero" yaml:"api_key,omitzero"` // Can be env var name like "$OPENAI_API_KEY"
+	BaseURL string `json:"base_url,omitzero" yaml:"base_url,omitzero"`
+
+	// Generator specific
+	Models []Entry `json:"models,omitzero" yaml:"models,omitzero"`
+
+	// TTS specific
+	AppID         string            `json:"app_id,omitzero" yaml:"app_id,omitzero"`
+	Token         string            `json:"token,omitzero" yaml:"token,omitzero"`
+	Cluster       string            `json:"cluster,omitzero" yaml:"cluster,omitzero"`
+	Model         string            `json:"model,omitzero" yaml:"model,omitzero"` // For TTS model like "speech-02-hd"
+	Voices        []VoiceEntry      `json:"voices,omitzero" yaml:"voices,omitzero"`
+	DefaultParams map[string]any    `json:"default_params,omitzero" yaml:"default_params,omitzero"`
+}
+
+// VoiceEntry represents a TTS voice configuration.
+type VoiceEntry struct {
+	Name    string `json:"name" yaml:"name"`       // Registration name, e.g., "doubao/cancan"
+	VoiceID string `json:"voice_id" yaml:"voice_id"` // Actual voice ID, e.g., "zh_female_cancan"
+	Desc    string `json:"desc,omitzero" yaml:"desc,omitzero"`
+	Cluster string `json:"cluster,omitzero" yaml:"cluster,omitzero"` // Override cluster for this voice
 }
 
 type Entry struct {
@@ -63,10 +88,16 @@ type Entry struct {
 	SupportTextOnly   bool              `json:"support_text_only,omitzero" yaml:"support_text_only,omitzero"`
 	UseSystemRole     bool              `json:"use_system_role,omitzero" yaml:"use_system_role,omitzero"`
 	ExtraFields       map[string]any    `json:"extra_fields,omitzero" yaml:"extra_fields,omitzero"`
+
+	// ASR/Realtime specific fields
+	Voice      string `json:"voice,omitzero" yaml:"voice,omitzero"`           // Voice ID for realtime
+	ResourceID string `json:"resource_id,omitzero" yaml:"resource_id,omitzero"` // Resource ID for ASR
+	Desc       string `json:"desc,omitzero" yaml:"desc,omitzero"`             // Description
 }
 
 // LoadFromDir loads model configs from dir recursively and registers generators.
 // Returns the registered model names.
+// Configs with missing credentials (empty API key/token after env expansion) are skipped.
 func LoadFromDir(dir string) ([]string, error) {
 	var names []string
 
@@ -87,6 +118,13 @@ func LoadFromDir(dir string) ([]string, error) {
 		}
 		fileNames, err := registerConfig(*cfg)
 		if err != nil {
+			// Skip configs with missing credentials
+			if strings.Contains(err.Error(), "is required") {
+				if Verbose {
+					fmt.Printf("skipping %s: %v\n", path, err)
+				}
+				return nil
+			}
 			return fmt.Errorf("register %s: %w", path, err)
 		}
 		names = append(names, fileNames...)
@@ -119,9 +157,17 @@ func parseConfig(path string) (*ConfigFile, error) {
 }
 
 func registerConfig(cfg ConfigFile) ([]string, error) {
-	// Expand environment variables in API key
+	// Expand environment variables
 	cfg.APIKey = expandEnv(cfg.APIKey)
+	cfg.AppID = expandEnv(cfg.AppID)
+	cfg.Token = expandEnv(cfg.Token)
 
+	// New unified format: use schema + type
+	if cfg.Schema != "" {
+		return registerBySchema(cfg)
+	}
+
+	// Legacy format: use kind
 	switch strings.ToLower(cfg.Kind) {
 	case "openai":
 		return registerOpenAI(cfg)
@@ -129,6 +175,42 @@ func registerConfig(cfg ConfigFile) ([]string, error) {
 		return registerGemini(cfg)
 	default:
 		return nil, fmt.Errorf("unknown kind: %s", cfg.Kind)
+	}
+}
+
+func registerBySchema(cfg ConfigFile) ([]string, error) {
+	// Schema format: {provider}/{subject}/{version}
+	// e.g., "openai/chat/v1", "doubao/seed_tts/v2", "minimax/speech/v1"
+
+	switch cfg.Type {
+	case "generator":
+		return registerGeneratorBySchema(cfg)
+	case "tts":
+		return registerTTSBySchema(cfg)
+	case "asr":
+		return registerASRBySchema(cfg)
+	case "realtime":
+		return registerRealtimeBySchema(cfg)
+	default:
+		return nil, fmt.Errorf("unknown type: %s", cfg.Type)
+	}
+}
+
+func registerGeneratorBySchema(cfg ConfigFile) ([]string, error) {
+	// Parse schema to determine provider
+	parts := strings.Split(cfg.Schema, "/")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("invalid schema: %s", cfg.Schema)
+	}
+	provider := parts[0]
+
+	switch provider {
+	case "openai":
+		return registerOpenAI(cfg)
+	case "gemini":
+		return registerGemini(cfg)
+	default:
+		return nil, fmt.Errorf("unknown generator provider: %s", provider)
 	}
 }
 

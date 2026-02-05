@@ -1,12 +1,17 @@
 package chatgear
 
 import (
-	"context"
 	"iter"
 	"time"
 
-	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
+	"github.com/haivivi/giztoy/go/pkg/audio/codec/opus"
 )
+
+// StampedOpusFrame represents an opus frame with its timestamp.
+type StampedOpusFrame struct {
+	Timestamp time.Time
+	Frame     opus.Frame
+}
 
 // =============================================================================
 // Uplink: Client -> Server
@@ -14,14 +19,14 @@ import (
 
 // UplinkTx is the client-side transmitter for sending data to the server.
 type UplinkTx interface {
-	// SendOpusFrames sends opus frames to the server.
-	SendOpusFrames(ctx context.Context, stamp opusrt.EpochMillis, frames ...[]byte) error
+	// SendOpusFrame sends an opus frame to the server.
+	SendOpusFrame(timestamp time.Time, frame opus.Frame) error
 
 	// SendState sends a state event to the server.
-	SendState(ctx context.Context, state *GearStateEvent) error
+	SendState(state *StateEvent) error
 
 	// SendStats sends a stats event to the server.
-	SendStats(ctx context.Context, stats *GearStatsEvent) error
+	SendStats(stats *StatsEvent) error
 
 	// Close closes the uplink.
 	Close() error
@@ -30,16 +35,16 @@ type UplinkTx interface {
 // UplinkRx is the server-side receiver for data from the client.
 type UplinkRx interface {
 	// OpusFrames returns an iterator for opus frames from the client.
-	OpusFrames() iter.Seq2[[]byte, error]
+	OpusFrames() iter.Seq2[StampedOpusFrame, error]
 
 	// States returns an iterator for state events from the client.
-	States() iter.Seq2[*GearStateEvent, error]
+	States() iter.Seq2[*StateEvent, error]
 
 	// Stats returns an iterator for stats events from the client.
-	Stats() iter.Seq2[*GearStatsEvent, error]
+	Stats() iter.Seq2[*StatsEvent, error]
 
-	// GearStats returns the latest gear stats from the client.
-	GearStats() *GearStatsEvent
+	// LatestStats returns the latest stats from the client.
+	LatestStats() *StatsEvent
 
 	// Close closes the receiver.
 	Close() error
@@ -51,14 +56,11 @@ type UplinkRx interface {
 
 // DownlinkTx is the server-side transmitter for sending data to the client.
 type DownlinkTx interface {
-	// SendOpusFrames sends opus frames to the client.
-	SendOpusFrames(ctx context.Context, stamp opusrt.EpochMillis, frames ...[]byte) error
+	// SendOpusFrame sends an opus frame to the client.
+	SendOpusFrame(timestamp time.Time, frame opus.Frame) error
 
 	// IssueCommand issues a command to the client.
-	IssueCommand(ctx context.Context, cmd SessionCommand, t time.Time) error
-
-	// OpusEncodeOptions returns the opus encoding options for the connection.
-	OpusEncodeOptions() []opusrt.EncodePCMOption
+	IssueCommand(cmd Command, t time.Time) error
 
 	// Close closes the downlink.
 	Close() error
@@ -67,10 +69,10 @@ type DownlinkTx interface {
 // DownlinkRx is the client-side receiver for data from the server.
 type DownlinkRx interface {
 	// OpusFrames returns an iterator for opus frames from the server.
-	OpusFrames() iter.Seq2[[]byte, error]
+	OpusFrames() iter.Seq2[StampedOpusFrame, error]
 
 	// Commands returns an iterator for commands from the server.
-	Commands() iter.Seq2[*SessionCommandEvent, error]
+	Commands() iter.Seq2[*CommandEvent, error]
 
 	// Close closes the receiver.
 	Close() error

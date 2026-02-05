@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+    name = "dashscope_realtime",
+    srcs = ["main.go"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/dashscope",
+        "//go/pkg/doubaospeech",
+        "//go/pkg/genx",
+        "//go/pkg/genx/transformers",
+        "//examples/go/genx/transformers/internal",
+        "//go/pkg/minimax",
+    ],
+)

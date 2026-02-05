@@ -1,0 +1,80 @@
+{
+    "schema": "openai/chat/v1",
+    "type": "generator",
+    "api_key": "$DOUBAO_API_KEY",
+    "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+    "models": [
+        {
+            "name": "doubao/1.5-lite-32k",
+            "model": "ep-20250128023034-7vjnh",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            }
+        },
+        {
+            "name": "doubao/1.5-pro-32k",
+            "model": "ep-20250325192912-rjrkk",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            }
+        },
+        {
+            "name": "doubao/1.6-flash",
+            "model": "ep-20250128023034-7vjnh",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            }
+        },
+        {
+            "name": "doubao/1.8",
+            "model": "ep-20260114224803-q89x2",
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 2048,
+                "temperature": 1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1,
+                "frequency_penalty": 0
+            }
+        }
+    ]
+}

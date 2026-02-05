@@ -3,8 +3,19 @@ package minimax
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"iter"
+	"log/slog"
+	"strings"
 )
+
+func truncateStr(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
+}
 
 // SpeechService provides speech synthesis operations.
 type SpeechService struct {
@@ -86,33 +97,98 @@ func (s *SpeechService) SynthesizeStream(ctx context.Context, req *SpeechRequest
 			Stream:        true,
 		}
 
+		slog.Debug("MiniMax SynthesizeStream starting", "model", req.Model, "text_len", len(req.Text))
+
 		resp, err := s.client.http.requestStream(ctx, "POST", "/v1/t2a_v2", streamReq)
 		if err != nil {
+			slog.Debug("MiniMax SynthesizeStream request error", "err", err)
 			yield(nil, err)
+			return
+		}
+
+		contentType := resp.Header.Get("Content-Type")
+		slog.Debug("MiniMax SynthesizeStream response", "status", resp.StatusCode, "content_type", contentType)
+
+		// Check if this is NOT a streaming response
+		if !strings.Contains(contentType, "event-stream") {
+			// Non-streaming response - read and parse JSON directly
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				yield(nil, fmt.Errorf("read response: %w", err))
+				return
+			}
+			slog.Debug("MiniMax non-streaming response", "body_len", len(body), "body_preview", truncateStr(string(body), 200))
+
+			var jsonResp struct {
+				Data struct {
+					Audio string `json:"audio"`
+				} `json:"data"`
+				ExtraInfo *AudioInfo `json:"extra_info,omitempty"`
+				TraceID   string     `json:"trace_id,omitempty"`
+				BaseResp  *baseResp  `json:"base_resp,omitempty"`
+			}
+			if err := json.Unmarshal(body, &jsonResp); err != nil {
+				yield(nil, fmt.Errorf("unmarshal response: %w", err))
+				return
+			}
+
+			// Check for API error
+			if jsonResp.BaseResp != nil && jsonResp.BaseResp.StatusCode != 0 {
+				yield(nil, &Error{
+					StatusCode: jsonResp.BaseResp.StatusCode,
+					StatusMsg:  jsonResp.BaseResp.StatusMsg,
+				})
+				return
+			}
+
+			// Decode audio
+			if jsonResp.Data.Audio != "" {
+				audio, err := decodeHexAudio(jsonResp.Data.Audio)
+				if err != nil {
+					yield(nil, fmt.Errorf("decode audio: %w", err))
+					return
+				}
+				chunk := &SpeechChunk{
+					ExtraInfo: jsonResp.ExtraInfo,
+					TraceID:   jsonResp.TraceID,
+					Audio:     audio,
+				}
+				slog.Debug("MiniMax audio from JSON", "audio_len", len(audio))
+				yield(chunk, nil)
+			}
 			return
 		}
 
 		reader := newSSEReader(resp)
 		defer reader.close()
 
+		eventCount := 0
 		for {
 			data, done, err := reader.readEvent()
 			if err != nil {
+				slog.Debug("MiniMax SSE read error", "err", err)
 				yield(nil, err)
 				return
 			}
 			if done {
+				slog.Debug("MiniMax SSE done", "events", eventCount)
 				return
 			}
 
+			eventCount++
+			slog.Debug("MiniMax SSE event", "count", eventCount, "data_len", len(data))
+
 			var streamResp speechStreamResponse
 			if err := json.Unmarshal(data, &streamResp); err != nil {
+				slog.Debug("MiniMax SSE unmarshal error", "err", err, "data", string(data))
 				yield(nil, err)
 				return
 			}
 
 			// Check for API error
 			if streamResp.BaseResp != nil && streamResp.BaseResp.StatusCode != 0 {
+				slog.Debug("MiniMax API error", "code", streamResp.BaseResp.StatusCode, "msg", streamResp.BaseResp.StatusMsg)
 				yield(nil, &Error{
 					StatusCode: streamResp.BaseResp.StatusCode,
 					StatusMsg:  streamResp.BaseResp.StatusMsg,
@@ -128,13 +204,16 @@ func (s *SpeechService) SynthesizeStream(ctx context.Context, req *SpeechRequest
 			}
 
 			// Decode hex audio if present
-			if streamResp.Data.Audio != "" {
+			// Note: status=2 contains the COMPLETE audio file (not incremental),
+			// so we skip it to avoid duplication when streaming
+			if streamResp.Data.Audio != "" && streamResp.Data.Status != 2 {
 				audio, err := decodeHexAudio(streamResp.Data.Audio)
 				if err != nil {
 					yield(nil, err)
 					return
 				}
 				chunk.Audio = audio
+				slog.Debug("MiniMax audio chunk", "audio_len", len(audio))
 			}
 
 			if !yield(chunk, nil) {

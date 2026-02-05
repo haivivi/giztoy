@@ -126,9 +126,6 @@ Examples:
 		if cmd.Flags().Changed("version") {
 			gearCfg.SysVersion, _ = cmd.Flags().GetString("version")
 		}
-		if cmd.Flags().Changed("headless") {
-			gearCfg.Headless, _ = cmd.Flags().GetBool("headless")
-		}
 
 		// Save gear config to context
 		SaveGearConfig(ctx, gearCfg)
@@ -196,7 +193,6 @@ var contextShowCmd = &cobra.Command{
 		fmt.Printf("Namespace:    %s\n", valueOrNotSet(cfg.Namespace))
 		fmt.Printf("Web Port:     %d\n", cfg.WebPort)
 		fmt.Printf("Sys Version:  %s\n", cfg.SysVersion)
-		fmt.Printf("Headless:     %v\n", cfg.Headless)
 		fmt.Println()
 		fmt.Printf("Config file: %s\n", globalConfig.Path())
 
@@ -243,5 +239,4 @@ func init() {
 	contextSetCmd.Flags().String("namespace", "", "MQTT topic namespace")
 	contextSetCmd.Flags().Int("web", 8088, "web control panel port")
 	contextSetCmd.Flags().String("version", "0_zh", "system version")
-	contextSetCmd.Flags().Bool("headless", false, "run without TUI")
 }

@@ -1,0 +1,55 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "runtime",
+    srcs = [
+        "agent.go",
+        "builtin_cache.go",
+        "builtin_env.go",
+        "builtin_generate.go",
+        "builtin_http.go",
+        "builtin_json.go",
+        "builtin_kvs.go",
+        "builtin_log.go",
+        "builtin_require.go",
+        "builtin_sleep.go",
+        "builtin_time.go",
+        "builtin_timeout.go",
+        "builtin_transformer.go",
+        "builtin_uuid.go",
+        "context.go",
+        "promise.go",
+        "runtime.go",
+        "stream.go",
+        "tool.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/luau/runtime",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/luau",
+    ],
+)
+
+go_test(
+    name = "runtime_test",
+    srcs = [
+        "async_examples_test.go",
+        "benchmark_test.go",
+        "builtin_cache_test.go",
+        "builtin_generate_test.go",
+        "builtin_http_test.go",
+        "builtin_sleep_test.go",
+        "builtin_transformer_test.go",
+        "concurrency_test.go",
+        "context_test.go",
+        "runtime_test.go",
+        "stream_test.go",
+    ],
+    data = ["//testdata/luau/runtime:runtime_scripts"],
+    embed = [":runtime"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/luau",
+    ],
+)

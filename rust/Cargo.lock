@@ -1180,6 +1180,16 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "giztoy-luau",
+ "giztoy-luau-runtime",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "giztoy-luau-runtime"
+version = "0.1.0"
+dependencies = [
+ "giztoy-luau",
  "reqwest",
  "serde_json",
  "tokio",
@@ -1243,19 +1253,6 @@ dependencies = [
  "tokio-tungstenite 0.26.2",
  "tracing",
  "uuid",
-]
-
-[[package]]
-name = "giztoy-speech"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "giztoy-audio",
- "giztoy-trie",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tracing",
 ]
 
 [[package]]

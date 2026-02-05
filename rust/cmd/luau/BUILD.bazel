@@ -2,14 +2,14 @@ load("@rules_rust//rust:defs.bzl", "rust_binary")
 
 rust_binary(
     name = "luau",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = ["src/main.rs"],
     edition = "2021",
     deps = [
         "//rust/luau",
+        "//rust/luau/runtime",
         "@crate_index//:clap",
         "@crate_index//:serde_json",
         "@crate_index//:tokio",
-        "@crate_index//:reqwest",
     ],
     visibility = ["//visibility:public"],
 )

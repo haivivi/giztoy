@@ -530,24 +530,38 @@ func goExternalCallback(L *C.LuauState, callbackID C.uint64_t) C.int {
 	entry, ok := globalFuncs[id]
 	globalFuncsMu.RUnlock()
 
-	if !ok || entry.fn == nil || entry.state == nil {
+	if !ok || entry.fn == nil {
 		return 0
+	}
+
+	// Create a temporary State wrapper for the actual Lua state (L).
+	// This is important because the function might be called from a different
+	// lua_State than the one it was registered on (e.g., from a coroutine).
+	// We need to use L (the actual caller's state) for stack operations.
+	callerState := &State{
+		L: L,
+		// Note: funcIDs is empty since this is a temporary wrapper.
+		// We don't track function registrations here.
+	}
+	// Share the callback status with the original state
+	if entry.state != nil && entry.state.callbackSet.Load() {
+		callerState.callbackSet.Store(true)
 	}
 
 	// Call the Go function with panic recovery
 	var result int
 	func() {
-	defer func() {
-		if r := recover(); r != nil {
-			// On panic, we return 0 (no return values) and let the caller handle it.
-			// We intentionally do NOT push an error string onto the stack because
-			// returning 0 means "no values returned" - pushing a string would
-			// pollute the stack since Lua won't read it.
-			fmt.Fprintf(os.Stderr, "luau: panic in go callback: %v\n", r)
-			result = 0
-		}
-	}()
-		result = entry.fn(entry.state)
+		defer func() {
+			if r := recover(); r != nil {
+				// On panic, we return 0 (no return values) and let the caller handle it.
+				// We intentionally do NOT push an error string onto the stack because
+				// returning 0 means "no values returned" - pushing a string would
+				// pollute the stack since Lua won't read it.
+				fmt.Fprintf(os.Stderr, "luau: panic in go callback: %v\n", r)
+				result = 0
+			}
+		}()
+		result = entry.fn(callerState)
 	}()
 
 	return C.int(result)
@@ -695,7 +709,7 @@ type Thread struct {
 }
 
 // NewThread creates a new coroutine (thread).
-// The new thread is pushed onto the parent's stack.
+// The thread is stored in the registry to prevent GC until Close() is called.
 func (s *State) NewThread() (*Thread, error) {
 	if s.L == nil {
 		return nil, ErrInvalid
@@ -773,12 +787,11 @@ func (s *State) IsYieldable() bool {
 }
 
 // Close cleans up the thread.
-// Note: The thread's lua_State is managed by the parent, so we don't close it.
-// We only clean up the wrapper.
+// This releases the registry reference allowing Luau GC to collect the thread,
+// and frees the C++ wrapper.
 func (t *Thread) Close() {
-	if t.State != nil {
-		// Don't close the lua_State - it's owned by the parent
-		// Just clean up our wrapper
+	if t.State != nil && t.L != nil {
+		// Clean up Go-side registered functions first
 		t.funcIDsMu.Lock()
 		funcIDs := t.funcIDs
 		t.funcIDs = nil
@@ -792,6 +805,9 @@ func (t *Thread) Close() {
 			globalFuncsMu.Unlock()
 		}
 
+		// Call C to release registry reference and free wrapper.
+		// This allows Luau GC to collect the thread's lua_State.
+		C.luau_close_thread(t.L)
 		t.L = nil
 	}
 }

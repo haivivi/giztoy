@@ -473,6 +473,97 @@
             color: var(--text-dim);
             font-size: 11px;
         }
+
+        /* Log Panel */
+        .log-panel {
+            margin-top: 20px;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .log-header h2 {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .log-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .log-actions button {
+            padding: 6px 12px;
+            font-size: 11px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .log-actions button:hover {
+            border-color: var(--accent);
+        }
+
+        .log-content {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 12px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-content .log-line {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .log-content .log-line.info {
+            color: var(--accent);
+        }
+
+        .log-content .log-line.warn {
+            color: var(--warning);
+        }
+
+        .log-content .log-line.error {
+            color: var(--danger);
+        }
+
+        .log-content .log-line.debug {
+            color: var(--info);
+        }
+
+        .log-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .log-status .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .log-status.connected .dot {
+            background: var(--accent);
+        }
     </style>
 </head>
 
@@ -640,8 +731,26 @@
             </div>
         </div>
 
+        <!-- MQTT Log Panel -->
+        <div class="panel log-panel">
+            <div class="log-header">
+                <h2>MQTT Logs</h2>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div class="log-status" id="logStatus">
+                        <span class="dot"></span>
+                        <span id="logStatusText">Disconnected</span>
+                    </div>
+                    <div class="log-actions">
+                        <button onclick="copyLogs()">📋 Copy</button>
+                        <button onclick="clearLogs()">🗑️ Clear</button>
+                    </div>
+                </div>
+            </div>
+            <div class="log-content" id="logContent"></div>
+        </div>
+
         <div class="version-marker">
-            GearTest v2.2 · 2026-01-11 · Press <kbd>H</kbd> for help
+            GearTest v2.3 · 2026-02-02 · Press <kbd>H</kbd> for help
         </div>
     </div>
 
@@ -1081,6 +1190,83 @@
 
         // Initial fetch
         fetchStats();
+
+        // ========================================
+        // MQTT Log Streaming via SSE
+        // ========================================
+        let logEventSource = null;
+        const logContent = document.getElementById('logContent');
+        const logStatus = document.getElementById('logStatus');
+        const logStatusText = document.getElementById('logStatusText');
+        const maxLogLines = 500;
+
+        function connectLogStream() {
+            if (logEventSource) {
+                logEventSource.close();
+            }
+
+            logEventSource = new EventSource('/api/logs');
+
+            logEventSource.onopen = () => {
+                logStatus.classList.add('connected');
+                logStatusText.textContent = 'Connected';
+            };
+
+            logEventSource.onerror = () => {
+                logStatus.classList.remove('connected');
+                logStatusText.textContent = 'Disconnected';
+                // Reconnect after 2 seconds
+                setTimeout(connectLogStream, 2000);
+            };
+
+            logEventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'connected') {
+                        addLogLine('system', '--- Log stream connected ---');
+                        return;
+                    }
+                    addLogLine(data.type, data.msg);
+                } catch (e) {
+                    console.error('Log parse error:', e);
+                }
+            };
+        }
+
+        function addLogLine(type, msg) {
+            const line = document.createElement('div');
+            line.className = 'log-line ' + type;
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            line.textContent = `[${time}] ${msg}`;
+            logContent.appendChild(line);
+
+            // Trim old lines
+            while (logContent.children.length > maxLogLines) {
+                logContent.removeChild(logContent.firstChild);
+            }
+
+            // Auto-scroll to bottom
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        function copyLogs() {
+            const text = Array.from(logContent.children)
+                .map(el => el.textContent)
+                .join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Logs copied to clipboard');
+            }).catch(err => {
+                showToast('Copy failed: ' + err.message);
+            });
+        }
+
+        function clearLogs() {
+            logContent.innerHTML = '';
+            showToast('Logs cleared');
+        }
+
+        // Start log stream
+        connectLogStream();
     </script>
 </body>
 
