@@ -247,9 +247,8 @@ func (h *realtimeHandler) handleAudio(frame *chatgear.StampedOpusFrame) {
 	}
 }
 
-// resample48to16 resamples 48kHz mono PCM to 16kHz by taking every 3rd sample.
-// Input and output are little-endian int16 bytes.
 // resample48to16 resamples 48kHz mono PCM to 16kHz using high-quality resampling.
+// Input and output are little-endian int16 bytes.
 func resample48to16(pcm48k []byte) []byte {
 	if len(pcm48k) == 0 {
 		return nil

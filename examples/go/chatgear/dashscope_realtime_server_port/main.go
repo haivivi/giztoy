@@ -497,18 +497,23 @@ func (h *realtimeHandler) receiveEvents(ctx context.Context, session *dashscope.
 
 			// Audio chunk - write to track as PCM 24kHz mono
 			// Note: DashScope outputs 24kHz PCM
-			if len(event.Audio) > 0 && h.track != nil {
-				audioChunks++
-				audioBytesOut += len(event.Audio)
-				if audioChunks%20 == 0 {
-					log.Printf("[Event] Audio out: %d chunks, %d bytes (%.2fs @ 24kHz)",
-						audioChunks, audioBytesOut, float64(audioBytesOut)/48000.0)
-				}
-				chunk := pcm.L16Mono24K.DataChunk(event.Audio)
-				if err := h.track.Write(chunk); err != nil {
-					log.Printf("[Event] Track write error (type=%T): %v", err, err)
-				} else if audioChunks <= 3 {
-					log.Printf("[Event] Track write OK: chunk %d, %d bytes", audioChunks, len(event.Audio))
+			if len(event.Audio) > 0 {
+				h.mu.Lock()
+				track := h.track
+				h.mu.Unlock()
+				if track != nil {
+					audioChunks++
+					audioBytesOut += len(event.Audio)
+					if audioChunks%20 == 0 {
+						log.Printf("[Event] Audio out: %d chunks, %d bytes (%.2fs @ 24kHz)",
+							audioChunks, audioBytesOut, float64(audioBytesOut)/48000.0)
+					}
+					chunk := pcm.L16Mono24K.DataChunk(event.Audio)
+					if err := track.Write(chunk); err != nil {
+						log.Printf("[Event] Track write error (type=%T): %v", err, err)
+					} else if audioChunks <= 3 {
+						log.Printf("[Event] Track write OK: chunk %d, %d bytes", audioChunks, len(event.Audio))
+					}
 				}
 			}
 
@@ -560,8 +565,10 @@ func (h *realtimeHandler) newTrack() error {
 	if err != nil {
 		return err
 	}
+	h.mu.Lock()
 	h.track = track
 	h.trackCtrl = ctrl
+	h.mu.Unlock()
 	log.Println("[Track] New foreground track created (old track will fade out)")
 	return nil
 }
