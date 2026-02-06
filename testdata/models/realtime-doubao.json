@@ -1,0 +1,13 @@
+{
+    "schema": "doubao/dialog/v1",
+    "type": "realtime",
+    "app_id": "$bytedance_speech_app_id",
+    "token": "$bytedance_speech_access_token",
+    "models": [
+        { "name": "doubao/vv", "voice": "zh_female_vv_jupiter_bigtts", "desc": "VV - 女声实时对话" },
+        { "name": "doubao/yunzhou", "voice": "zh_male_yunzhou_jupiter_bigtts", "desc": "云州 - 男声实时对话" }
+    ],
+    "default_params": {
+        "sample_rate": 24000
+    }
+}

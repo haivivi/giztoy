@@ -224,15 +224,11 @@ func (b *Buffer[T]) CloseWrite() error {
 	return nil
 }
 
-// Next reads and returns the next element from the buffer.
+// Next reads and returns the next element from the buffer (FIFO order).
 //
 // This method implements the iterator pattern, reading one element at a time.
 // It blocks until an element is available in the buffer or the buffer is
 // closed.
-//
-// Note: The current implementation reads from the end of the buffer (LIFO
-// behavior) rather than the beginning (FIFO behavior). This may not be the
-// intended behavior for a typical buffer implementation.
 //
 // Returns the next element and any error encountered. If the buffer is closed
 // for writing and empty, returns ErrIteratorDone to signal the end of iteration.
@@ -256,9 +252,9 @@ func (b *Buffer[T]) Next() (t T, err error) {
 			return
 		}
 	}
-	head := len(b.buf) - 1
-	t = b.buf[head]
-	b.buf = b.buf[:head]
+	// FIFO: read from the beginning
+	t = b.buf[0]
+	b.buf = b.buf[1:]
 	return
 }
 
@@ -287,6 +283,11 @@ func (b *Buffer[T]) Add(t T) error {
 		return fmt.Errorf("buffer: write to closed buffer: %w", io.ErrClosedPipe)
 	}
 	b.buf = append(b.buf, t)
+	// Notify waiting readers
+	select {
+	case b.writeNotify <- struct{}{}:
+	default:
+	}
 	return nil
 }
 

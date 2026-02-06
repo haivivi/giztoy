@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "registry",
+    srcs = [
+        "memory.go",
+        "package.go",
+        "registry.go",
+        "require.go",
+        "upstream.go",
+        "version.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/luau/registry",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/luau",
+    ],
+)
+
+go_test(
+    name = "registry_test",
+    srcs = [
+        "registry_test.go",
+        "version_test.go",
+    ],
+    embed = [":registry"],
+)

@@ -9,37 +9,37 @@ import (
 	"github.com/haivivi/giztoy/go/pkg/jsontime"
 )
 
-// Ensure all command types implement SessionCommand.
+// Ensure all command types implement Command.
 var (
-	_ SessionCommand = (*Streaming)(nil)
-	_ SessionCommand = (*Reset)(nil)
-	_ SessionCommand = (*SetVolume)(nil)
-	_ SessionCommand = (*SetBrightness)(nil)
-	_ SessionCommand = (*SetLightMode)(nil)
-	_ SessionCommand = (*SetWifi)(nil)
-	_ SessionCommand = (*DeleteWifi)(nil)
-	_ SessionCommand = (*OTA)(nil)
-	_ SessionCommand = (*Raise)(nil)
-	_ SessionCommand = (*Halt)(nil)
+	_ Command = (*Streaming)(nil)
+	_ Command = (*Reset)(nil)
+	_ Command = (*SetVolume)(nil)
+	_ Command = (*SetBrightness)(nil)
+	_ Command = (*SetLightMode)(nil)
+	_ Command = (*SetWifi)(nil)
+	_ Command = (*DeleteWifi)(nil)
+	_ Command = (*OTA)(nil)
+	_ Command = (*Raise)(nil)
+	_ Command = (*Halt)(nil)
 )
 
-// SessionCommand is the interface for device commands.
-type SessionCommand interface {
-	isSessionCommand()
+// Command is the interface for device commands.
+type Command interface {
+	isCommand()
 	commandType() string
 }
 
-// SessionCommandEvent wraps a command with metadata.
-type SessionCommandEvent struct {
+// CommandEvent wraps a command with metadata.
+type CommandEvent struct {
 	Type    string         `json:"type"`
 	Time    jsontime.Milli `json:"time"`
-	Payload SessionCommand `json:"pld"`
+	Payload Command        `json:"pld"`
 	IssueAt jsontime.Milli `json:"issue_at"`
 }
 
-// NewSessionCommandEvent creates a new command event.
-func NewSessionCommandEvent(cmd SessionCommand, issueAt time.Time) *SessionCommandEvent {
-	return &SessionCommandEvent{
+// NewCommandEvent creates a new command event.
+func NewCommandEvent(cmd Command, issueAt time.Time) *CommandEvent {
+	return &CommandEvent{
 		Type:    cmd.commandType(),
 		Time:    jsontime.NowEpochMilli(),
 		Payload: cmd,
@@ -48,7 +48,7 @@ func NewSessionCommandEvent(cmd SessionCommand, issueAt time.Time) *SessionComma
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (sce *SessionCommandEvent) UnmarshalJSON(b []byte) error {
+func (e *CommandEvent) UnmarshalJSON(b []byte) error {
 	var v struct {
 		Type    string          `json:"type"`
 		Time    jsontime.Milli  `json:"time"`
@@ -58,7 +58,7 @@ func (sce *SessionCommandEvent) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &v); err != nil {
 		return err
 	}
-	var cmd SessionCommand
+	var cmd Command
 	switch v.Type {
 	case "streaming":
 		cmd = new(Streaming)
@@ -88,7 +88,7 @@ func (sce *SessionCommandEvent) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	*sce = SessionCommandEvent{
+	*e = CommandEvent{
 		Type:    v.Type,
 		Time:    v.Time,
 		Payload: cmd,
@@ -106,8 +106,8 @@ func NewStreaming(enabled bool) *Streaming {
 	return &s
 }
 
-func (*Streaming) isSessionCommand()    {}
-func (*Streaming) commandType() string  { return "streaming" }
+func (*Streaming) isCommand()          {}
+func (*Streaming) commandType() string { return "streaming" }
 
 func (s Streaming) MarshalJSON() ([]byte, error) {
 	return json.Marshal(bool(s))
@@ -127,8 +127,8 @@ type Reset struct {
 	Unpair bool `json:"unpair,omitempty"`
 }
 
-func (*Reset) isSessionCommand()    {}
-func (*Reset) commandType() string  { return "reset" }
+func (*Reset) isCommand()          {}
+func (*Reset) commandType() string { return "reset" }
 
 func (r Reset) MarshalJSON() ([]byte, error) {
 	if r == (Reset{}) {
@@ -162,8 +162,8 @@ type Raise struct {
 	Call bool `json:"call,omitempty"`
 }
 
-func (*Raise) isSessionCommand()    {}
-func (*Raise) commandType() string  { return "raise" }
+func (*Raise) isCommand()          {}
+func (*Raise) commandType() string { return "raise" }
 
 func (r Raise) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
@@ -191,8 +191,8 @@ type Halt struct {
 	Interrupt bool `json:"interrupt,omitempty"`
 }
 
-func (*Halt) isSessionCommand()    {}
-func (*Halt) commandType() string  { return "halt" }
+func (*Halt) isCommand()          {}
+func (*Halt) commandType() string { return "halt" }
 
 func (h Halt) MarshalJSON() ([]byte, error) {
 	if h == (Halt{}) {
@@ -240,8 +240,8 @@ func NewSetVolume(volume int) *SetVolume {
 	return &v
 }
 
-func (*SetVolume) isSessionCommand()    {}
-func (*SetVolume) commandType() string  { return "set_volume" }
+func (*SetVolume) isCommand()          {}
+func (*SetVolume) commandType() string { return "set_volume" }
 
 func (s SetVolume) MarshalJSON() ([]byte, error) {
 	return json.Marshal(int(s))
@@ -265,8 +265,8 @@ func NewSetBrightness(brightness int) *SetBrightness {
 	return &b
 }
 
-func (*SetBrightness) isSessionCommand()    {}
-func (*SetBrightness) commandType() string  { return "set_brightness" }
+func (*SetBrightness) isCommand()          {}
+func (*SetBrightness) commandType() string { return "set_brightness" }
 
 func (s SetBrightness) MarshalJSON() ([]byte, error) {
 	return json.Marshal(int(s))
@@ -290,8 +290,8 @@ func NewSetLightMode(mode string) *SetLightMode {
 	return &m
 }
 
-func (*SetLightMode) isSessionCommand()    {}
-func (*SetLightMode) commandType() string  { return "set_light_mode" }
+func (*SetLightMode) isCommand()          {}
+func (*SetLightMode) commandType() string { return "set_light_mode" }
 
 func (s SetLightMode) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(s))
@@ -313,14 +313,14 @@ type SetWifi struct {
 	Password string `json:"password"`
 }
 
-func (SetWifi) isSessionCommand()    {}
-func (SetWifi) commandType() string  { return "set_wifi" }
+func (SetWifi) isCommand()          {}
+func (SetWifi) commandType() string { return "set_wifi" }
 
 // DeleteWifi is a command to delete a stored WiFi network.
 type DeleteWifi string
 
-func (DeleteWifi) isSessionCommand()    {}
-func (DeleteWifi) commandType() string  { return "delete_wifi" }
+func (DeleteWifi) isCommand()          {}
+func (DeleteWifi) commandType() string { return "delete_wifi" }
 
 func (s DeleteWifi) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(s))
@@ -355,5 +355,5 @@ type ComponentOTA struct {
 	DataFileMD5 string `json:"data_file_md5,omitzero"`
 }
 
-func (*OTA) isSessionCommand()    {}
-func (*OTA) commandType() string  { return "ota_upgrade" }
+func (*OTA) isCommand()          {}
+func (*OTA) commandType() string { return "ota_upgrade" }

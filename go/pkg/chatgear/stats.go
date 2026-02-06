@@ -9,8 +9,8 @@ import (
 	"github.com/haivivi/giztoy/go/pkg/jsontime"
 )
 
-// GearStatsChanges represents changes to device statistics.
-type GearStatsChanges struct {
+// StatsChanges represents changes to device statistics.
+type StatsChanges struct {
 	Time jsontime.Milli
 
 	LastResetAt   *jsontime.Milli
@@ -27,32 +27,32 @@ type GearStatsChanges struct {
 	Shaking       *Shaking
 }
 
-// GearStatsEvent converts changes to a full stats event.
-func (gsc *GearStatsChanges) GearStatsEvent() *GearStatsEvent {
-	if gsc == nil {
+// StatsEvent converts changes to a full stats event.
+func (c *StatsChanges) StatsEvent() *StatsEvent {
+	if c == nil {
 		return nil
 	}
-	gse := &GearStatsEvent{
-		Time:          gsc.Time,
-		Battery:       gsc.Battery,
-		SystemVersion: gsc.SystemVersion,
-		Volume:        gsc.Volume,
-		Brightness:    gsc.Brightness,
-		LightMode:     gsc.LightMode,
-		WifiNetwork:   gsc.WifiNetwork,
-		WifiStore:     gsc.WifiStore,
-		ReadNFCTag:    gsc.ReadNFCTag,
-		PairStatus:    gsc.PairStatus,
-		Shaking:       gsc.Shaking,
+	e := &StatsEvent{
+		Time:          c.Time,
+		Battery:       c.Battery,
+		SystemVersion: c.SystemVersion,
+		Volume:        c.Volume,
+		Brightness:    c.Brightness,
+		LightMode:     c.LightMode,
+		WifiNetwork:   c.WifiNetwork,
+		WifiStore:     c.WifiStore,
+		ReadNFCTag:    c.ReadNFCTag,
+		PairStatus:    c.PairStatus,
+		Shaking:       c.Shaking,
 	}
-	if gsc.LastResetAt != nil {
-		gse.LastResetAt = *gsc.LastResetAt
+	if c.LastResetAt != nil {
+		e.LastResetAt = *c.LastResetAt
 	}
-	return gse
+	return e
 }
 
-// GearStatsEvent contains device statistics.
-type GearStatsEvent struct {
+// StatsEvent contains device statistics.
+type StatsEvent struct {
 	Time          jsontime.Milli     `json:"time"`
 	LastResetAt   jsontime.Milli     `json:"last_reset_at,omitzero"`
 	Battery       *Battery           `json:"battery,omitzero"`
@@ -184,21 +184,21 @@ type Shaking struct {
 }
 
 // Clone returns a deep copy of the stats event.
-func (gse *GearStatsEvent) Clone() *GearStatsEvent {
-	if gse == nil {
+func (e *StatsEvent) Clone() *StatsEvent {
+	if e == nil {
 		return nil
 	}
-	v := *gse
-	v.Battery = clonePtr(gse.Battery)
-	v.SystemVersion = gse.SystemVersion.clone()
-	v.Volume = clonePtr(gse.Volume)
-	v.Brightness = clonePtr(gse.Brightness)
-	v.LightMode = clonePtr(gse.LightMode)
-	v.WifiNetwork = gse.WifiNetwork.clone()
-	v.WifiStore = gse.WifiStore.clone()
-	v.ReadNFCTag = gse.ReadNFCTag.clone()
-	v.PairStatus = clonePtr(gse.PairStatus)
-	v.Shaking = clonePtr(gse.Shaking)
+	v := *e
+	v.Battery = clonePtr(e.Battery)
+	v.SystemVersion = e.SystemVersion.clone()
+	v.Volume = clonePtr(e.Volume)
+	v.Brightness = clonePtr(e.Brightness)
+	v.LightMode = clonePtr(e.LightMode)
+	v.WifiNetwork = e.WifiNetwork.clone()
+	v.WifiStore = e.WifiStore.clone()
+	v.ReadNFCTag = e.ReadNFCTag.clone()
+	v.PairStatus = clonePtr(e.PairStatus)
+	v.Shaking = clonePtr(e.Shaking)
 	return &v
 }
 
@@ -280,108 +280,108 @@ func (rnt *ReadNFCTag) UnmarshalJSON(data []byte) error {
 
 // MergeWith merges another stats event into this one.
 // Returns the changes if any fields were updated.
-func (gse *GearStatsEvent) MergeWith(other *GearStatsEvent) *GearStatsChanges {
-	if other.Time.Before(gse.Time) {
+func (e *StatsEvent) MergeWith(other *StatsEvent) *StatsChanges {
+	if other.Time.Before(e.Time) {
 		return nil
 	}
-	gse.Time = other.Time
+	e.Time = other.Time
 
-	var diff GearStatsChanges
+	var diff StatsChanges
 
-	if other.LastResetAt.After(gse.LastResetAt) {
-		gse.LastResetAt = other.LastResetAt
+	if other.LastResetAt.After(e.LastResetAt) {
+		e.LastResetAt = other.LastResetAt
 		v := other.LastResetAt
 		diff.LastResetAt = &v
 	}
 
 	switch {
 	case other.SystemVersion == nil:
-	case gse.SystemVersion == nil,
-		!other.SystemVersion.UpdateAt.Before(gse.SystemVersion.UpdateAt):
-		gse.SystemVersion = other.SystemVersion
+	case e.SystemVersion == nil,
+		!other.SystemVersion.UpdateAt.Before(e.SystemVersion.UpdateAt):
+		e.SystemVersion = other.SystemVersion
 		diff.SystemVersion = other.SystemVersion.clone()
 	}
 
 	switch {
 	case other.Volume == nil:
-	case gse.Volume == nil,
-		!other.Volume.UpdateAt.Before(gse.Volume.UpdateAt):
-		gse.Volume = other.Volume
+	case e.Volume == nil,
+		!other.Volume.UpdateAt.Before(e.Volume.UpdateAt):
+		e.Volume = other.Volume
 		diff.Volume = clonePtr(other.Volume)
 	}
 
 	switch {
 	case other.Brightness == nil:
-	case gse.Brightness == nil,
-		!other.Brightness.UpdateAt.Before(gse.Brightness.UpdateAt):
-		gse.Brightness = other.Brightness
+	case e.Brightness == nil,
+		!other.Brightness.UpdateAt.Before(e.Brightness.UpdateAt):
+		e.Brightness = other.Brightness
 		diff.Brightness = clonePtr(other.Brightness)
 	}
 
 	switch {
 	case other.LightMode == nil:
-	case gse.LightMode == nil,
-		!other.LightMode.UpdateAt.Before(gse.LightMode.UpdateAt):
-		gse.LightMode = other.LightMode
+	case e.LightMode == nil,
+		!other.LightMode.UpdateAt.Before(e.LightMode.UpdateAt):
+		e.LightMode = other.LightMode
 		diff.LightMode = clonePtr(other.LightMode)
 	}
 
 	switch {
 	case other.PairStatus == nil:
-	case gse.PairStatus == nil,
-		!other.PairStatus.UpdateAt.Before(gse.PairStatus.UpdateAt):
-		gse.PairStatus = other.PairStatus
+	case e.PairStatus == nil,
+		!other.PairStatus.UpdateAt.Before(e.PairStatus.UpdateAt):
+		e.PairStatus = other.PairStatus
 		diff.PairStatus = clonePtr(other.PairStatus)
 	}
 
 	switch {
 	case other.Battery == nil:
-	case !other.Battery.Equal(gse.Battery):
-		gse.Battery = other.Battery
+	case !other.Battery.Equal(e.Battery):
+		e.Battery = other.Battery
 		diff.Battery = clonePtr(other.Battery)
 	}
 
 	switch {
 	case other.WifiStore == nil:
-	case gse.WifiStore == nil,
-		!other.WifiStore.UpdateAt.Before(gse.WifiStore.UpdateAt):
-		gse.WifiStore = other.WifiStore
+	case e.WifiStore == nil,
+		!other.WifiStore.UpdateAt.Before(e.WifiStore.UpdateAt):
+		e.WifiStore = other.WifiStore
 		diff.WifiStore = other.WifiStore.clone()
 	}
 
 	switch {
 	case other.Cellular == nil:
-	case !gse.Cellular.Equal(other.Cellular):
-		gse.Cellular = other.Cellular
+	case !e.Cellular.Equal(other.Cellular):
+		e.Cellular = other.Cellular
 		diff.Cellular = other.Cellular.clone()
 	}
 
 	switch {
 	case other.WifiNetwork == nil:
-	case !gse.WifiNetwork.Equal(other.WifiNetwork):
-		gse.WifiNetwork = other.WifiNetwork
+	case !e.WifiNetwork.Equal(other.WifiNetwork):
+		e.WifiNetwork = other.WifiNetwork
 		diff.WifiNetwork = other.WifiNetwork.clone()
 	}
 
 	switch {
 	case other.ReadNFCTag == nil:
-	case !other.ReadNFCTag.Equal(gse.ReadNFCTag):
-		gse.ReadNFCTag = other.ReadNFCTag
+	case !other.ReadNFCTag.Equal(e.ReadNFCTag):
+		e.ReadNFCTag = other.ReadNFCTag
 		diff.ReadNFCTag = other.ReadNFCTag.clone()
 	}
 
 	switch {
 	case other.Shaking == nil:
-	case gse.Shaking == nil,
-		!other.Shaking.Equal(gse.Shaking):
-		gse.Shaking = other.Shaking
+	case e.Shaking == nil,
+		!other.Shaking.Equal(e.Shaking):
+		e.Shaking = other.Shaking
 		diff.Shaking = clonePtr(other.Shaking)
 	}
 
-	if diff == (GearStatsChanges{}) {
+	if diff == (StatsChanges{}) {
 		return nil
 	}
-	diff.Time = gse.Time
+	diff.Time = e.Time
 	return &diff
 }
 

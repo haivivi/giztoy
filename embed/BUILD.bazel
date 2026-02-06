@@ -1,7 +1,0 @@
-# Embedded development root BUILD file
-# Contains Zig-based ESP32 examples using embed-zig
-
-package(default_visibility = ["//visibility:public"])
-
-# Reference to external embed-zig repository for ESP-IDF Zig bindings
-# See MODULE.bazel for the http_archive configuration

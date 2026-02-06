@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "cortextest_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/go/cmd/cortextest",
+    visibility = ["//visibility:private"],
+    deps = ["//go/cmd/cortextest/commands"],
+)
+
+go_binary(
+    name = "cortextest",
+    embed = [":cortextest_lib"],
+    visibility = ["//visibility:public"],
+)

@@ -42,7 +42,7 @@ SCRIPT_DIR="$PROJECT_ROOT/go/cmd/genx/matchtest"
 BINARY="$PROJECT_ROOT/bazel-bin/go/cmd/genx/matchtest/matchtest_/matchtest"
 BAZEL_TARGET="//go/cmd/genx/matchtest"
 DEFAULT_RULES_DIR="$PROJECT_ROOT/testdata/matchtest/rules"
-DEFAULT_MODELS_DIR="$PROJECT_ROOT/testdata/matchtest/models"
+DEFAULT_MODELS_DIR="$PROJECT_ROOT/testdata/models"
 
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -106,7 +106,7 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -rules <dir>                   Rules directory (default: testdata/matchtest/rules)"
-    echo "  -models <dir>                  Models config directory (default: testdata/matchtest/models)"
+    echo "  -models <dir>                  Models config directory (default: testdata/models)"
     echo "  -tpl <file.gotmpl>             Custom prompt template file"
     echo "  -o <file.json>                 Save results to JSON file"
     echo "  -serve :8080                   Start web server after test"

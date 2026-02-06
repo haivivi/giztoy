@@ -1,16 +1,30 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "modelloader",
-    srcs = ["config.go"],
+    srcs = [
+        "asr.go",
+        "config.go",
+        "realtime.go",
+        "tts.go",
+    ],
     importpath = "github.com/haivivi/giztoy/go/pkg/genx/modelloader",
     visibility = ["//visibility:public"],
     deps = [
+        "//go/pkg/doubaospeech",
         "//go/pkg/genx",
         "//go/pkg/genx/generators",
+        "//go/pkg/genx/transformers",
+        "//go/pkg/minimax",
         "@com_github_goccy_go_yaml//:go-yaml",
         "@com_github_openai_openai_go//:openai-go",
         "@com_github_openai_openai_go//option",
         "@org_golang_google_genai//:genai",
     ],
+)
+
+go_test(
+    name = "modelloader_test",
+    srcs = ["config_test.go"],
+    embed = [":modelloader"],
 )

@@ -365,7 +365,8 @@ func (s *RealtimeSession) readLoop() {
 			}
 		}
 
-		// Check for error event
+		// Check for error event - handle as regular event, not fatal error
+		// This matches Rust SDK behavior: business errors don't close the session
 		if eventType == "error" {
 			var errorData struct {
 				Type  string `json:"type"`
@@ -373,16 +374,23 @@ func (s *RealtimeSession) readLoop() {
 					Type    string `json:"type"`
 					Code    string `json:"code"`
 					Message string `json:"message"`
+					Param   string `json:"param"`
 				} `json:"error"`
 			}
 			if err := json.Unmarshal(message, &errorData); err == nil {
+				event := &RealtimeEvent{
+					Type: EventTypeError,
+					Error: &EventError{
+						Type:    errorData.Error.Type,
+						Code:    errorData.Error.Code,
+						Message: errorData.Error.Message,
+						Param:   errorData.Error.Param,
+					},
+				}
 				select {
 				case <-s.closeCh:
 					return
-				case s.eventsCh <- eventOrError{err: &Error{
-					Code:    errorData.Error.Code,
-					Message: errorData.Error.Message,
-				}}:
+				case s.eventsCh <- eventOrError{event: event}:
 				}
 				continue
 			}

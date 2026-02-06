@@ -8,42 +8,42 @@ import (
 	"github.com/haivivi/giztoy/go/pkg/jsontime"
 )
 
-// GearState represents the state of a device.
-type GearState int
+// State represents the state of a device.
+type State int
 
 const (
-	GearUnknown GearState = iota
-	GearShuttingDown
-	GearSleeping
-	GearResetting
-	GearReady
-	GearRecording
-	GearWaitingForResponse
-	GearStreaming
-	GearCalling
-	GearInterrupted
+	StateUnknown State = iota
+	StateShuttingDown
+	StateSleeping
+	StateResetting
+	StateReady
+	StateRecording
+	StateWaitingForResponse
+	StateStreaming
+	StateCalling
+	StateInterrupted
 )
 
 // String returns the string representation of the state.
-func (gs GearState) String() string {
-	switch gs {
-	case GearShuttingDown:
+func (s State) String() string {
+	switch s {
+	case StateShuttingDown:
 		return "shutting_down"
-	case GearSleeping:
+	case StateSleeping:
 		return "sleeping"
-	case GearResetting:
+	case StateResetting:
 		return "resetting"
-	case GearReady:
+	case StateReady:
 		return "ready"
-	case GearRecording:
+	case StateRecording:
 		return "recording"
-	case GearWaitingForResponse:
+	case StateWaitingForResponse:
 		return "waiting_for_response"
-	case GearStreaming:
+	case StateStreaming:
 		return "streaming"
-	case GearCalling:
+	case StateCalling:
 		return "calling"
-	case GearInterrupted:
+	case StateInterrupted:
 		return "interrupted"
 	default:
 		return "unknown"
@@ -51,59 +51,59 @@ func (gs GearState) String() string {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (gs *GearState) UnmarshalJSON(b []byte) error {
+func (s *State) UnmarshalJSON(b []byte) error {
 	var name string
 	if err := json.Unmarshal(b, &name); err != nil {
 		return err
 	}
 	switch name {
 	case "shutting_down":
-		*gs = GearShuttingDown
+		*s = StateShuttingDown
 	case "sleeping":
-		*gs = GearSleeping
+		*s = StateSleeping
 	case "resetting":
-		*gs = GearResetting
+		*s = StateResetting
 	case "ready":
-		*gs = GearReady
+		*s = StateReady
 	case "recording":
-		*gs = GearRecording
+		*s = StateRecording
 	case "waiting_for_response":
-		*gs = GearWaitingForResponse
+		*s = StateWaitingForResponse
 	case "streaming":
-		*gs = GearStreaming
+		*s = StateStreaming
 	case "calling":
-		*gs = GearCalling
+		*s = StateCalling
 	case "interrupted":
-		*gs = GearInterrupted
+		*s = StateInterrupted
 	default:
-		*gs = GearUnknown
+		*s = StateUnknown
 	}
 	return nil
 }
 
 // MarshalJSON implements json.Marshaler.
-func (gs GearState) MarshalJSON() ([]byte, error) {
-	return json.Marshal(gs.String())
+func (s State) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }
 
-// GearStateEvent represents a state change event from the device.
-type GearStateEvent struct {
-	Version  int                   `json:"v"`
-	Time     jsontime.Milli        `json:"t"`
-	State    GearState             `json:"s"`
-	Cause    *GearStateChangeCause `json:"c,omitempty"`
-	UpdateAt jsontime.Milli        `json:"ut"`
+// StateEvent represents a state change event from the device.
+type StateEvent struct {
+	Version  int               `json:"v"`
+	Time     jsontime.Milli    `json:"t"`
+	State    State             `json:"s"`
+	Cause    *StateChangeCause `json:"c,omitempty"`
+	UpdateAt jsontime.Milli    `json:"ut"`
 }
 
-// GearStateChangeCause provides additional context for why a state changed.
-type GearStateChangeCause struct {
+// StateChangeCause provides additional context for why a state changed.
+type StateChangeCause struct {
 	CallingInitiated bool `json:"calling_initiated,omitempty"`
 	CallingResume    bool `json:"calling_resume,omitempty"`
 }
 
-// NewGearStateEvent creates a new GearStateEvent.
-func NewGearStateEvent(state GearState, updateAt time.Time) *GearStateEvent {
-	return &GearStateEvent{
+// NewStateEvent creates a new StateEvent.
+func NewStateEvent(state State, updateAt time.Time) *StateEvent {
+	return &StateEvent{
 		Version:  1,
 		Time:     jsontime.NowEpochMilli(),
 		State:    state,
@@ -112,13 +112,13 @@ func NewGearStateEvent(state GearState, updateAt time.Time) *GearStateEvent {
 }
 
 // Clone returns a deep copy of the event.
-func (gse *GearStateEvent) Clone() *GearStateEvent {
-	if gse == nil {
+func (e *StateEvent) Clone() *StateEvent {
+	if e == nil {
 		return nil
 	}
-	v := *gse
-	if gse.Cause != nil {
-		cause := *gse.Cause
+	v := *e
+	if e.Cause != nil {
+		cause := *e.Cause
 		v.Cause = &cause
 	}
 	return &v
@@ -126,27 +126,27 @@ func (gse *GearStateEvent) Clone() *GearStateEvent {
 
 // MergeWith merges another event into this one.
 // Returns true if the state changed.
-func (gse *GearStateEvent) MergeWith(other *GearStateEvent) bool {
+func (e *StateEvent) MergeWith(other *StateEvent) bool {
 	if other.Version != 1 {
 		return false
 	}
-	if other.Time.Before(gse.Time) {
+	if other.Time.Before(e.Time) {
 		return false
 	}
-	gse.Time = other.Time
-	gse.UpdateAt = other.UpdateAt
-	gse.Cause = other.Cause
-	if gse.State != other.State {
-		gse.State = other.State
+	e.Time = other.Time
+	e.UpdateAt = other.UpdateAt
+	e.Cause = other.Cause
+	if e.State != other.State {
+		e.State = other.State
 		return true
 	}
 	return false
 }
 
 // IsActive returns true if the device is in an active (non-idle) state.
-func (gs GearState) IsActive() bool {
-	switch gs {
-	case GearRecording, GearWaitingForResponse, GearStreaming, GearCalling:
+func (s State) IsActive() bool {
+	switch s {
+	case StateRecording, StateWaitingForResponse, StateStreaming, StateCalling:
 		return true
 	default:
 		return false
@@ -154,6 +154,6 @@ func (gs GearState) IsActive() bool {
 }
 
 // CanRecord returns true if the device can start recording in this state.
-func (gs GearState) CanRecord() bool {
-	return gs == GearReady || gs == GearStreaming
+func (s State) CanRecord() bool {
+	return s == StateReady || s == StateStreaming
 }

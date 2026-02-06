@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"iter"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -16,14 +18,37 @@ import (
 type RealtimeEventType int32
 
 const (
-	EventSessionStarted RealtimeEventType = 50
-	EventSessionFailed  RealtimeEventType = 51
-	EventSessionEnded   RealtimeEventType = 52
-	EventASRStarted     RealtimeEventType = 100
-	EventASRFinished    RealtimeEventType = 101
-	EventTTSStarted     RealtimeEventType = 102
-	EventTTSFinished    RealtimeEventType = 103
-	EventAudioReceived  RealtimeEventType = 104
+	// Connection events
+	EventConnectionStarted RealtimeEventType = 50
+	EventConnectionFailed  RealtimeEventType = 51
+	EventConnectionEnded   RealtimeEventType = 52
+
+	// Session events
+	EventSessionStarted RealtimeEventType = 150
+	EventSessionFinished RealtimeEventType = 152
+	EventSessionFailed  RealtimeEventType = 153
+	EventUsageResponse  RealtimeEventType = 154
+
+	// ASR events (per official API doc)
+	EventASRInfo     RealtimeEventType = 450 // First word detected (interrupt)
+	EventASRResponse RealtimeEventType = 451 // ASR text result
+	EventASREnded    RealtimeEventType = 459 // User speech ended
+
+	// TTS events
+	EventTTSStarted    RealtimeEventType = 350 // TTSSentenceStart
+	EventTTSSegmentEnd RealtimeEventType = 351 // TTSSentenceEnd
+	EventTTSAudioData  RealtimeEventType = 352 // TTSResponse (audio)
+	EventTTSFinished   RealtimeEventType = 359 // TTSEnded
+
+	// Chat/LLM events
+	EventChatResponse RealtimeEventType = 550 // Model text response
+	EventChatEnded    RealtimeEventType = 559 // Model response ended
+
+	// Legacy aliases
+	EventAudioReceived = EventTTSAudioData
+	EventSessionEnded  = EventSessionFinished // Alias for compatibility
+	EventASRStarted    = EventASRInfo         // Alias
+	EventASRFinished   = EventASREnded        // Alias
 )
 
 // RealtimeConfig represents realtime session configuration
@@ -104,6 +129,11 @@ func newRealtimeService(c *Client) *RealtimeService {
 //
 // This uses the endpoint: WSS /api/v3/realtime/dialogue
 // Resource ID: volc.speech.dialog
+//
+// The connection flow is:
+//  1. WebSocket connect
+//  2. Send StartConnection (event=1)
+//  3. Wait for ConnectionStarted (event=50)
 func (s *RealtimeService) Dial(ctx context.Context) (*RealtimeConnection, error) {
 	url := s.client.config.wsURL + "/api/v3/realtime/dialogue"
 	reqID := generateReqID()
@@ -125,10 +155,62 @@ func (s *RealtimeService) Dial(ctx context.Context) (*RealtimeConnection, error)
 		closeChan: make(chan struct{}),
 	}
 
-	// Start connection-level receive loop
-	go conn.receiveLoop()
+	// Send StartConnection (event=1)
+	startConnMsg := &message{
+		msgType: msgTypeFullClient,
+		flags:   msgFlagWithEvent,
+		event:   1, // StartConnection
+		payload: []byte("{}"),
+	}
+	data, err := conn.proto.marshal(startConnMsg)
+	if err != nil {
+		wsConn.Close()
+		return nil, wrapError(err, "marshal start connection")
+	}
+	if err := wsConn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+		wsConn.Close()
+		return nil, wrapError(err, "send start connection")
+	}
+
+	// Wait for ConnectionStarted (event=50)
+	wsConn.SetReadDeadline(timeFromContext(ctx))
+	_, respData, err := wsConn.ReadMessage()
+	if err != nil {
+		wsConn.Close()
+		return nil, wrapError(err, "read connection started")
+	}
+
+	respMsg, err := conn.proto.unmarshal(respData)
+	if err != nil {
+		wsConn.Close()
+		return nil, wrapError(err, "parse connection started")
+	}
+
+	if respMsg.event != 50 {
+		wsConn.Close()
+		if respMsg.msgType == msgTypeError {
+			return nil, wrapError(fmt.Errorf("event=%d payload=%s", respMsg.event, string(respMsg.payload)), "connection failed")
+		}
+		return nil, wrapError(fmt.Errorf("expected event=50, got %d", respMsg.event), "unexpected response")
+	}
+
+	// Store connect ID
+	conn.connectID = respMsg.connectID
+
+	// Clear read deadline
+	wsConn.SetReadDeadline(time.Time{})
+
+	// Note: receiveLoop is started after StartSession completes
 
 	return conn, nil
+}
+
+// timeFromContext extracts deadline from context, returns zero time if no deadline
+func timeFromContext(ctx context.Context) time.Time {
+	if deadline, ok := ctx.Deadline(); ok {
+		return deadline
+	}
+	return time.Now().Add(30 * time.Second) // default timeout
 }
 
 // Connect establishes connection and starts a session (convenience method)
@@ -148,35 +230,39 @@ func (s *RealtimeService) Connect(ctx context.Context, config *RealtimeConfig) (
 }
 
 func (s *RealtimeService) buildStartRequest(config *RealtimeConfig) map[string]any {
-	req := map[string]any{
+	return map[string]any{
 		"type": "start",
 		"data": map[string]any{
 			"session_id": generateReqID(),
-			"config": map[string]any{
-				"asr": map[string]any{
-					"extra": config.ASR.Extra,
-				},
-				"tts": map[string]any{
-					"speaker": config.TTS.Speaker,
-					"audio_config": map[string]any{
-						"channel":     config.TTS.AudioConfig.Channel,
-						"format":      config.TTS.AudioConfig.Format,
-						"sample_rate": config.TTS.AudioConfig.SampleRate,
-					},
-				},
-				"dialog": map[string]any{
-					"bot_name":           config.Dialog.BotName,
-					"system_role":        config.Dialog.SystemRole,
-					"speaking_style":     config.Dialog.SpeakingStyle,
-					"character_manifest": config.Dialog.CharacterManifest,
-					"extra":              config.Dialog.Extra,
-				},
+			"config":     s.buildSessionConfig(config),
+		},
+	}
+}
+
+func (s *RealtimeService) buildSessionConfig(config *RealtimeConfig) map[string]any {
+	cfg := map[string]any{
+		"asr": map[string]any{
+			"extra": config.ASR.Extra,
+		},
+		"tts": map[string]any{
+			"speaker": config.TTS.Speaker,
+			"audio_config": map[string]any{
+				"channel":     config.TTS.AudioConfig.Channel,
+				"format":      config.TTS.AudioConfig.Format,
+				"sample_rate": config.TTS.AudioConfig.SampleRate,
 			},
+		},
+		"dialog": map[string]any{
+			"bot_name":           config.Dialog.BotName,
+			"system_role":        config.Dialog.SystemRole,
+			"speaking_style":     config.Dialog.SpeakingStyle,
+			"character_manifest": config.Dialog.CharacterManifest,
+			"extra":              config.Dialog.Extra,
 		},
 	}
 
 	if config.Dialog.Location != nil {
-		req["data"].(map[string]any)["config"].(map[string]any)["dialog"].(map[string]any)["location"] = map[string]any{
+		cfg["dialog"].(map[string]any)["location"] = map[string]any{
 			"longitude":    config.Dialog.Location.Longitude,
 			"latitude":     config.Dialog.Location.Latitude,
 			"city":         config.Dialog.Location.City,
@@ -189,7 +275,7 @@ func (s *RealtimeService) buildStartRequest(config *RealtimeConfig) map[string]a
 		}
 	}
 
-	return req
+	return cfg
 }
 
 // ================== Connection Implementation ==================
@@ -202,6 +288,7 @@ type RealtimeConnection struct {
 	proto     *binaryProtocol
 	closeChan chan struct{}
 	closeOnce sync.Once
+	connectID string // Connection ID from server
 
 	// Current active session
 	sessionMu      sync.RWMutex
@@ -209,6 +296,10 @@ type RealtimeConnection struct {
 }
 
 // StartSession starts a new session on this connection
+//
+// The session flow is:
+//  1. Send StartSession (event=100) with session config
+//  2. Wait for SessionStarted (event=150)
 func (c *RealtimeConnection) StartSession(ctx context.Context, config *RealtimeConfig) (*RealtimeSession, error) {
 	c.sessionMu.Lock()
 	defer c.sessionMu.Unlock()
@@ -218,36 +309,70 @@ func (c *RealtimeConnection) StartSession(ctx context.Context, config *RealtimeC
 		c.currentSession.close()
 	}
 
+	// Generate session ID
+	sessionID := generateReqID()
+
 	session := &RealtimeSession{
 		conn:      c,
 		config:    config,
+		sessionID: sessionID,
 		recvChan:  make(chan *RealtimeEvent, 100),
 		errChan:   make(chan error, 1),
 		closeChan: make(chan struct{}),
 	}
 
-	// Send start request
-	startReq := c.service.buildStartRequest(config)
-	if err := c.conn.WriteJSON(startReq); err != nil {
-		return nil, wrapError(err, "send start request")
+	// Build session config payload
+	configPayload := c.service.buildSessionConfig(config)
+	payload, err := json.Marshal(configPayload)
+	if err != nil {
+		return nil, wrapError(err, "marshal config")
+	}
+
+	// Send StartSession (event=100) with session_id in protocol header
+	startMsg := &message{
+		msgType:   msgTypeFullClient,
+		flags:     msgFlagWithEvent,
+		event:     100, // StartSession
+		sessionID: sessionID,
+		payload:   payload,
+	}
+	data, err := c.proto.marshal(startMsg)
+	if err != nil {
+		return nil, wrapError(err, "marshal start session")
+	}
+	if err := c.conn.WriteMessage(websocket.BinaryMessage, data); err != nil {
+		return nil, wrapError(err, "send start session")
+	}
+
+	// Read response synchronously (before receiveLoop picks it up)
+	c.conn.SetReadDeadline(timeFromContext(ctx))
+	_, respData, err := c.conn.ReadMessage()
+	if err != nil {
+		return nil, wrapError(err, "read session response")
+	}
+	c.conn.SetReadDeadline(time.Time{}) // Clear deadline
+
+	// Parse response
+	respMsg, err := c.proto.unmarshal(respData)
+	if err != nil {
+		return nil, wrapError(err, "parse session response")
+	}
+
+	// Check for error response
+	if respMsg.isError() {
+		return nil, wrapError(fmt.Errorf("code=%d: %s", respMsg.errorCode, string(respMsg.payload)), "session failed")
+	}
+
+	// Check for SessionStarted (event=150)
+	if respMsg.event != 150 {
+		return nil, wrapError(fmt.Errorf("expected event=150, got %d", respMsg.event), "unexpected response")
 	}
 
 	// Set as current active session
 	c.currentSession = session
 
-	// Wait for connection confirmation (from receiveLoop)
-	select {
-	case event := <-session.recvChan:
-		if event != nil {
-			session.sessionID = event.SessionID
-		}
-	case err := <-session.errChan:
-		c.currentSession = nil
-		return nil, err
-	case <-ctx.Done():
-		c.currentSession = nil
-		return nil, ctx.Err()
-	}
+	// Start receive loop now that session is established
+	go c.receiveLoop()
 
 	return session, nil
 }
@@ -329,8 +454,22 @@ func (c *RealtimeConnection) dispatchError(err error) {
 func (c *RealtimeConnection) parseMessage(data []byte) *RealtimeEvent {
 	// Try to parse as binary protocol message
 	msg, err := c.proto.unmarshal(data)
-	if err == nil && msg.flags&msgFlagWithEvent != 0 {
-		return c.parseProtocolEvent(msg)
+	if err == nil {
+		// Handle error messages (msgType=15) regardless of flags
+		if msg.isError() {
+			return &RealtimeEvent{
+				Type:      EventSessionFailed,
+				SessionID: msg.sessionID,
+				Error: &Error{
+					Code:    int(msg.errorCode),
+					Message: string(msg.payload),
+				},
+			}
+		}
+		// Handle event messages
+		if msg.flags&msgFlagWithEvent != 0 {
+			return c.parseProtocolEvent(msg)
+		}
 	}
 
 	// Try to parse as JSON message
@@ -352,6 +491,7 @@ func (c *RealtimeConnection) parseProtocolEvent(msg *message) *RealtimeEvent {
 		// Try to parse info from payload
 		var payload struct {
 			Text      string `json:"text"`
+			Content   string `json:"content"` // ChatResponse uses this field
 			SessionID string `json:"session_id"`
 			DialogID  string `json:"dialog_id"`
 			ASRInfo   *struct {
@@ -362,6 +502,7 @@ func (c *RealtimeConnection) parseProtocolEvent(msg *message) *RealtimeEvent {
 			TTSInfo *struct {
 				TTSType string `json:"tts_type"`
 				Content string `json:"content"`
+				Text    string `json:"text"` // TTSSentenceStart uses text
 			} `json:"tts_info,omitempty"`
 		}
 
@@ -369,7 +510,12 @@ func (c *RealtimeConnection) parseProtocolEvent(msg *message) *RealtimeEvent {
 			if payload.SessionID != "" {
 				event.SessionID = payload.SessionID
 			}
-			event.Text = payload.Text
+			// Prefer content (ChatResponse) over text
+			if payload.Content != "" {
+				event.Text = payload.Content
+			} else {
+				event.Text = payload.Text
+			}
 			if payload.ASRInfo != nil {
 				event.ASRInfo = &RealtimeASRInfo{
 					Text:       payload.ASRInfo.Text,
@@ -381,6 +527,10 @@ func (c *RealtimeConnection) parseProtocolEvent(msg *message) *RealtimeEvent {
 				event.TTSInfo = &RealtimeTTSInfo{
 					TTSType: payload.TTSInfo.TTSType,
 					Content: payload.TTSInfo.Content,
+				}
+				// TTSSentenceStart may have text in tts_info.text
+				if payload.TTSInfo.Text != "" && event.Text == "" {
+					event.Text = payload.TTSInfo.Text
 				}
 			}
 		}
@@ -460,6 +610,28 @@ func (c *RealtimeConnection) writeJSON(v any) error {
 	return c.conn.WriteJSON(v)
 }
 
+// sendBinaryJSON wraps JSON data in binary protocol with event ID and sends it
+func (c *RealtimeConnection) sendBinaryJSON(v any) error {
+	jsonData, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Errorf("marshal json: %w", err)
+	}
+
+	// Create message with event=100 (StartSession)
+	msg := &message{
+		msgType: msgTypeFullClient,
+		flags:   msgFlagWithEvent,
+		event:   100, // StartSession event
+		payload: jsonData,
+	}
+	data, err := c.proto.marshal(msg)
+	if err != nil {
+		return fmt.Errorf("marshal binary: %w", err)
+	}
+
+	return c.conn.WriteMessage(websocket.BinaryMessage, data)
+}
+
 // writeMessage writes binary message (thread-safe via gorilla/websocket)
 func (c *RealtimeConnection) writeMessage(messageType int, data []byte) error {
 	return c.conn.WriteMessage(messageType, data)
@@ -486,11 +658,11 @@ func (s *RealtimeSession) SendAudio(ctx context.Context, audio []byte) error {
 		return wrapError(nil, "session closed")
 	}
 
-	// Build audio message
+	// Build audio message with TaskRequest event (200)
 	msg := &message{
 		msgType:   msgTypeAudioOnlyClient,
 		flags:     msgFlagWithEvent,
-		event:     int32(EventAudioReceived),
+		event:     200, // TaskRequest event for audio upload
 		sessionID: s.sessionID,
 		payload:   audio,
 	}
@@ -508,14 +680,8 @@ func (s *RealtimeSession) SendText(ctx context.Context, text string) error {
 		return wrapError(nil, "session closed")
 	}
 
-	msg := map[string]any{
-		"type": "text",
-		"data": map[string]any{
-			"session_id": s.sessionID,
-			"text":       text,
-		},
-	}
-	return s.conn.writeJSON(msg)
+	payload, _ := json.Marshal(map[string]any{"content": text})
+	return s.sendEvent(501, payload) // ChatTextQuery event
 }
 
 func (s *RealtimeSession) SayHello(ctx context.Context, content string) error {
@@ -523,14 +689,24 @@ func (s *RealtimeSession) SayHello(ctx context.Context, content string) error {
 		return wrapError(nil, "session closed")
 	}
 
-	msg := map[string]any{
-		"type": "say_hello",
-		"data": map[string]any{
-			"session_id": s.sessionID,
-			"content":    content,
-		},
+	payload, _ := json.Marshal(map[string]any{"content": content})
+	return s.sendEvent(300, payload) // SayHello event
+}
+
+// sendEvent sends a binary protocol message with the given event ID
+func (s *RealtimeSession) sendEvent(eventID int32, payload []byte) error {
+	msg := &message{
+		msgType:   msgTypeFullClient,
+		flags:     msgFlagWithEvent,
+		event:     eventID,
+		sessionID: s.sessionID,
+		payload:   payload,
 	}
-	return s.conn.writeJSON(msg)
+	data, err := s.conn.proto.marshal(msg)
+	if err != nil {
+		return wrapError(err, "marshal event")
+	}
+	return s.conn.writeMessage(websocket.BinaryMessage, data)
 }
 
 func (s *RealtimeSession) Interrupt(ctx context.Context) error {
@@ -538,13 +714,8 @@ func (s *RealtimeSession) Interrupt(ctx context.Context) error {
 		return wrapError(nil, "session closed")
 	}
 
-	msg := map[string]any{
-		"type": "cancel",
-		"data": map[string]any{
-			"session_id": s.sessionID,
-		},
-	}
-	return s.conn.writeJSON(msg)
+	// FinishSession event (102) to interrupt current response
+	return s.sendEvent(102, []byte("{}"))
 }
 
 func (s *RealtimeSession) Recv() iter.Seq2[*RealtimeEvent, error] {

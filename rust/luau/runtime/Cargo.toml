@@ -1,0 +1,20 @@
+[package]
+name = "giztoy-luau-runtime"
+version.workspace = true
+edition = "2021"
+license.workspace = true
+authors.workspace = true
+description = "Luau minimal runtime for giztoy"
+
+[dependencies]
+# Internal crates
+giztoy-luau = { workspace = true }
+
+# Serialization
+serde_json = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+
+# HTTP client
+reqwest = { workspace = true }

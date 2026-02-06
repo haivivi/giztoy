@@ -4,17 +4,14 @@ go_binary(
     name = "luau",
     srcs = [
         "main.go",
-        "runtime.go",
-        "builtin_env.go",
-        "builtin_http.go",
-        "builtin_json.go",
-        "builtin_kvs.go",
-        "builtin_log.go",
-        "builtin_require.go",
-        "builtin_time.go",
     ],
     deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+        "//go/pkg/genx/modelloader",
+        "//go/pkg/genx/transformers",
         "//go/pkg/luau",
+        "//go/pkg/luau/runtime",
     ],
     visibility = ["//visibility:public"],
 )

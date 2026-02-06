@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	"github.com/haivivi/giztoy/go/pkg/audio/opusrt"
 	"github.com/haivivi/giztoy/go/pkg/chatgear"
-	"github.com/haivivi/giztoy/go/pkg/jsontime"
 )
 
 // Note: Audio is handled via WebRTC, format negotiated with browser
@@ -57,30 +55,22 @@ func (p PowerState) String() string {
 type Simulator struct {
 	cfg SimulatorConfig
 
-	// chatgear port
+	// chatgear port and connection
 	port *chatgear.ClientPort
+	conn *chatgear.MQTTClientConn
 
 	// WebRTC for browser audio
-	webrtc *WebRTCBridge
-	// RTP sequence number and timestamp are updated from both the WebRTC
-	// callback goroutine and the playback loop. To avoid taking the
-	// Simulator mutex on every audio packet, these counters are accessed
-	// exclusively via sync/atomic operations and are intentionally *not*
-	// protected by mu. All other mutable fields in Simulator must be
-	// accessed under mu.
-	rtpSeqNum    uint32
-	rtpTimestamp uint32
+	webrtc  *WebRTCBridge
+	mic     *WebRTCMic
+	speaker *WebRTCSpeaker
+
+	// Web server for log forwarding
+	webServer *WebServer
 
 	mu         sync.RWMutex
-	state      chatgear.GearState
 	powerState PowerState
-	stats      *chatgear.GearStatsEvent
 
-	// Staged stats for incremental sending (like C's stats_pending_send)
-	stagedStats  *chatgear.GearStatsEvent
-	statsTrigger chan struct{}
-
-	// Simulated device state
+	// Simulated device state (for reading back values)
 	volume     int     // 0-100
 	brightness int     // 0-100
 	lightMode  string  // "auto", "on", "off"
@@ -97,7 +87,7 @@ type Simulator struct {
 	shakingLevel float64  // 0-100
 	wifiStore    []string // stored wifi SSIDs
 
-	// Channels for TUI
+	// Channels for web events
 	events chan SimulatorEvent
 
 	ctx    context.Context
@@ -107,14 +97,10 @@ type Simulator struct {
 // NewSimulator creates a new simulator with default device state.
 func NewSimulator(cfg SimulatorConfig) *Simulator {
 	s := &Simulator{
-		cfg:          cfg,
-		state:        chatgear.GearReady,
-		powerState:   PowerOff, // Start powered off
-		stats:        &chatgear.GearStatsEvent{Time: jsontime.NowEpochMilli()},
-		stagedStats:  &chatgear.GearStatsEvent{},
-		statsTrigger: make(chan struct{}, 1),
-		events:       make(chan SimulatorEvent, 100),
-		webrtc:       NewWebRTCBridge(),
+		cfg:        cfg,
+		powerState: PowerOff, // Start powered off
+		events:     make(chan SimulatorEvent, 100),
+		webrtc:     NewWebRTCBridge(),
 
 		// Default device state
 		volume:       70,
@@ -132,11 +118,6 @@ func NewSimulator(cfg SimulatorConfig) *Simulator {
 		wifiStore:    []string{"HomeWiFi", "Office", "Guest"},
 	}
 
-	// Set up WebRTC audio callback - send browser audio to server
-	s.webrtc.SetOnAudioReceived(func(opusData []byte) {
-		s.handleBrowserAudio(opusData)
-	})
-
 	return s
 }
 
@@ -145,18 +126,89 @@ func (s *Simulator) Events() <-chan SimulatorEvent {
 	return s.events
 }
 
-// State returns the current state.
-func (s *Simulator) State() chatgear.GearState {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.state
+// SetWebServer sets the web server for log forwarding.
+func (s *Simulator) SetWebServer(ws *WebServer) {
+	s.webServer = ws
 }
 
-// Stats returns the current stats.
-func (s *Simulator) Stats() *chatgear.GearStatsEvent {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.stats
+// webLogger wraps chatgear.Logger and forwards logs to WebServer.
+type webLogger struct {
+	ws *WebServer
+
+	// Audio frame counters for summary logging
+	txAudioFrames int
+	rxAudioFrames int
+	lastAudioLog  time.Time
+}
+
+func (l *webLogger) InfoPrintf(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	slog.Info("chatgear: " + msg)
+	if l.ws != nil {
+		l.ws.AddLog(fmt.Sprintf(`{"type":"info","msg":%q}`, msg))
+	}
+}
+
+func (l *webLogger) WarnPrintf(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	slog.Warn("chatgear: " + msg)
+	if l.ws != nil {
+		l.ws.AddLog(fmt.Sprintf(`{"type":"warn","msg":%q}`, msg))
+	}
+}
+
+func (l *webLogger) DebugPrintf(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	slog.Debug("chatgear: " + msg)
+
+	// Forward audio logs as summary every second
+	if l.ws != nil {
+		if strings.Contains(msg, "MQTT TX audio") {
+			l.txAudioFrames++
+			l.maybeLogAudioSummary()
+		} else if strings.Contains(msg, "MQTT RX audio") {
+			l.rxAudioFrames++
+			l.maybeLogAudioSummary()
+		}
+	}
+}
+
+func (l *webLogger) maybeLogAudioSummary() {
+	now := time.Now()
+	if now.Sub(l.lastAudioLog) >= time.Second {
+		if l.txAudioFrames > 0 || l.rxAudioFrames > 0 {
+			msg := fmt.Sprintf("Audio: TX %d frames, RX %d frames (last 1s)", l.txAudioFrames, l.rxAudioFrames)
+			l.ws.AddLog(fmt.Sprintf(`{"type":"debug","msg":%q}`, msg))
+			l.txAudioFrames = 0
+			l.rxAudioFrames = 0
+		}
+		l.lastAudioLog = now
+	}
+}
+
+func (l *webLogger) ErrorPrintf(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	slog.Error("chatgear: " + msg)
+	if l.ws != nil {
+		l.ws.AddLog(fmt.Sprintf(`{"type":"error","msg":%q}`, msg))
+	}
+}
+
+func (l *webLogger) Errorf(format string, args ...any) error {
+	msg := fmt.Sprintf(format, args...)
+	slog.Error("chatgear: " + msg)
+	if l.ws != nil {
+		l.ws.AddLog(fmt.Sprintf(`{"type":"error","msg":%q}`, msg))
+	}
+	return fmt.Errorf(format, args...)
+}
+
+// State returns the current state.
+func (s *Simulator) State() chatgear.State {
+	if s.port != nil {
+		return s.port.State()
+	}
+	return chatgear.StateReady
 }
 
 // WebRTC returns the WebRTC bridge for audio I/O.
@@ -168,56 +220,72 @@ func (s *Simulator) WebRTC() *WebRTCBridge {
 func (s *Simulator) Start(ctx context.Context) error {
 	s.ctx, s.cancel = context.WithCancel(ctx)
 
-	// Recreate internal channels for new session
-	// Note: s.events is NOT recreated - it persists for TUI to listen
-	s.statsTrigger = make(chan struct{}, 1)
-	s.stagedStats = &chatgear.GearStatsEvent{}
-
 	slog.Info("connecting to MQTT broker", "url", s.cfg.MQTTURL)
 
-	// Connect to MQTT using mqtt0
-	clientConn, err := mqttDial(s.ctx, s.cfg.MQTTURL, s.cfg.Namespace, s.cfg.GearID)
+	// Connect to MQTT using chatgear.DialMQTT with custom logger
+	conn, err := chatgear.DialMQTT(s.ctx, chatgear.MQTTClientConfig{
+		Addr:   s.cfg.MQTTURL,
+		Scope:  s.cfg.Namespace,
+		GearID: s.cfg.GearID,
+		Logger: &webLogger{ws: s.webServer},
+	})
 	if err != nil {
 		slog.Error("MQTT connection failed", "error", err)
 		return err
 	}
+	s.conn = conn
 	slog.Info("MQTT connected successfully")
 
 	// Create ClientPort
-	s.port = chatgear.NewClientPort(s.ctx, clientConn)
-	slog.Info("ClientPort created, ready to send/receive")
+	s.port = chatgear.NewClientPort()
 
-	// Start receiving from server (commands and audio)
+	// Start periodic state/stats reporting (protocol requirement)
+	s.port.StartPeriodicReporting(s.ctx)
+
+	// Create WebRTC audio adapters
+	mic, err := NewWebRTCMic(s.webrtc)
+	if err != nil {
+		s.conn.Close()
+		return fmt.Errorf("create webrtc mic: %w", err)
+	}
+	s.mic = mic
+
+	speaker, err := NewWebRTCSpeaker(s.webrtc)
+	if err != nil {
+		s.mic.Close()
+		s.conn.Close()
+		return fmt.Errorf("create webrtc speaker: %w", err)
+	}
+	s.speaker = speaker
+
+	// Start ClientPort goroutines
 	go func() {
-		slog.Info("starting receive loop...")
-		if err := s.port.RecvFrom(clientConn); err != nil {
-			slog.Error("RecvFrom error", "error", err)
-			s.emitEvent("error", err.Error())
+		if err := s.port.ReadFromMic(s.mic); err != nil {
+			slog.Info("ReadFromMic ended", "error", err)
+		}
+	}()
+	go func() {
+		if err := s.port.WriteToSpeaker(s.speaker); err != nil {
+			slog.Info("WriteToSpeaker ended", "error", err)
+		}
+	}()
+	go func() {
+		if err := s.port.ReadFrom(s.conn); err != nil {
+			slog.Info("ReadFrom ended", "error", err)
+		}
+	}()
+	go func() {
+		if err := s.port.WriteTo(s.conn); err != nil {
+			slog.Info("WriteTo ended", "error", err)
 		}
 	}()
 
-	// Handle commands from server
+	// Handle commands from ClientPort
 	go s.handleCommands()
 
-	// Start audio playback loop (server -> WebRTC -> browser)
-	go s.playbackLoop()
-	slog.Info("audio playback loop started (WebRTC to browser)")
-
-	// Note: recording is handled by WebRTC callback (browser -> WebRTC -> server)
-	// No need for a dedicated recording loop - audio comes from browser via WebRTC
-
-	// Send periodic stats (like C implementation)
-	go s.statsQueryLoop()
-	go s.statsSendLoop()
-
-	// Send state periodically (for CALLING/RECORDING timestamp updates)
-	go s.stateSendLoop()
-
-	// Set state to READY and send initial state
-	s.mu.Lock()
-	s.state = chatgear.GearReady
-	s.mu.Unlock()
-	s.sendState()
+	// Set initial state and stats
+	s.port.SetState(chatgear.StateReady)
+	s.initializeStats()
 
 	slog.Info("simulator started", "gearID", s.cfg.GearID)
 	return nil
@@ -230,85 +298,85 @@ func (s *Simulator) Stop() {
 		s.cancel()
 		s.cancel = nil
 	}
+	if s.mic != nil {
+		s.mic.Close()
+		s.mic = nil
+	}
+	if s.speaker != nil {
+		s.speaker.Close()
+		s.speaker = nil
+	}
 	if s.port != nil {
 		s.port.Close()
 		s.port = nil
 	}
+	if s.conn != nil {
+		s.conn.Close()
+		s.conn = nil
+	}
 	// Note: WebRTC bridge is not closed here - it persists across power cycles
 	// This allows browser to stay connected while device is powered off
-
-	// Note: the events channel is intentionally NOT closed here.
-	// It is designed to be long-lived (across simulator power cycles), and
-	// consumers such as the TUI must not rely on a closed events channel to
-	// detect shutdown. Instead, they should also select on s.ctx.Done() (or
-	// their own cancellation) and terminate when the simulator context ends.
-	//
-	// Only close statsTrigger (internal channel), which is used purely inside
-	// the simulator implementation. Use mutex to prevent race with triggerStatsSend.
-	s.mu.Lock()
-	if s.statsTrigger != nil {
-		close(s.statsTrigger)
-		s.statsTrigger = nil
-	}
-	s.mu.Unlock()
 	slog.Info("simulator stopped")
 }
 
 // handleCommands handles commands from the server.
 func (s *Simulator) handleCommands() {
 	slog.Info("command handler started")
-	for {
-		select {
-		case <-s.ctx.Done():
-			slog.Info("command handler stopped")
-			return
-		case cmd, ok := <-s.port.Commands():
-			if !ok {
-				slog.Info("command channel closed")
-				return
-			}
-			slog.Info("received command", "type", fmt.Sprintf("%T", cmd.Payload))
-			data, _ := json.Marshal(cmd)
-			s.emitEvent("command_received", string(data))
-			s.applyCommand(cmd)
+	for cmd, err := range s.port.Commands() {
+		if err != nil {
+			slog.Error("command receive error", "error", err)
+			break
 		}
+		slog.Info("received command", "type", fmt.Sprintf("%T", cmd.Payload))
+		data, _ := json.Marshal(cmd)
+		s.emitEvent("command_received", string(data))
+		s.applyCommand(cmd)
 	}
+	slog.Info("command handler stopped")
 }
 
 // applyCommand applies a command to the simulator state.
-func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+func (s *Simulator) applyCommand(cmd *chatgear.CommandEvent) {
 	switch t := cmd.Payload.(type) {
 	case *chatgear.Streaming:
 		slog.Info("cmd: streaming", "value", bool(*t))
 		if bool(*t) {
-			if s.state == chatgear.GearWaitingForResponse {
-				s.state = chatgear.GearStreaming
-				s.sendStateLocked()
+			if s.port.State() == chatgear.StateWaitingForResponse {
+				s.port.SetState(chatgear.StateStreaming)
 			}
 		} else {
-			if s.state == chatgear.GearStreaming {
-				s.state = chatgear.GearReady
-				s.sendStateLocked()
+			if s.port.State() == chatgear.StateStreaming {
+				s.port.SetState(chatgear.StateReady)
 			}
 		}
 
 	case *chatgear.SetVolume:
-		s.volume = min(max(int(*t), 0), 100)
-		slog.Info("cmd: set_volume", "value", s.volume)
+		v := min(max(int(*t), 0), 100)
+		slog.Info("cmd: set_volume", "value", v)
+		s.mu.Lock()
+		s.volume = v
+		s.mu.Unlock()
+		s.port.SetVolume(v)
 
 	case *chatgear.SetBrightness:
-		s.brightness = min(max(int(*t), 0), 100)
-		slog.Info("cmd: set_brightness", "value", s.brightness)
+		b := min(max(int(*t), 0), 100)
+		slog.Info("cmd: set_brightness", "value", b)
+		s.mu.Lock()
+		s.brightness = b
+		s.mu.Unlock()
+		s.port.SetBrightness(b)
 
 	case *chatgear.SetLightMode:
-		s.lightMode = string(*t)
-		slog.Info("cmd: set_light_mode", "value", s.lightMode)
+		mode := string(*t)
+		slog.Info("cmd: set_light_mode", "value", mode)
+		s.mu.Lock()
+		s.lightMode = mode
+		s.mu.Unlock()
+		s.port.SetLightMode(mode)
 
 	case *chatgear.SetWifi:
 		slog.Info("cmd: set_wifi", "ssid", t.SSID)
+		s.mu.Lock()
 		s.wifiSSID = t.SSID
 		s.wifiRSSI = -50
 		s.wifiIP = "192.168.1.100"
@@ -324,10 +392,18 @@ func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
 		if !found {
 			s.wifiStore = append(s.wifiStore, t.SSID)
 		}
+		s.mu.Unlock()
+		s.port.SetWifiNetwork(&chatgear.ConnectedWifi{
+			SSID:    t.SSID,
+			RSSI:    -50,
+			IP:      "192.168.1.100",
+			Gateway: "192.168.1.1",
+		})
 
 	case *chatgear.DeleteWifi:
 		ssid := string(*t)
 		slog.Info("cmd: delete_wifi", "ssid", ssid)
+		s.mu.Lock()
 		// Disconnect if currently connected
 		if ssid == s.wifiSSID {
 			s.wifiSSID = ""
@@ -342,10 +418,11 @@ func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
 				break
 			}
 		}
+		s.mu.Unlock()
 
 	case *chatgear.Reset:
 		slog.Info("cmd: reset", "unpair", t.Unpair)
-		// Reset to factory defaults (consistent with Reset() method)
+		s.mu.Lock()
 		s.volume = 100
 		s.brightness = 100
 		s.lightMode = "auto"
@@ -357,44 +434,39 @@ func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
 			s.pairWith = ""
 			s.wifiStore = []string{}
 		}
+		s.mu.Unlock()
+		// Report changes via port
+		s.port.SetVolume(100)
+		s.port.SetBrightness(100)
+		s.port.SetLightMode("auto")
 
 	case *chatgear.Halt:
 		slog.Info("cmd: halt", "sleep", t.Sleep, "shutdown", t.Shutdown, "interrupt", t.Interrupt)
 		if t.Interrupt {
-			// Interrupt current operation
-			if s.state == chatgear.GearStreaming || s.state == chatgear.GearRecording ||
-				s.state == chatgear.GearWaitingForResponse {
-				s.state = chatgear.GearReady
-				s.sendStateLocked()
+			st := s.port.State()
+			if st == chatgear.StateStreaming || st == chatgear.StateRecording ||
+				st == chatgear.StateWaitingForResponse {
+				s.port.SetState(chatgear.StateReady)
 			}
-		} else if t.Sleep {
-			// Go to sleep (simulate as ready)
-			s.state = chatgear.GearReady
-			s.sendStateLocked()
-		} else if t.Shutdown {
-			// Shutdown (simulate as ready, in real device would power off)
-			s.state = chatgear.GearReady
-			s.sendStateLocked()
+		} else if t.Sleep || t.Shutdown {
+			s.port.SetState(chatgear.StateReady)
 		}
 
 	case *chatgear.Raise:
 		slog.Info("cmd: raise", "call", t.Call)
 		if t.Call {
-			if s.state == chatgear.GearReady {
-				s.state = chatgear.GearCalling
-				s.sendStateLocked()
+			if s.port.State() == chatgear.StateReady {
+				s.port.SetState(chatgear.StateCalling)
 			}
 		}
 
 	case *chatgear.OTA:
 		slog.Info("cmd: ota_upgrade", "version", t.Version)
-		// Simulate OTA upgrade with context cancellation support
 		go func(ctx context.Context) {
 			s.mu.Lock()
 			oldVersion := s.sysVersion
 			s.mu.Unlock()
 
-			// Simulate download/install progress
 			for i := 0; i <= 100; i += 10 {
 				select {
 				case <-ctx.Done():
@@ -410,6 +482,7 @@ func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
 				s.sysVersion = t.Version
 			}
 			s.mu.Unlock()
+			s.port.SetSystemVersion(t.Version)
 
 			slog.Info("OTA complete", "from", oldVersion, "to", t.Version)
 		}(s.ctx)
@@ -419,358 +492,40 @@ func (s *Simulator) applyCommand(cmd *chatgear.SessionCommandEvent) {
 	}
 }
 
-// playbackLoop reads opus from server and sends to browser via WebRTC.
-func (s *Simulator) playbackLoop() {
-	slog.Info("playback loop started (server -> WebRTC -> browser)")
-
-	// Read opus frames from server and send to browser
-	for {
-		select {
-		case <-s.ctx.Done():
-			slog.Info("playback loop stopped")
-			return
-		default:
-		}
-
-		// Read opus frame from server via ClientPort's Frame() method
-		frame, _, err := s.port.Frame()
-		if err != nil {
-			slog.Info("playback read ended", "error", err)
-			return
-		}
-
-		if len(frame) == 0 {
-			continue
-		}
-
-		// Send to browser via WebRTC
-		if s.webrtc.IsConnected() {
-			seqNum := uint16(atomic.AddUint32(&s.rtpSeqNum, 1))
-			timestamp := atomic.AddUint32(&s.rtpTimestamp, 960) // 20ms at 48kHz
-			if err := s.webrtc.SendAudio([]byte(frame), timestamp, seqNum); err != nil {
-				slog.Error("webrtc send error", "error", err)
-			}
-		}
-	}
-}
-
-// handleBrowserAudio handles audio received from browser via WebRTC.
-// This is called from the WebRTC bridge when audio is received.
-func (s *Simulator) handleBrowserAudio(opusData []byte) {
-	s.mu.RLock()
-	st := s.state
-	port := s.port
-	s.mu.RUnlock()
-
-	// Only send audio when in recording or calling state
-	if st != chatgear.GearRecording && st != chatgear.GearCalling {
-		return
-	}
-
-	if port == nil {
-		return
-	}
-
-	// Stamp and send to server
-	frame := opusrt.Frame(opusData)
-	stamped := opusrt.Stamp(frame, opusrt.FromTime(time.Now()))
-	port.WriteRecordingFrame(stamped)
-}
-
-// stateSendLoop sends state periodically (every 5 seconds).
-// Updates timestamp for CALLING and RECORDING states.
-func (s *Simulator) stateSendLoop() {
-	slog.Info("stateSendLoop started")
-	defer slog.Info("stateSendLoop stopped")
-
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	var lastState chatgear.GearState
-	var lastSentAt time.Time
-
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case <-ticker.C:
-			s.sendStateOnce(&lastState, &lastSentAt)
-		}
-	}
-}
-
-// sendStateOnce sends state if needed, updating lastState and lastSentAt.
-func (s *Simulator) sendStateOnce(lastState *chatgear.GearState, lastSentAt *time.Time) {
-	s.mu.Lock()
-	now := time.Now()
-	stateChanged := s.state != *lastState
-
-	// For CALLING and RECORDING, always update timestamp
-	if s.state == chatgear.GearCalling || s.state == chatgear.GearRecording {
-		stateChanged = true
-	}
-
-	if stateChanged || time.Since(*lastSentAt) > 30*time.Second {
-		stateEvent := chatgear.NewGearStateEvent(s.state, now)
-		port := s.port
-		state := s.state
-		s.mu.Unlock()
-
-		if port != nil {
-			if err := port.SendState(stateEvent); err == nil {
-				*lastState = state
-				*lastSentAt = now
-				data, _ := json.Marshal(stateEvent)
-				s.emitEvent("state_sent", string(data))
-			} else {
-				slog.Error("send state failed", "error", err)
-			}
-		}
-	} else {
-		s.mu.Unlock()
-	}
-}
-
-// statsQueryLoop implements the C-style tiered stats querying.
-// Periodically stages stats for sending based on different intervals.
-// 1 min: battery, volume, brightness, lang, light_mode, sys_ver, pair_status, wlan
-// 2 min: nfc_read, shaking
-// 10 min: wifi_scan, wifi_store
-func (s *Simulator) statsQueryLoop() {
-	slog.Info("statsQueryLoop started")
-	defer slog.Info("statsQueryLoop stopped")
-
-	ticker := time.NewTicker(20 * time.Second)
-	defer ticker.Stop()
-
-	// Send initial stats immediately
-	s.stageAllStats()
-	s.triggerStatsSend()
-
-	rounds := -1
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case <-ticker.C:
-			rounds++
-			now := jsontime.NowEpochMilli()
-
-			s.mu.Lock()
-			switch rounds % 3 {
-			case 0:
-				// Every 1 minute (20s * 3 = 60s)
-				// Stage: battery, volume, brightness, light_mode, sys_ver, pair_status, wlan
-				s.stagedStats.Battery = &chatgear.Battery{
-					Percentage: s.batteryPct,
-					IsCharging: s.charging,
-				}
-				s.stagedStats.Volume = &chatgear.Volume{
-					Percentage: float64(s.volume),
-					UpdateAt:   now,
-				}
-				s.stagedStats.Brightness = &chatgear.Brightness{
-					Percentage: float64(s.brightness),
-					UpdateAt:   now,
-				}
-				s.stagedStats.LightMode = &chatgear.LightMode{
-					Mode:     s.lightMode,
-					UpdateAt: now,
-				}
-				s.stagedStats.SystemVersion = &chatgear.SystemVersion{
-					CurrentVersion: s.sysVersion,
-				}
-				s.stagedStats.PairStatus = &chatgear.PairStatus{
-					PairWith: s.pairWith,
-					UpdateAt: now,
-				}
-				if s.wifiSSID != "" {
-					s.stagedStats.WifiNetwork = &chatgear.ConnectedWifi{
-						SSID:    s.wifiSSID,
-						RSSI:    s.wifiRSSI,
-						IP:      s.wifiIP,
-						Gateway: s.wifiGW,
-					}
-				}
-			case 1:
-				if rounds%6 != 1 {
-					s.mu.Unlock()
-					continue
-				}
-				// Every 2 minutes
-				// Stage: shaking
-				s.stagedStats.Shaking = &chatgear.Shaking{
-					Level: s.shakingLevel,
-				}
-			case 2:
-				if rounds%30 != 2 {
-					s.mu.Unlock()
-					continue
-				}
-				// Every 10 minutes
-				// Stage: wifi_store
-				if len(s.wifiStore) > 0 {
-					items := make([]chatgear.WifiStoreItem, len(s.wifiStore))
-					for i, ssid := range s.wifiStore {
-						items[i] = chatgear.WifiStoreItem{SSID: ssid}
-					}
-					s.stagedStats.WifiStore = &chatgear.StoredWifiList{
-						List:     items,
-						UpdateAt: now,
-					}
-				}
-			}
-			s.mu.Unlock()
-
-			// Trigger send
-			s.triggerStatsSend()
-		}
-	}
-}
-
-// statsSendLoop listens for stats send triggers and sends staged stats.
-func (s *Simulator) statsSendLoop() {
-	slog.Info("statsSendLoop started")
-	defer slog.Info("statsSendLoop stopped")
-
-	for {
-		select {
-		case <-s.ctx.Done():
-			return
-		case _, ok := <-s.statsTrigger:
-			if !ok {
-				// Channel closed, exit loop
-				return
-			}
-			s.sendStagedStats()
-		}
-	}
-}
-
-// triggerStatsSend triggers a stats send (non-blocking).
-func (s *Simulator) triggerStatsSend() {
+// initializeStats sets initial stats values on the ClientPort.
+func (s *Simulator) initializeStats() {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.statsTrigger == nil {
-		return
-	}
-	select {
-	case s.statsTrigger <- struct{}{}:
-	default:
-		// Already triggered, skip
-	}
-}
+	// Use batch mode to send only one stats update at the end
+	s.port.BeginBatch()
+	defer s.port.EndBatch()
 
-// stageAllStats stages all stats for sending (used for initial send).
-func (s *Simulator) stageAllStats() {
-	now := jsontime.NowEpochMilli()
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.stagedStats.Battery = &chatgear.Battery{
-		Percentage: s.batteryPct,
-		IsCharging: s.charging,
-	}
-	s.stagedStats.Volume = &chatgear.Volume{
-		Percentage: float64(s.volume),
-		UpdateAt:   now,
-	}
-	s.stagedStats.Brightness = &chatgear.Brightness{
-		Percentage: float64(s.brightness),
-		UpdateAt:   now,
-	}
-	s.stagedStats.LightMode = &chatgear.LightMode{
-		Mode:     s.lightMode,
-		UpdateAt: now,
-	}
-	s.stagedStats.SystemVersion = &chatgear.SystemVersion{
-		CurrentVersion: s.sysVersion,
-	}
-	s.stagedStats.PairStatus = &chatgear.PairStatus{
-		PairWith: s.pairWith,
-		UpdateAt: now,
-	}
+	// Set all initial stats via ClientPort
+	s.port.SetVolume(s.volume)
+	s.port.SetBrightness(s.brightness)
+	s.port.SetLightMode(s.lightMode)
+	s.port.SetBattery(int(s.batteryPct), s.charging)
+	s.port.SetSystemVersion(s.sysVersion)
 	if s.wifiSSID != "" {
-		s.stagedStats.WifiNetwork = &chatgear.ConnectedWifi{
+		s.port.SetWifiNetwork(&chatgear.ConnectedWifi{
 			SSID:    s.wifiSSID,
 			RSSI:    s.wifiRSSI,
 			IP:      s.wifiIP,
 			Gateway: s.wifiGW,
-		}
+		})
 	}
-	s.stagedStats.Shaking = &chatgear.Shaking{
-		Level: s.shakingLevel,
-	}
-	if len(s.wifiStore) > 0 {
-		items := make([]chatgear.WifiStoreItem, len(s.wifiStore))
-		for i, ssid := range s.wifiStore {
-			items[i] = chatgear.WifiStoreItem{SSID: ssid}
-		}
-		s.stagedStats.WifiStore = &chatgear.StoredWifiList{
-			List:     items,
-			UpdateAt: now,
-		}
-	}
-}
-
-// sendStagedStats sends the staged stats and clears them.
-func (s *Simulator) sendStagedStats() {
-	if s.port == nil {
-		return
-	}
-
-	s.mu.Lock()
-	// Check if there's anything to send
-	if s.isStagedStatsEmpty() {
-		s.mu.Unlock()
-		return
-	}
-
-	// Set timestamp
-	s.stagedStats.Time = jsontime.NowEpochMilli()
-
-	// Clone and clear staged stats
-	stats := s.stagedStats.Clone()
-	s.stagedStats = &chatgear.GearStatsEvent{}
-	s.mu.Unlock()
-
-	if err := s.port.SendStats(stats); err == nil {
-		data, _ := json.Marshal(stats)
-		slog.Info("stats sent", "data", string(data))
-		s.emitEvent("stats_sent", string(data))
-	} else {
-		slog.Error("SendStats error", "error", err)
-	}
-}
-
-// isStagedStatsEmpty checks if staged stats has any fields set.
-// Must be called with s.mu held.
-func (s *Simulator) isStagedStatsEmpty() bool {
-	st := s.stagedStats
-	return st.Battery == nil &&
-		st.Volume == nil &&
-		st.Brightness == nil &&
-		st.LightMode == nil &&
-		st.SystemVersion == nil &&
-		st.WifiNetwork == nil &&
-		st.WifiStore == nil &&
-		st.PairStatus == nil &&
-		st.Shaking == nil &&
-		st.ReadNFCTag == nil &&
-		st.Cellular == nil
 }
 
 // StartRecording starts recording (button pressed).
 // Valid from: READY, WAITING_FOR_RESPONSE, STREAMING (interrupt and re-record)
 func (s *Simulator) StartRecording() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	switch s.state {
-	case chatgear.GearReady, chatgear.GearWaitingForResponse, chatgear.GearStreaming:
-		s.state = chatgear.GearRecording
-		s.sendStateLocked()
+	if s.port == nil {
+		return false
+	}
+	switch s.port.State() {
+	case chatgear.StateReady, chatgear.StateWaitingForResponse, chatgear.StateStreaming:
+		s.port.SetState(chatgear.StateRecording)
 		return true
 	default:
 		return false
@@ -780,11 +535,11 @@ func (s *Simulator) StartRecording() bool {
 // EndRecording ends recording and waits for response (button released).
 // Valid from: RECORDING
 func (s *Simulator) EndRecording() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.state == chatgear.GearRecording {
-		s.state = chatgear.GearWaitingForResponse
-		s.sendStateLocked()
+	if s.port == nil {
+		return false
+	}
+	if s.port.State() == chatgear.StateRecording {
+		s.port.SetState(chatgear.StateWaitingForResponse)
 		return true
 	}
 	return false
@@ -793,11 +548,11 @@ func (s *Simulator) EndRecording() bool {
 // StartCalling starts calling mode.
 // Valid from: READY
 func (s *Simulator) StartCalling() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.state == chatgear.GearReady {
-		s.state = chatgear.GearCalling
-		s.sendStateLocked()
+	if s.port == nil {
+		return false
+	}
+	if s.port.State() == chatgear.StateReady {
+		s.port.SetState(chatgear.StateCalling)
 		return true
 	}
 	return false
@@ -806,11 +561,11 @@ func (s *Simulator) StartCalling() bool {
 // EndCalling ends calling mode.
 // Valid from: CALLING
 func (s *Simulator) EndCalling() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.state == chatgear.GearCalling {
-		s.state = chatgear.GearReady
-		s.sendStateLocked()
+	if s.port == nil {
+		return false
+	}
+	if s.port.State() == chatgear.StateCalling {
+		s.port.SetState(chatgear.StateReady)
 		return true
 	}
 	return false
@@ -819,48 +574,14 @@ func (s *Simulator) EndCalling() bool {
 // Cancel cancels/interrupts current operation back to READY.
 // Valid from: any state except READY
 func (s *Simulator) Cancel() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.state != chatgear.GearReady {
-		s.state = chatgear.GearReady
-		s.sendStateLocked()
+	if s.port == nil {
+		return false
+	}
+	if s.port.State() != chatgear.StateReady {
+		s.port.SetState(chatgear.StateReady)
 		return true
 	}
 	return false
-}
-
-// sendState sends the current state (acquires lock).
-func (s *Simulator) sendState() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.sendStateLocked()
-}
-
-// sendStateLocked sends the current state (must hold lock).
-// Uses goroutine to avoid blocking while holding the lock.
-func (s *Simulator) sendStateLocked() {
-	if s.port == nil {
-		return
-	}
-	stateEvent := chatgear.NewGearStateEvent(s.state, time.Now())
-	port := s.port // capture reference for goroutine
-	ctx := s.ctx   // capture context for cancellation check
-	go func() {
-		// Check context before sending to avoid work after shutdown
-		if ctx != nil {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-		}
-		if err := port.SendState(stateEvent); err == nil {
-			data, _ := json.Marshal(stateEvent)
-			s.emitEvent("state_sent", string(data))
-		} else {
-			slog.Error("send state failed", "error", err)
-		}
-	}()
 }
 
 func (s *Simulator) emitEvent(eventType, data string) {
@@ -922,74 +643,51 @@ func (s *Simulator) SystemVersion() string {
 	return s.sysVersion
 }
 
-// --- Setters for TUI commands ---
-// All setters update staged stats and trigger send.
+// --- Setters for web commands ---
+// All setters update local state and report via ClientPort.
 
 // SetVolume sets volume (0-100).
 func (s *Simulator) SetVolume(v int) {
+	v = min(max(v, 0), 100)
 	s.mu.Lock()
-	if v < 0 {
-		v = 0
-	}
-	if v > 100 {
-		v = 100
-	}
 	s.volume = v
-	s.stagedStats.Volume = &chatgear.Volume{
-		Percentage: float64(v),
-		UpdateAt:   jsontime.NowEpochMilli(),
-	}
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	if s.port != nil {
+		s.port.SetVolume(v)
+	}
 }
 
 // SetBrightness sets brightness (0-100).
 func (s *Simulator) SetBrightness(b int) {
+	b = min(max(b, 0), 100)
 	s.mu.Lock()
-	if b < 0 {
-		b = 0
-	}
-	if b > 100 {
-		b = 100
-	}
 	s.brightness = b
-	s.stagedStats.Brightness = &chatgear.Brightness{
-		Percentage: float64(b),
-		UpdateAt:   jsontime.NowEpochMilli(),
-	}
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	if s.port != nil {
+		s.port.SetBrightness(b)
+	}
 }
 
 // SetLightMode sets light mode ("auto", "on", "off").
 func (s *Simulator) SetLightMode(mode string) {
 	s.mu.Lock()
 	s.lightMode = mode
-	s.stagedStats.LightMode = &chatgear.LightMode{
-		Mode:     mode,
-		UpdateAt: jsontime.NowEpochMilli(),
-	}
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	if s.port != nil {
+		s.port.SetLightMode(mode)
+	}
 }
 
 // SetBattery sets battery status.
 func (s *Simulator) SetBattery(pct float64, charging bool) {
+	pct = min(max(pct, 0), 100)
 	s.mu.Lock()
-	if pct < 0 {
-		pct = 0
-	}
-	if pct > 100 {
-		pct = 100
-	}
 	s.batteryPct = pct
 	s.charging = charging
-	s.stagedStats.Battery = &chatgear.Battery{
-		Percentage: pct,
-		IsCharging: charging,
-	}
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	if s.port != nil {
+		s.port.SetBattery(int(pct), charging)
+	}
 }
 
 // SetWifi sets wifi status.
@@ -1000,20 +698,23 @@ func (s *Simulator) SetWifi(ssid string, rssi float64) {
 	if ssid != "" {
 		s.wifiIP = "192.168.1.100"
 		s.wifiGW = "192.168.1.1"
-		s.stagedStats.WifiNetwork = &chatgear.ConnectedWifi{
-			SSID:    ssid,
-			RSSI:    rssi,
-			IP:      s.wifiIP,
-			Gateway: s.wifiGW,
-		}
 	} else {
 		s.wifiIP = ""
 		s.wifiGW = ""
-		// Send empty wifi to indicate disconnected
-		s.stagedStats.WifiNetwork = &chatgear.ConnectedWifi{}
 	}
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	if s.port != nil {
+		if ssid != "" {
+			s.port.SetWifiNetwork(&chatgear.ConnectedWifi{
+				SSID:    ssid,
+				RSSI:    rssi,
+				IP:      "192.168.1.100",
+				Gateway: "192.168.1.1",
+			})
+		} else {
+			s.port.SetWifiNetwork(nil)
+		}
+	}
 }
 
 // WifiIP returns the WiFi IP address.
@@ -1034,12 +735,8 @@ func (s *Simulator) PairStatus() string {
 func (s *Simulator) SetPairStatus(pairWith string) {
 	s.mu.Lock()
 	s.pairWith = pairWith
-	s.stagedStats.PairStatus = &chatgear.PairStatus{
-		PairWith: pairWith,
-		UpdateAt: jsontime.NowEpochMilli(),
-	}
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	// Note: PairStatus reporting not yet implemented in ClientPort
 }
 
 // Shaking returns the current shaking level.
@@ -1053,11 +750,8 @@ func (s *Simulator) Shaking() float64 {
 func (s *Simulator) SetShaking(level float64) {
 	s.mu.Lock()
 	s.shakingLevel = level
-	s.stagedStats.Shaking = &chatgear.Shaking{
-		Level: level,
-	}
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	// Note: Shaking reporting not yet implemented in ClientPort
 }
 
 // WifiStore returns the stored WiFi SSIDs.
@@ -1072,7 +766,6 @@ func (s *Simulator) WifiStore() []string {
 // AddWifiStore adds a WiFi SSID to stored list.
 func (s *Simulator) AddWifiStore(ssid string) {
 	s.mu.Lock()
-	// Check if already exists
 	for _, stored := range s.wifiStore {
 		if stored == ssid {
 			s.mu.Unlock()
@@ -1080,9 +773,8 @@ func (s *Simulator) AddWifiStore(ssid string) {
 		}
 	}
 	s.wifiStore = append(s.wifiStore, ssid)
-	s.stageWifiStore()
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	// Note: WifiStore reporting not yet implemented in ClientPort
 }
 
 // RemoveWifiStore removes a WiFi SSID from stored list.
@@ -1091,49 +783,32 @@ func (s *Simulator) RemoveWifiStore(ssid string) {
 	for i, stored := range s.wifiStore {
 		if stored == ssid {
 			s.wifiStore = append(s.wifiStore[:i], s.wifiStore[i+1:]...)
-			s.stageWifiStore()
-			s.mu.Unlock()
-			s.triggerStatsSend()
-			return
+			break
 		}
 	}
 	s.mu.Unlock()
-}
-
-// stageWifiStore stages the current wifi store list.
-// Must be called with s.mu held.
-func (s *Simulator) stageWifiStore() {
-	items := make([]chatgear.WifiStoreItem, len(s.wifiStore))
-	for i, ssid := range s.wifiStore {
-		items[i] = chatgear.WifiStoreItem{SSID: ssid}
-	}
-	s.stagedStats.WifiStore = &chatgear.StoredWifiList{
-		List:     items,
-		UpdateAt: jsontime.NowEpochMilli(),
-	}
 }
 
 // SetVersion sets the system version.
 func (s *Simulator) SetVersion(version string) {
 	s.mu.Lock()
 	s.sysVersion = version
-	s.stagedStats.SystemVersion = &chatgear.SystemVersion{
-		CurrentVersion: version,
-	}
 	s.mu.Unlock()
-	s.triggerStatsSend()
+	if s.port != nil {
+		s.port.SetSystemVersion(version)
+	}
 }
 
-// --- TUI Helper: Get all status as a summary string ---
+// --- Status Helper ---
 
-// StatusSummary returns a formatted status summary for TUI display.
+// StatusSummary returns a formatted status summary for display.
 func (s *Simulator) StatusSummary() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	chargingIcon := ""
 	if s.charging {
-		chargingIcon = "⚡"
+		chargingIcon = "+"
 	}
 
 	wifiInfo := "disconnected"
@@ -1141,9 +816,14 @@ func (s *Simulator) StatusSummary() string {
 		wifiInfo = s.wifiSSID
 	}
 
+	state := chatgear.StateReady
+	if s.port != nil {
+		state = s.port.State()
+	}
+
 	return fmt.Sprintf(
-		"State: %-12s | 🔋 %.0f%%%s | 🔊 %d%% | 💡 %d%% (%s) | 📶 %s",
-		s.state.String(),
+		"State: %-12s | Batt: %.0f%%%s | Vol: %d%% | Bright: %d%% (%s) | WiFi: %s",
+		state.String(),
 		s.batteryPct,
 		chargingIcon,
 		s.volume,
@@ -1151,13 +831,6 @@ func (s *Simulator) StatusSummary() string {
 		s.lightMode,
 		wifiInfo,
 	)
-}
-
-// SendStats sends current stats to the server immediately.
-// SendStats triggers sending staged stats (called by web UI).
-// Note: The actual stats are staged by setter methods, this just triggers the send.
-func (s *Simulator) SendStats() {
-	s.triggerStatsSend()
 }
 
 // --- Power Control ---

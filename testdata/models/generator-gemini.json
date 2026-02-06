@@ -1,0 +1,16 @@
+{
+    "schema": "gemini/generate/v1",
+    "type": "generator",
+    "api_key": "$GEMINI_API_KEY",
+    "models": [
+        {
+            "name": "gemini/flash",
+            "model": "gemini-2.5-flash",
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        }
+    ]
+}

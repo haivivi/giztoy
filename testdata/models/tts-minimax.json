@@ -1,0 +1,27 @@
+{
+    "schema": "minimax/speech/v1",
+    "type": "tts",
+    "api_key": "$MINIMAX_API_KEY",
+    "model": "speech-02-hd",
+    "voices": [
+        { "name": "minimax/qingse", "voice_id": "male-qn-qingse", "desc": "青涩 - 年轻男声" },
+        { "name": "minimax/jingying", "voice_id": "male-qn-jingying", "desc": "精英 - 成熟男声" },
+        { "name": "minimax/badao", "voice_id": "male-qn-badao", "desc": "霸道 - 强势男声" },
+        { "name": "minimax/shaonv", "voice_id": "female-shaonv", "desc": "少女 - 甜美少女" },
+        { "name": "minimax/yujie", "voice_id": "female-yujie", "desc": "御姐 - 成熟女声" },
+        { "name": "minimax/chengshu", "voice_id": "female-chengshu", "desc": "成熟 - 知性女声" },
+        { "name": "minimax/presenter-male", "voice_id": "presenter_male", "desc": "主持人 - 男声" },
+        { "name": "minimax/presenter-female", "voice_id": "presenter_female", "desc": "主持人 - 女声" },
+        { "name": "minimax/audiobook-male", "voice_id": "audiobook_male_1", "desc": "有声书 - 男声" },
+        { "name": "minimax/audiobook-female", "voice_id": "audiobook_female_1", "desc": "有声书 - 女声" },
+        { "name": "minimax/cute-boy", "voice_id": "cute_boy", "desc": "可爱男孩" },
+        { "name": "minimax/charming-lady", "voice_id": "Charming_Lady", "desc": "魅力女士" }
+    ],
+    "default_params": {
+        "format": "mp3",
+        "sample_rate": 32000,
+        "speed": 1.0,
+        "vol": 1.0,
+        "pitch": 0
+    }
+}

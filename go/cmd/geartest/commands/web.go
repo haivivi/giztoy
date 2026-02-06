@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 //go:embed templates/*
@@ -29,14 +30,32 @@ func init() {
 type WebServer struct {
 	sim  *Simulator
 	addr string
+
+	// SSE log broadcast
+	logMu      sync.RWMutex
+	logClients map[chan string]struct{}
+}
+
+// AddLog broadcasts a log message to all SSE clients.
+func (ws *WebServer) AddLog(msg string) {
+	ws.logMu.RLock()
+	defer ws.logMu.RUnlock()
+	for ch := range ws.logClients {
+		select {
+		case ch <- msg:
+		default:
+			// Drop if client is slow
+		}
+	}
 }
 
 // NewWebServer creates a new web server.
 // Binds to localhost only for security (prevents network exposure).
 func NewWebServer(sim *Simulator, port int) *WebServer {
 	return &WebServer{
-		sim:  sim,
-		addr: fmt.Sprintf("127.0.0.1:%d", port),
+		sim:        sim,
+		addr:       fmt.Sprintf("127.0.0.1:%d", port),
+		logClients: make(map[chan string]struct{}),
 	}
 }
 
@@ -48,6 +67,7 @@ func (ws *WebServer) Start() {
 	mux.HandleFunc("/api/stats/update", ws.handleUpdateStats)
 	mux.HandleFunc("/api/control", ws.handleControl)
 	mux.HandleFunc("/api/webrtc/offer", ws.handleWebRTCOffer)
+	mux.HandleFunc("/api/logs", ws.handleLogs)
 
 	go func() {
 		slog.Info("Web control panel starting", "addr", ws.addr)
@@ -55,6 +75,53 @@ func (ws *WebServer) Start() {
 			slog.Error("web server error", "error", err)
 		}
 	}()
+}
+
+// handleLogs serves Server-Sent Events for MQTT logs.
+func (ws *WebServer) handleLogs(w http.ResponseWriter, r *http.Request) {
+	// Set headers for SSE
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// Create channel for this client
+	ch := make(chan string, 100)
+
+	// Register client
+	ws.logMu.Lock()
+	ws.logClients[ch] = struct{}{}
+	ws.logMu.Unlock()
+
+	// Cleanup on disconnect
+	defer func() {
+		ws.logMu.Lock()
+		delete(ws.logClients, ch)
+		ws.logMu.Unlock()
+		close(ch)
+	}()
+
+	// Get flusher
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	// Send initial message
+	fmt.Fprintf(w, "data: {\"type\":\"connected\"}\n\n")
+	flusher.Flush()
+
+	// Stream logs
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case msg := <-ch:
+			fmt.Fprintf(w, "data: %s\n\n", msg)
+			flusher.Flush()
+		}
+	}
 }
 
 func (ws *WebServer) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -251,8 +318,7 @@ func (ws *WebServer) handleUpdateStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Trigger stats report after any change
-	ws.sim.SendStats()
+	// Stats reporting is now handled automatically by ClientPort
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(map[string]string{"message": msg}); err != nil {

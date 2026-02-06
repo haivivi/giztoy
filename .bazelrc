@@ -8,9 +8,7 @@ test --test_output=errors
 build --build_tag_filters=-manual
 test --test_tag_filters=-manual
 
-# Cache (shared across workspaces with embed-zig)
-# NOTE: Using same paths as zig-bootstrap for cache sharing
-common --repository_cache=~/.cache/bazel-repo
+# Cache
 build --disk_cache=~/.cache/bazel
 
 # Platform

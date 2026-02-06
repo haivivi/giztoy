@@ -26,3 +26,15 @@ rust_binary(
         "@crate_index//:tracing-subscriber",
     ],
 )
+
+rust_binary(
+    name = "luau_dialogue",
+    srcs = ["src/bin/luau_dialogue.rs"],
+    deps = [
+        "//rust/genx",
+        "@crate_index//:anyhow",
+        "@crate_index//:tokio",
+        "@crate_index//:tracing",
+        "@crate_index//:tracing-subscriber",
+    ],
+)

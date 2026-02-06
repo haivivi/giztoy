@@ -44,6 +44,32 @@ func WithSilenceGap(gap time.Duration) MixerOption {
 	return silenceGapOption{gap: gap}
 }
 
+type onTrackCreatedOption struct {
+	fn func()
+}
+
+func (o onTrackCreatedOption) apply(mx *Mixer) {
+	mx.onTrackCreated = o.fn
+}
+
+// WithOnTrackCreated sets a callback that is called when a new track is created.
+func WithOnTrackCreated(fn func()) MixerOption {
+	return onTrackCreatedOption{fn: fn}
+}
+
+type onTrackClosedOption struct {
+	fn func()
+}
+
+func (o onTrackClosedOption) apply(mx *Mixer) {
+	mx.onTrackClosed = o.fn
+}
+
+// WithOnTrackClosed sets a callback that is called when a track is closed/removed.
+func WithOnTrackClosed(fn func()) MixerOption {
+	return onTrackClosedOption{fn: fn}
+}
+
 // Mixer is a mixer for audio data. It mixes multiple audio streams into a
 // single stream. With TrackCtrl, you can control the play/stop/gain of each
 // track.
@@ -66,6 +92,10 @@ type Mixer struct {
 	writeNotify chan struct{}
 
 	buf []float32
+
+	// Track lifecycle callbacks
+	onTrackCreated func()
+	onTrackClosed  func()
 }
 
 // NewMixer creates a new Mixer with the specified output format and options.
@@ -138,6 +168,9 @@ func (mx *Mixer) CreateTrack(opts ...TrackOption) (Track, *TrackCtrl, error) {
 	select {
 	case mx.trackNotify <- struct{}{}:
 	default:
+	}
+	if mx.onTrackCreated != nil {
+		mx.onTrackCreated()
 	}
 	return tr, mx.head, nil
 }
@@ -352,6 +385,9 @@ func (mx *Mixer) readFullLocked(p []byte) (peak float32, read, silence bool, err
 				mx.head = it
 			} else {
 				prev.next = it
+			}
+			if mx.onTrackClosed != nil {
+				mx.onTrackClosed()
 			}
 			continue
 		}

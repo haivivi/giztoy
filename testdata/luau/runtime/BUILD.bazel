@@ -1,0 +1,13 @@
+# Luau runtime test scripts
+# These scripts are shared between Go and Rust tests
+
+exports_files(
+    glob(["*.luau"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "runtime_scripts",
+    srcs = glob(["*.luau"]),
+    visibility = ["//visibility:public"],
+)

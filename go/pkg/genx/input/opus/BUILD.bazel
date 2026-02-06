@@ -1,0 +1,37 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "opus",
+    srcs = [
+        "doc.go",
+        "frame.go",
+        "ogg.go",
+        "opus.go",
+        "stamped.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/input/opus",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/codec/ogg",
+        "//go/pkg/audio/codec/opus",
+        "//go/pkg/buffer",
+        "//go/pkg/genx",
+        "//go/pkg/genx/input",
+    ],
+)
+
+go_test(
+    name = "opus_test",
+    srcs = [
+        "frame_test.go",
+        "ogg_test.go",
+        "opus_test.go",
+        "stamped_test.go",
+    ],
+    embed = [":opus"],
+    deps = [
+        "//go/pkg/audio/codec/ogg",
+        "//go/pkg/audio/codec/opus",
+        "//go/pkg/genx",
+    ],
+)

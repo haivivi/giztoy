@@ -10,6 +10,18 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+filegroup(
+    name = "tool_tests",
+    srcs = glob(["tool/**/*.luau"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "agent_tests",
+    srcs = glob(["agent/**/*.luau"]),
+    visibility = ["//visibility:public"],
+)
+
 # Test runner script
 sh_binary(
     name = "run_test",
@@ -432,4 +444,274 @@ sh_test(
         "integration",
         "manual",
     ],
+)
+
+# =============================================================================
+# Tool Runtime Tests
+# =============================================================================
+
+sh_test(
+    name = "test_tool_basic_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location tool/test_basic.luau)",
+        "luau/libs",
+        "tool",  # runtime mode
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "tool/test_basic.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_tool_basic_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location tool/test_basic.luau)",
+        "luau/libs",
+        "tool",  # runtime mode
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "tool/test_basic.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_tool_require_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location tool/test_require.luau)",
+        "luau/libs",
+        "tool",  # runtime mode
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "tool/test_require.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_tool_require_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location tool/test_require.luau)",
+        "luau/libs",
+        "tool",  # runtime mode
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "tool/test_require.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_tool_stream_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location tool/test_stream.luau)",
+        "luau/libs",
+        "tool",  # runtime mode
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "tool/test_stream.luau",
+    ],
+    tags = ["unit"],
+)
+
+# =============================================================================
+# Agent Runtime Tests
+# =============================================================================
+
+sh_test(
+    name = "test_agent_basic_go",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location agent/test_basic.luau)",
+        "luau/libs",
+        "agent",  # runtime mode
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "agent/test_basic.luau",
+    ],
+    tags = ["unit"],
+)
+
+sh_test(
+    name = "test_agent_basic_rust",
+    srcs = ["run_test.sh"],
+    args = [
+        "$(location //rust/cmd/luau)",
+        "$(location agent/test_basic.luau)",
+        "luau/libs",
+        "agent",  # runtime mode
+    ],
+    data = [
+        "//rust/cmd/luau",
+        "//luau/libs:haivivi",
+        "agent/test_basic.luau",
+    ],
+    tags = ["unit"],
+)
+
+# =============================================================================
+# Genx Integration Tests (require API keys, manual)
+# =============================================================================
+
+sh_test(
+    name = "test_generate_go",
+    srcs = ["run_genx_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location //testdata/luau/runtime:generate.luau)",
+        "luau/libs",
+        "testdata/models",
+        "$(location //luau/tests/genx:generate_input.json)",
+        "tool",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "//testdata/luau/runtime:generate.luau",
+        "//testdata/models",
+        "//luau/tests/genx:generate_input.json",
+    ],
+    env_inherit = [
+        "DEEPSEEK_API_KEY",
+    ],
+    tags = [
+        "genx",
+        "manual",
+    ],
+)
+
+sh_test(
+    name = "test_generate_stream_go",
+    srcs = ["run_genx_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location //testdata/luau/runtime:generate_stream.luau)",
+        "luau/libs",
+        "testdata/models",
+        "$(location //luau/tests/genx:generate_stream_input.json)",
+        "tool",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "//testdata/luau/runtime:generate_stream.luau",
+        "//testdata/models",
+        "//luau/tests/genx:generate_stream_input.json",
+    ],
+    env_inherit = [
+        "DEEPSEEK_API_KEY",
+    ],
+    tags = [
+        "genx",
+        "manual",
+    ],
+)
+
+sh_test(
+    name = "test_tts_go",
+    srcs = ["run_genx_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location //testdata/luau/runtime:tts.luau)",
+        "luau/libs",
+        "testdata/models",
+        "$(location //luau/tests/genx:tts_minimax_input.json)",
+        "tool",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "//testdata/luau/runtime:tts.luau",
+        "//testdata/models",
+        "//luau/tests/genx:tts_minimax_input.json",
+    ],
+    env_inherit = [
+        "MINIMAX_API_KEY",
+        "MINIMAX_GROUP_ID",
+    ],
+    tags = [
+        "genx",
+        "manual",
+    ],
+)
+
+sh_test(
+    name = "test_tts_doubao_go",
+    srcs = ["run_genx_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location //testdata/luau/runtime:tts.luau)",
+        "luau/libs",
+        "testdata/models",
+        "$(location //luau/tests/genx:tts_doubao_input.json)",
+        "tool",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "//testdata/luau/runtime:tts.luau",
+        "//testdata/models",
+        "//luau/tests/genx:tts_doubao_input.json",
+    ],
+    env_inherit = [
+        "bytedance_speech_app_id",
+        "bytedance_speech_access_token",
+    ],
+    tags = [
+        "genx",
+        "manual",
+    ],
+)
+
+sh_test(
+    name = "test_realtime_go",
+    srcs = ["run_genx_test.sh"],
+    args = [
+        "$(location //go/cmd/luau)",
+        "$(location //testdata/luau/runtime:realtime.luau)",
+        "luau/libs",
+        "testdata/models",
+        "$(location //luau/tests/genx:realtime_input.json)",
+        "tool",
+    ],
+    data = [
+        "//go/cmd/luau",
+        "//luau/libs:haivivi",
+        "//testdata/luau/runtime:realtime.luau",
+        "//testdata/models",
+        "//luau/tests/genx:realtime_input.json",
+    ],
+    env_inherit = [
+        "bytedance_speech_app_id",
+        "bytedance_speech_access_token",
+    ],
+    tags = [
+        "genx",
+        "manual",
+    ],
+    timeout = "moderate",
 )

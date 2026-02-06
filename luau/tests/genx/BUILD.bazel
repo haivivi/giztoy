@@ -1,0 +1,12 @@
+# Genx test input files
+
+exports_files(
+    glob(["*.json"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "inputs",
+    srcs = glob(["*.json"]),
+    visibility = ["//visibility:public"],
+)

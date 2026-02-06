@@ -21,3 +21,7 @@ path = "src/bin/dialogue.rs"
 [[bin]]
 name = "tools"
 path = "src/bin/tools.rs"
+
+[[bin]]
+name = "luau_dialogue"
+path = "src/bin/luau_dialogue.rs"

@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "internal",
+    srcs = [
+        "audio_track.go",
+        "eos_to_silence.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/examples/go/genx/transformers/internal",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/audio/codec/mp3",
+        "//go/pkg/audio/codec/ogg",
+        "//go/pkg/audio/codec/opus",
+        "//go/pkg/audio/resampler",
+        "//go/pkg/genx",
+    ],
+)

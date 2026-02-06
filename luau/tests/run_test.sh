@@ -23,6 +23,7 @@ fi
 RUNNER="$1"
 SCRIPT="$2"
 LIBS_DIR="$3"
+RUNTIME="${4:-minimal}"  # Default to minimal runtime
 
 # In bazel sandbox, files are in runfiles directory
 # Try to find the libs directory
@@ -43,5 +44,5 @@ else
     fi
 fi
 
-echo "Running: $RUNNER --libs=$LIBS_DIR $SCRIPT"
-exec "$RUNNER" --libs="$LIBS_DIR" "$SCRIPT"
+echo "Running: $RUNNER --dir=$LIBS_DIR --runtime=$RUNTIME $SCRIPT"
+exec "$RUNNER" --dir="$LIBS_DIR" --runtime="$RUNTIME" "$SCRIPT"

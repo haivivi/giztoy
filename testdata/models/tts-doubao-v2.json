@@ -1,0 +1,18 @@
+{
+    "schema": "doubao/seed_tts/v2",
+    "type": "tts",
+    "app_id": "$bytedance_speech_app_id",
+    "token": "$bytedance_speech_access_token",
+    "voices": [
+        { "name": "doubao/xiaohe", "voice_id": "zh_female_xiaohe_uranus_bigtts", "desc": "小禾 - 温柔女声" },
+        { "name": "doubao/vv", "voice_id": "zh_female_vv_uranus_bigtts", "desc": "VV - 活泼女声" },
+        { "name": "doubao/taocheng", "voice_id": "zh_male_taocheng_uranus_bigtts", "desc": "桃城 - 阳光男声" }
+    ],
+    "default_params": {
+        "format": "mp3",
+        "sample_rate": 24000,
+        "speed_ratio": 1.0,
+        "volume_ratio": 1.0,
+        "pitch_ratio": 1.0
+    }
+}
