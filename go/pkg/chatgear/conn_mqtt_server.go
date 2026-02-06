@@ -76,7 +76,7 @@ func (m *serverMux) handleMessage(topic string, payload []byte) {
 		select {
 		case m.opusFrames <- StampedOpusFrame{Timestamp: t, Frame: frame}:
 		default:
-			// Drop frame if buffer full
+			m.logger.DebugPrintf("opusFrames channel full, dropping frame")
 		}
 
 	case stateTopic:
