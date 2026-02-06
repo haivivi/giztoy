@@ -103,7 +103,7 @@ func main() {
 	fmt.Println("[1] Building TTS streams with silence gaps...")
 	ttsStreams := make([]genx.Stream, len(sentences))
 	for i, sentence := range sentences {
-		stream, err := tts.Transform(ctx, textToStream(sentence))
+		stream, err := tts.Transform(ctx, "", textToStream(sentence))
 		if err != nil {
 			log.Fatalf("TTS error: %v", err)
 		}
@@ -120,7 +120,7 @@ func main() {
 
 	// Connect to Doubao Realtime
 	fmt.Println("[2] Connecting to Doubao Realtime...")
-	output, err := realtime.Transform(ctx, withSilence)
+	output, err := realtime.Transform(ctx, "", withSilence)
 	if err != nil {
 		log.Fatalf("Doubao Realtime error: %v", err)
 	}

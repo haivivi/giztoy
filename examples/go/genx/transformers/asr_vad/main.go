@@ -111,21 +111,21 @@ func runEoSPipelineTest(ctx context.Context, doubaoClient *doubaospeech.Client, 
 
 	// Transform through TTS
 	fmt.Println("[2] TTS transform (text -> audio)...")
-	audioStream, err := tts.Transform(ctx, combined)
+	audioStream, err := tts.Transform(ctx, "", combined)
 	if err != nil {
 		log.Fatalf("TTS transform error: %v", err)
 	}
 
 	// Transform through Codec
 	fmt.Println("[3] Codec transform (MP3 -> OGG)...")
-	oggStream, err := codec.Transform(ctx, audioStream)
+	oggStream, err := codec.Transform(ctx, "", audioStream)
 	if err != nil {
 		log.Fatalf("Codec transform error: %v", err)
 	}
 
 	// Transform through ASR
 	fmt.Println("[4] ASR transform (audio -> text)...")
-	textStream, err := asr.Transform(ctx, oggStream)
+	textStream, err := asr.Transform(ctx, "", oggStream)
 	if err != nil {
 		log.Fatalf("ASR transform error: %v", err)
 	}

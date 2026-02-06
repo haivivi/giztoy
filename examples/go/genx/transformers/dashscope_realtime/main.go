@@ -234,7 +234,7 @@ func runVoiceTest(ctx context.Context, dsClient *dashscope.Client, mmClient *min
 
 func runStreamingPipeline(ctx context.Context, tts *transformers.MinimaxTTS, realtime *transformers.DashScopeRealtime, testName string, testSentences []string) {
 	fmt.Println("[1] Testing TTS...")
-	testStream, err := tts.Transform(ctx, textToStream(testSentences[0]))
+	testStream, err := tts.Transform(ctx, "", textToStream(testSentences[0]))
 	if err != nil {
 		log.Printf("TTS transform error: %v", err)
 		return
@@ -262,7 +262,7 @@ func runStreamingPipeline(ctx context.Context, tts *transformers.MinimaxTTS, rea
 	fmt.Println("[2] Building pipeline...")
 	ttsStreams := make([]genx.Stream, len(testSentences))
 	for i, sentence := range testSentences {
-		stream, err := tts.Transform(ctx, textToStream(sentence))
+		stream, err := tts.Transform(ctx, "", textToStream(sentence))
 		if err != nil {
 			log.Printf("TTS transform error for sentence %d: %v", i, err)
 			return
@@ -287,7 +287,7 @@ func runStreamingPipeline(ctx context.Context, tts *transformers.MinimaxTTS, rea
 
 	fmt.Println("[3] Connecting to DashScope Realtime...")
 	// DashScope Realtime tracks input StreamID and applies it to output
-	output, err := realtime.Transform(ctx, teedInput)
+	output, err := realtime.Transform(ctx, "", teedInput)
 	if err != nil {
 		log.Printf("DashScope Realtime transform error: %v", err)
 		return
@@ -322,7 +322,7 @@ func runVoiceSwitchPipeline(ctx context.Context, tts *transformers.MinimaxTTS, r
 	// Build TTS streams for all sentences
 	ttsStreams := make([]genx.Stream, len(testSentences))
 	for i, sentence := range testSentences {
-		stream, err := tts.Transform(ctx, textToStream(sentence))
+		stream, err := tts.Transform(ctx, "", textToStream(sentence))
 		if err != nil {
 			log.Printf("TTS transform error for sentence %d: %v", i, err)
 			return
@@ -347,7 +347,7 @@ func runVoiceSwitchPipeline(ctx context.Context, tts *transformers.MinimaxTTS, r
 	teedInput := internal.TeeToTrack(withSilence, track)
 
 	fmt.Println("[2] Connecting to DashScope Realtime (voice: Chelsie)...")
-	output, err := realtime.Transform(ctx, teedInput)
+	output, err := realtime.Transform(ctx, "", teedInput)
 	if err != nil {
 		log.Printf("DashScope Realtime transform error: %v", err)
 		return
@@ -720,7 +720,7 @@ func verifyAudio(ctx context.Context, audioPath string) {
 	}
 
 	// Run ASR
-	output, err := asr.Transform(ctx, inputStream)
+	output, err := asr.Transform(ctx, "", inputStream)
 	if err != nil {
 		fmt.Printf("ASR transform error: %v\n", err)
 		return

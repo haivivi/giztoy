@@ -87,7 +87,7 @@ func main() {
 		input := textToStream(sentence)
 
 		// Connect to Doubao Realtime
-		output, err := realtime.Transform(ctx, input)
+		output, err := realtime.Transform(ctx, "", input)
 		if err != nil {
 			log.Printf("Doubao Realtime error: %v", err)
 			continue

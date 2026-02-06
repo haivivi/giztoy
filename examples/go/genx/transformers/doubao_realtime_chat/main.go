@@ -119,7 +119,7 @@ func main() {
 
 // getResponse gets AI response for a message
 func getResponse(ctx context.Context, ai *transformers.DoubaoRealtime, message string, speaker *portaudio.OutputStream) (string, int, error) {
-	output, err := ai.Transform(ctx, textToStream(message))
+	output, err := ai.Transform(ctx, "", textToStream(message))
 	if err != nil {
 		return "", 0, err
 	}

@@ -104,14 +104,14 @@ func runMinimaxTest(ctx context.Context) {
 	// Round 1: TTS -> Codec -> ASR
 	fmt.Println("[1] TTS (MiniMax)...")
 	stream := textToStream(sampleText)
-	stream, err = tts.Transform(ctx, stream)
+	stream, err = tts.Transform(ctx, "", stream)
 	if err != nil {
 		log.Printf("Round 1 TTS error: %v", err)
 		return
 	}
 
 	fmt.Println("[2] Codec (MP3 -> OGG)...")
-	stream, err = codec.Transform(ctx, stream)
+	stream, err = codec.Transform(ctx, "", stream)
 	if err != nil {
 		log.Printf("Round 1 Codec error: %v", err)
 		return
@@ -133,14 +133,14 @@ func runMinimaxTest(ctx context.Context) {
 	// Round 2: TTS -> Codec -> ASR
 	fmt.Println("[3] TTS (MiniMax)...")
 	stream = textToStream(text1)
-	stream, err = tts.Transform(ctx, stream)
+	stream, err = tts.Transform(ctx, "", stream)
 	if err != nil {
 		log.Printf("Round 2 TTS error: %v", err)
 		return
 	}
 
 	fmt.Println("[4] Codec (MP3 -> OGG)...")
-	stream, err = codec.Transform(ctx, stream)
+	stream, err = codec.Transform(ctx, "", stream)
 	if err != nil {
 		log.Printf("Round 2 Codec error: %v", err)
 		return
@@ -175,7 +175,7 @@ func runDoubaoTest(ctx context.Context) {
 	// Doubao TTS ogg_opus is at 24000 Hz
 	fmt.Println("[1] TTS (Doubao)...")
 	stream := textToStream(sampleText)
-	stream, err = tts.Transform(ctx, stream)
+	stream, err = tts.Transform(ctx, "", stream)
 	if err != nil {
 		log.Printf("Round 1 TTS error: %v", err)
 		return
@@ -196,7 +196,7 @@ func runDoubaoTest(ctx context.Context) {
 	// Round 2: TTS -> ASR
 	fmt.Println("[3] TTS (Doubao)...")
 	stream = textToStream(text1)
-	stream, err = tts.Transform(ctx, stream)
+	stream, err = tts.Transform(ctx, "", stream)
 	if err != nil {
 		log.Printf("Round 2 TTS error: %v", err)
 		return

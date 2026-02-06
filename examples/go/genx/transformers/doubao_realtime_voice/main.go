@@ -126,14 +126,14 @@ func main() {
 			fmt.Printf("[Turn %d] Input: %s\n", j+1, sentence)
 
 			// Create TTS stream
-			ttsStream, err := tts.Transform(ctx, textToStream(sentence))
+			ttsStream, err := tts.Transform(ctx, "", textToStream(sentence))
 			if err != nil {
 				log.Printf("TTS error: %v", err)
 				continue
 			}
 
 			// Connect to Doubao Realtime
-			output, err := realtime.Transform(ctx, ttsStream)
+			output, err := realtime.Transform(ctx, "", ttsStream)
 			if err != nil {
 				log.Printf("Doubao Realtime error: %v", err)
 				continue

@@ -504,7 +504,7 @@
           "@@//examples/rust/audio/Cargo.toml": "34e3d306c17be36326faf0f317d5058868d18554c192acc80e478380086054df",
           "@@//examples/rust/genx/Cargo.toml": "b384ec8aa569eddc9740edca4377f7285142338f347ef89f7ab5dadb90aeb43b",
           "@@//examples/rust/minimax/Cargo.toml": "4ccecf89636d39760b456688d5b3a96df6e9e069aeb1c66e98c06f6129900d3e",
-          "@@//rust/Cargo.lock": "e23fef8f8982357a32c181f62709d7fcc358693234656f5516d1c808041c01be",
+          "@@//rust/Cargo.lock": "045ba1488406b2f14d66629f0a0f812e6b209e54286d3b85087ccef6ccd11246",
           "@@//rust/Cargo.toml": "d5136d588291f8a8808f6aff0f95d4381f86c973d4c52a597ef90c119baac6d2",
           "@@//rust/audio/Cargo.toml": "efa397d558180713bba55c6a91180c765ffa262981be30b660edc74fb52f5ff0",
           "@@//rust/buffer/Cargo.toml": "810fbdc9cc3c24e0711d3a84a1d2e0702b3bdc7bb1595c0a036bb712dd99ecbc",

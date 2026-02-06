@@ -149,21 +149,21 @@ func runChat(ctx context.Context, tts *transformers.MinimaxTTS, aiA, aiB *transf
 	// Generate initial TTS message
 	fmt.Println("[1] Generating initial message with TTS...")
 	initialStream := textToStream(initialMessage)
-	ttsStream, err := tts.Transform(ctx, initialStream)
+	ttsStream, err := tts.Transform(ctx, "", initialStream)
 	if err != nil {
 		log.Fatalf("TTS error: %v", err)
 	}
 
 	// Connect AI_A (东北大妈)
 	fmt.Println("[2] Connecting AI_A (东北大妈 - Cherry)...")
-	streamA, err := aiA.Transform(ctx, bufA)
+	streamA, err := aiA.Transform(ctx, "", bufA)
 	if err != nil {
 		log.Fatalf("AI_A connect error: %v", err)
 	}
 
 	// Connect AI_B (上海小姐姐)
 	fmt.Println("[3] Connecting AI_B (上海小姐姐 - Chelsie)...")
-	streamB, err := aiB.Transform(ctx, bufB)
+	streamB, err := aiB.Transform(ctx, "", bufB)
 	if err != nil {
 		log.Fatalf("AI_B connect error: %v", err)
 	}
