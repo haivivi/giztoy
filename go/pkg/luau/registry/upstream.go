@@ -166,6 +166,9 @@ func (c *UpstreamClient) ListVersions(ctx context.Context, name string) ([]strin
 	return result.Versions, nil
 }
 
+// maxDownloadSize is the maximum allowed package download size (50 MB).
+const maxDownloadSize = 50 << 20
+
 // DownloadPackage downloads a package tarball.
 func (c *UpstreamClient) DownloadPackage(ctx context.Context, tarballURL string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", tarballURL, nil)
@@ -184,7 +187,16 @@ func (c *UpstreamClient) DownloadPackage(ctx context.Context, tarballURL string)
 		return nil, fmt.Errorf("download error: %s", resp.Status)
 	}
 
-	return io.ReadAll(resp.Body)
+	// Limit read size to prevent OOM from oversized responses.
+	limited := io.LimitReader(resp.Body, maxDownloadSize+1)
+	data, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, fmt.Errorf("reading download body: %w", err)
+	}
+	if len(data) > maxDownloadSize {
+		return nil, fmt.Errorf("download exceeds maximum size (%d bytes)", maxDownloadSize)
+	}
+	return data, nil
 }
 
 // setAuth sets authentication headers on a request.

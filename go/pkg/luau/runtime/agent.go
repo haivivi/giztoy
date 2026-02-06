@@ -15,11 +15,12 @@ var (
 // AgentContext provides streaming I/O for agent scripts.
 // Agents use recv() to receive input and emit() to send output.
 type AgentContext struct {
-	mu       sync.Mutex
-	inputCh  chan *MessageChunk
-	outputCh chan *MessageChunk
-	closeCh  chan struct{}
-	closed   bool
+	mu          sync.Mutex
+	inputCh     chan *MessageChunk
+	outputCh    chan *MessageChunk
+	closeCh     chan struct{}
+	closed      bool
+	inputClosed bool
 
 	inputBufSize  int
 	outputBufSize int
@@ -167,14 +168,10 @@ func (ac *AgentContext) CloseInput() {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
-	select {
-	case <-ac.closeCh:
-		return // Already closed
-	default:
+	if ac.inputClosed {
+		return
 	}
-
-	// Safely close inputCh
-	defer func() { _ = recover() }()
+	ac.inputClosed = true
 	close(ac.inputCh)
 }
 

@@ -6,6 +6,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -162,6 +163,7 @@ func New(state *luau.State, opts *Options) *Runtime {
 		bytecodeCache: make(map[string][]byte),
 		streams:       newStreamRegistry(),
 		promises:      newPromiseRegistry(),
+		timeouts:      newTimeoutRegistry(),
 		pendingOps:    make(map[uint64]*PendingOp),
 		completedOps:  make(chan *PendingOp, completedOpsBufferSize),
 		transformers:  make(map[string]TransformerFactory),
@@ -178,6 +180,7 @@ func NewWithOptions(state *luau.State, options ...Option) *Runtime {
 		bytecodeCache: make(map[string][]byte),
 		streams:       newStreamRegistry(),
 		promises:      newPromiseRegistry(),
+		timeouts:      newTimeoutRegistry(),
 		pendingOps:    make(map[uint64]*PendingOp),
 		completedOps:  make(chan *PendingOp, completedOpsBufferSize),
 		transformers:  make(map[string]TransformerFactory),
@@ -472,6 +475,28 @@ func (rt *Runtime) RegisterBuiltins() error {
 		return err
 	}
 
+	// Register Stream methods as globals (used by pushStreamObject)
+	if err := rt.state.RegisterFunc("__stream_recv", rt.builtinStreamRecv); err != nil {
+		return err
+	}
+	if err := rt.state.RegisterFunc("__stream_close", rt.builtinStreamClose); err != nil {
+		return err
+	}
+
+	// Register BiStream methods as globals (used by pushBiStreamObject)
+	if err := rt.state.RegisterFunc("__bistream_send", rt.builtinBiStreamSend); err != nil {
+		return err
+	}
+	if err := rt.state.RegisterFunc("__bistream_close_send", rt.builtinBiStreamCloseSend); err != nil {
+		return err
+	}
+	if err := rt.state.RegisterFunc("__bistream_recv", rt.builtinBiStreamRecv); err != nil {
+		return err
+	}
+	if err := rt.state.RegisterFunc("__bistream_close", rt.builtinBiStreamClose); err != nil {
+		return err
+	}
+
 	// Initialize __loaded table for module caching
 	rt.state.NewTable()
 	rt.state.SetGlobal("__loaded")
@@ -623,7 +648,6 @@ func (rt *Runtime) PrecompileModules() error {
 
 		// Cache bytecode
 		rt.bytecodeCache[moduleName] = bytecode
-		fmt.Printf("[luau] precompiled: %s (%d bytes)\n", moduleName, len(bytecode))
 
 		return nil
 	})
@@ -636,7 +660,6 @@ func (rt *Runtime) PrecompileModules() error {
 		return fmt.Errorf("compile errors:\n  %s", strings.Join(compileErrors, "\n  "))
 	}
 
-	fmt.Printf("[luau] precompiled %d modules\n", len(rt.bytecodeCache))
 	return nil
 }
 
@@ -824,7 +847,7 @@ func (rt *Runtime) processCompletedOp(op *PendingOp) {
 
 	if status != luau.CoStatusOK && status != luau.CoStatusYield {
 		errMsg := op.Thread.ToString(-1)
-		fmt.Printf("[luau] thread error: %s\n", errMsg)
+		slog.Error("luau thread error", "error", errMsg)
 	}
 }
 

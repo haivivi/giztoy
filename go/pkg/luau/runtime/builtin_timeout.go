@@ -80,11 +80,6 @@ func (rt *Runtime) builtinTimeout(state *luau.State) int {
 		ms = 0
 	}
 
-	// Initialize timeout registry if needed
-	if rt.timeouts == nil {
-		rt.timeouts = newTimeoutRegistry()
-	}
-
 	// Create promise for the timeout result
 	promise := rt.promises.newPromise()
 

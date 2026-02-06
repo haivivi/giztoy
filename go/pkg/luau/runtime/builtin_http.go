@@ -3,6 +3,7 @@ package runtime
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -159,7 +160,7 @@ func executeHTTP(parentCtx context.Context, method, urlStr string, headers map[s
 	// Read response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		// Continue with partial body if any
+		return HTTPResult{Err: fmt.Errorf("reading response body: %w", err)}
 	}
 
 	// Build response headers map

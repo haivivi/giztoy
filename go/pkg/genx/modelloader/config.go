@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -38,9 +39,9 @@ func (t *verboseTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		// Pretty print JSON
 		var prettyJSON bytes.Buffer
 		if err := json.Indent(&prettyJSON, body, "", "  "); err == nil {
-			fmt.Printf("\n=== REQUEST TO %s ===\n%s\n=== END REQUEST ===\n\n", req.URL, prettyJSON.String())
+			log.Printf("\n=== REQUEST TO %s ===\n%s\n=== END REQUEST ===\n", req.URL, prettyJSON.String())
 		} else {
-			fmt.Printf("\n=== REQUEST TO %s ===\n%s\n=== END REQUEST ===\n\n", req.URL, string(body))
+			log.Printf("\n=== REQUEST TO %s ===\n%s\n=== END REQUEST ===\n", req.URL, string(body))
 		}
 	}
 	return t.base.RoundTrip(req)
@@ -121,7 +122,7 @@ func LoadFromDir(dir string) ([]string, error) {
 			// Skip configs with missing credentials
 			if strings.Contains(err.Error(), "is required") {
 				if Verbose {
-					fmt.Printf("skipping %s: %v\n", path, err)
+					log.Printf("skipping %s: %v", path, err)
 				}
 				return nil
 			}

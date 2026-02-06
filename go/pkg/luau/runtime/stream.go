@@ -454,6 +454,8 @@ func (rt *Runtime) builtinBiStreamClose(state *luau.State) int {
 }
 
 // pushStreamObject creates a Lua stream object with methods.
+// Stream methods (__stream_recv, __stream_close) must be pre-registered
+// in RegisterBuiltins() before calling this function.
 func (rt *Runtime) pushStreamObject(state *luau.State, id uint64) {
 	state.NewTable()
 
@@ -461,25 +463,19 @@ func (rt *Runtime) pushStreamObject(state *luau.State, id uint64) {
 	state.PushInteger(int64(id))
 	state.SetField(-2, "_id")
 
-	// recv method
-	state.PushValue(-1) // push self for closure
-	if err := state.RegisterFunc("__stream_recv", rt.builtinStreamRecv); err == nil {
-		state.GetGlobal("__stream_recv")
-		state.SetField(-2, "recv")
-		state.PushNil()
-		state.SetGlobal("__stream_recv")
-	}
+	// recv method (pre-registered in RegisterBuiltins)
+	state.GetGlobal("__stream_recv")
+	state.SetField(-2, "recv")
 
-	// close method
-	if err := state.RegisterFunc("__stream_close", rt.builtinStreamClose); err == nil {
-		state.GetGlobal("__stream_close")
-		state.SetField(-2, "close")
-		state.PushNil()
-		state.SetGlobal("__stream_close")
-	}
+	// close method (pre-registered in RegisterBuiltins)
+	state.GetGlobal("__stream_close")
+	state.SetField(-2, "close")
 }
 
 // pushBiStreamObject creates a Lua bistream object with methods.
+// BiStream methods (__bistream_send, __bistream_close_send, __bistream_recv,
+// __bistream_close) must be pre-registered in RegisterBuiltins() before
+// calling this function.
 func (rt *Runtime) pushBiStreamObject(state *luau.State, id uint64) {
 	state.NewTable()
 
@@ -487,35 +483,19 @@ func (rt *Runtime) pushBiStreamObject(state *luau.State, id uint64) {
 	state.PushInteger(int64(id))
 	state.SetField(-2, "_id")
 
-	// send method
-	if err := state.RegisterFunc("__bistream_send", rt.builtinBiStreamSend); err == nil {
-		state.GetGlobal("__bistream_send")
-		state.SetField(-2, "send")
-		state.PushNil()
-		state.SetGlobal("__bistream_send")
-	}
+	// send method (pre-registered in RegisterBuiltins)
+	state.GetGlobal("__bistream_send")
+	state.SetField(-2, "send")
 
-	// close_send method
-	if err := state.RegisterFunc("__bistream_close_send", rt.builtinBiStreamCloseSend); err == nil {
-		state.GetGlobal("__bistream_close_send")
-		state.SetField(-2, "close_send")
-		state.PushNil()
-		state.SetGlobal("__bistream_close_send")
-	}
+	// close_send method (pre-registered in RegisterBuiltins)
+	state.GetGlobal("__bistream_close_send")
+	state.SetField(-2, "close_send")
 
-	// recv method
-	if err := state.RegisterFunc("__bistream_recv", rt.builtinBiStreamRecv); err == nil {
-		state.GetGlobal("__bistream_recv")
-		state.SetField(-2, "recv")
-		state.PushNil()
-		state.SetGlobal("__bistream_recv")
-	}
+	// recv method (pre-registered in RegisterBuiltins)
+	state.GetGlobal("__bistream_recv")
+	state.SetField(-2, "recv")
 
-	// close method
-	if err := state.RegisterFunc("__bistream_close", rt.builtinBiStreamClose); err == nil {
-		state.GetGlobal("__bistream_close")
-		state.SetField(-2, "close")
-		state.PushNil()
-		state.SetGlobal("__bistream_close")
-	}
+	// close method (pre-registered in RegisterBuiltins)
+	state.GetGlobal("__bistream_close")
+	state.SetField(-2, "close")
 }

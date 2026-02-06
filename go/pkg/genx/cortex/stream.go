@@ -1,12 +1,16 @@
 package cortex
 
 import (
+	"errors"
 	"io"
 	"sync"
 	"sync/atomic"
 
 	"github.com/haivivi/giztoy/go/pkg/genx"
 )
+
+// ErrInputBufferFull is returned when the input stream buffer is full and a frame is dropped.
+var ErrInputBufferFull = errors.New("input buffer full")
 
 // inputStream implements genx.Stream for user audio input.
 // It collects PCM audio data and emits it as MessageChunks.
@@ -67,8 +71,7 @@ func (s *inputStream) Write(pcmData []byte) error {
 	case s.ch <- chunk:
 		return nil
 	default:
-		// Channel full, drop frame
-		return nil
+		return ErrInputBufferFull
 	}
 }
 
