@@ -19,6 +19,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"io"
@@ -30,6 +31,7 @@ import (
 
 	"github.com/haivivi/giztoy/go/pkg/audio/codec/opus"
 	"github.com/haivivi/giztoy/go/pkg/audio/pcm"
+	"github.com/haivivi/giztoy/go/pkg/audio/resampler"
 	"github.com/haivivi/giztoy/go/pkg/buffer"
 	"github.com/haivivi/giztoy/go/pkg/chatgear"
 	"github.com/haivivi/giztoy/go/pkg/dashscope"
@@ -310,18 +312,27 @@ func (h *realtimeHandler) handleAudio(frame *chatgear.StampedOpusFrame) {
 	}
 }
 
-// resample48to16 resamples 48kHz mono PCM to 16kHz by taking every 3rd sample.
+// resample48to16 resamples 48kHz mono PCM to 16kHz using high-quality resampling.
 func resample48to16(pcm48k []byte) []byte {
-	samples48k := len(pcm48k) / 2
-	samples16k := samples48k / 3
-	pcm16k := make([]byte, samples16k*2)
-	for i := 0; i < samples16k; i++ {
-		srcIdx := i * 3 * 2
-		dstIdx := i * 2
-		pcm16k[dstIdx] = pcm48k[srcIdx]
-		pcm16k[dstIdx+1] = pcm48k[srcIdx+1]
+	if len(pcm48k) == 0 {
+		return nil
 	}
-	return pcm16k
+	srcFmt := resampler.Format{SampleRate: 48000, Stereo: false}
+	dstFmt := resampler.Format{SampleRate: 16000, Stereo: false}
+
+	rs, err := resampler.New(bytes.NewReader(pcm48k), srcFmt, dstFmt)
+	if err != nil {
+		log.Printf("Failed to create resampler: %v", err)
+		return nil
+	}
+	defer rs.Close()
+
+	var out bytes.Buffer
+	if _, err := io.Copy(&out, rs); err != nil {
+		log.Printf("Failed to resample: %v", err)
+		return nil
+	}
+	return out.Bytes()
 }
 
 func (h *realtimeHandler) ensureSession() {

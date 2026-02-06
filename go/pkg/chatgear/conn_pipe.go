@@ -1,12 +1,16 @@
 package chatgear
 
 import (
+	"errors"
 	"iter"
 	"sync"
 	"time"
 
 	"github.com/haivivi/giztoy/go/pkg/audio/codec/opus"
 )
+
+// ErrPipeBufferFull is returned when a pipe's internal buffer is full and data was dropped.
+var ErrPipeBufferFull = errors.New("chatgear: pipe buffer full, data dropped")
 
 // NewPipe creates a connected pair of server and client connections using channels.
 // This is useful for testing and in-process communication.
@@ -147,8 +151,7 @@ func (c *PipeServerConn) SendOpusFrame(timestamp time.Time, frame opus.Frame) er
 	case c.downlinkOpus <- StampedOpusFrame{Timestamp: timestamp, Frame: frame}:
 		return nil
 	default:
-		// Channel full, drop frame
-		return nil
+		return ErrPipeBufferFull
 	}
 }
 
@@ -165,8 +168,7 @@ func (c *PipeServerConn) IssueCommand(cmd Command, t time.Time) error {
 	case c.downlinkCmds <- evt:
 		return nil
 	default:
-		// Channel full, drop command
-		return nil
+		return ErrPipeBufferFull
 	}
 }
 
@@ -230,8 +232,7 @@ func (c *PipeClientConn) SendOpusFrame(timestamp time.Time, frame opus.Frame) er
 	case c.uplinkOpus <- StampedOpusFrame{Timestamp: timestamp, Frame: frame}:
 		return nil
 	default:
-		// Channel full, drop frame
-		return nil
+		return ErrPipeBufferFull
 	}
 }
 
@@ -247,8 +248,7 @@ func (c *PipeClientConn) SendState(state *StateEvent) error {
 	case c.uplinkStates <- state:
 		return nil
 	default:
-		// Channel full, drop state
-		return nil
+		return ErrPipeBufferFull
 	}
 }
 
@@ -264,8 +264,7 @@ func (c *PipeClientConn) SendStats(stats *StatsEvent) error {
 	case c.uplinkStats <- stats:
 		return nil
 	default:
-		// Channel full, drop stats
-		return nil
+		return ErrPipeBufferFull
 	}
 }
 
