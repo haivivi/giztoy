@@ -12,6 +12,15 @@ import (
 	"github.com/aws/smithy-go"
 )
 
+// S3Client abstracts the S3 API operations used by [S3Store].
+// The [s3.Client] type satisfies this interface.
+type S3Client interface {
+	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	DeleteObject(ctx context.Context, params *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+}
+
 // S3Store implements FileStore backed by Amazon S3 or any S3-compatible
 // object store (MinIO, R2, etc.).
 //
@@ -19,7 +28,7 @@ import (
 // The caller is responsible for configuring the [s3.Client] with appropriate
 // credentials, region, and endpoint.
 type S3Store struct {
-	client *s3.Client
+	client S3Client
 	bucket string
 	prefix string
 }
@@ -27,8 +36,9 @@ type S3Store struct {
 // NewS3 creates an S3-backed FileStore.
 //
 // The client should be pre-configured (credentials, region, endpoint).
+// Any type satisfying [S3Client] is accepted; typically an [s3.Client].
 // Prefix is prepended to all object keys; pass "" for no prefix.
-func NewS3(client *s3.Client, bucket, prefix string) *S3Store {
+func NewS3(client S3Client, bucket, prefix string) *S3Store {
 	return &S3Store{client: client, bucket: bucket, prefix: prefix}
 }
 

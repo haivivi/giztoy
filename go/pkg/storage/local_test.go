@@ -170,5 +170,43 @@ func TestNewLocalCreatesDir(t *testing.T) {
 	}
 }
 
+func TestWriteErrorReadOnlyRoot(t *testing.T) {
+	dir := t.TempDir()
+	s, err := NewLocal(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Make root read-only so MkdirAll fails for nested paths.
+	os.Chmod(dir, 0o444)
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+
+	ctx := context.Background()
+	_, err = s.Write(ctx, "sub/file.txt")
+	if err == nil {
+		t.Fatal("expected error writing to read-only directory")
+	}
+}
+
+func TestExistsPermissionError(t *testing.T) {
+	dir := t.TempDir()
+	s, err := NewLocal(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	// Create a subdirectory, put a file in it, then make the subdir unreadable.
+	subdir := filepath.Join(dir, "locked")
+	os.MkdirAll(subdir, 0o755)
+	os.WriteFile(filepath.Join(subdir, "secret"), []byte("x"), 0o644)
+	os.Chmod(subdir, 0o000)
+	t.Cleanup(func() { os.Chmod(subdir, 0o755) })
+
+	_, err = s.Exists(ctx, "locked/secret")
+	if err == nil {
+		t.Fatal("expected permission error")
+	}
+}
+
 // Verify Local satisfies FileStore at compile time.
 var _ FileStore = (*Local)(nil)
