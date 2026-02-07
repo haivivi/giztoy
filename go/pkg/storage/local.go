@@ -29,8 +29,9 @@ func NewLocal(dir string) (*Local, error) {
 }
 
 // resolve turns a storage path into an absolute filesystem path.
+// The path is sanitized to prevent directory traversal outside the root.
 func (l *Local) resolve(path string) string {
-	return filepath.Join(l.root, filepath.FromSlash(path))
+	return filepath.Join(l.root, filepath.Clean("/"+filepath.FromSlash(path)))
 }
 
 // Read opens the named file for reading.

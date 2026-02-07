@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -205,6 +206,24 @@ func TestExistsPermissionError(t *testing.T) {
 	_, err = s.Exists(ctx, "locked/secret")
 	if err == nil {
 		t.Fatal("expected permission error")
+	}
+}
+
+func TestResolvePathTraversal(t *testing.T) {
+	s := newTestLocal(t)
+
+	// All traversal attempts must stay under root.
+	cases := []string{
+		"../etc/passwd",
+		"a/../../etc/passwd",
+		"../../../../../../../etc/passwd",
+		"..\\etc\\passwd", // backslash variant
+	}
+	for _, tc := range cases {
+		resolved := s.resolve(tc)
+		if !strings.HasPrefix(resolved, s.root) {
+			t.Errorf("resolve(%q) = %q, escapes root %q", tc, resolved, s.root)
+		}
 	}
 }
 
