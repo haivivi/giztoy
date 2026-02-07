@@ -1,7 +1,6 @@
 package kv
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"iter"
@@ -36,6 +35,9 @@ type BadgerOptions struct {
 
 // NewBadger creates a new BadgerDB-backed Store.
 func NewBadger(bopts BadgerOptions) (*Badger, error) {
+	if !bopts.InMemory && bopts.Dir == "" {
+		return nil, errors.New("kv: BadgerOptions.Dir is required for on-disk mode")
+	}
 	dbOpts := badger.DefaultOptions(bopts.Dir)
 	if bopts.InMemory {
 		dbOpts = dbOpts.WithInMemory(true)
@@ -105,11 +107,6 @@ func (b *Badger) List(_ context.Context, prefix Key) iter.Seq2[Entry, error] {
 			for it.Seek(prefixBytes); it.ValidForPrefix(prefixBytes); it.Next() {
 				item := it.Item()
 				keyCopy := item.KeyCopy(nil)
-
-				// Double-check prefix boundary for safety.
-				if len(prefixBytes) > 0 && !bytes.HasPrefix(keyCopy, prefixBytes) {
-					break
-				}
 
 				val, err := item.ValueCopy(nil)
 				if err != nil {

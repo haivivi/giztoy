@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/haivivi/giztoy/go/pkg/kv"
@@ -263,4 +264,23 @@ func TestValueIsolation(t *testing.T) {
 	if got2[0] != 'o' {
 		t.Fatal("store value was mutated via returned slice")
 	}
+}
+
+func TestKeySegmentValidation(t *testing.T) {
+	ctx := context.Background()
+	s := newTestStore(t, nil)
+
+	// A key segment containing the separator should panic.
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for key segment containing separator")
+		}
+		msg, ok := r.(string)
+		if !ok || !strings.Contains(msg, "contains separator") {
+			t.Fatalf("unexpected panic: %v", r)
+		}
+	}()
+
+	_ = s.Set(ctx, kv.Key{"bad:seg", "x"}, []byte("v"))
 }

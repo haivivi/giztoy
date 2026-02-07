@@ -7,6 +7,7 @@
 package kv
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"iter"
@@ -82,8 +83,16 @@ func (o *Options) sep() byte {
 }
 
 // encode converts a Key to its byte representation using the separator.
+// It panics if any segment contains the separator character, which indicates
+// a programming error (keys must be constructed with clean segments).
 func (o *Options) encode(k Key) []byte {
 	s := o.sep()
+	// Validate segments do not contain the separator.
+	for _, seg := range k {
+		if strings.IndexByte(seg, s) >= 0 {
+			panic("kv: key segment " + seg + " contains separator '" + string(s) + "'")
+		}
+	}
 	// Calculate total length to avoid allocations.
 	n := 0
 	for i, seg := range k {
@@ -107,31 +116,10 @@ func (o *Options) encode(k Key) []byte {
 // decode converts a byte representation back to a Key using the separator.
 func (o *Options) decode(b []byte) Key {
 	s := o.sep()
-	parts := splitBytes(b, s)
+	parts := bytes.Split(b, []byte{s})
 	k := make(Key, len(parts))
 	for i, p := range parts {
 		k[i] = string(p)
 	}
 	return k
-}
-
-// splitBytes splits b by separator byte, similar to bytes.Split but returns
-// [][]byte without importing bytes package for this single use.
-func splitBytes(b []byte, sep byte) [][]byte {
-	n := 1
-	for _, c := range b {
-		if c == sep {
-			n++
-		}
-	}
-	parts := make([][]byte, 0, n)
-	start := 0
-	for i, c := range b {
-		if c == sep {
-			parts = append(parts, b[start:i])
-			start = i + 1
-		}
-	}
-	parts = append(parts, b[start:])
-	return parts
 }

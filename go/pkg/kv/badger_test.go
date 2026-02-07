@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/haivivi/giztoy/go/pkg/kv"
@@ -231,5 +232,18 @@ func TestBadgerCustomSeparator(t *testing.T) {
 	}
 	if len(keys) != 1 || keys[0] != "path:to:value" {
 		t.Fatalf("List = %v, want [path:to:value]", keys)
+	}
+}
+
+func TestBadgerDirRequired(t *testing.T) {
+	_, err := kv.NewBadger(kv.BadgerOptions{
+		Dir:      "",
+		InMemory: false,
+	})
+	if err == nil {
+		t.Fatal("expected error for empty Dir in on-disk mode")
+	}
+	if !strings.Contains(err.Error(), "Dir is required") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
