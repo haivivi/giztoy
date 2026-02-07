@@ -1,6 +1,3 @@
-# Build options
-build --enable_bzlmod
-
 # Test options
 test --test_output=errors
 
@@ -11,13 +8,13 @@ test --test_tag_filters=-manual
 # Cache
 build --disk_cache=~/.cache/bazel
 
-# Platform
-build --incompatible_enable_cc_toolchain_resolution
-
 # CC toolchain: Use system clang/gcc and inherit PATH for zig, etc.
 # Inherit PATH from environment to allow CI-installed tools (zig, etc.)
 build --action_env=PATH
 build --host_action_env=PATH
+
+# Go module proxy (goproxy.cn works globally and avoids GFW issues)
+build --repo_env=GOPROXY=https://goproxy.cn,direct
 
 # =============================================================================
 # User local config

@@ -23,13 +23,13 @@ bazel_dep(name = "platforms", version = "1.0.0")
 # ============================================================================
 
 # Apple support - provides Apple CC toolchain (must be before rules_cc)
-bazel_dep(name = "apple_support", version = "1.24.1")
+bazel_dep(name = "apple_support", version = "2.2.0")
 
 # Apple platform rules (iOS, macOS, tvOS, watchOS)
-bazel_dep(name = "rules_apple", version = "3.16.1")
+bazel_dep(name = "rules_apple", version = "4.3.3")
 
 # Swift language rules (required by rules_apple)
-bazel_dep(name = "rules_swift", version = "2.8.1")
+bazel_dep(name = "rules_swift", version = "3.4.2")
 
 # ============================================================================
 # Core rules
@@ -39,7 +39,7 @@ bazel_dep(name = "rules_swift", version = "2.8.1")
 bazel_dep(name = "rules_rust", version = "0.68.1")
 
 # C/C++ rules (after apple_support for correct toolchain resolution)
-bazel_dep(name = "rules_cc", version = "0.2.14")
+bazel_dep(name = "rules_cc", version = "0.2.16")
 
 # Shell rules (required for sh_binary/sh_test in Bazel 8+)
 bazel_dep(name = "rules_shell", version = "0.6.1")

@@ -1,3 +1,4 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//bazel/harmonyos:defs.bzl", "harmonyos_application", "harmonyos_hap", "harmonyos_install")
 
 package(default_visibility = ["//visibility:public"])
