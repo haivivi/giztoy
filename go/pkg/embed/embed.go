@@ -43,7 +43,4 @@ type Embedder interface {
 var (
 	// ErrEmptyInput is returned when the input text is empty.
 	ErrEmptyInput = errors.New("embed: empty input")
-
-	// ErrTooManyTexts is returned when the batch size exceeds the maximum.
-	ErrTooManyTexts = errors.New("embed: too many texts in batch")
 )
