@@ -1,0 +1,2 @@
+# Enable USB Serial JTAG as console for DevKit boards
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y

@@ -1,0 +1,14 @@
+# mqtt0 - Lightweight MQTT 5.0 Client Library
+#
+# A minimal MQTT 5.0 client implementation for embedded systems.
+# Features:
+# - QoS 0 only (fire and forget)
+# - Topic Alias support for bandwidth reduction
+# - Zero dynamic allocation
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(["**/*"]),
+)

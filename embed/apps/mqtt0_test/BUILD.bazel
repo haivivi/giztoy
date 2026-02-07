@@ -1,22 +1,29 @@
-# Palgear API Test App
+# mqtt0 Test App
 #
-# Tests Palgear API client on Korvo-2 board using event-driven WiFi and pure Zig TLS.
-# Requires WiFi and device credentials via --define flags.
+# Tests MQTT 5.0 client with Topic Alias support on ESP32-S3 boards.
+# Includes comprehensive test suites for:
+# - Basic connectivity
+# - Multi-topic concurrent publish
+# - Throughput measurement (up/down)
+# - Long connection stability
+# - Reconnection handling
 #
 # Usage:
-#   bazel build //embed/apps/palgear_test:esp \
+#   bazel build //embed/apps/mqtt0_test:esp \
 #     --define WIFI_SSID=HAIVIVI-MFG \
 #     --define WIFI_PASSWORD=xxx \
-#     --define DEVICE_SN=xxx \
-#     --define DEVICE_EID=xxx \
-#     --define API_HOST=api.haivivi.cn
+#     --define MQTT_HOST=mqtt.haivivi.cn \
+#     --define MQTT_PORT=8883 \
+#     --define TEST_SUITE=all
 
 load("@embed_zig//bazel/esp:defs.bzl", "esp_flash", "esp_sdkconfig", "esp_zig_app")
 load("@embed_zig//bazel:env.bzl", "make_env_file")
 load("@embed_zig//bazel/esp/sdkconfig:app.bzl", "esp_app")
 load("@embed_zig//bazel/esp/sdkconfig:crypto.bzl", "esp_crypto")
+load("@embed_zig//bazel/esp/sdkconfig:lwip.bzl", "esp_lwip")
 load("@embed_zig//bazel/esp/sdkconfig:newlib.bzl", "esp_newlib")
 load("@embed_zig//bazel/esp/sdkconfig:psram.bzl", "esp_psram")
+load("@embed_zig//bazel/esp/sdkconfig:wifi.bzl", "esp_wifi")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -28,10 +35,27 @@ filegroup(
 # Environment from command line --define flags
 make_env_file(
     name = "env",
-    defines = ["WIFI_SSID", "WIFI_PASSWORD", "DEVICE_SN", "DEVICE_EID", "API_HOST"],
+    defines = [
+        "WIFI_SSID",
+        "WIFI_PASSWORD",
+        "MQTT_HOST",
+        "MQTT_PORT",
+        "MQTT_USERNAME",
+        "MQTT_PASSWORD",
+        "CLIENT_ID",
+        "TEST_SUITE",
+        "MQTT_SKIP_VERIFY",
+    ],
     defaults = {
         "WIFI_SSID": "HAIVIVI-MFG",
-        "API_HOST": "api.haivivi.cn",
+        "WIFI_PASSWORD": "!haivivi",
+        "MQTT_HOST": "mqtt.stage.haivivi.cn",
+        "MQTT_PORT": "8883",
+        "MQTT_USERNAME": "admin",
+        "MQTT_PASSWORD": "isA953Nx56EBfEu",
+        "CLIENT_ID": "zig-mqtt0-test",
+        "TEST_SUITE": "remote_bandwidth",
+        "MQTT_SKIP_VERIFY": "true",
     },
 )
 
@@ -40,7 +64,6 @@ make_env_file(
 # =============================================================================
 
 # XIP PSRAM - allows PSRAM access during WiFi/flash operations
-# Required for apps that use PSRAM task stack with WiFi
 esp_psram(
     name = "psram_xip",
     chip = "esp32s3",
@@ -49,37 +72,55 @@ esp_psram(
     xip_from_psram = True,
 )
 
-# 128KB PSRAM stack for TLS/crypto operations
+# 128KB PSRAM stack for TLS/MQTT operations
 esp_app(
     name = "app_128k",
     run_in_psram = 131072,  # 128KB
 )
 
 # mbedTLS with hardware-accelerated crypto
-# When disable_mbedtls=False, all crypto features are enabled by default
 esp_crypto(
     name = "crypto_mbedtls",
     disable_mbedtls = False,
 )
 
 # Newlib nano printf - saves ~20KB
-# Note: No 64-bit int format or C99 features
 esp_newlib(
     name = "newlib_nano",
     nano_format = True,
 )
 
-# Combined sdkconfig for this app
+# High throughput WiFi configuration
+esp_wifi(
+    name = "wifi_fast",
+    static_rx_buffer_num = 24,      # More static buffers (default: 16)
+    dynamic_rx_buffer_num = 128,    # Double dynamic buffers (default: 64)
+    rx_ba_win = 32,
+    tx_ba_win = 16,                 # Larger TX window (default: 6)
+)
+
+# High throughput LWIP configuration
+esp_lwip(
+    name = "lwip_fast",
+    tcpip_task_stack_size = 8192,
+    max_sockets = 10,
+    max_active_tcp = 16,
+    tcp_snd_buf_default = 65535,    # Max TCP send buffer
+    tcp_wnd_default = 65535,        # Max TCP window
+    tcp_recvmbox_size = 64,
+)
+
+# Combined sdkconfig for this app (high throughput)
 esp_sdkconfig(
     name = "sdkconfig",
     core = "//embed/esp:core",
     crypto = ":crypto_mbedtls",
     freertos = "//embed/esp:freertos",
     log = "//embed/esp:log",
-    lwip = "//embed/esp:lwip",
+    lwip = ":lwip_fast",            # High throughput LWIP
     newlib = ":newlib_nano",
     psram = ":psram_xip",
-    wifi = "//embed/esp:wifi",
+    wifi = ":wifi_fast",            # High throughput WiFi
 )
 
 # =============================================================================
@@ -112,8 +153,6 @@ esp_zig_app(
         "@embed_zig//lib/drivers",
         "@embed_zig//lib/dns",
         "@embed_zig//lib/tls",
-        "@embed_zig//lib/http",
-        "@embed_zig//lib/ntp",
     ],
     force_link = [
         "led_strip_refresh",

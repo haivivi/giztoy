@@ -1,0 +1,40 @@
+# chatgear - Chatgear Protocol Client Library
+#
+# Implements the client-side of the chatgear device-server communication protocol.
+# Based on go/pkg/chatgear.
+#
+# Features:
+# - MQTT-based transport
+# - Stamped Opus audio frame encoding/decoding
+# - State and stats event reporting (uplink)
+# - Command and audio stream reception (downlink)
+
+load("@embed_zig//bazel/zig:defs.bzl", "zig_lib", "zig_run")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(
+        ["**/*"],
+        exclude = [".zig-cache/**", "zig-out/**"],
+    ),
+)
+
+zig_lib(
+    name = "chatgear",
+    srcs = glob(
+        ["**/*"],
+        exclude = [".zig-cache/**", "zig-out/**"],
+    ),
+)
+
+zig_run(
+    name = "test",
+    srcs = glob(
+        ["**/*"],
+        exclude = [".zig-cache/**", "zig-out/**"],
+    ),
+    project_dir = "embed/lib/chatgear",
+    build_step = "test --summary all",
+)

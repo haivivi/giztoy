@@ -1,0 +1,11 @@
+.{
+    .name = .chatgear,
+    .version = "0.1.0",
+    .fingerprint = 0x66e56cc4e7ad8e13,
+    .dependencies = .{},
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
