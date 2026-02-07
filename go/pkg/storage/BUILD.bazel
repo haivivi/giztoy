@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "storage",
+    srcs = [
+        "local.go",
+        "storage.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/storage",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "storage_test",
+    srcs = ["local_test.go"],
+    embed = [":storage"],
+)
