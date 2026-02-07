@@ -358,6 +358,28 @@
         }
       }
     },
+    "//bazel/harmonyos:extensions.bzl%hos_sdk_extension": {
+      "general": {
+        "bzlTransitiveDigest": "J9FiD3aObm6EI5/5D5k6nBb6NQmIqMbbZQg/D0AWzOo=",
+        "usagesDigest": "QUqJ/EpP3FzVURuYQqR5TG4DVQhV343eNmtRz/PKd4k=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "hos_sdk": {
+            "repoRuleId": "@@//bazel/harmonyos:repository.bzl%hos_sdk_repository",
+            "attributes": {
+              "version": "2.0.0.2",
+              "tag": "v2.0.2",
+              "url": "",
+              "sha256": "",
+              "strip_prefix": "command-line-tools",
+              "install_components": [
+                "OpenHarmony/toolchains:9"
+              ]
+            }
+          }
+        }
+      }
+    },
     "@@rules_android+//rules/android_sdk_repository:rule.bzl%android_sdk_repository_extension": {
       "general": {
         "bzlTransitiveDigest": "+rMrzIrv7sImYmkbXJYv+gFpTJQ79X3MpwwMLI2A+oA=",
