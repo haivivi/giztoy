@@ -68,10 +68,8 @@ go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//go:go.mod")
 use_repo(
     go_deps,
-    "com_github_dgraph_io_badger_v4",
-    "com_github_charmbracelet_bubbles",
-    "com_github_charmbracelet_bubbletea",
     "com_github_charmbracelet_lipgloss",
+    "com_github_dgraph_io_badger_v4",
     "com_github_goccy_go_yaml",
     "com_github_google_jsonschema_go",
     "com_github_google_uuid",
@@ -86,7 +84,6 @@ use_repo(
     "com_github_tphakala_go_audio_resampling",
     "com_github_vmihailenco_msgpack_v5",
     "in_gopkg_yaml_v3",
-    "org_golang_google_api",
     "org_golang_google_genai",
 )
 
