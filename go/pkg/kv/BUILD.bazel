@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "kv",
+    srcs = [
+        "badger.go",
+        "kv.go",
+        "memory.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/kv",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_dgraph_io_badger_v4//:badger",
+    ],
+)
+
+go_test(
+    name = "kv_test",
+    srcs = [
+        "badger_test.go",
+        "kv_test.go",
+    ],
+    deps = [":kv"],
+)
