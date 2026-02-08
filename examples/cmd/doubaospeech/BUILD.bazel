@@ -14,12 +14,19 @@ filegroup(
     srcs = glob(["commands/*.yaml"]),
 )
 
+# Test audio files for ASR testing
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/*"]),
+)
+
 # All data files needed for the test runner
 filegroup(
     name = "run_data",
     srcs = [
         ":configs",
         ":templates",
+        ":testdata",
     ],
 )
 

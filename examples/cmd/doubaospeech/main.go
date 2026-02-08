@@ -8,17 +8,17 @@
 //	bazel run //examples/cmd/doubaospeech:run -- [test_level]
 //
 //	test_level:
-//	  1       - TTS V1 (classic)
-//	  2       - TTS V2 HTTP streaming (BigModel)
-//	  3       - TTS V2 bidirectional WebSocket
-//	  4       - ASR V1 (one-sentence)
-//	  5       - ASR V2 (BigModel file)
+//	  1       - TTS V2 HTTP streaming (BigModel) - recommended
+//	  2       - TTS V2 bidirectional WebSocket
+//	  3       - TTS V1 (classic, requires volcano_tts grant)
+//	  4       - ASR V2 streaming (uses testdata audio)
+//	  5       - ASR V2 file recognition (requires audio URL)
 //	  6       - Podcast SAMI (WebSocket)
 //	  7       - Meeting transcription
 //	  8       - Subtitle extraction
 //	  9       - Realtime
 //	  all     - All tests (default)
-//	  quick   - Quick smoke test (TTS V2 + ASR V1)
+//	  quick   - Quick smoke test (TTS V2 HTTP + ASR V2 stream)
 //	  tts     - All TTS tests
 //	  asr     - All ASR tests
 //	  help    - Show usage
@@ -169,42 +169,40 @@ func main() {
 func buildTestCases(commandsDir, outputDir, _ string) []testCase {
 	cmd := func(name string) string { return filepath.Join(commandsDir, name) }
 	out := func(name string) string { return filepath.Join(outputDir, name) }
+	testdata := func(name string) string {
+		return filepath.Join(filepath.Dir(commandsDir), "testdata", name)
+	}
 
 	return []testCase{
-		// Level 1: TTS V1
-		{
-			Name:  "TTS V1 Synchronous",
-			Level: 1, Tags: []string{"tts", "v1"},
-			Args: []string{"tts", "v1", "synthesize", "-f", cmd("tts-v1.yaml"), "-o", out("tts_v1.mp3")},
-		},
-		{
-			Name:  "TTS V1 Streaming",
-			Level: 1, Tags: []string{"tts", "v1"},
-			Args: []string{"tts", "v1", "stream", "-f", cmd("tts-v1.yaml"), "-o", out("tts_v1_stream.mp3")},
-		},
-
-		// Level 2: TTS V2 HTTP
+		// Level 1: TTS V2 HTTP Streaming
 		{
 			Name:  "TTS V2 HTTP Streaming",
-			Level: 2, Tags: []string{"tts", "v2"},
+			Level: 1, Tags: []string{"tts", "v2"},
 			Args: []string{"tts", "v2", "stream", "-f", cmd("tts-v2.yaml"), "-o", out("tts_v2_stream.mp3")},
 		},
 
-		// Level 3: TTS V2 WebSocket bidirectional
+		// Level 2: TTS V2 WebSocket bidirectional
 		{
 			Name:  "TTS V2 Bidirectional WebSocket",
-			Level: 3, Tags: []string{"tts", "v2"},
+			Level: 2, Tags: []string{"tts", "v2"},
 			Args: []string{"tts", "v2", "bidirectional", "-f", cmd("tts-v2.yaml"), "-o", out("tts_v2_bidi.mp3")},
 		},
 
-		// Level 4: ASR V1
+		// Level 3: TTS V1 (Classic, requires volcano_tts grant)
 		{
-			Name:  "ASR V1 One-Sentence",
-			Level: 4, Tags: []string{"asr", "v1"},
-			Args: []string{"asr", "v1", "recognize", "-f", cmd("asr-v1.yaml"), "--json"},
+			Name:  "TTS V1 Synchronous",
+			Level: 3, Tags: []string{"tts", "v1"},
+			Args: []string{"tts", "v1", "synthesize", "-f", cmd("tts-v1.yaml"), "-o", out("tts_v1.mp3")},
 		},
 
-		// Level 5: ASR V2
+		// Level 4: ASR V2 Streaming (uses testdata audio)
+		{
+			Name:  "ASR V2 Streaming",
+			Level: 4, Tags: []string{"asr", "v2"},
+			Args: []string{"asr", "v2", "stream", "-f", cmd("asr-v2-stream.yaml"), "--audio", testdata("test_speech.mp3"), "--json"},
+		},
+
+		// Level 5: ASR V2 File (requires audio URL -- placeholder)
 		{
 			Name:  "ASR V2 File Recognition",
 			Level: 5, Tags: []string{"asr", "v2"},
@@ -247,7 +245,7 @@ func filterTests(tests []testCase, level string) []testCase {
 	case "all":
 		return tests
 	case "quick":
-		return filterByLevels(tests, 2, 4) // TTS V2 + ASR V1
+		return filterByLevels(tests, 1, 4) // TTS V2 HTTP + ASR V2 stream
 	case "tts":
 		return filterByTag(tests, "tts")
 	case "asr":
@@ -368,17 +366,17 @@ Usage:
   bazel run //examples/cmd/doubaospeech:run -- [test_level]
 
 Test levels:
-  1         TTS V1 (classic)
-  2         TTS V2 HTTP streaming (BigModel)
-  3         TTS V2 bidirectional WebSocket
-  4         ASR V1 (one-sentence)
-  5         ASR V2 (BigModel file)
+  1         TTS V2 HTTP streaming (BigModel) - recommended
+  2         TTS V2 bidirectional WebSocket
+  3         TTS V1 (classic, requires volcano_tts grant)
+  4         ASR V2 streaming (uses testdata audio)
+  5         ASR V2 file recognition (requires audio URL)
   6         Podcast SAMI (WebSocket)
   7         Meeting transcription
   8         Subtitle extraction
   9         Realtime
   all       All tests (default)
-  quick     Quick smoke test (TTS V2 + ASR V1)
+  quick     Quick smoke test (TTS V2 HTTP + ASR V2 stream)
   tts       All TTS tests
   asr       All ASR tests
   realtime  Realtime tests
@@ -387,5 +385,5 @@ Test levels:
 Environment variables:
   DOUBAO_CONTEXT    Context name (default: test)
   DOUBAO_APP_ID     App ID for auto-context setup
-  DOUBAO_API_KEY    API Key for auto-context setup`)
+  DOUBAO_API_KEY    API Key (Bearer Token from Volcengine console)`)
 }

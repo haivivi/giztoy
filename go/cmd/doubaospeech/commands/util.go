@@ -105,9 +105,10 @@ func createClient(ctx *cli.Context) (*ds.Client, error) {
 
 	var opts []ds.Option
 
-	// Set authentication - use Bearer Token by default
-	// API Keys from console start with specific patterns (like UUID format)
-	// Bearer Tokens are typically longer alphanumeric strings
+	// Set authentication via Bearer Token
+	// This uses "Authorization: Bearer;{token}" for V1 APIs and
+	// "X-Api-Access-Key: {token}" for V2/V3 APIs.
+	// The token is the access_token from Volcengine console.
 	if ctx.Client.APIKey != "" {
 		opts = append(opts, ds.WithBearerToken(ctx.Client.APIKey))
 	}
