@@ -113,30 +113,8 @@ func runTranslationStream(ctx context.Context, client *ds.Client, config *ds.Tra
 
 	printVerbose("Translation session opened")
 
-	// Read audio data
-	audioData, err := readAudioInput(audioFile)
-	if err != nil {
-		return fmt.Errorf("failed to read audio: %w", err)
-	}
-
-	printVerbose("Sending audio (%s)...", formatBytes(int64(len(audioData))))
-
-	// Send audio in chunks
-	chunkSize := 3200 // 100ms of 16kHz 16-bit mono
-	for i := 0; i < len(audioData); i += chunkSize {
-		end := i + chunkSize
-		isLast := end >= len(audioData)
-		if isLast {
-			end = len(audioData)
-		}
-
-		if err := session.SendAudio(ctx, audioData[i:end], isLast); err != nil {
-			return fmt.Errorf("send audio: %w", err)
-		}
-
-		if !isLast {
-			time.Sleep(100 * time.Millisecond)
-		}
+	if err := sendAudioChunked(ctx, session, audioFile); err != nil {
+		return err
 	}
 
 	// Receive results

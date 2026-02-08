@@ -325,6 +325,10 @@ type TTSAsyncTaskStatus struct {
 }
 
 // GetAsyncTask queries async TTS task status
+//
+// Uses flat response format matching queryTaskStatus in task.go,
+// since /api/v1/tts_async/query returns fields at the top level
+// (not nested under a "data" key like some other V1 endpoints).
 func (s *TTSService) GetAsyncTask(ctx context.Context, taskID string) (*TTSAsyncTaskStatus, error) {
 	queryReq := map[string]any{
 		"appid":   s.client.config.appID,
@@ -332,15 +336,13 @@ func (s *TTSService) GetAsyncTask(ctx context.Context, taskID string) (*TTSAsync
 	}
 
 	var apiResp struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-		Data    struct {
-			TaskID        string `json:"task_id"`
-			Status        string `json:"status"`
-			Progress      int    `json:"progress,omitempty"`
-			AudioURL      string `json:"audio_url,omitempty"`
-			AudioDuration int    `json:"audio_duration,omitempty"`
-		} `json:"data"`
+		Code          int    `json:"code"`
+		Message       string `json:"message"`
+		TaskID        string `json:"task_id"`
+		Status        string `json:"status"`
+		Progress      int    `json:"progress,omitempty"`
+		AudioURL      string `json:"audio_url,omitempty"`
+		AudioDuration int    `json:"audio_duration,omitempty"`
 	}
 
 	if err := s.client.doJSONRequest(ctx, http.MethodPost, "/api/v1/tts_async/query", queryReq, &apiResp); err != nil {
@@ -355,13 +357,13 @@ func (s *TTSService) GetAsyncTask(ctx context.Context, taskID string) (*TTSAsync
 	}
 
 	status := &TTSAsyncTaskStatus{
-		TaskID:        apiResp.Data.TaskID,
-		Progress:      apiResp.Data.Progress,
-		AudioURL:      apiResp.Data.AudioURL,
-		AudioDuration: apiResp.Data.AudioDuration,
+		TaskID:        apiResp.TaskID,
+		Progress:      apiResp.Progress,
+		AudioURL:      apiResp.AudioURL,
+		AudioDuration: apiResp.AudioDuration,
 	}
 
-	switch apiResp.Data.Status {
+	switch apiResp.Status {
 	case "submitted", "pending":
 		status.Status = TaskStatusPending
 	case "running", "processing":

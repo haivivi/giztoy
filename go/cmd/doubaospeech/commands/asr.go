@@ -1,11 +1,8 @@
 package commands
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -340,28 +337,8 @@ func runASRV1Stream(ctx context.Context, client *ds.Client, config *ds.StreamASR
 
 	printVerbose("Stream session opened")
 
-	// Read audio data from file or stdin
-	audioData, err := readAudioInput(audioFile)
-	if err != nil {
-		return fmt.Errorf("failed to read audio: %w", err)
-	}
-
-	// Send audio in chunks
-	chunkSize := 3200 // 100ms of 16kHz 16-bit mono
-	for i := 0; i < len(audioData); i += chunkSize {
-		end := i + chunkSize
-		isLast := end >= len(audioData)
-		if isLast {
-			end = len(audioData)
-		}
-
-		if err := session.SendAudio(ctx, audioData[i:end], isLast); err != nil {
-			return fmt.Errorf("failed to send audio: %w", err)
-		}
-
-		if !isLast {
-			time.Sleep(100 * time.Millisecond) // Simulate real-time streaming
-		}
+	if err := sendAudioChunked(ctx, session, audioFile); err != nil {
+		return err
 	}
 
 	// Receive results
@@ -400,28 +377,8 @@ func runASRV2Stream(ctx context.Context, client *ds.Client, config *ds.ASRV2Conf
 
 	printVerbose("V2 stream session opened")
 
-	// Read audio data from file or stdin
-	audioData, err := readAudioInput(audioFile)
-	if err != nil {
-		return fmt.Errorf("failed to read audio: %w", err)
-	}
-
-	// Send audio in chunks
-	chunkSize := 3200 // 100ms of 16kHz 16-bit mono
-	for i := 0; i < len(audioData); i += chunkSize {
-		end := i + chunkSize
-		isLast := end >= len(audioData)
-		if isLast {
-			end = len(audioData)
-		}
-
-		if err := session.SendAudio(ctx, audioData[i:end], isLast); err != nil {
-			return fmt.Errorf("failed to send audio: %w", err)
-		}
-
-		if !isLast {
-			time.Sleep(100 * time.Millisecond) // Simulate real-time streaming
-		}
+	if err := sendAudioChunked(ctx, session, audioFile); err != nil {
+		return err
 	}
 
 	// Receive results
@@ -451,24 +408,6 @@ func runASRV2Stream(ctx context.Context, client *ds.Client, config *ds.ASRV2Conf
 	}
 
 	return outputResult(output, getOutputFile(), isJSONOutput())
-}
-
-// readAudioInput reads audio data from a file or stdin
-func readAudioInput(audioFile string) ([]byte, error) {
-	if audioFile != "" {
-		data, err := os.ReadFile(audioFile)
-		if err != nil {
-			return nil, fmt.Errorf("read audio file %s: %w", audioFile, err)
-		}
-		return data, nil
-	}
-
-	// Read from stdin
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, os.Stdin); err != nil {
-		return nil, fmt.Errorf("read stdin: %w", err)
-	}
-	return buf.Bytes(), nil
 }
 
 // ============================================================================

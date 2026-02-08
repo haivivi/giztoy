@@ -1,11 +1,15 @@
 package commands
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/haivivi/giztoy/go/pkg/cli"
 	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
@@ -143,4 +147,58 @@ func printSuccess(format string, args ...any) {
 // printInfo prints an info message
 func printInfo(format string, args ...any) {
 	cli.PrintInfo(format, args...)
+}
+
+// audioSender is the interface for sending audio chunks with an isLast flag.
+// Implemented by ASRStreamSession, ASRV2Session, TranslationSession, etc.
+type audioSender interface {
+	SendAudio(ctx context.Context, audio []byte, isLast bool) error
+}
+
+// sendAudioChunked reads audio from a file (or stdin if empty) and sends it
+// in 3200-byte chunks with 100ms delay to simulate real-time streaming.
+func sendAudioChunked(ctx context.Context, sender audioSender, audioFile string) error {
+	audioData, err := readAudioInput(audioFile)
+	if err != nil {
+		return fmt.Errorf("failed to read audio: %w", err)
+	}
+
+	printVerbose("Sending audio (%s)...", formatBytes(int64(len(audioData))))
+
+	chunkSize := 3200 // 100ms of 16kHz 16-bit mono
+	for i := 0; i < len(audioData); i += chunkSize {
+		end := i + chunkSize
+		isLast := end >= len(audioData)
+		if isLast {
+			end = len(audioData)
+		}
+
+		if err := sender.SendAudio(ctx, audioData[i:end], isLast); err != nil {
+			return fmt.Errorf("send audio: %w", err)
+		}
+
+		if !isLast {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	return nil
+}
+
+// readAudioInput reads audio data from a file or stdin
+func readAudioInput(audioFile string) ([]byte, error) {
+	if audioFile != "" {
+		data, err := os.ReadFile(audioFile)
+		if err != nil {
+			return nil, fmt.Errorf("read audio file %s: %w", audioFile, err)
+		}
+		return data, nil
+	}
+
+	// Read from stdin
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, os.Stdin); err != nil {
+		return nil, fmt.Errorf("read stdin: %w", err)
+	}
+	return buf.Bytes(), nil
 }
