@@ -1,0 +1,11 @@
+# End-to-end tests and examples
+#
+# e2e/
+# ├── bazel/        - Bazel mobile platform examples
+# ├── cmd/          - CLI end-to-end test runners (Go binaries)
+# │   ├── minimax/
+# │   └── doubaospeech/
+# ├── go/           - Go SDK examples (single go.mod)
+# └── rust/         - Rust SDK examples
+
+package(default_visibility = ["//visibility:public"])

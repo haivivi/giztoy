@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "speech_tts_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/e2e/minimax/speech_tts",
+    visibility = ["//visibility:private"],
+    deps = ["//go/pkg/minimax"],
+)
+
+go_binary(
+    name = "speech_tts",
+    embed = [":speech_tts_lib"],
+    visibility = ["//visibility:public"],
+)

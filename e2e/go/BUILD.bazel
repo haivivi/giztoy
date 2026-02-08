@@ -1,0 +1,4 @@
+load("@gazelle//:def.bzl", "gazelle")
+
+# gazelle:prefix github.com/haivivi/giztoy/e2e
+gazelle(name = "gazelle")

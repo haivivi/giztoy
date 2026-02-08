@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "meeting_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/e2e/doubaospeech/meeting",
+    visibility = ["//visibility:private"],
+    deps = ["//go/pkg/doubaospeech"],
+)
+
+go_binary(
+    name = "meeting",
+    embed = [":meeting_lib"],
+    visibility = ["//visibility:public"],
+)

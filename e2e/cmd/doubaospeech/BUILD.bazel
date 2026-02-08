@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+package(default_visibility = ["//visibility:public"])
+
+go_library(
+    name = "run_lib",
+    srcs = ["run.go"],
+    importpath = "github.com/haivivi/giztoy/e2e/cmd/doubaospeech",
+    visibility = ["//visibility:private"],
+)
+
+# Go-based test runner for doubaospeech CLI
+# Usage:
+#   bazel run //e2e/cmd/doubaospeech:run -- 1        # TTS V2 HTTP
+#   bazel run //e2e/cmd/doubaospeech:run -- quick    # Quick smoke test
+#   bazel run //e2e/cmd/doubaospeech:run -- all      # All tests
+go_binary(
+    name = "run",
+    embed = [":run_lib"],
+    data = [
+        "//go/cmd/doubaospeech",
+        "//testdata/doubaospeech:doubaospeech",
+    ],
+)

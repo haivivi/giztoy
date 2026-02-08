@@ -1,0 +1,17 @@
+# Doubaospeech CLI test data: YAML command configs and test audio files.
+# Shared between Go and Rust CLI test runners.
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "doubaospeech",
+    srcs = glob(
+        [
+            "commands/*.yaml",
+            "templates/*.yaml",
+            "*.mp3",
+            "*.pcm",
+        ],
+        allow_empty = True,
+    ),
+)

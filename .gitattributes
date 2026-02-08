@@ -1,1 +1,2 @@
-examples/cmd/doubaospeech/testdata/*.mp3 filter=lfs diff=lfs merge=lfs -text
+testdata/doubaospeech/*.mp3 filter=lfs diff=lfs merge=lfs -text
+testdata/doubaospeech/*.pcm filter=lfs diff=lfs merge=lfs -text
