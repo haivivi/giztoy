@@ -18,6 +18,73 @@ func newTestGraph(t *testing.T) graph.Graph {
 	return graph.NewKVGraph(store, kv.Key{"test", "g"})
 }
 
+// --- Validation tests ---
+
+func TestInvalidLabel_Separator(t *testing.T) {
+	g := newTestGraph(t)
+	ctx := context.Background()
+
+	// Entity operations with label containing separator.
+	_, err := g.GetEntity(ctx, "person:123")
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("GetEntity: expected ErrInvalidLabel, got %v", err)
+	}
+
+	err = g.SetEntity(ctx, graph.Entity{Label: "person:123"})
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("SetEntity: expected ErrInvalidLabel, got %v", err)
+	}
+
+	err = g.DeleteEntity(ctx, "a:b")
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("DeleteEntity: expected ErrInvalidLabel, got %v", err)
+	}
+
+	err = g.MergeAttrs(ctx, "a:b", map[string]any{"x": 1})
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("MergeAttrs: expected ErrInvalidLabel, got %v", err)
+	}
+
+	// Relation operations with separator in from/to/relType.
+	err = g.AddRelation(ctx, graph.Relation{From: "a:b", To: "c", RelType: "knows"})
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("AddRelation (from): expected ErrInvalidLabel, got %v", err)
+	}
+	err = g.AddRelation(ctx, graph.Relation{From: "a", To: "b:c", RelType: "knows"})
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("AddRelation (to): expected ErrInvalidLabel, got %v", err)
+	}
+	err = g.AddRelation(ctx, graph.Relation{From: "a", To: "b", RelType: "type:sub"})
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("AddRelation (relType): expected ErrInvalidLabel, got %v", err)
+	}
+
+	err = g.RemoveRelation(ctx, "a:b", "c", "knows")
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("RemoveRelation: expected ErrInvalidLabel, got %v", err)
+	}
+
+	_, err = g.Relations(ctx, "a:b")
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("Relations: expected ErrInvalidLabel, got %v", err)
+	}
+
+	// Traversal operations.
+	_, err = g.Neighbors(ctx, "a:b")
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("Neighbors (label): expected ErrInvalidLabel, got %v", err)
+	}
+	_, err = g.Neighbors(ctx, "a", "type:sub")
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("Neighbors (relType): expected ErrInvalidLabel, got %v", err)
+	}
+
+	_, err = g.Expand(ctx, []string{"ok", "bad:label"}, 1)
+	if !errors.Is(err, graph.ErrInvalidLabel) {
+		t.Fatalf("Expand: expected ErrInvalidLabel, got %v", err)
+	}
+}
+
 // --- Entity tests ---
 
 func TestGetEntity_NotFound(t *testing.T) {

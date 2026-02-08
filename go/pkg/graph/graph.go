@@ -14,6 +14,12 @@ import (
 var (
 	// ErrNotFound is returned when an entity does not exist.
 	ErrNotFound = errors.New("graph: not found")
+
+	// ErrInvalidLabel is returned when a label or relation type contains
+	// the KV separator character (default ':'), which would corrupt key
+	// encoding. Labels and relation types are used as KV key segments
+	// and must not contain the separator.
+	ErrInvalidLabel = errors.New("graph: label contains separator")
 )
 
 // Entity is a node in the graph identified by a unique label.

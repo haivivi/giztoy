@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"iter"
 	"sort"
+	"strings"
 
 	"github.com/haivivi/giztoy/go/pkg/kv"
 )
@@ -29,6 +31,19 @@ type KVGraph struct {
 // results in entity keys like "mem:123:g:e:Alice".
 func NewKVGraph(store kv.Store, prefix kv.Key) *KVGraph {
 	return &KVGraph{store: store, prefix: prefix}
+}
+
+// validateSegments checks that none of the given strings contain the KV
+// separator character. Labels and relation types are used as kv.Key segments;
+// if they contain the separator the encoded key would be corrupted.
+func (g *KVGraph) validateSegments(segs ...string) error {
+	sep := string(kv.DefaultSeparator)
+	for _, s := range segs {
+		if strings.Contains(s, sep) {
+			return fmt.Errorf("%w: %q contains %q", ErrInvalidLabel, s, sep)
+		}
+	}
+	return nil
 }
 
 // --- key helpers ---
@@ -87,6 +102,9 @@ func (g *KVGraph) revPrefix(to string) kv.Key {
 // --- Entity operations ---
 
 func (g *KVGraph) GetEntity(ctx context.Context, label string) (*Entity, error) {
+	if err := g.validateSegments(label); err != nil {
+		return nil, err
+	}
 	data, err := g.store.Get(ctx, g.entityKey(label))
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
@@ -104,6 +122,9 @@ func (g *KVGraph) GetEntity(ctx context.Context, label string) (*Entity, error) 
 }
 
 func (g *KVGraph) SetEntity(ctx context.Context, e Entity) error {
+	if err := g.validateSegments(e.Label); err != nil {
+		return err
+	}
 	data, err := json.Marshal(e.Attrs)
 	if err != nil {
 		return err
@@ -112,6 +133,9 @@ func (g *KVGraph) SetEntity(ctx context.Context, e Entity) error {
 }
 
 func (g *KVGraph) DeleteEntity(ctx context.Context, label string) error {
+	if err := g.validateSegments(label); err != nil {
+		return err
+	}
 	// Collect all relation keys involving this entity.
 	rels, err := g.Relations(ctx, label)
 	if err != nil {
@@ -130,6 +154,9 @@ func (g *KVGraph) DeleteEntity(ctx context.Context, label string) error {
 }
 
 func (g *KVGraph) MergeAttrs(ctx context.Context, label string, attrs map[string]any) error {
+	if err := g.validateSegments(label); err != nil {
+		return err
+	}
 	e, err := g.GetEntity(ctx, label)
 	if err != nil {
 		return err
@@ -188,6 +215,9 @@ func hasPrefix(s, prefix string) bool {
 // --- Relation operations ---
 
 func (g *KVGraph) AddRelation(ctx context.Context, r Relation) error {
+	if err := g.validateSegments(r.From, r.To, r.RelType); err != nil {
+		return err
+	}
 	return g.store.BatchSet(ctx, []kv.Entry{
 		{Key: g.fwdKey(r.From, r.RelType, r.To), Value: nil},
 		{Key: g.revKey(r.To, r.RelType, r.From), Value: nil},
@@ -195,6 +225,9 @@ func (g *KVGraph) AddRelation(ctx context.Context, r Relation) error {
 }
 
 func (g *KVGraph) RemoveRelation(ctx context.Context, from, to, relType string) error {
+	if err := g.validateSegments(from, to, relType); err != nil {
+		return err
+	}
 	return g.store.BatchDelete(ctx, []kv.Key{
 		g.fwdKey(from, relType, to),
 		g.revKey(to, relType, from),
@@ -202,6 +235,9 @@ func (g *KVGraph) RemoveRelation(ctx context.Context, from, to, relType string) 
 }
 
 func (g *KVGraph) Relations(ctx context.Context, label string) ([]Relation, error) {
+	if err := g.validateSegments(label); err != nil {
+		return nil, err
+	}
 	var rels []Relation
 
 	// Forward: relations where label is the source.
@@ -251,6 +287,12 @@ func (g *KVGraph) Relations(ctx context.Context, label string) ([]Relation, erro
 // --- Traversal ---
 
 func (g *KVGraph) Neighbors(ctx context.Context, label string, relTypes ...string) ([]string, error) {
+	if err := g.validateSegments(label); err != nil {
+		return nil, err
+	}
+	if err := g.validateSegments(relTypes...); err != nil {
+		return nil, err
+	}
 	typeSet := make(map[string]struct{}, len(relTypes))
 	for _, rt := range relTypes {
 		typeSet[rt] = struct{}{}
@@ -308,6 +350,9 @@ func (g *KVGraph) Neighbors(ctx context.Context, label string, relTypes ...strin
 }
 
 func (g *KVGraph) Expand(ctx context.Context, labels []string, hops int) ([]string, error) {
+	if err := g.validateSegments(labels...); err != nil {
+		return nil, err
+	}
 	visited := make(map[string]struct{}, len(labels))
 	for _, l := range labels {
 		visited[l] = struct{}{}
