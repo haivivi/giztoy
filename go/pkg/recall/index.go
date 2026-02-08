@@ -4,6 +4,7 @@ import (
 	"github.com/haivivi/giztoy/go/pkg/embed"
 	"github.com/haivivi/giztoy/go/pkg/graph"
 	"github.com/haivivi/giztoy/go/pkg/kv"
+	"github.com/haivivi/giztoy/go/pkg/vecstore"
 )
 
 // IndexConfig configures a new [Index].
@@ -19,7 +20,7 @@ type IndexConfig struct {
 
 	// Vec is the vector index for approximate nearest-neighbor search.
 	// Optional: if nil, vector search is disabled.
-	Vec VectorIndex
+	Vec vecstore.Index
 
 	// Prefix is the KV key prefix that scopes all data for this index.
 	// For example, kv.Key{"mem", "cat_girl"} isolates one persona's data.
@@ -37,7 +38,7 @@ type IndexConfig struct {
 type Index struct {
 	store    kv.Store
 	embedder embed.Embedder
-	vec      VectorIndex
+	vec      vecstore.Index
 	graph    graph.Graph
 	prefix   kv.Key
 }

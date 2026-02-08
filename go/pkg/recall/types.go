@@ -10,7 +10,7 @@
 //
 // [Index.SearchSegments] fuses three signals:
 //
-//   - Vector cosine similarity (via [VectorIndex] + [embed.Embedder])
+//   - Vector cosine similarity (via [vecstore.Index] + [embed.Embedder])
 //   - Keyword overlap between query terms and segment keywords
 //   - Label overlap between query labels and segment labels
 //
@@ -41,48 +41,6 @@ type Segment struct {
 	// Timestamp is the Unix timestamp in nanoseconds when this segment
 	// was created.
 	Timestamp int64 `json:"ts" msgpack:"ts"`
-}
-
-// VectorIndex is the interface for approximate nearest-neighbor search
-// over dense float32 vectors. Implementations include in-memory brute
-// force (for testing) and HNSW (for production).
-//
-// VectorIndex is an in-memory data structure. Persistence (save/load
-// to [storage.FileStore]) is the responsibility of the upper layer.
-type VectorIndex interface {
-	// Insert adds or updates a vector with the given ID.
-	Insert(id string, vector []float32) error
-
-	// BatchInsert adds or updates multiple vectors at once.
-	// ids and vectors must have the same length.
-	BatchInsert(ids []string, vectors [][]float32) error
-
-	// Search returns the top-k nearest vectors to the query.
-	// Results are ordered by ascending distance (closest first).
-	Search(query []float32, topK int) ([]VectorMatch, error)
-
-	// Delete removes a vector by ID. No error if ID does not exist.
-	Delete(id string) error
-
-	// Len returns the number of vectors in the index.
-	Len() int
-
-	// Flush ensures all pending writes are visible to subsequent searches.
-	// For in-memory implementations this is typically a no-op.
-	Flush() error
-
-	// Close releases resources held by the index.
-	Close() error
-}
-
-// VectorMatch is a single result from a vector similarity search.
-type VectorMatch struct {
-	// ID is the identifier of the matched vector.
-	ID string
-
-	// Distance is the distance between the query and matched vector.
-	// Lower values indicate higher similarity.
-	Distance float32
 }
 
 // SearchQuery specifies parameters for [Index.SearchSegments].

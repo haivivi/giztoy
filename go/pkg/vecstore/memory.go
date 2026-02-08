@@ -1,4 +1,4 @@
-package recall
+package vecstore
 
 import (
 	"math"
@@ -6,23 +6,23 @@ import (
 	"sync"
 )
 
-// MemVec is an in-memory VectorIndex implementation using brute-force
-// cosine distance. Intended for testing and small-scale use.
+// Memory is an in-memory Index implementation using brute-force cosine
+// distance. Intended for testing and small-scale use (< 1000 vectors).
 //
 // It is safe for concurrent use.
-type MemVec struct {
+type Memory struct {
 	mu      sync.RWMutex
 	vectors map[string][]float32
 }
 
-// NewMemVec creates a new in-memory vector index.
-func NewMemVec() *MemVec {
-	return &MemVec{
+// NewMemory creates a new in-memory vector index.
+func NewMemory() *Memory {
+	return &Memory{
 		vectors: make(map[string][]float32),
 	}
 }
 
-func (m *MemVec) Insert(id string, vector []float32) error {
+func (m *Memory) Insert(id string, vector []float32) error {
 	cp := make([]float32, len(vector))
 	copy(cp, vector)
 	m.mu.Lock()
@@ -31,7 +31,7 @@ func (m *MemVec) Insert(id string, vector []float32) error {
 	return nil
 }
 
-func (m *MemVec) BatchInsert(ids []string, vectors [][]float32) error {
+func (m *Memory) BatchInsert(ids []string, vectors [][]float32) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for i, id := range ids {
@@ -42,11 +42,11 @@ func (m *MemVec) BatchInsert(ids []string, vectors [][]float32) error {
 	return nil
 }
 
-func (m *MemVec) Flush() error {
+func (m *Memory) Flush() error {
 	return nil // in-memory: always visible
 }
 
-func (m *MemVec) Search(query []float32, topK int) ([]VectorMatch, error) {
+func (m *Memory) Search(query []float32, topK int) ([]Match, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -60,7 +60,7 @@ func (m *MemVec) Search(query []float32, topK int) ([]VectorMatch, error) {
 	}
 	results := make([]scored, 0, len(m.vectors))
 	for id, vec := range m.vectors {
-		d := cosineDistance(query, vec)
+		d := CosineDistance(query, vec)
 		results = append(results, scored{id: id, dist: d})
 	}
 
@@ -72,34 +72,34 @@ func (m *MemVec) Search(query []float32, topK int) ([]VectorMatch, error) {
 		results = results[:topK]
 	}
 
-	matches := make([]VectorMatch, len(results))
+	matches := make([]Match, len(results))
 	for i, r := range results {
-		matches[i] = VectorMatch{ID: r.id, Distance: r.dist}
+		matches[i] = Match{ID: r.id, Distance: r.dist}
 	}
 	return matches, nil
 }
 
-func (m *MemVec) Delete(id string) error {
+func (m *Memory) Delete(id string) error {
 	m.mu.Lock()
 	delete(m.vectors, id)
 	m.mu.Unlock()
 	return nil
 }
 
-func (m *MemVec) Len() int {
+func (m *Memory) Len() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return len(m.vectors)
 }
 
-func (m *MemVec) Close() error {
+func (m *Memory) Close() error {
 	return nil
 }
 
-// cosineDistance computes the cosine distance between two vectors.
+// CosineDistance computes the cosine distance between two vectors.
 // Returns a value in [0, 2] where 0 means identical direction and
 // 2 means opposite direction. Returns 0 if either vector has zero norm.
-func cosineDistance(a, b []float32) float32 {
+func CosineDistance(a, b []float32) float32 {
 	if len(a) != len(b) {
 		return 2 // maximum distance for mismatched dimensions
 	}
