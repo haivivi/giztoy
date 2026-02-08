@@ -1,0 +1,82 @@
+# Convert all ONNX/JIT models to ncnn format.
+#
+# Usage:
+#   bazel build //devops/tools/pnnx:models
+#
+# Output files (in bazel-bin/devops/tools/pnnx/):
+#   speaker_eres2net.ncnn.{param,bin}   — speaker embedding (19 MB)
+#   vad_silero.ncnn.{param,bin}         — voice activity detection (608 KB)
+#   denoise_dtln1.ncnn.{param,bin}      — noise suppression stage 1 (714 KB)
+#   denoise_dtln2.ncnn.{param,bin}      — noise suppression stage 2 (1.2 MB)
+
+# ERes2Net: direct PNNX conversion (no LSTM issues)
+genrule(
+    name = "model_speaker",
+    srcs = ["@onnx_speaker_eres2net//:model"],
+    outs = [
+        "speaker_eres2net.ncnn.param",
+        "speaker_eres2net.ncnn.bin",
+    ],
+    cmd = """
+        set -e
+        PNNX=$$(realpath $(execpath @pnnx//:pnnx))
+        ONNX=$$(realpath $(location @onnx_speaker_eres2net//:model))
+        WORK=$$(mktemp -d)
+        trap "rm -rf $$WORK" EXIT
+        cp $$ONNX $$WORK/m.onnx
+        cd $$WORK && $$PNNX m.onnx inputshape="[1,40,80]" >/dev/null 2>&1 && cd -
+        cp $$WORK/m.ncnn.param $(location speaker_eres2net.ncnn.param)
+        cp $$WORK/m.ncnn.bin $(location speaker_eres2net.ncnn.bin)
+    """,
+    tools = ["@pnnx//:pnnx"],
+    visibility = ["//visibility:public"],
+)
+
+# Silero VAD + DTLN: need Python for manual LSTM decomposition
+genrule(
+    name = "model_vad_denoise",
+    srcs = [
+        "convert_models.py",
+        "@model_vad_silero//:model",
+        "@onnx_denoise_dtln_1//:model",
+        "@onnx_denoise_dtln_2//:model",
+    ],
+    outs = [
+        "vad_silero.ncnn.param",
+        "vad_silero.ncnn.bin",
+        "denoise_dtln1.ncnn.param",
+        "denoise_dtln1.ncnn.bin",
+        "denoise_dtln2.ncnn.param",
+        "denoise_dtln2.ncnn.bin",
+    ],
+    cmd = """
+        set -e
+        PNNX=$$(realpath $(execpath @pnnx//:pnnx))
+        SCRIPT=$$(realpath $(location convert_models.py))
+        VAD=$$(realpath $(location @model_vad_silero//:model))
+        DTLN1=$$(realpath $(location @onnx_denoise_dtln_1//:model))
+        DTLN2=$$(realpath $(location @onnx_denoise_dtln_2//:model))
+        WORK=$$(mktemp -d)
+        trap "rm -rf $$WORK" EXIT
+        python3 $$SCRIPT --pnnx $$PNNX --output $$WORK \
+            --silero-vad $$VAD --dtln1 $$DTLN1 --dtln2 $$DTLN2
+        cp $$WORK/vad_silero.ncnn.param $(location vad_silero.ncnn.param)
+        cp $$WORK/vad_silero.ncnn.bin $(location vad_silero.ncnn.bin)
+        cp $$WORK/denoise_dtln1.ncnn.param $(location denoise_dtln1.ncnn.param)
+        cp $$WORK/denoise_dtln1.ncnn.bin $(location denoise_dtln1.ncnn.bin)
+        cp $$WORK/denoise_dtln2.ncnn.param $(location denoise_dtln2.ncnn.param)
+        cp $$WORK/denoise_dtln2.ncnn.bin $(location denoise_dtln2.ncnn.bin)
+    """,
+    tools = ["@pnnx//:pnnx"],
+    visibility = ["//visibility:public"],
+)
+
+# All models combined
+filegroup(
+    name = "models",
+    srcs = [
+        ":model_speaker",
+        ":model_vad_denoise",
+    ],
+    visibility = ["//visibility:public"],
+)

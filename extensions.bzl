@@ -5,6 +5,7 @@ load("@gazelle//:deps.bzl", "go_repository")
 # Load repository rules from organized directories
 # DevOps tools
 load("//devops/tools/mdbook:defs.bzl", "mdbook_repo")
+load("//devops/tools/pnnx:defs.bzl", "pnnx_repo")
 load("//devops/tools/yq:defs.bzl", "yq_repo")
 
 # Third-party libraries
@@ -86,6 +87,67 @@ def _ncnn_impl(_ctx):
 
 ncnn_ext = module_extension(
     implementation = _ncnn_impl,
+)
+
+# =============================================================================
+# PNNX + ONNX Models Extension (for model conversion)
+# =============================================================================
+
+def _pnnx_impl(_ctx):
+    """Module extension for PNNX binary and ONNX source models."""
+    pnnx_repo(name = "pnnx")
+
+    # 3D-Speaker ERes2Net base — speaker embedding (512-dim)
+    _onnx_model_repo(
+        name = "onnx_speaker_eres2net",
+        url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx",
+        sha256 = "1a331345f04805badbb495c775a6ddffcdd1a732567d5ec8b3d5749e3c7a5e4b",
+    )
+
+    # Silero VAD — JIT model (includes both 8k and 16k, we extract 16k path)
+    _onnx_model_repo(
+        name = "model_vad_silero",
+        url = "https://github.com/snakers4/silero-vad/raw/v6.2/src/silero_vad/data/silero_vad.jit",
+        sha256 = "",  # JIT model, SHA256 computed after first download
+    )
+
+    # DTLN noise suppression — stage 1
+    _onnx_model_repo(
+        name = "onnx_denoise_dtln_1",
+        url = "https://github.com/breizhn/DTLN/raw/master/pretrained_model/model_1.onnx",
+        sha256 = "22b91cae3855e5a0620e66a917ca6c82c58db0e842c770f58d86751c5e8d4ae3",
+    )
+
+    # DTLN noise suppression — stage 2
+    _onnx_model_repo(
+        name = "onnx_denoise_dtln_2",
+        url = "https://github.com/breizhn/DTLN/raw/master/pretrained_model/model_2.onnx",
+        sha256 = "e20c92f9233fccf29cddf86970d0d0161a03aebccc26d6f4d5639c4d5ec2e639",
+    )
+
+pnnx_ext = module_extension(
+    implementation = _pnnx_impl,
+)
+
+def _onnx_model_repo_impl(ctx):
+    """Download a single ONNX model file."""
+    ctx.download(
+        url = ctx.attr.url,
+        sha256 = ctx.attr.sha256,
+        output = "model.onnx",
+    )
+    ctx.file("BUILD.bazel", """\
+package(default_visibility = ["//visibility:public"])
+exports_files(["model.onnx"])
+filegroup(name = "model", srcs = ["model.onnx"])
+""")
+
+_onnx_model_repo = repository_rule(
+    implementation = _onnx_model_repo_impl,
+    attrs = {
+        "url": attr.string(mandatory = True),
+        "sha256": attr.string(default = ""),
+    },
 )
 
 # =============================================================================

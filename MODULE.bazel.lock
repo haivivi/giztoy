@@ -344,7 +344,7 @@
     },
     "//:extensions.bzl%ncnn_ext": {
       "general": {
-        "bzlTransitiveDigest": "8wWNJVNKfX1+WmtXVqQqySNBUOE5yDZJxmNOd/YYFxM=",
+        "bzlTransitiveDigest": "npPdZBwrLMkoj+kTKdDBjt1EhB84qiBShzizYzvG2o0=",
         "usagesDigest": "7FXmzMt45LZCdeJCmHX1Yx5NwpRhNuQktngUfiRN+vQ=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -354,6 +354,50 @@
           "ncnn": {
             "repoRuleId": "@@//third_party/ncnn:defs.bzl%ncnn_repo",
             "attributes": {}
+          }
+        }
+      }
+    },
+    "//:extensions.bzl%pnnx_ext": {
+      "general": {
+        "bzlTransitiveDigest": "npPdZBwrLMkoj+kTKdDBjt1EhB84qiBShzizYzvG2o0=",
+        "usagesDigest": "Sfi6G4M1DeRrfXTKujPY38s0GENlMxXWPwOKW9HVcRw=",
+        "recordedInputs": [
+          "REPO_MAPPING:,gazelle gazelle+",
+          "REPO_MAPPING:gazelle+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "pnnx": {
+            "repoRuleId": "@@//devops/tools/pnnx:defs.bzl%pnnx_repo",
+            "attributes": {}
+          },
+          "onnx_speaker_eres2net": {
+            "repoRuleId": "@@//:extensions.bzl%_onnx_model_repo",
+            "attributes": {
+              "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx",
+              "sha256": "1a331345f04805badbb495c775a6ddffcdd1a732567d5ec8b3d5749e3c7a5e4b"
+            }
+          },
+          "model_vad_silero": {
+            "repoRuleId": "@@//:extensions.bzl%_onnx_model_repo",
+            "attributes": {
+              "url": "https://github.com/snakers4/silero-vad/raw/v6.2/src/silero_vad/data/silero_vad.jit",
+              "sha256": ""
+            }
+          },
+          "onnx_denoise_dtln_1": {
+            "repoRuleId": "@@//:extensions.bzl%_onnx_model_repo",
+            "attributes": {
+              "url": "https://github.com/breizhn/DTLN/raw/master/pretrained_model/model_1.onnx",
+              "sha256": "22b91cae3855e5a0620e66a917ca6c82c58db0e842c770f58d86751c5e8d4ae3"
+            }
+          },
+          "onnx_denoise_dtln_2": {
+            "repoRuleId": "@@//:extensions.bzl%_onnx_model_repo",
+            "attributes": {
+              "url": "https://github.com/breizhn/DTLN/raw/master/pretrained_model/model_2.onnx",
+              "sha256": "e20c92f9233fccf29cddf86970d0d0161a03aebccc26d6f4d5639c4d5ec2e639"
+            }
           }
         }
       }

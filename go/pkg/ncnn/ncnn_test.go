@@ -116,3 +116,68 @@ func TestLoadModelNotRegistered(t *testing.T) {
 		t.Error("expected error for unregistered model")
 	}
 }
+
+func TestLoadEmbeddedModels(t *testing.T) {
+	models := ListModels()
+	t.Logf("registered models: %v", models)
+	if len(models) < 4 {
+		t.Fatalf("expected at least 4 registered models, got %d", len(models))
+	}
+
+	tests := []struct {
+		id     ModelID
+		inputW int // width of input mat
+	}{
+		{ModelSpeakerERes2Net, 80},  // [T=40, 80] fbank
+		{ModelVADSilero, 512},       // [1, 512] audio
+		{ModelDenoiseDTLN1, 257},    // [1, 257] STFT mag
+		{ModelDenoiseDTLN2, 512},    // [1, 512] features
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.id), func(t *testing.T) {
+			net, err := LoadModel(tt.id)
+			if err != nil {
+				t.Fatalf("LoadModel(%s): %v", tt.id, err)
+			}
+			defer net.Close()
+			t.Logf("loaded %s OK", tt.id)
+		})
+	}
+}
+
+func TestEmbeddedModelInference(t *testing.T) {
+	// Test speaker model inference
+	net, err := LoadModel(ModelSpeakerERes2Net)
+	if err != nil {
+		t.Fatalf("LoadModel: %v", err)
+	}
+	defer net.Close()
+
+	// Input: [T=40, 80] fbank features
+	data := make([]float32, 40*80)
+	for i := range data {
+		data[i] = float32(i%100) * 0.01
+	}
+	input := NewMat2D(80, 40, data)
+	defer input.Close()
+
+	ex := net.NewExtractor()
+	defer ex.Close()
+
+	if err := ex.SetInput("in0", input); err != nil {
+		t.Fatalf("SetInput: %v", err)
+	}
+
+	output, err := ex.Extract("out0")
+	if err != nil {
+		t.Fatalf("Extract: %v", err)
+	}
+	defer output.Close()
+
+	embedding := output.FloatData()
+	if len(embedding) == 0 {
+		t.Fatal("empty output")
+	}
+	t.Logf("speaker embedding: %d dims, first 5: %v", len(embedding), embedding[:5])
+}
