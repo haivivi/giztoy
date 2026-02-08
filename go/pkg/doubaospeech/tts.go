@@ -329,6 +329,12 @@ type TTSAsyncTaskStatus struct {
 // Uses flat response format matching queryTaskStatus in task.go,
 // since /api/v1/tts_async/query returns fields at the top level
 // (not nested under a "data" key like some other V1 endpoints).
+//
+// Note: queryTaskStatus in task.go uses "reqid" (client-generated UUID) for this
+// endpoint, while this method uses "task_id" (server-returned ID) for consistency
+// with other service-specific GetTask methods (Podcast, Meeting, Media).
+// If the API only recognizes "reqid", this query may fail. This has not been
+// verified because V1 TTS async is not granted on the current test account.
 func (s *TTSService) GetAsyncTask(ctx context.Context, taskID string) (*TTSAsyncTaskStatus, error) {
 	queryReq := map[string]any{
 		"appid":   s.client.config.appID,
@@ -372,6 +378,8 @@ func (s *TTSService) GetAsyncTask(ctx context.Context, taskID string) (*TTSAsync
 		status.Status = TaskStatusSuccess
 	case "failed":
 		status.Status = TaskStatusFailed
+	case "cancelled":
+		status.Status = TaskStatusCancelled
 	default:
 		status.Status = TaskStatusPending
 	}

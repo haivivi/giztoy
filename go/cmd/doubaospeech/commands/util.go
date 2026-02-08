@@ -166,7 +166,7 @@ func sendAudioChunked(ctx context.Context, sender audioSender, audioFile string)
 
 // sendAudioChunkedFn is the core chunked audio sender.
 // sendFn receives each chunk and whether it's the last one.
-func sendAudioChunkedFn(ctx context.Context, audioFile string, sendFn func(chunk []byte, isLast bool) error) error {
+func sendAudioChunkedFn(_ context.Context, audioFile string, sendFn func(chunk []byte, isLast bool) error) error {
 	audioData, err := readAudioInput(audioFile)
 	if err != nil {
 		return fmt.Errorf("failed to read audio: %w", err)
