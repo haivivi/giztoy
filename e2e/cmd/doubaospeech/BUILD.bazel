@@ -21,4 +21,5 @@ go_binary(
         "//go/cmd/doubaospeech",
         "//testdata/doubaospeech:doubaospeech",
     ],
+    tags = ["manual"],
 )
