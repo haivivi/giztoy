@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "vecstore",
+    srcs = [
+        "hnsw.go",
+        "hnsw_io.go",
+        "memory.go",
+        "vecstore.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/vecstore",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "vecstore_test",
+    srcs = [
+        "hnsw_test.go",
+        "vecstore_test.go",
+    ],
+    embed = [":vecstore"],
+)
