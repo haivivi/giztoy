@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "config",
+    srcs = [
+        "config.go",
+        "service.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/cmd/giztoy/internal/config",
+    visibility = ["//go/cmd/giztoy:__subpackages__"],
+    deps = [
+        "@com_github_goccy_go_yaml//:go-yaml",
+    ],
+)
