@@ -117,7 +117,8 @@ func NewNCNNModelFromMemory(paramData, binData []byte, opts ...NCNNModelOption) 
 	}
 
 	// ncnn_net_load_model_memory expects raw bytes.
-	if ret := C.ncnn_net_load_model_memory(m.net, (*C.uchar)(unsafe.Pointer(&binData[0]))); ret != 0 {
+	// Returns 0 or bytes consumed on success, negative on error.
+	if ret := C.ncnn_net_load_model_memory(m.net, (*C.uchar)(unsafe.Pointer(&binData[0]))); ret < 0 {
 		C.ncnn_net_destroy(m.net)
 		return nil, fmt.Errorf("voiceprint: ncnn_net_load_model_memory failed: %d", ret)
 	}
