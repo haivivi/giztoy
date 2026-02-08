@@ -77,24 +77,10 @@ func WithNCNNBlobNames(input, output string) NCNNModelOption {
 	}
 }
 
-// NewNCNNModel creates a new NCNNModel by loading the given .param and .bin files.
-// Returns an error if the model files cannot be loaded.
+// NewNCNNModel creates a new NCNNModel by loading .param and .bin from files.
+// For embedding the model in the binary, use [NewNCNNModelFromMemory] instead.
 func NewNCNNModel(paramPath, binPath string, opts ...NCNNModelOption) (*NCNNModel, error) {
-	m := &NCNNModel{
-		dim:        512,
-		fbankCfg:   DefaultFbankConfig(),
-		inputName:  C.CString("in0"),
-		outputName: C.CString("out0"),
-	}
-	for _, opt := range opts {
-		opt(m)
-	}
-
-	// Create and load the ncnn network.
-	m.net = C.ncnn_net_create()
-	if m.net == nil {
-		return nil, fmt.Errorf("voiceprint: ncnn_net_create failed")
-	}
+	m := newNCNNModel(opts)
 
 	cParam := C.CString(paramPath)
 	defer C.free(unsafe.Pointer(cParam))
@@ -111,6 +97,46 @@ func NewNCNNModel(paramPath, binPath string, opts ...NCNNModelOption) (*NCNNMode
 	}
 
 	return m, nil
+}
+
+// NewNCNNModelFromMemory creates a new NCNNModel from in-memory .param and .bin data.
+// This is the preferred constructor when the model is embedded in the binary
+// via go:embed, producing a single-file deployment with zero external dependencies.
+//
+// The paramData must be the text content of the .ncnn.param file (null-terminated
+// internally). The binData must be the raw bytes of the .ncnn.bin file.
+func NewNCNNModelFromMemory(paramData, binData []byte, opts ...NCNNModelOption) (*NCNNModel, error) {
+	m := newNCNNModel(opts)
+
+	// ncnn_net_load_param_memory expects a null-terminated C string.
+	cParam := C.CString(string(paramData))
+	defer C.free(unsafe.Pointer(cParam))
+	if ret := C.ncnn_net_load_param_memory(m.net, cParam); ret != 0 {
+		C.ncnn_net_destroy(m.net)
+		return nil, fmt.Errorf("voiceprint: ncnn_net_load_param_memory failed: %d", ret)
+	}
+
+	// ncnn_net_load_model_memory expects raw bytes.
+	if ret := C.ncnn_net_load_model_memory(m.net, (*C.uchar)(unsafe.Pointer(&binData[0]))); ret != 0 {
+		C.ncnn_net_destroy(m.net)
+		return nil, fmt.Errorf("voiceprint: ncnn_net_load_model_memory failed: %d", ret)
+	}
+
+	return m, nil
+}
+
+func newNCNNModel(opts []NCNNModelOption) *NCNNModel {
+	m := &NCNNModel{
+		dim:        512,
+		fbankCfg:   DefaultFbankConfig(),
+		inputName:  C.CString("in0"),
+		outputName: C.CString("out0"),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	m.net = C.ncnn_net_create()
+	return m
 }
 
 // Extract implements [Model]. It converts PCM16 audio to fbank features

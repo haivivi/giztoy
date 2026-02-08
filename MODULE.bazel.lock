@@ -344,7 +344,7 @@
     },
     "//:extensions.bzl%ncnn_ext": {
       "general": {
-        "bzlTransitiveDigest": "y5aQtXj5SQOHn5NmRyXm5ccioMLvgVR/14DeKSD0TFs=",
+        "bzlTransitiveDigest": "x54YaEJUllP25ChUjt+QjY90xI9CNmBlIK3pvNO/y+8=",
         "usagesDigest": "7FXmzMt45LZCdeJCmHX1Yx5NwpRhNuQktngUfiRN+vQ=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
