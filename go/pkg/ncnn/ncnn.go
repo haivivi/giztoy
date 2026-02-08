@@ -95,10 +95,19 @@ func NewNet(paramPath, binPath string) (*Net, error) {
 //
 // paramData is the text content of the .param file.
 // binData is the raw bytes of the .bin file.
-func NewNetFromMemory(paramData, binData []byte) (*Net, error) {
+// opts is an optional Option to configure the net (FP16, threads, etc.).
+// The option must be set before loading for it to take effect.
+func NewNetFromMemory(paramData, binData []byte, opts ...*Option) (*Net, error) {
 	n := &Net{net: C.ncnn_net_create()}
 	if n.net == nil {
 		return nil, fmt.Errorf("ncnn: net_create failed")
+	}
+
+	// Apply option BEFORE loading (ncnn applies options during load).
+	for _, opt := range opts {
+		if opt != nil {
+			C.ncnn_net_set_option(n.net, opt.opt)
+		}
 	}
 
 	// ncnn_net_load_param_memory expects a null-terminated C string.
@@ -117,6 +126,53 @@ func NewNetFromMemory(paramData, binData []byte) (*Net, error) {
 
 	runtime.SetFinalizer(n, (*Net).Close)
 	return n, nil
+}
+
+// SetOption applies a configured Option to this Net.
+// Must be called before creating Extractors.
+func (n *Net) SetOption(opt *Option) {
+	C.ncnn_net_set_option(n.net, opt.opt)
+}
+
+// Option configures inference behavior for a Net.
+type Option struct {
+	opt C.ncnn_option_t
+}
+
+// NewOption creates a new Option with default settings.
+func NewOption() *Option {
+	o := &Option{opt: C.ncnn_option_create()}
+	runtime.SetFinalizer(o, (*Option).Close)
+	return o
+}
+
+// SetFP16 enables or disables FP16 optimizations.
+// Disable for models with intermediate values >65504 (e.g., Silero VAD).
+func (o *Option) SetFP16(enabled bool) *Option {
+	v := C.int(0)
+	if enabled {
+		v = 1
+	}
+	C.ncnn_option_set_use_fp16_packed(o.opt, v)
+	C.ncnn_option_set_use_fp16_storage(o.opt, v)
+	C.ncnn_option_set_use_fp16_arithmetic(o.opt, v)
+	return o
+}
+
+// SetNumThreads sets the number of CPU threads for inference.
+func (o *Option) SetNumThreads(n int) *Option {
+	C.ncnn_option_set_num_threads(o.opt, C.int(n))
+	return o
+}
+
+// Close releases the option resources.
+func (o *Option) Close() error {
+	if o.opt != nil {
+		C.ncnn_option_destroy(o.opt)
+		o.opt = nil
+		runtime.SetFinalizer(o, nil)
+	}
+	return nil
 }
 
 // NewExtractor creates a new inference session for this Net.
@@ -174,12 +230,9 @@ func (e *Extractor) Extract(name string) (*Mat, error) {
 	return mat, nil
 }
 
-// SetNumThreads sets the number of threads for this extractor.
-func (e *Extractor) SetNumThreads(n int) {
-	opt := C.ncnn_option_create()
-	C.ncnn_option_set_num_threads(opt, C.int(n))
-	C.ncnn_extractor_set_option(e.ex, opt)
-	C.ncnn_option_destroy(opt)
+// SetOption applies a configured Option to this extractor.
+func (e *Extractor) SetOption(opt *Option) {
+	C.ncnn_extractor_set_option(e.ex, opt.opt)
 }
 
 // Close releases the extractor resources.

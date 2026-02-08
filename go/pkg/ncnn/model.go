@@ -58,6 +58,8 @@ func RegisterModel(id ModelID, paramData, binData []byte) {
 
 // LoadModel loads a built-in model by ID, returning a ready-to-use Net.
 // The model must have been previously registered via [RegisterModel].
+// FP16 is disabled by default for numerical safety. Use [Net.SetOptFP16]
+// to re-enable if the model is known to be FP16-safe.
 func LoadModel(id ModelID) (*Net, error) {
 	registryMu.RLock()
 	info, ok := registry[id]
@@ -67,7 +69,11 @@ func LoadModel(id ModelID) (*Net, error) {
 		return nil, fmt.Errorf("ncnn: model %q not registered", id)
 	}
 
-	return NewNetFromMemory(info.ParamData, info.BinData)
+	// Disable FP16 by default — some models (Silero VAD, DTLN) produce
+	// intermediate values >65504 which overflow in FP16.
+	opt := NewOption()
+	opt.SetFP16(false)
+	return NewNetFromMemory(info.ParamData, info.BinData, opt)
 }
 
 // ListModels returns the IDs of all registered models.

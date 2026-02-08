@@ -117,6 +117,200 @@ func TestLoadModelNotRegistered(t *testing.T) {
 	}
 }
 
+// ============================================================================
+// Benchmarks
+// ============================================================================
+
+func BenchmarkLoadModel(b *testing.B) {
+	for _, id := range []ModelID{ModelSpeakerERes2Net, ModelVADSilero, ModelDenoiseDTLN1, ModelDenoiseDTLN2} {
+		b.Run(string(id), func(b *testing.B) {
+			for range b.N {
+				net, err := LoadModel(id)
+				if err != nil {
+					b.Fatal(err)
+				}
+				net.Close()
+			}
+		})
+	}
+}
+
+func BenchmarkSpeakerInference(b *testing.B) {
+	net, err := LoadModel(ModelSpeakerERes2Net)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer net.Close()
+
+	data := make([]float32, 40*80)
+	for i := range data {
+		data[i] = float32(i%100) * 0.01
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for range b.N {
+		input := NewMat2D(80, 40, data)
+		ex := net.NewExtractor()
+		ex.SetInput("in0", input)
+		output, err := ex.Extract("out0")
+		if err != nil {
+			b.Fatal(err)
+		}
+		_ = output.FloatData()
+		output.Close()
+		ex.Close()
+		input.Close()
+	}
+}
+
+func BenchmarkVADInference(b *testing.B) {
+	net, err := LoadModel(ModelVADSilero)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer net.Close()
+
+	audio := make([]float32, 512)
+	h := make([]float32, 128)
+	c := make([]float32, 128)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for range b.N {
+		inAudio := NewMat2D(512, 1, audio)
+		inH := NewMat2D(128, 1, h)
+		inC := NewMat2D(128, 1, c)
+		ex := net.NewExtractor()
+		ex.SetInput("in0", inAudio)
+		ex.SetInput("in1", inH)
+		ex.SetInput("in2", inC)
+		prob, err := ex.Extract("out0")
+		if err != nil {
+			b.Fatal(err)
+		}
+		hOut, _ := ex.Extract("out1")
+		cOut, _ := ex.Extract("out2")
+		_ = prob.FloatData()
+		prob.Close()
+		hOut.Close()
+		cOut.Close()
+		ex.Close()
+		inAudio.Close()
+		inH.Close()
+		inC.Close()
+	}
+}
+
+func BenchmarkDTLN1Inference(b *testing.B) {
+	net, err := LoadModel(ModelDenoiseDTLN1)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer net.Close()
+
+	mag := make([]float32, 257)
+	state := make([]float32, 128)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for range b.N {
+		inMag := NewMat2D(257, 1, mag)
+		inH1 := NewMat2D(128, 1, state)
+		inC1 := NewMat2D(128, 1, state)
+		inH2 := NewMat2D(128, 1, state)
+		inC2 := NewMat2D(128, 1, state)
+		ex := net.NewExtractor()
+		ex.SetInput("in0", inMag)
+		ex.SetInput("in1", inH1)
+		ex.SetInput("in2", inC1)
+		ex.SetInput("in3", inH2)
+		ex.SetInput("in4", inC2)
+		mask, err := ex.Extract("out0")
+		if err != nil {
+			b.Fatal(err)
+		}
+		_ = mask.FloatData()
+		mask.Close()
+		ex.Close()
+		inMag.Close()
+		inH1.Close()
+		inC1.Close()
+		inH2.Close()
+		inC2.Close()
+	}
+}
+
+func BenchmarkDTLN2Inference(b *testing.B) {
+	net, err := LoadModel(ModelDenoiseDTLN2)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer net.Close()
+
+	feat := make([]float32, 512)
+	state := make([]float32, 128)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for range b.N {
+		inFeat := NewMat2D(512, 1, feat)
+		inH1 := NewMat2D(128, 1, state)
+		inC1 := NewMat2D(128, 1, state)
+		inH2 := NewMat2D(128, 1, state)
+		inC2 := NewMat2D(128, 1, state)
+		ex := net.NewExtractor()
+		ex.SetInput("in0", inFeat)
+		ex.SetInput("in1", inH1)
+		ex.SetInput("in2", inC1)
+		ex.SetInput("in3", inH2)
+		ex.SetInput("in4", inC2)
+		out, err := ex.Extract("out0")
+		if err != nil {
+			b.Fatal(err)
+		}
+		_ = out.FloatData()
+		out.Close()
+		ex.Close()
+		inFeat.Close()
+		inH1.Close()
+		inC1.Close()
+		inH2.Close()
+		inC2.Close()
+	}
+}
+
+func BenchmarkConcurrentSpeakerInference(b *testing.B) {
+	net, err := LoadModel(ModelSpeakerERes2Net)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer net.Close()
+
+	data := make([]float32, 40*80)
+	for i := range data {
+		data[i] = float32(i%100) * 0.01
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			input := NewMat2D(80, 40, data)
+			ex := net.NewExtractor()
+			ex.SetInput("in0", input)
+			output, err := ex.Extract("out0")
+			if err != nil {
+				b.Fatal(err)
+			}
+			_ = output.FloatData()
+			output.Close()
+			ex.Close()
+			input.Close()
+		}
+	})
+}
+
 func TestLoadEmbeddedModels(t *testing.T) {
 	models := ListModels()
 	t.Logf("registered models: %v", models)
