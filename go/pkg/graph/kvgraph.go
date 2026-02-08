@@ -48,14 +48,6 @@ func (g *KVGraph) entityPrefix() kv.Key {
 	return k
 }
 
-func (g *KVGraph) entityPrefixWith(prefix string) kv.Key {
-	k := make(kv.Key, len(g.prefix)+2)
-	copy(k, g.prefix)
-	k[len(g.prefix)] = "e"
-	k[len(g.prefix)+1] = prefix
-	return k
-}
-
 func (g *KVGraph) fwdKey(from, relType, to string) kv.Key {
 	k := make(kv.Key, len(g.prefix)+4)
 	copy(k, g.prefix)
@@ -247,8 +239,13 @@ func (g *KVGraph) Relations(ctx context.Context, label string) ([]Relation, erro
 		if len(k) != plen+4 {
 			continue
 		}
+		from := k[plen+3]
+		// Skip self-loops: already captured by the forward scan above.
+		if from == label {
+			continue
+		}
 		rels = append(rels, Relation{
-			From:    k[plen+3],
+			From:    from,
 			RelType: k[plen+2],
 			To:      k[plen+1],
 		})

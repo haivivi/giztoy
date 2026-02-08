@@ -276,6 +276,39 @@ func TestAddRelation_Idempotent(t *testing.T) {
 	}
 }
 
+func TestRelations_SelfLoop(t *testing.T) {
+	g := newTestGraph(t)
+	ctx := context.Background()
+
+	// Self-loop: A -> A.
+	if err := g.AddRelation(ctx, graph.Relation{From: "A", To: "A", RelType: "self"}); err != nil {
+		t.Fatal(err)
+	}
+	// Plus a normal relation.
+	if err := g.AddRelation(ctx, graph.Relation{From: "A", To: "B", RelType: "knows"}); err != nil {
+		t.Fatal(err)
+	}
+
+	rels, err := g.Relations(ctx, "A")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Should have exactly 2: self-loop + A->B. No duplicates from self-loop.
+	if len(rels) != 2 {
+		t.Fatalf("expected 2 relations, got %d: %+v", len(rels), rels)
+	}
+
+	// Neighbors of A should include A (self-loop) and B.
+	neighbors, err := g.Neighbors(ctx, "A")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"A", "B"}
+	if !slices.Equal(neighbors, want) {
+		t.Fatalf("Neighbors(A) = %v, want %v", neighbors, want)
+	}
+}
+
 func TestRemoveRelation(t *testing.T) {
 	g := newTestGraph(t)
 	ctx := context.Background()
