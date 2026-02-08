@@ -157,7 +157,16 @@ type audioSender interface {
 
 // sendAudioChunked reads audio from a file (or stdin if empty) and sends it
 // in 3200-byte chunks with 100ms delay to simulate real-time streaming.
+// The sender receives each chunk with an isLast flag for end-of-stream signaling.
 func sendAudioChunked(ctx context.Context, sender audioSender, audioFile string) error {
+	return sendAudioChunkedFn(ctx, audioFile, func(chunk []byte, isLast bool) error {
+		return sender.SendAudio(ctx, chunk, isLast)
+	})
+}
+
+// sendAudioChunkedFn is the core chunked audio sender.
+// sendFn receives each chunk and whether it's the last one.
+func sendAudioChunkedFn(ctx context.Context, audioFile string, sendFn func(chunk []byte, isLast bool) error) error {
 	audioData, err := readAudioInput(audioFile)
 	if err != nil {
 		return fmt.Errorf("failed to read audio: %w", err)
@@ -177,7 +186,7 @@ func sendAudioChunked(ctx context.Context, sender audioSender, audioFile string)
 			end = len(audioData)
 		}
 
-		if err := sender.SendAudio(ctx, audioData[i:end], isLast); err != nil {
+		if err := sendFn(audioData[i:end], isLast); err != nil {
 			return fmt.Errorf("send audio: %w", err)
 		}
 

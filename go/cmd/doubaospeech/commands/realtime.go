@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -121,27 +120,11 @@ func runRealtimeConnect(ctx context.Context, client *ds.Client, config *ds.Realt
 			return fmt.Errorf("send greeting: %w", err)
 		}
 	} else if audioFile != "" {
-		// Audio input mode
-		audioData, err := os.ReadFile(audioFile)
-		if err != nil {
-			return fmt.Errorf("read audio file: %w", err)
-		}
-		if len(audioData) == 0 {
-			return fmt.Errorf("empty audio file: %s", audioFile)
-		}
-
-		printVerbose("Sending audio (%s)...", formatBytes(int64(len(audioData))))
-
-		chunkSize := 3200 // 100ms of 16kHz 16-bit mono
-		for i := 0; i < len(audioData); i += chunkSize {
-			end := i + chunkSize
-			if end > len(audioData) {
-				end = len(audioData)
-			}
-			if err := session.SendAudio(ctx, audioData[i:end]); err != nil {
-				return fmt.Errorf("send audio: %w", err)
-			}
-			time.Sleep(100 * time.Millisecond)
+		// Audio input mode (realtime SendAudio has no isLast param)
+		if err := sendAudioChunkedFn(ctx, audioFile, func(chunk []byte, _ bool) error {
+			return session.SendAudio(ctx, chunk)
+		}); err != nil {
+			return err
 		}
 	}
 
