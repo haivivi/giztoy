@@ -202,28 +202,7 @@ Endpoint: WSS /api/v3/tts/unidirectional
 Example:
   doubaospeech tts v2 ws -f tts-v2.yaml -o output.mp3`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := requireInputFile(); err != nil {
-			return err
-		}
-
-		outputPath := getOutputFile()
-		if outputPath == "" {
-			return fmt.Errorf("output file is required, use -o flag")
-		}
-
-		cliCtx, err := getContext()
-		if err != nil {
-			return err
-		}
-
-		printVerbose("Using context: %s", cliCtx.Name)
-		printVerbose("WebSocket streaming to: %s", outputPath)
-
-		// TODO: Implement WebSocket unidirectional streaming
-		fmt.Println("[WebSocket unidirectional streaming not implemented yet]")
-		fmt.Printf("Would stream speech via WebSocket to %s\n", outputPath)
-
-		return nil
+		return fmt.Errorf("not implemented: TTS V2 WebSocket unidirectional streaming is not supported in CLI; use 'doubaospeech tts v2 stream' (HTTP streaming) instead")
 	},
 }
 
@@ -289,20 +268,40 @@ Example:
 			return err
 		}
 
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
 		var req ds.AsyncTTSRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
 		}
 
+		if req.VoiceType == "" && cliCtx.DefaultVoice != "" {
+			req.VoiceType = cliCtx.DefaultVoice
+		}
+
 		printVerbose("Using context: %s", cliCtx.Name)
 		printVerbose("Text length: %d characters", len(req.Text))
+		printVerbose("Voice type: %s", req.VoiceType)
 
-		// TODO: Implement async API call
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		task, err := client.TTS.CreateAsyncTask(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("async TTS submit failed: %w", err)
+		}
+
+		printSuccess("Async TTS task submitted!")
+		printInfo("Task ID: %s", task.ID)
+		printInfo("Use 'doubaospeech tts v2 status %s' to check status", task.ID)
+
 		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": cliCtx.Name,
-			"request":  req,
-			"task_id":  "placeholder-task-id",
+			"api_version": "v1-async",
+			"task_id":     task.ID,
+			"status":      "submitted",
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())
@@ -326,15 +325,36 @@ Example:
 			return err
 		}
 
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
 		printVerbose("Using context: %s", cliCtx.Name)
 		printVerbose("Querying task: %s", taskID)
 
-		// TODO: Implement task status query
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		status, err := client.TTS.GetAsyncTask(reqCtx, taskID)
+		if err != nil {
+			return fmt.Errorf("query task status failed: %w", err)
+		}
+
+		printInfo("Task ID: %s", taskID)
+		printInfo("Status: %s", status.Status)
+		if status.AudioURL != "" {
+			printSuccess("Audio URL: %s", status.AudioURL)
+		}
+
 		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": cliCtx.Name,
-			"task_id":  taskID,
-			"status":   "pending",
+			"api_version": "v1-async",
+			"task_id":     taskID,
+			"status":      status.Status,
+		}
+		if status.AudioURL != "" {
+			result["audio_url"] = status.AudioURL
+			result["audio_duration"] = status.AudioDuration
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())

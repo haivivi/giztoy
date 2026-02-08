@@ -1,4 +1,0 @@
-# CLI test scripts directory
-# Each subdirectory contains shell scripts and YAML configs for testing CLI tools
-
-package(default_visibility = ["//visibility:public"])

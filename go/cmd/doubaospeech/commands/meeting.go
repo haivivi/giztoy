@@ -1,6 +1,10 @@
 package commands
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 
 	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
@@ -44,7 +48,12 @@ Examples:
 			return err
 		}
 
-		ctx, err := getContext()
+		cliCtx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := createClient(cliCtx)
 		if err != nil {
 			return err
 		}
@@ -54,14 +63,23 @@ Examples:
 			return err
 		}
 
-		printVerbose("Using context: %s", ctx.Name)
+		printVerbose("Using context: %s", cliCtx.Name)
 
-		// TODO: Implement meeting create API call
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		task, err := client.Meeting.CreateTask(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("meeting task creation failed: %w", err)
+		}
+
+		printSuccess("Meeting transcription task submitted!")
+		printInfo("Task ID: %s", task.ID)
+		printInfo("Use 'doubaospeech meeting status %s' to check status", task.ID)
+
 		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"request":  req,
-			"task_id":  "placeholder-task-id",
+			"task_id": task.ID,
+			"status":  "submitted",
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())
@@ -80,27 +98,45 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskID := args[0]
 
-		ctx, err := getContext()
+		cliCtx, err := getContext()
 		if err != nil {
 			return err
 		}
 
-		printVerbose("Using context: %s", ctx.Name)
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
+		printVerbose("Using context: %s", cliCtx.Name)
 		printVerbose("Querying task: %s", taskID)
 
-		// TODO: Implement task status query
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		status, err := client.Meeting.GetTask(reqCtx, taskID)
+		if err != nil {
+			return fmt.Errorf("query meeting task failed: %w", err)
+		}
+
+		printInfo("Task ID: %s", status.TaskID)
+		printInfo("Status: %s", status.Status)
+		if status.Progress > 0 {
+			printInfo("Progress: %d%%", status.Progress)
+		}
+		if status.Result != nil {
+			printSuccess("Transcript: %s", status.Result.Text)
+		}
+
 		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"task_id":  taskID,
-			"status":   "completed",
-			"result": map[string]any{
-				"speakers": []map[string]any{
-					{"speaker_id": "speaker_1", "segments": 10},
-					{"speaker_id": "speaker_2", "segments": 8},
-				},
-				"transcript": "Meeting transcript would appear here...",
-			},
+			"task_id":  status.TaskID,
+			"status":   status.Status,
+			"progress": status.Progress,
+		}
+		if status.Result != nil {
+			result["text"] = status.Result.Text
+			result["duration"] = status.Result.Duration
+			result["segments"] = status.Result.Segments
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())

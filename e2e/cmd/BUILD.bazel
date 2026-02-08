@@ -1,0 +1,4 @@
+# CLI end-to-end test runners (Go binaries)
+# Each subdirectory is a go_binary that invokes the corresponding CLI tool
+
+package(default_visibility = ["//visibility:public"])

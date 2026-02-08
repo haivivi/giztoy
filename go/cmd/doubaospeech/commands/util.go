@@ -1,11 +1,15 @@
 package commands
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/haivivi/giztoy/go/pkg/cli"
 	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
@@ -105,9 +109,10 @@ func createClient(ctx *cli.Context) (*ds.Client, error) {
 
 	var opts []ds.Option
 
-	// Set authentication - use Bearer Token by default
-	// API Keys from console start with specific patterns (like UUID format)
-	// Bearer Tokens are typically longer alphanumeric strings
+	// Set authentication via Bearer Token
+	// This uses "Authorization: Bearer;{token}" for V1 APIs and
+	// "X-Api-Access-Key: {token}" for V2/V3 APIs.
+	// The token is the access_token from Volcengine console.
 	if ctx.Client.APIKey != "" {
 		opts = append(opts, ds.WithBearerToken(ctx.Client.APIKey))
 	}
@@ -142,4 +147,71 @@ func printSuccess(format string, args ...any) {
 // printInfo prints an info message
 func printInfo(format string, args ...any) {
 	cli.PrintInfo(format, args...)
+}
+
+// audioSender is the interface for sending audio chunks with an isLast flag.
+// Implemented by ASRStreamSession, ASRV2Session, TranslationSession, etc.
+type audioSender interface {
+	SendAudio(ctx context.Context, audio []byte, isLast bool) error
+}
+
+// sendAudioChunked reads audio from a file (or stdin if empty) and sends it
+// in 3200-byte chunks with 100ms delay to simulate real-time streaming.
+// The sender receives each chunk with an isLast flag for end-of-stream signaling.
+func sendAudioChunked(ctx context.Context, sender audioSender, audioFile string) error {
+	return sendAudioChunkedFn(ctx, audioFile, func(chunk []byte, isLast bool) error {
+		return sender.SendAudio(ctx, chunk, isLast)
+	})
+}
+
+// sendAudioChunkedFn is the core chunked audio sender.
+// sendFn receives each chunk and whether it's the last one.
+func sendAudioChunkedFn(_ context.Context, audioFile string, sendFn func(chunk []byte, isLast bool) error) error {
+	audioData, err := readAudioInput(audioFile)
+	if err != nil {
+		return fmt.Errorf("failed to read audio: %w", err)
+	}
+
+	if len(audioData) == 0 {
+		return fmt.Errorf("empty audio data: provide a non-empty audio file")
+	}
+
+	printVerbose("Sending audio (%s)...", formatBytes(int64(len(audioData))))
+
+	chunkSize := 3200 // 100ms of 16kHz 16-bit mono
+	for i := 0; i < len(audioData); i += chunkSize {
+		end := i + chunkSize
+		isLast := end >= len(audioData)
+		if isLast {
+			end = len(audioData)
+		}
+
+		if err := sendFn(audioData[i:end], isLast); err != nil {
+			return fmt.Errorf("send audio: %w", err)
+		}
+
+		if !isLast {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	return nil
+}
+
+// readAudioInput reads audio data from a file or stdin
+func readAudioInput(audioFile string) ([]byte, error) {
+	if audioFile != "" {
+		data, err := os.ReadFile(audioFile)
+		if err != nil {
+			return nil, fmt.Errorf("read audio file %s: %w", audioFile, err)
+		}
+		return data, nil
+	}
+
+	// Read from stdin
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, os.Stdin); err != nil {
+		return nil, fmt.Errorf("read stdin: %w", err)
+	}
+	return buf.Bytes(), nil
 }

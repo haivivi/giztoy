@@ -25,38 +25,6 @@ Examples:
   doubaospeech i
   doubaospeech tui`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, err := getContext()
-		if err != nil {
-			// Don't require context for interactive mode
-			fmt.Println("Note: No context selected. Use 'doubaospeech config use-context' to set one.")
-		} else {
-			fmt.Printf("Using context: %s\n", ctx.Name)
-		}
-
-		// TODO: Implement TUI using bubbletea or similar
-		fmt.Println()
-		fmt.Println("╔══════════════════════════════════════════════════════════════╗")
-		fmt.Println("║               Doubao Speech API Interactive Mode             ║")
-		fmt.Println("╠══════════════════════════════════════════════════════════════╣")
-		fmt.Println("║                                                              ║")
-		fmt.Println("║  [TUI not implemented yet]                                   ║")
-		fmt.Println("║                                                              ║")
-		fmt.Println("║  Available services:                                         ║")
-		fmt.Println("║    1. TTS - Text-to-Speech                                   ║")
-		fmt.Println("║    2. ASR - Speech Recognition                               ║")
-		fmt.Println("║    3. Voice - Voice Cloning                                  ║")
-		fmt.Println("║    4. Realtime - Real-time Conversation                      ║")
-		fmt.Println("║    5. Meeting - Meeting Transcription                        ║")
-		fmt.Println("║    6. Podcast - Podcast Synthesis                            ║")
-		fmt.Println("║    7. Translation - Simultaneous Translation                 ║")
-		fmt.Println("║    8. Media - Subtitle Extraction                            ║")
-		fmt.Println("║    9. Console - Account Management                           ║")
-		fmt.Println("║                                                              ║")
-		fmt.Println("║  Press Ctrl+C to exit                                        ║")
-		fmt.Println("║                                                              ║")
-		fmt.Println("╚══════════════════════════════════════════════════════════════╝")
-		fmt.Println()
-
-		return nil
+		return fmt.Errorf("not implemented: interactive TUI mode requires a terminal UI framework (bubbletea); use individual subcommands instead")
 	},
 }

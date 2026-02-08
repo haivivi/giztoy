@@ -1,6 +1,10 @@
 package commands
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 
 	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
@@ -44,7 +48,12 @@ Examples:
 			return err
 		}
 
-		ctx, err := getContext()
+		cliCtx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := createClient(cliCtx)
 		if err != nil {
 			return err
 		}
@@ -54,14 +63,23 @@ Examples:
 			return err
 		}
 
-		printVerbose("Using context: %s", ctx.Name)
+		printVerbose("Using context: %s", cliCtx.Name)
 
-		// TODO: Implement subtitle extraction API call
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		task, err := client.Media.ExtractSubtitle(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("subtitle extraction failed: %w", err)
+		}
+
+		printSuccess("Subtitle extraction task submitted!")
+		printInfo("Task ID: %s", task.ID)
+		printInfo("Use 'doubaospeech media status %s' to check status", task.ID)
+
 		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"request":  req,
-			"task_id":  "placeholder-task-id",
+			"task_id": task.ID,
+			"status":  "submitted",
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())
@@ -80,23 +98,44 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		taskID := args[0]
 
-		ctx, err := getContext()
+		cliCtx, err := getContext()
 		if err != nil {
 			return err
 		}
 
-		printVerbose("Using context: %s", ctx.Name)
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
+		printVerbose("Using context: %s", cliCtx.Name)
 		printVerbose("Querying task: %s", taskID)
 
-		// TODO: Implement task status query
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		status, err := client.Media.GetSubtitleTask(reqCtx, taskID)
+		if err != nil {
+			return fmt.Errorf("query subtitle task failed: %w", err)
+		}
+
+		printInfo("Task ID: %s", status.TaskID)
+		printInfo("Status: %s", status.Status)
+		if status.Progress > 0 {
+			printInfo("Progress: %d%%", status.Progress)
+		}
+		if status.Result != nil && status.Result.SubtitleURL != "" {
+			printSuccess("Subtitle URL: %s", status.Result.SubtitleURL)
+		}
+
 		result := map[string]any{
-			"_note":        "API call not implemented yet",
-			"_context":     ctx.Name,
-			"task_id":      taskID,
-			"status":       "completed",
-			"subtitle_url": "https://example.com/output.srt",
-			"format":       "srt",
-			"segments":     42,
+			"task_id":  status.TaskID,
+			"status":   status.Status,
+			"progress": status.Progress,
+		}
+		if status.Result != nil {
+			result["subtitle_url"] = status.Result.SubtitleURL
+			result["duration"] = status.Result.Duration
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())

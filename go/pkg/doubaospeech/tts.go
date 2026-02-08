@@ -315,6 +315,78 @@ func (s *TTSService) CreateAsyncTask(ctx context.Context, req *AsyncTTSRequest) 
 	return newTask[TTSAsyncResult](resp.TaskID, s.client, taskTypeTTSAsync, submitReq.ReqID), nil
 }
 
+// TTSAsyncTaskStatus represents async TTS task status
+type TTSAsyncTaskStatus struct {
+	TaskID        string     `json:"task_id"`
+	Status        TaskStatus `json:"status"`
+	Progress      int        `json:"progress,omitempty"`
+	AudioURL      string     `json:"audio_url,omitempty"`
+	AudioDuration int        `json:"audio_duration,omitempty"`
+}
+
+// GetAsyncTask queries async TTS task status
+//
+// Uses flat response format matching queryTaskStatus in task.go,
+// since /api/v1/tts_async/query returns fields at the top level
+// (not nested under a "data" key like some other V1 endpoints).
+//
+// Note: queryTaskStatus in task.go uses "reqid" (client-generated UUID) for this
+// endpoint, while this method uses "task_id" (server-returned ID) for consistency
+// with other service-specific GetTask methods (Podcast, Meeting, Media).
+// If the API only recognizes "reqid", this query may fail. This has not been
+// verified because V1 TTS async is not granted on the current test account.
+func (s *TTSService) GetAsyncTask(ctx context.Context, taskID string) (*TTSAsyncTaskStatus, error) {
+	queryReq := map[string]any{
+		"appid":   s.client.config.appID,
+		"task_id": taskID,
+	}
+
+	var apiResp struct {
+		Code          int    `json:"code"`
+		Message       string `json:"message"`
+		TaskID        string `json:"task_id"`
+		Status        string `json:"status"`
+		Progress      int    `json:"progress,omitempty"`
+		AudioURL      string `json:"audio_url,omitempty"`
+		AudioDuration int    `json:"audio_duration,omitempty"`
+	}
+
+	if err := s.client.doJSONRequest(ctx, http.MethodPost, "/api/v1/tts_async/query", queryReq, &apiResp); err != nil {
+		return nil, err
+	}
+
+	if apiResp.Code != 0 {
+		return nil, &Error{
+			Code:    apiResp.Code,
+			Message: apiResp.Message,
+		}
+	}
+
+	status := &TTSAsyncTaskStatus{
+		TaskID:        apiResp.TaskID,
+		Progress:      apiResp.Progress,
+		AudioURL:      apiResp.AudioURL,
+		AudioDuration: apiResp.AudioDuration,
+	}
+
+	switch apiResp.Status {
+	case "submitted", "pending":
+		status.Status = TaskStatusPending
+	case "running", "processing":
+		status.Status = TaskStatusProcessing
+	case "success":
+		status.Status = TaskStatusSuccess
+	case "failed":
+		status.Status = TaskStatusFailed
+	case "cancelled":
+		status.Status = TaskStatusCancelled
+	default:
+		status.Status = TaskStatusPending
+	}
+
+	return status, nil
+}
+
 // buildRequest builds TTS request
 func (s *TTSService) buildRequest(req *TTSRequest) *ttsRequest {
 	ttsReq := s.client.buildTTSRequest(req.Text, req.VoiceType)

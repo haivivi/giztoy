@@ -1,0 +1,72 @@
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//bazel/harmonyos:defs.bzl", "harmonyos_application", "harmonyos_hap", "harmonyos_install")
+
+package(default_visibility = ["//visibility:public"])
+
+# ============================================================================
+# 方式 1: 使用便捷宏（推荐）
+# ============================================================================
+
+# Note: harmonyos_application includes tags = ["manual"] by default
+# Excluded from `bazel build //...`, requires explicit build
+harmonyos_application(
+    name = "hello_bazel",
+    srcs = glob(["HelloWorld/**/*.ets"]),
+    ability_name = "EntryAbility",
+    bundle_name = "com.example.hellobazel",
+    project_dir = "e2e/bazel/harmonyos/HelloWorld",
+    resources = glob(["HelloWorld/**/resources/**"]),
+)
+
+# 生成的 targets:
+# - //e2e/bazel/harmonyos:hello_bazel_hap   (HAP 包)
+# - //e2e/bazel/harmonyos:hello_bazel       (安装脚本)
+
+# ============================================================================
+# 方式 2: 分步构建（更多控制）
+# ============================================================================
+
+# 构建 HAP
+harmonyos_hap(
+    name = "hello_world_hap",
+    srcs = glob(["HelloWorld/**/*.ets"]),
+    bundle_name = "com.example.hellobazel",
+    module_name = "entry",
+    product = "default",
+    project_dir = "e2e/bazel/harmonyos/HelloWorld",
+    resources = glob(["HelloWorld/**/resources/**"]),
+    tags = ["manual"],
+)
+
+# 安装到设备
+harmonyos_install(
+    name = "install_hello_world",
+    ability_name = "EntryAbility",
+    bundle_name = "com.example.hellobazel",
+    hap = ":hello_world_hap",
+    tags = ["manual"],
+)
+
+# ============================================================================
+# 原生构建脚本（备用）
+# ============================================================================
+
+sh_binary(
+    name = "build_native",
+    srcs = ["build_native.sh"],
+    data = glob(["HelloWorld/**"]),
+    tags = ["manual"],
+)
+
+sh_binary(
+    name = "run_emulator",
+    srcs = ["run_emulator.sh"],
+    data = glob(["HelloWorld/**"]),
+    tags = ["manual"],
+)
+
+sh_binary(
+    name = "sign_hap",
+    srcs = ["sign_hap.sh"],
+    tags = ["manual"],
+)

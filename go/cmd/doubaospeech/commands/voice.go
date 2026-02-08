@@ -1,6 +1,10 @@
 package commands
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 
 	ds "github.com/haivivi/giztoy/go/pkg/doubaospeech"
@@ -46,7 +50,12 @@ Examples:
 			return err
 		}
 
-		ctx, err := getContext()
+		cliCtx, err := getContext()
+		if err != nil {
+			return err
+		}
+
+		client, err := createClient(cliCtx)
 		if err != nil {
 			return err
 		}
@@ -56,16 +65,23 @@ Examples:
 			return err
 		}
 
-		printVerbose("Using context: %s", ctx.Name)
+		printVerbose("Using context: %s", cliCtx.Name)
 		printVerbose("Speaker ID: %s", req.SpeakerID)
-		printVerbose("Audio samples: %d", len(req.AudioURLs))
 
-		// TODO: Implement voice training API call
+		reqCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+		defer cancel()
+
+		task, err := client.VoiceClone.Train(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("voice clone training failed: %w", err)
+		}
+
+		printSuccess("Voice clone training submitted!")
+		printInfo("Speaker ID: %s", task.ID)
+		printInfo("Use 'doubaospeech voice status %s' to check status", task.ID)
+
 		result := map[string]any{
-			"_note":      "API call not implemented yet",
-			"_context":   ctx.Name,
-			"request":    req,
-			"speaker_id": req.SpeakerID,
+			"speaker_id": task.ID,
 			"status":     "training",
 		}
 
@@ -85,20 +101,39 @@ Examples:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		speakerID := args[0]
 
-		ctx, err := getContext()
+		cliCtx, err := getContext()
 		if err != nil {
 			return err
 		}
 
-		printVerbose("Using context: %s", ctx.Name)
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
+		printVerbose("Using context: %s", cliCtx.Name)
 		printVerbose("Querying speaker: %s", speakerID)
 
-		// TODO: Implement status query
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		status, err := client.VoiceClone.GetStatus(reqCtx, speakerID)
+		if err != nil {
+			return fmt.Errorf("query voice clone status failed: %w", err)
+		}
+
+		printInfo("Speaker ID: %s", status.SpeakerID)
+		printInfo("Status: %s", status.Status)
+		if status.DemoAudio != "" {
+			printInfo("Demo audio available")
+		}
+
 		result := map[string]any{
-			"_note":      "API call not implemented yet",
-			"_context":   ctx.Name,
-			"speaker_id": speakerID,
-			"status":     "ready",
+			"speaker_id": status.SpeakerID,
+			"status":     status.Status,
+		}
+		if status.DemoAudio != "" {
+			result["demo_audio"] = status.DemoAudio
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())
@@ -114,21 +149,53 @@ Examples:
   doubaospeech -c myctx voice list
   doubaospeech -c myctx voice list --json`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, err := getContext()
+		cliCtx, err := getContext()
 		if err != nil {
 			return err
 		}
 
-		printVerbose("Using context: %s", ctx.Name)
+		console, err := createConsole(cliCtx)
+		if err != nil {
+			return fmt.Errorf("console credentials required for listing voices: %w", err)
+		}
 
-		// TODO: Implement list API call
+		printVerbose("Using context: %s", cliCtx.Name)
+
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if cliCtx.Client == nil {
+			return fmt.Errorf("client credentials required: --app-id is needed for listing voices")
+		}
+
+		resp, err := console.ListVoiceCloneStatus(reqCtx, &ds.ListVoiceCloneStatusRequest{
+			AppID: cliCtx.Client.AppID,
+		})
+		if err != nil {
+			return fmt.Errorf("list voice clone status failed: %w", err)
+		}
+
+		printInfo("Total voices: %d", resp.Total)
+
+		var voices []map[string]any
+		for _, s := range resp.Statuses {
+			v := map[string]any{
+				"speaker_id":  s.SpeakerID,
+				"state":       s.State,
+				"version":     s.Version,
+				"resource_id": s.ResourceID,
+				"create_time": s.CreateTime,
+				"expire_time": s.ExpireTime,
+			}
+			if s.Alias != "" {
+				v["alias"] = s.Alias
+			}
+			voices = append(voices, v)
+		}
+
 		result := map[string]any{
-			"_note":    "API call not implemented yet",
-			"_context": ctx.Name,
-			"voices": []map[string]any{
-				{"speaker_id": "custom_voice_1", "status": "ready", "created_at": "2024-01-01"},
-				{"speaker_id": "custom_voice_2", "status": "training", "created_at": "2024-01-02"},
-			},
+			"total":  resp.Total,
+			"voices": voices,
 		}
 
 		return outputResult(result, getOutputFile(), isJSONOutput())

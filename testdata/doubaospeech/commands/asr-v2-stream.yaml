@@ -1,0 +1,26 @@
+# ASR V2 (BigModel) streaming recognition config
+# Usage: doubaospeech asr v2 stream -f asr-v2-stream.yaml --audio input.mp3
+#
+# API: WSS /api/v3/sauc/bigmodel
+# Resource ID: volc.bigasr.sauc.duration
+
+# Audio format: pcm, mp3, wav, ogg_opus
+format: mp3
+
+# Sample rate in Hz
+sample_rate: 24000
+
+# Language
+language: zh-CN
+
+# Enable ITN (Inverse Text Normalization)
+enable_itn: true
+
+# Enable punctuation
+enable_punc: true
+
+# Result type: "single" (only definite) or "full" (all results)
+result_type: full
+
+# Resource ID
+resource_id: volc.bigasr.sauc.duration

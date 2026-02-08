@@ -129,9 +129,9 @@ crate.from_cargo(
         "//rust/luau:Cargo.toml",
         "//rust/cmd/dashscope:Cargo.toml",
         "//rust/cmd/minimax:Cargo.toml",
-        "//examples/rust/audio:Cargo.toml",
-        "//examples/rust/minimax:Cargo.toml",
-        "//examples/rust/genx:Cargo.toml",
+        "//e2e/rust/audio:Cargo.toml",
+        "//e2e/rust/minimax:Cargo.toml",
+        "//e2e/rust/genx:Cargo.toml",
     ],
 )
 use_repo(crate, "crate_index")

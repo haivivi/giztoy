@@ -1,7 +1,10 @@
 package commands
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -52,33 +55,33 @@ Examples:
 		if err != nil {
 			return fmt.Errorf("failed to read 'audio' flag: %w", err)
 		}
+		if audioFile == "" {
+			return fmt.Errorf("--audio flag is required for streaming translation")
+		}
 
-		outputPath := getOutputFile()
-
-		ctx, err := getContext()
+		cliCtx, err := getContext()
 		if err != nil {
 			return err
 		}
 
-		var req ds.TranslationConfig
-		if err := loadRequest(getInputFile(), &req); err != nil {
+		client, err := createClient(cliCtx)
+		if err != nil {
 			return err
 		}
 
-		printVerbose("Using context: %s", ctx.Name)
-		printVerbose("Source language: %s", req.SourceLanguage)
-		printVerbose("Target language: %s", req.TargetLanguage)
-
-		// TODO: Implement streaming translation
-		fmt.Println("[Streaming translation not implemented yet]")
-		if audioFile != "" {
-			fmt.Printf("Would stream audio from %s\n", audioFile)
-		}
-		if outputPath != "" {
-			fmt.Printf("Would output translated audio to %s\n", outputPath)
+		var config ds.TranslationConfig
+		if err := loadRequest(getInputFile(), &config); err != nil {
+			return err
 		}
 
-		return nil
+		printVerbose("Using context: %s", cliCtx.Name)
+		printVerbose("Source language: %s", config.SourceLanguage)
+		printVerbose("Target language: %s", config.TargetLanguage)
+
+		reqCtx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		defer cancel()
+
+		return runTranslationStream(reqCtx, client, &config, audioFile)
 	},
 }
 
@@ -93,35 +96,82 @@ translated audio through your speakers.
 Examples:
   doubaospeech -c myctx translation interactive -f translation.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := requireInputFile(); err != nil {
-			return err
-		}
-
-		ctx, err := getContext()
-		if err != nil {
-			return err
-		}
-
-		var req ds.TranslationConfig
-		if err := loadRequest(getInputFile(), &req); err != nil {
-			return err
-		}
-
-		printVerbose("Using context: %s", ctx.Name)
-		printVerbose("Source language: %s", req.SourceLanguage)
-		printVerbose("Target language: %s", req.TargetLanguage)
-
-		// TODO: Implement interactive mode
-		fmt.Println("[Interactive translation not implemented yet]")
-		fmt.Println("Would start interactive translation...")
-		fmt.Println("Press Ctrl+C to exit")
-
-		return nil
+		return fmt.Errorf("not implemented: interactive translation mode requires microphone/speaker hardware integration; use 'doubaospeech translation stream' for file-based translation")
 	},
 }
 
+// ============================================================================
+// Implementation Functions
+// ============================================================================
+
+func runTranslationStream(ctx context.Context, client *ds.Client, config *ds.TranslationConfig, audioFile string) error {
+	session, err := client.Translation.OpenSession(ctx, config)
+	if err != nil {
+		return fmt.Errorf("failed to open translation session: %w", err)
+	}
+	defer session.Close()
+
+	printVerbose("Translation session opened")
+
+	if err := sendAudioChunked(ctx, session, audioFile); err != nil {
+		return err
+	}
+
+	// Receive results
+	outputPath := getOutputFile()
+	var audioBuf bytes.Buffer
+	var finalSource, finalTarget string
+
+	for chunk, err := range session.Recv() {
+		if err != nil {
+			return fmt.Errorf("receive error: %w", err)
+		}
+
+		if chunk.SourceText != "" {
+			if chunk.IsDefinite {
+				printInfo("[Source] %s", chunk.SourceText)
+			} else {
+				printVerbose("[Source interim] %s", chunk.SourceText)
+			}
+			finalSource = chunk.SourceText
+		}
+		if chunk.TargetText != "" {
+			if chunk.IsDefinite {
+				printInfo("[Target] %s", chunk.TargetText)
+			} else {
+				printVerbose("[Target interim] %s", chunk.TargetText)
+			}
+			finalTarget = chunk.TargetText
+		}
+		if len(chunk.Audio) > 0 {
+			audioBuf.Write(chunk.Audio)
+			printVerbose("[Audio] +%d bytes", len(chunk.Audio))
+		}
+		if chunk.IsFinal {
+			break
+		}
+	}
+
+	if audioBuf.Len() > 0 && outputPath != "" {
+		if err := outputBytes(audioBuf.Bytes(), outputPath); err != nil {
+			return fmt.Errorf("write audio: %w", err)
+		}
+		printSuccess("Translated audio saved to: %s (%s)", outputPath, formatBytes(int64(audioBuf.Len())))
+	}
+
+	result := map[string]any{
+		"source_text": finalSource,
+		"target_text": finalTarget,
+	}
+	if audioBuf.Len() > 0 {
+		result["audio_size"] = audioBuf.Len()
+	}
+
+	return outputResult(result, "", isJSONOutput())
+}
+
 func init() {
-	translationStreamCmd.Flags().String("audio", "", "Audio file path (optional, defaults to stdin)")
+	translationStreamCmd.Flags().String("audio", "", "Audio file path (required)")
 
 	translationCmd.AddCommand(translationStreamCmd)
 	translationCmd.AddCommand(translationInteractiveCmd)
