@@ -2,10 +2,13 @@ package recall
 
 import (
 	"context"
+	"errors"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/haivivi/giztoy/go/pkg/kv"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -19,6 +22,7 @@ const (
 // StoreSegment persists a segment in the index.
 //
 // It stores the segment data in KV (msgpack-encoded, keyed by timestamp),
+// writes a reverse index entry (sid:{id} → timestamp) for O(1) ID lookups,
 // and if an embedder and vector index are configured, embeds the summary
 // text and inserts the resulting vector.
 func (idx *Index) StoreSegment(ctx context.Context, seg Segment) error {
@@ -27,8 +31,15 @@ func (idx *Index) StoreSegment(ctx context.Context, seg Segment) error {
 		return err
 	}
 
-	key := segmentKey(idx.prefix, seg.Timestamp)
-	if err := idx.store.Set(ctx, key, data); err != nil {
+	segK := segmentKey(idx.prefix, seg.Timestamp)
+	sidK := sidKey(idx.prefix, seg.ID)
+	tsBytes := []byte(strconv.FormatInt(seg.Timestamp, 10))
+
+	// Write segment data + reverse index atomically.
+	if err := idx.store.BatchSet(ctx, []kv.Entry{
+		{Key: segK, Value: data},
+		{Key: sidK, Value: tsBytes},
+	}); err != nil {
 		return err
 	}
 
@@ -48,55 +59,59 @@ func (idx *Index) StoreSegment(ctx context.Context, seg Segment) error {
 
 // DeleteSegment removes a segment by ID.
 //
-// Since segment keys are time-based (not ID-based), this scans all
-// segments to find the matching ID. For typical per-persona indexes
-// (hundreds to low thousands of segments) this is acceptable.
+// Uses the sid reverse index for O(1) lookup instead of scanning.
 func (idx *Index) DeleteSegment(ctx context.Context, id string) error {
-	prefix := segmentPrefix(idx.prefix)
-
-	for entry, err := range idx.store.List(ctx, prefix) {
-		if err != nil {
-			return err
+	// Look up timestamp via reverse index.
+	ts, err := idx.lookupSegmentTS(ctx, id)
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return nil // not found is not an error
 		}
-		var seg Segment
-		if err := msgpack.Unmarshal(entry.Value, &seg); err != nil {
-			continue // skip malformed entries
-		}
-		if seg.ID == id {
-			if err := idx.store.Delete(ctx, entry.Key); err != nil {
-				return err
-			}
-			// Remove from vector index if configured.
-			if idx.vec != nil {
-				_ = idx.vec.Delete(id)
-			}
-			return nil
-		}
+		return err
 	}
 
-	return nil // not found is not an error
+	segK := segmentKey(idx.prefix, ts)
+	sidK := sidKey(idx.prefix, id)
+
+	// Delete segment data + reverse index atomically.
+	if err := idx.store.BatchDelete(ctx, []kv.Key{segK, sidK}); err != nil {
+		return err
+	}
+
+	// Remove from vector index if configured.
+	if idx.vec != nil {
+		_ = idx.vec.Delete(id)
+	}
+	return nil
 }
 
 // GetSegment retrieves a segment by ID.
 //
-// Scans all segments to find the matching ID. Returns nil if not found.
+// Uses the sid reverse index for O(1) lookup instead of scanning.
+// Returns nil if the segment does not exist.
 func (idx *Index) GetSegment(ctx context.Context, id string) (*Segment, error) {
-	prefix := segmentPrefix(idx.prefix)
-
-	for entry, err := range idx.store.List(ctx, prefix) {
-		if err != nil {
-			return nil, err
+	// Look up timestamp via reverse index.
+	ts, err := idx.lookupSegmentTS(ctx, id)
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return nil, nil // not found
 		}
-		var seg Segment
-		if err := msgpack.Unmarshal(entry.Value, &seg); err != nil {
-			continue
-		}
-		if seg.ID == id {
-			return &seg, nil
-		}
+		return nil, err
 	}
 
-	return nil, nil
+	data, err := idx.store.Get(ctx, segmentKey(idx.prefix, ts))
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return nil, nil // data key missing (orphan sid)
+		}
+		return nil, err
+	}
+
+	var seg Segment
+	if err := msgpack.Unmarshal(data, &seg); err != nil {
+		return nil, err
+	}
+	return &seg, nil
 }
 
 // RecentSegments returns the n most recent segments, ordered newest first.
@@ -273,6 +288,20 @@ func (idx *Index) loadSegments(ctx context.Context, q SearchQuery) ([]Segment, e
 		segments = append(segments, seg)
 	}
 	return segments, nil
+}
+
+// lookupSegmentTS looks up the timestamp for a segment ID via the sid reverse index.
+// Returns kv.ErrNotFound if the ID does not exist.
+func (idx *Index) lookupSegmentTS(ctx context.Context, id string) (int64, error) {
+	data, err := idx.store.Get(ctx, sidKey(idx.prefix, id))
+	if err != nil {
+		return 0, err
+	}
+	ts, err := strconv.ParseInt(string(data), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return ts, nil
 }
 
 // keywordScore computes the fraction of query terms found in the segment's

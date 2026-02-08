@@ -11,10 +11,14 @@ import (
 // Key layout (relative to the Index prefix):
 //
 //	{prefix}:seg:{YYYYMMDD}:{ts_ns}  → msgpack-encoded Segment
+//	{prefix}:sid:{id}                → timestamp string (reverse index)
 //
 // The date partition enables efficient time-range scans while the
 // nanosecond timestamp ensures uniqueness and total ordering within
 // a day. Lexicographic ordering of keys matches chronological order.
+//
+// The sid (segment-ID) reverse index maps segment ID → timestamp,
+// enabling O(1) lookups by ID without scanning all segments.
 
 // segmentKey builds the KV key for a segment.
 // Format: {prefix} + "seg" + "YYYYMMDD" + "{ts_ns}"
@@ -66,6 +70,16 @@ func parseSegmentKey(key kv.Key, prefixLen int) (int64, error) {
 		return 0, fmt.Errorf("recall: malformed segment key timestamp: %w", err)
 	}
 	return ts, nil
+}
+
+// sidKey returns the KV key for the segment-ID reverse index.
+// Format: {prefix} + "sid" + {id}
+func sidKey(prefix kv.Key, id string) kv.Key {
+	k := make(kv.Key, len(prefix)+2)
+	copy(k, prefix)
+	k[len(prefix)] = "sid"
+	k[len(prefix)+1] = id
+	return k
 }
 
 // graphPrefix returns the KV prefix for the graph sub-store.

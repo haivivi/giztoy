@@ -31,6 +31,21 @@ func (m *MemVec) Insert(id string, vector []float32) error {
 	return nil
 }
 
+func (m *MemVec) BatchInsert(ids []string, vectors [][]float32) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for i, id := range ids {
+		cp := make([]float32, len(vectors[i]))
+		copy(cp, vectors[i])
+		m.vectors[id] = cp
+	}
+	return nil
+}
+
+func (m *MemVec) Flush() error {
+	return nil // in-memory: always visible
+}
+
 func (m *MemVec) Search(query []float32, topK int) ([]VectorMatch, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()

@@ -520,6 +520,11 @@ func TestKeyHelpers(t *testing.T) {
 	if len(gp) != 3 || gp[2] != "g" {
 		t.Errorf("graphPrefix = %v", gp)
 	}
+
+	sk := sidKey(prefix, "seg-001")
+	if len(sk) != 4 || sk[2] != "sid" || sk[3] != "seg-001" {
+		t.Errorf("sidKey = %v", sk)
+	}
 }
 
 func TestSegmentDatePrefix(t *testing.T) {
@@ -684,6 +689,37 @@ func TestMemVecCosineDistanceEdgeCases(t *testing.T) {
 	d = cosineDistance([]float32{0, 0, 0}, []float32{1, 0, 0})
 	if d != 0 {
 		t.Errorf("zero vector: got %f, want 0", d)
+	}
+}
+
+func TestMemVecBatchInsert(t *testing.T) {
+	vec := NewMemVec()
+	ids := []string{"a", "b", "c"}
+	vecs := [][]float32{
+		{1, 0, 0},
+		{0, 1, 0},
+		{0, 0, 1},
+	}
+	if err := vec.BatchInsert(ids, vecs); err != nil {
+		t.Fatal(err)
+	}
+	if vec.Len() != 3 {
+		t.Errorf("Len = %d, want 3", vec.Len())
+	}
+	// Verify search works after batch insert.
+	matches, err := vec.Search([]float32{1, 0, 0}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(matches) != 1 || matches[0].ID != "a" {
+		t.Errorf("expected match 'a', got %v", matches)
+	}
+}
+
+func TestMemVecFlush(t *testing.T) {
+	vec := NewMemVec()
+	if err := vec.Flush(); err != nil {
+		t.Fatal(err)
 	}
 }
 

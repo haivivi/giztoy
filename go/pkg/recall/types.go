@@ -46,9 +46,16 @@ type Segment struct {
 // VectorIndex is the interface for approximate nearest-neighbor search
 // over dense float32 vectors. Implementations include in-memory brute
 // force (for testing) and HNSW (for production).
+//
+// VectorIndex is an in-memory data structure. Persistence (save/load
+// to [storage.FileStore]) is the responsibility of the upper layer.
 type VectorIndex interface {
 	// Insert adds or updates a vector with the given ID.
 	Insert(id string, vector []float32) error
+
+	// BatchInsert adds or updates multiple vectors at once.
+	// ids and vectors must have the same length.
+	BatchInsert(ids []string, vectors [][]float32) error
 
 	// Search returns the top-k nearest vectors to the query.
 	// Results are ordered by ascending distance (closest first).
@@ -59,6 +66,10 @@ type VectorIndex interface {
 
 	// Len returns the number of vectors in the index.
 	Len() int
+
+	// Flush ensures all pending writes are visible to subsequent searches.
+	// For in-memory implementations this is typically a no-op.
+	Flush() error
 
 	// Close releases resources held by the index.
 	Close() error
