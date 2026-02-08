@@ -35,18 +35,25 @@ func (idx *Index) StoreSegment(ctx context.Context, seg Segment) error {
 	sidK := sidKey(idx.prefix, seg.ID)
 	tsBytes := []byte(strconv.FormatInt(seg.Timestamp, 10))
 
-	// If this ID already exists with a different timestamp, delete the
-	// old segment key to prevent orphaned data.
-	if oldTs, err := idx.lookupSegmentTS(ctx, seg.ID); err == nil && oldTs != seg.Timestamp {
-		_ = idx.store.Delete(ctx, segmentKey(idx.prefix, oldTs))
+	// Check if this ID already exists with a different timestamp.
+	oldTs, oldExists := int64(0), false
+	if ts, err := idx.lookupSegmentTS(ctx, seg.ID); err == nil && ts != seg.Timestamp {
+		oldTs, oldExists = ts, true
 	}
 
-	// Write segment data + reverse index atomically.
+	// Write new segment data + reverse index atomically first.
+	// This ensures the new data is persisted before we remove the old key.
 	if err := idx.store.BatchSet(ctx, []kv.Entry{
 		{Key: segK, Value: data},
 		{Key: sidK, Value: tsBytes},
 	}); err != nil {
 		return err
+	}
+
+	// Delete the old segment key after the new data is safely written.
+	// If this fails, we only have an orphaned old key — no data loss.
+	if oldExists {
+		_ = idx.store.Delete(ctx, segmentKey(idx.prefix, oldTs))
 	}
 
 	// Index the vector if both embedder and vector index are available.
