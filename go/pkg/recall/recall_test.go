@@ -521,3 +521,367 @@ func TestKeyHelpers(t *testing.T) {
 		t.Errorf("graphPrefix = %v", gp)
 	}
 }
+
+func TestSegmentDatePrefix(t *testing.T) {
+	prefix := kv.Key{"mem", "cat"}
+	d := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
+	dp := segmentDatePrefix(prefix, d)
+	if len(dp) != 4 {
+		t.Fatalf("len = %d, want 4", len(dp))
+	}
+	if dp[2] != "seg" || dp[3] != "20250615" {
+		t.Errorf("segmentDatePrefix = %v", dp)
+	}
+}
+
+func TestParseSegmentKeyErrors(t *testing.T) {
+	// Too short.
+	_, err := parseSegmentKey(kv.Key{"a", "b"}, 2)
+	if err == nil {
+		t.Error("expected error for short key")
+	}
+
+	// Wrong segment marker.
+	_, err = parseSegmentKey(kv.Key{"a", "b", "notSeg", "20250615", "123"}, 2)
+	if err == nil {
+		t.Error("expected error for wrong segment marker")
+	}
+
+	// Invalid timestamp.
+	_, err = parseSegmentKey(kv.Key{"a", "b", "seg", "20250615", "notanumber"}, 2)
+	if err == nil {
+		t.Error("expected error for invalid timestamp")
+	}
+}
+
+func TestStoreSegmentNoEmbedder(t *testing.T) {
+	idx := newTestIndexNoVec(t)
+	ctx := context.Background()
+
+	seg := Segment{
+		ID:        "s1",
+		Summary:   "hello",
+		Timestamp: time.Now().UnixNano(),
+	}
+	if err := idx.StoreSegment(ctx, seg); err != nil {
+		t.Fatalf("StoreSegment without embedder: %v", err)
+	}
+
+	got, err := idx.GetSegment(ctx, "s1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.ID != "s1" {
+		t.Errorf("expected s1, got %v", got)
+	}
+}
+
+func TestGetSegmentNotFound(t *testing.T) {
+	idx, _ := newTestIndex(t)
+	ctx := context.Background()
+
+	got, err := idx.GetSegment(ctx, "nonexistent")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != nil {
+		t.Errorf("expected nil, got %v", got)
+	}
+}
+
+func TestRecentSegmentsZero(t *testing.T) {
+	idx, _ := newTestIndex(t)
+	ctx := context.Background()
+
+	got, err := idx.RecentSegments(ctx, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != nil {
+		t.Errorf("expected nil for n=0, got %v", got)
+	}
+}
+
+func TestSearchSegmentsDefaultLimit(t *testing.T) {
+	idx := newTestIndexNoVec(t)
+	ctx := context.Background()
+
+	// Store 15 segments, search with Limit=0 (should default to 10).
+	for i := 0; i < 15; i++ {
+		seg := Segment{
+			ID:        fmt.Sprintf("s%d", i),
+			Summary:   "hello",
+			Keywords:  []string{"hello"},
+			Timestamp: int64(i + 1),
+		}
+		if err := idx.StoreSegment(ctx, seg); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	results, err := idx.SearchSegments(ctx, SearchQuery{Text: "hello"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 10 {
+		t.Errorf("expected 10 (default limit), got %d", len(results))
+	}
+}
+
+func TestSearchSegmentsNoMatchesNoFilter(t *testing.T) {
+	idx := newTestIndexNoVec(t)
+	ctx := context.Background()
+
+	// Store a segment with no keywords or labels.
+	seg := Segment{ID: "s1", Summary: "hello", Timestamp: 1}
+	if err := idx.StoreSegment(ctx, seg); err != nil {
+		t.Fatal(err)
+	}
+
+	// Search with no text, no labels — should return segments (no filter active).
+	results, err := idx.SearchSegments(ctx, SearchQuery{Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Errorf("expected 1 result with no filters, got %d", len(results))
+	}
+}
+
+func TestSearchDefaultHopsAndLimit(t *testing.T) {
+	idx, _ := newTestIndex(t)
+	ctx := context.Background()
+
+	seg := Segment{
+		ID: "s1", Summary: "dinosaurs", Keywords: []string{"dinosaur"},
+		Labels: []string{"Alice"}, Timestamp: 1,
+	}
+	if err := idx.StoreSegment(ctx, seg); err != nil {
+		t.Fatal(err)
+	}
+
+	// Hops=0 and Limit=0 should use defaults (2 and 10).
+	result, err := idx.Search(ctx, Query{
+		Labels: []string{"Alice"},
+		Text:   "dinosaurs",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Segments) == 0 {
+		t.Error("expected results with default hops/limit")
+	}
+}
+
+func TestMemVecCosineDistanceEdgeCases(t *testing.T) {
+	// Dimension mismatch.
+	d := cosineDistance([]float32{1, 0}, []float32{1, 0, 0})
+	if d != 2 {
+		t.Errorf("dimension mismatch: got %f, want 2", d)
+	}
+
+	// Zero vector.
+	d = cosineDistance([]float32{0, 0, 0}, []float32{1, 0, 0})
+	if d != 0 {
+		t.Errorf("zero vector: got %f, want 0", d)
+	}
+}
+
+func TestMemVecClose(t *testing.T) {
+	vec := NewMemVec()
+	if err := vec.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMemVecSearchEmpty(t *testing.T) {
+	vec := NewMemVec()
+	matches, err := vec.Search([]float32{1, 0, 0}, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if matches != nil {
+		t.Errorf("expected nil for empty index, got %v", matches)
+	}
+}
+
+func TestMemVecDelete(t *testing.T) {
+	vec := NewMemVec()
+	_ = vec.Insert("a", []float32{1, 0})
+	if vec.Len() != 1 {
+		t.Fatalf("Len = %d, want 1", vec.Len())
+	}
+	_ = vec.Delete("a")
+	if vec.Len() != 0 {
+		t.Errorf("Len after delete = %d, want 0", vec.Len())
+	}
+	// Delete nonexistent should not error.
+	if err := vec.Delete("nonexistent"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestTokenize(t *testing.T) {
+	// Deduplication.
+	got := tokenize("hello world hello")
+	if len(got) != 2 {
+		t.Errorf("expected 2 unique tokens, got %d: %v", len(got), got)
+	}
+	// Empty.
+	if tokenize("") != nil {
+		t.Error("expected nil for empty string")
+	}
+}
+
+func TestKeywordScoreEmpty(t *testing.T) {
+	// No query terms.
+	if s := keywordScore(nil, []string{"foo"}); s != 0 {
+		t.Errorf("expected 0, got %f", s)
+	}
+}
+
+func TestLabelScoreEmpty(t *testing.T) {
+	// No segment labels.
+	set := map[string]struct{}{"a": {}}
+	if s := labelScore(nil, set); s != 0 {
+		t.Errorf("expected 0, got %f", s)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Benchmarks
+// ---------------------------------------------------------------------------
+
+func BenchmarkStoreSegment(b *testing.B) {
+	store := kv.NewMemory(nil)
+	emb := newMockEmbedder()
+	vec := NewMemVec()
+	idx := NewIndex(IndexConfig{
+		Store: store, Embedder: emb, Vec: vec, Prefix: kv.Key{"bench"},
+	})
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		seg := Segment{
+			ID:        fmt.Sprintf("seg-%d", i),
+			Summary:   "dinosaurs",
+			Keywords:  []string{"dinosaur", "fossil"},
+			Labels:    []string{"Alice", "dinosaurs"},
+			Timestamp: int64(i),
+		}
+		if err := idx.StoreSegment(ctx, seg); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkSearchSegments(b *testing.B) {
+	store := kv.NewMemory(nil)
+	emb := newMockEmbedder()
+	vec := NewMemVec()
+	idx := NewIndex(IndexConfig{
+		Store: store, Embedder: emb, Vec: vec, Prefix: kv.Key{"bench"},
+	})
+	ctx := context.Background()
+
+	// Pre-populate 500 segments.
+	for i := 0; i < 500; i++ {
+		seg := Segment{
+			ID:        fmt.Sprintf("seg-%d", i),
+			Summary:   "dinosaurs",
+			Keywords:  []string{"dinosaur", "fossil", "museum"},
+			Labels:    []string{"Alice", "Bob"},
+			Timestamp: int64(i),
+		}
+		if err := idx.StoreSegment(ctx, seg); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	q := SearchQuery{
+		Text:   "dinosaur fossils",
+		Labels: []string{"Alice"},
+		Limit:  10,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := idx.SearchSegments(ctx, q); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkMemVecSearch(b *testing.B) {
+	vec := NewMemVec()
+	// Insert 1000 random-ish vectors.
+	for i := 0; i < 1000; i++ {
+		v := []float32{
+			float32(i%7) / 7.0,
+			float32(i%11) / 11.0,
+			float32(i%13) / 13.0,
+			float32(i%17) / 17.0,
+		}
+		_ = vec.Insert(fmt.Sprintf("v-%d", i), v)
+	}
+
+	query := []float32{0.5, 0.5, 0.5, 0.5}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = vec.Search(query, 10)
+	}
+}
+
+func BenchmarkSearchCombined(b *testing.B) {
+	store := kv.NewMemory(nil)
+	emb := newMockEmbedder()
+	vec := NewMemVec()
+	idx := NewIndex(IndexConfig{
+		Store: store, Embedder: emb, Vec: vec, Prefix: kv.Key{"bench"},
+	})
+	ctx := context.Background()
+
+	// Set up a small graph.
+	g := idx.Graph()
+	_ = g.SetEntity(ctx, graph.Entity{Label: "Alice"})
+	_ = g.SetEntity(ctx, graph.Entity{Label: "Bob"})
+	_ = g.SetEntity(ctx, graph.Entity{Label: "dinosaurs"})
+	_ = g.AddRelation(ctx, graph.Relation{From: "Alice", To: "Bob", RelType: "knows"})
+	_ = g.AddRelation(ctx, graph.Relation{From: "Bob", To: "dinosaurs", RelType: "likes"})
+
+	// Pre-populate 200 segments.
+	for i := 0; i < 200; i++ {
+		labels := []string{"Alice"}
+		if i%3 == 0 {
+			labels = append(labels, "Bob")
+		}
+		if i%5 == 0 {
+			labels = append(labels, "dinosaurs")
+		}
+		seg := Segment{
+			ID:        fmt.Sprintf("seg-%d", i),
+			Summary:   "dinosaurs",
+			Keywords:  []string{"dinosaur", "fossil"},
+			Labels:    labels,
+			Timestamp: int64(i),
+		}
+		if err := idx.StoreSegment(ctx, seg); err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	q := Query{
+		Labels: []string{"Alice"},
+		Text:   "dinosaurs",
+		Hops:   2,
+		Limit:  10,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := idx.Search(ctx, q); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
