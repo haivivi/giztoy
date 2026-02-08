@@ -144,17 +144,11 @@ func (g *KVGraph) MergeAttrs(ctx context.Context, label string, attrs map[string
 }
 
 func (g *KVGraph) ListEntities(ctx context.Context, prefix string) iter.Seq2[Entity, error] {
-	// Determine the KV prefix to scan.
-	var kvPrefix kv.Key
-	if prefix == "" {
-		kvPrefix = g.entityPrefix()
-	} else {
-		// We scan for the exact prefix segment under "e".
-		// Since kv.List appends separator, "e:Ali" matches "e:Ali:*" but not "e:Alice".
-		// But entity keys are {prefix}:e:{label} — only 1 segment after "e".
-		// So we use a full entity prefix scan and filter client-side.
-		kvPrefix = g.entityPrefix()
-	}
+	// Always scan all entities and filter client-side. We cannot use a
+	// more specific KV prefix because kv.List appends a separator, so
+	// "e:Ali" would match "e:Ali:*" but not "e:Alice". Entity keys have
+	// exactly one segment after "e", so client-side filtering is correct.
+	kvPrefix := g.entityPrefix()
 
 	return func(yield func(Entity, error) bool) {
 		for entry, err := range g.store.List(ctx, kvPrefix) {
