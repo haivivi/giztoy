@@ -124,10 +124,10 @@ func TestCosineDistanceEdgeCases(t *testing.T) {
 	if d != 2 {
 		t.Errorf("dimension mismatch: got %f, want 2", d)
 	}
-	// Zero vector.
+	// Zero vector — no direction, treated as maximum distance.
 	d = CosineDistance([]float32{0, 0, 0}, []float32{1, 0, 0})
-	if d != 0 {
-		t.Errorf("zero vector: got %f, want 0", d)
+	if d != 2 {
+		t.Errorf("zero vector: got %f, want 2", d)
 	}
 }
 

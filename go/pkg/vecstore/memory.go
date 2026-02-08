@@ -117,7 +117,7 @@ func CosineDistance(a, b []float32) float32 {
 	}
 
 	if normA == 0 || normB == 0 {
-		return 0
+		return 2 // zero vector has no direction; treat as maximum distance
 	}
 
 	similarity := dot / (math.Sqrt(normA) * math.Sqrt(normB))

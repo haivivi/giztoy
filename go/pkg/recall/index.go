@@ -50,6 +50,9 @@ type Index struct {
 // The graph is automatically created as a KVGraph scoped under
 // {prefix}:g using the same KV store.
 func NewIndex(cfg IndexConfig) *Index {
+	if cfg.Store == nil {
+		panic("recall: IndexConfig.Store is required")
+	}
 	return &Index{
 		store:    cfg.Store,
 		embedder: cfg.Embedder,
