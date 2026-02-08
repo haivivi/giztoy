@@ -1,7 +1,12 @@
 package commands
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"io"
+	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -65,6 +70,11 @@ Example:
 			return err
 		}
 
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
 		var req ds.OneSentenceRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
@@ -73,15 +83,26 @@ Example:
 		printVerbose("Using V1 API (classic)")
 		printVerbose("Format: %s", req.Format)
 
-		// TODO: Implement actual API call
-		result := map[string]any{
-			"_note":       "API call not implemented yet",
-			"api_version": "v1",
-			"_context":    cliCtx.Name,
-			"request":     req,
+		reqCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		result, err := client.ASR.RecognizeOneSentence(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("V1 recognition failed: %w", err)
 		}
 
-		return outputResult(result, getOutputFile(), isJSONOutput())
+		printSuccess("Recognition complete")
+		if result.Text != "" {
+			fmt.Println(result.Text)
+		}
+
+		output := map[string]any{
+			"api_version": "v1",
+			"text":        result.Text,
+			"duration":    result.Duration,
+		}
+
+		return outputResult(output, getOutputFile(), isJSONOutput())
 	},
 }
 
@@ -102,27 +123,29 @@ Example:
 			return fmt.Errorf("failed to read 'audio' flag: %w", err)
 		}
 
-		if _, err := getContext(); err != nil {
+		cliCtx, err := getContext()
+		if err != nil {
 			return err
 		}
 
-		var req ds.StreamASRConfig
-		if err := loadRequest(getInputFile(), &req); err != nil {
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
+		var config ds.StreamASRConfig
+		if err := loadRequest(getInputFile(), &config); err != nil {
 			return err
 		}
 
 		printVerbose("Using V1 API (classic streaming)")
+		printVerbose("Format: %s", config.Format)
 		printVerbose("Audio file: %s", audioFile)
 
-		// TODO: Implement streaming recognition
-		fmt.Println("[V1 streaming recognition not implemented yet]")
-		if audioFile != "" {
-			fmt.Printf("Would stream audio from %s\n", audioFile)
-		} else {
-			fmt.Println("Would stream audio from stdin")
-		}
+		reqCtx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		defer cancel()
 
-		return nil
+		return runASRV1Stream(reqCtx, client, &config, audioFile)
 	},
 }
 
@@ -168,28 +191,29 @@ Example:
 			return fmt.Errorf("failed to read 'audio' flag: %w", err)
 		}
 
-		if _, err := getContext(); err != nil {
+		cliCtx, err := getContext()
+		if err != nil {
 			return err
 		}
 
-		var req ds.StreamASRConfig
-		if err := loadRequest(getInputFile(), &req); err != nil {
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
+		var config ds.ASRV2Config
+		if err := loadRequest(getInputFile(), &config); err != nil {
 			return err
 		}
 
 		printVerbose("Using V2 API (BigModel streaming)")
-		printVerbose("Format: %s", req.Format)
+		printVerbose("Format: %s", config.Format)
 		printVerbose("Audio file: %s", audioFile)
 
-		// TODO: Implement V2 streaming recognition
-		fmt.Println("[V2 streaming recognition not implemented yet]")
-		if audioFile != "" {
-			fmt.Printf("Would stream audio from %s\n", audioFile)
-		} else {
-			fmt.Println("Would stream audio from stdin")
-		}
+		reqCtx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		defer cancel()
 
-		return nil
+		return runASRV2Stream(reqCtx, client, &config, audioFile)
 	},
 }
 
@@ -216,7 +240,12 @@ Example:
 			return err
 		}
 
-		var req ds.FileASRRequest
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
+		var req ds.ASRV2AsyncRequest
 		if err := loadRequest(getInputFile(), &req); err != nil {
 			return err
 		}
@@ -224,16 +253,25 @@ Example:
 		printVerbose("Using V2 API (BigModel file)")
 		printVerbose("Audio URL: %s", req.AudioURL)
 
-		// TODO: Implement file recognition
-		result := map[string]any{
-			"_note":       "API call not implemented yet",
-			"api_version": "v2",
-			"_context":    cliCtx.Name,
-			"request":     req,
-			"task_id":     "placeholder-task-id",
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		result, err := client.ASRV2.SubmitAsync(reqCtx, &req)
+		if err != nil {
+			return fmt.Errorf("V2 file ASR submit failed: %w", err)
 		}
 
-		return outputResult(result, getOutputFile(), isJSONOutput())
+		printSuccess("File ASR task submitted!")
+		printInfo("Task ID: %s", result.TaskID)
+		printInfo("Use 'doubaospeech asr v2 status %s' to check status", result.TaskID)
+
+		output := map[string]any{
+			"api_version": "v2",
+			"task_id":     result.TaskID,
+			"status":      result.Status,
+		}
+
+		return outputResult(output, getOutputFile(), isJSONOutput())
 	},
 }
 
@@ -254,20 +292,183 @@ Example:
 			return err
 		}
 
+		client, err := createClient(cliCtx)
+		if err != nil {
+			return err
+		}
+
 		printVerbose("Using context: %s", cliCtx.Name)
 		printVerbose("Querying task: %s", taskID)
 
-		// TODO: Implement task status query
-		result := map[string]any{
-			"_note":       "API call not implemented yet",
-			"api_version": "v2",
-			"_context":    cliCtx.Name,
-			"task_id":     taskID,
-			"status":      "pending",
+		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		result, err := client.ASRV2.QueryAsync(reqCtx, taskID)
+		if err != nil {
+			return fmt.Errorf("query task status failed: %w", err)
 		}
 
-		return outputResult(result, getOutputFile(), isJSONOutput())
+		printInfo("Task ID: %s", result.TaskID)
+		printInfo("Status: %s", result.Status)
+		if result.Text != "" {
+			printSuccess("Text: %s", result.Text)
+		}
+
+		output := map[string]any{
+			"api_version": "v2",
+			"task_id":     result.TaskID,
+			"status":      result.Status,
+		}
+		if result.Text != "" {
+			output["text"] = result.Text
+		}
+
+		return outputResult(output, getOutputFile(), isJSONOutput())
 	},
+}
+
+// ============================================================================
+// Implementation Functions
+// ============================================================================
+
+func runASRV1Stream(ctx context.Context, client *ds.Client, config *ds.StreamASRConfig, audioFile string) error {
+	session, err := client.ASR.OpenStreamSession(ctx, config)
+	if err != nil {
+		return fmt.Errorf("failed to open stream session: %w", err)
+	}
+	defer session.Close()
+
+	printVerbose("Stream session opened")
+
+	// Read audio data from file or stdin
+	audioData, err := readAudioInput(audioFile)
+	if err != nil {
+		return fmt.Errorf("failed to read audio: %w", err)
+	}
+
+	// Send audio in chunks
+	chunkSize := 3200 // 100ms of 16kHz 16-bit mono
+	for i := 0; i < len(audioData); i += chunkSize {
+		end := i + chunkSize
+		isLast := end >= len(audioData)
+		if isLast {
+			end = len(audioData)
+		}
+
+		if err := session.SendAudio(ctx, audioData[i:end], isLast); err != nil {
+			return fmt.Errorf("failed to send audio: %w", err)
+		}
+
+		if !isLast {
+			time.Sleep(100 * time.Millisecond) // Simulate real-time streaming
+		}
+	}
+
+	// Receive results
+	var finalText string
+	for chunk, err := range session.Recv() {
+		if err != nil {
+			return fmt.Errorf("receive error: %w", err)
+		}
+		if chunk.Text != "" {
+			if chunk.IsDefinite {
+				fmt.Println(chunk.Text)
+			} else {
+				printVerbose("[interim] %s", chunk.Text)
+			}
+			finalText = chunk.Text
+		}
+		if chunk.IsFinal {
+			break
+		}
+	}
+
+	result := map[string]any{
+		"api_version": "v1",
+		"text":        finalText,
+	}
+
+	return outputResult(result, getOutputFile(), isJSONOutput())
+}
+
+func runASRV2Stream(ctx context.Context, client *ds.Client, config *ds.ASRV2Config, audioFile string) error {
+	session, err := client.ASRV2.OpenStreamSession(ctx, config)
+	if err != nil {
+		return fmt.Errorf("failed to open stream session: %w", err)
+	}
+	defer session.Close()
+
+	printVerbose("V2 stream session opened")
+
+	// Read audio data from file or stdin
+	audioData, err := readAudioInput(audioFile)
+	if err != nil {
+		return fmt.Errorf("failed to read audio: %w", err)
+	}
+
+	// Send audio in chunks
+	chunkSize := 3200 // 100ms of 16kHz 16-bit mono
+	for i := 0; i < len(audioData); i += chunkSize {
+		end := i + chunkSize
+		isLast := end >= len(audioData)
+		if isLast {
+			end = len(audioData)
+		}
+
+		if err := session.SendAudio(ctx, audioData[i:end], isLast); err != nil {
+			return fmt.Errorf("failed to send audio: %w", err)
+		}
+
+		if !isLast {
+			time.Sleep(100 * time.Millisecond) // Simulate real-time streaming
+		}
+	}
+
+	// Receive results
+	var finalText string
+	var allUtterances []ds.ASRV2Utterance
+	for result, err := range session.Recv() {
+		if err != nil {
+			return fmt.Errorf("receive error: %w", err)
+		}
+		if result.Text != "" {
+			if result.IsFinal {
+				fmt.Println(result.Text)
+			} else {
+				printVerbose("[interim] %s", result.Text)
+			}
+			finalText = result.Text
+		}
+		allUtterances = append(allUtterances, result.Utterances...)
+	}
+
+	output := map[string]any{
+		"api_version": "v2",
+		"text":        finalText,
+	}
+	if len(allUtterances) > 0 {
+		output["utterances"] = allUtterances
+	}
+
+	return outputResult(output, getOutputFile(), isJSONOutput())
+}
+
+// readAudioInput reads audio data from a file or stdin
+func readAudioInput(audioFile string) ([]byte, error) {
+	if audioFile != "" {
+		data, err := os.ReadFile(audioFile)
+		if err != nil {
+			return nil, fmt.Errorf("read audio file %s: %w", audioFile, err)
+		}
+		return data, nil
+	}
+
+	// Read from stdin
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, os.Stdin); err != nil {
+		return nil, fmt.Errorf("read stdin: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 // ============================================================================
