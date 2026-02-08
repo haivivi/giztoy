@@ -14,7 +14,7 @@ harmonyos_application(
     srcs = glob(["HelloWorld/**/*.ets"]),
     ability_name = "EntryAbility",
     bundle_name = "com.example.hellobazel",
-    project_dir = "examples/bazel/harmonyos/HelloWorld",
+    project_dir = "e2e/bazel/harmonyos/HelloWorld",
     resources = glob(["HelloWorld/**/resources/**"]),
 )
 
@@ -33,7 +33,7 @@ harmonyos_hap(
     bundle_name = "com.example.hellobazel",
     module_name = "entry",
     product = "default",
-    project_dir = "examples/bazel/harmonyos/HelloWorld",
+    project_dir = "e2e/bazel/harmonyos/HelloWorld",
     resources = glob(["HelloWorld/**/resources/**"]),
     tags = ["manual"],
 )

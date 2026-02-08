@@ -164,6 +164,10 @@ Examples:
 		reqCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
+		if cliCtx.Client == nil {
+			return fmt.Errorf("client credentials required: --app-id is needed for listing voices")
+		}
+
 		resp, err := console.ListVoiceCloneStatus(reqCtx, &ds.ListVoiceCloneStatusRequest{
 			AppID: cliCtx.Client.AppID,
 		})
