@@ -5,14 +5,12 @@ load("@gazelle//:deps.bzl", "go_repository")
 # Load repository rules from organized directories
 # DevOps tools
 load("//devops/tools/mdbook:defs.bzl", "mdbook_repo")
-load("//devops/tools/pnnx:defs.bzl", "pnnx_repo")
 load("//devops/tools/yq:defs.bzl", "yq_repo")
 
 # Third-party libraries
 load("//third_party/mermaidjs:defs.bzl", "mermaid_repo")
-load("//third_party/ncnn:defs.bzl", "ncnn_repo")
-load("//third_party/onnxruntime:defs.bzl", "onnxruntime_repo")
 load("//third_party/ogg:defs.bzl", "ogg_repo")
+load("//third_party/ncnn:defs.bzl", "ncnn_repo")
 load("//third_party/opus:defs.bzl", "opus_repo")
 load("//third_party/portaudio:defs.bzl", "portaudio_repo")
 load("//third_party/lame:defs.bzl", "lame_repo")
@@ -79,7 +77,7 @@ luau = module_extension(
 )
 
 # =============================================================================
-# ncnn Extension (neural network inference, static library)
+# ncnn Extension (for neural network inference)
 # =============================================================================
 
 def _ncnn_impl(_ctx):
@@ -88,66 +86,6 @@ def _ncnn_impl(_ctx):
 
 ncnn_ext = module_extension(
     implementation = _ncnn_impl,
-)
-
-# =============================================================================
-# ONNX Runtime Extension (pre-built shared library)
-# =============================================================================
-
-def _onnxruntime_impl(_ctx):
-    """Module extension for ONNX Runtime pre-built library."""
-    onnxruntime_repo(name = "onnxruntime")
-
-onnxruntime_ext = module_extension(
-    implementation = _onnxruntime_impl,
-)
-
-# =============================================================================
-# PNNX + ONNX Models Extension (for model conversion)
-# =============================================================================
-
-def _pnnx_impl(_ctx):
-    """Module extension for PNNX binary and ONNX source models."""
-    pnnx_repo(name = "pnnx")
-
-    # 3D-Speaker ERes2Net base — speaker embedding (512-dim)
-    _onnx_model_repo(
-        name = "onnx_speaker_eres2net",
-        url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx",
-        sha256 = "1a331345f04805badbb495c775a6ddffcdd1a732567d5ec8b3d5749e3c7a5e4b",
-    )
-
-    # Silero VAD — JIT model (includes both 8k and 16k, we extract 16k path)
-    _onnx_model_repo(
-        name = "model_vad_silero",
-        url = "https://github.com/snakers4/silero-vad/raw/v6.2/src/silero_vad/data/silero_vad.jit",
-        sha256 = "e1122837f4154c511485fe0b9c64455f7b929c96fbb8d79fbdb336383ebd3720",
-    )
-
-
-pnnx_ext = module_extension(
-    implementation = _pnnx_impl,
-)
-
-def _onnx_model_repo_impl(ctx):
-    """Download a single ONNX model file."""
-    ctx.download(
-        url = ctx.attr.url,
-        sha256 = ctx.attr.sha256,
-        output = "model.onnx",
-    )
-    ctx.file("BUILD.bazel", """\
-package(default_visibility = ["//visibility:public"])
-exports_files(["model.onnx"])
-filegroup(name = "model", srcs = ["model.onnx"])
-""")
-
-_onnx_model_repo = repository_rule(
-    implementation = _onnx_model_repo_impl,
-    attrs = {
-        "url": attr.string(mandatory = True),
-        "sha256": attr.string(default = ""),
-    },
 )
 
 # =============================================================================

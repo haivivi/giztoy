@@ -1,102 +1,96 @@
-"""ncnn static library built from source via CMake.
+"""ncnn pre-built static library repository rule.
 
-Downloads the ncnn source code and builds it with CMake to produce a
-properly optimized static library with ARM NEON / x86 AVX support.
+Downloads the ncnn pre-built package from Tencent's official GitHub releases
+and exposes the static library (.a) and C API headers for CGo linking.
 
-The pre-built releases lack ARM NEON optimizations on macOS, resulting
-in ~1000x slower inference. Building from source fixes this.
+ncnn is a high-performance neural network inference framework optimized for
+mobile/embedded platforms. We use it for speaker embedding inference.
 
 Source: https://github.com/Tencent/ncnn
 """
 
 _NCNN_VERSION = "20260113"
-_NCNN_SHA256 = "53696039ee8ba5c8db6446bdf12a576b8d7f7b0c33bb6749f94688bddf5a3d5c"
+
+_NCNN_SHA256 = {
+    "darwin": "40bd0854ac5de56f730e07619d116d14a14d873befa53c739f2dcec1d8c60cf8",
+    "linux": "7eb010ddd393efd571b3462c2a62ecea55297cdb025cbe1438bcf52b742a8cfd",
+}
+
+_NCNN_ARCHIVE = {
+    "darwin": "ncnn-{}-macos.zip".format(_NCNN_VERSION),
+    "linux": "ncnn-{}-ubuntu-2404.zip".format(_NCNN_VERSION),
+}
 
 def _ncnn_repo_impl(ctx):
-    """Download ncnn source and build with CMake."""
+    """Download ncnn pre-built package and normalize directory structure."""
+    os = ctx.os.name.lower()
 
-    # Download source.
+    if os in ("mac os x", "darwin", "macos") or os.startswith("darwin"):
+        os_name = "darwin"
+    elif os in ("linux",) or os.startswith("linux"):
+        os_name = "linux"
+    else:
+        fail("Unsupported OS: '{}'. Supported: darwin, linux".format(os))
+
+    if os_name not in _NCNN_SHA256:
+        fail("No ncnn package for platform: {}".format(os_name))
+
+    archive = _NCNN_ARCHIVE[os_name]
+    url = "https://github.com/Tencent/ncnn/releases/download/{}/{}".format(
+        _NCNN_VERSION,
+        archive,
+    )
+
     ctx.download_and_extract(
-        url = "https://github.com/Tencent/ncnn/releases/download/{}/ncnn-{}-full-source.zip".format(
-            _NCNN_VERSION, _NCNN_VERSION,
-        ),
-        sha256 = _NCNN_SHA256,
+        url = url,
+        sha256 = _NCNN_SHA256[os_name],
         type = "zip",
     )
 
-    # Detect CPU count for parallel build.
-    os_name = ctx.os.name.lower()
-    if "mac" in os_name or "darwin" in os_name:
-        result = ctx.execute(["sysctl", "-n", "hw.ncpu"])
-        nproc = result.stdout.strip() if result.return_code == 0 else "4"
+    # Normalize directory structure: macOS uses framework layout, Linux uses standard layout.
+    # We create a unified structure: include/ncnn/*.h + lib/libncnn.a + lib/libomp.a
+    if os_name == "darwin":
+        # macOS: frameworks layout → standard layout
+        ctx.execute(["mkdir", "-p", "include/ncnn", "lib"])
+        ctx.execute(["sh", "-c", "cp ncnn.framework/Versions/A/Headers/ncnn/*.h include/ncnn/"])
+        ctx.execute(["cp", "ncnn.framework/Versions/A/ncnn", "lib/libncnn.a"])
+        # OpenMP static library (bundled with ncnn macOS release)
+        ctx.execute(["cp", "openmp.framework/Versions/A/openmp", "lib/libomp.a"])
     else:
-        result = ctx.execute(["nproc"])
-        nproc = result.stdout.strip() if result.return_code == 0 else "4"
+        # Linux: standard layout
+        prefix = "ncnn-{}-ubuntu-2404".format(_NCNN_VERSION)
+        ctx.execute(["mkdir", "-p", "include/ncnn", "lib"])
+        ctx.execute(["sh", "-c", "cp {}/include/ncnn/*.h include/ncnn/".format(prefix)])
+        ctx.execute(["cp", "{}/lib/libncnn.a".format(prefix), "lib/libncnn.a"])
 
-    # CMake configure.
-    ctx.execute(["mkdir", "-p", "build"])
-    cmake_result = ctx.execute(
-        [
-            "cmake", "..",
-            "-DCMAKE_BUILD_TYPE=Release",
-            "-DNCNN_VULKAN=OFF",
-            "-DNCNN_BUILD_TOOLS=OFF",
-            "-DNCNN_BUILD_EXAMPLES=OFF",
-            "-DNCNN_BUILD_BENCHMARK=OFF",
-            "-DNCNN_BUILD_TESTS=OFF",
-            "-DNCNN_OPENMP=OFF",
-            "-DNCNN_SIMPLEOMP=ON",
-            "-DNCNN_C_API=ON",
-            "-DNCNN_INSTALL_SDK=OFF",
-        ],
-        working_directory = "build",
-        timeout = 120,
-    )
-    if cmake_result.return_code != 0:
-        fail("ncnn CMake configure failed:\n" + cmake_result.stderr)
+    # Create BUILD file with cc_import for static linking.
+    # ncnn depends on OpenMP for multi-threaded inference and C++ stdlib.
+    _load_cc = 'load("@rules_cc//cc:cc_import.bzl", "cc_import")\nload("@rules_cc//cc:cc_library.bzl", "cc_library")\n'
 
-    # Build.
-    build_result = ctx.execute(
-        ["make", "-j{}".format(nproc)],
-        working_directory = "build",
-        timeout = 600,
-    )
-    if build_result.return_code != 0:
-        fail("ncnn build failed:\n" + build_result.stderr)
+    if os_name == "darwin":
+        ctx.file("BUILD.bazel", _load_cc + """\
+package(default_visibility = ["//visibility:public"])
 
-    # Collect artifacts into standard layout: include/ncnn/*.h + lib/libncnn.a
-    ctx.execute(["mkdir", "-p", "include/ncnn", "lib"])
-    ctx.execute(["cp", "build/src/libncnn.a", "lib/libncnn.a"])
+cc_import(
+    name = "ncnn_lib",
+    hdrs = glob(["include/ncnn/*.h"]),
+    static_library = "lib/libncnn.a",
+    includes = ["include"],
+)
 
-    # Copy generated headers.
-    ctx.execute(["cp", "build/src/platform.h", "include/ncnn/"])
-    ctx.execute(["cp", "build/src/ncnn_export.h", "include/ncnn/"])
-    ctx.execute(["cp", "build/src/layer_type_enum.h", "include/ncnn/"])
-    ctx.execute(["cp", "build/src/layer_shader_type_enum.h", "include/ncnn/"])
+cc_import(
+    name = "omp_lib",
+    static_library = "lib/libomp.a",
+)
 
-    # Copy source headers.
-    headers = [
-        "c_api.h", "net.h", "mat.h", "blob.h", "layer.h", "option.h",
-        "allocator.h", "paramdict.h", "datareader.h", "modelbin.h",
-        "cpu.h", "pipelinecache.h", "gpu.h", "command.h", "pipeline.h",
-        "simplestl.h", "simpleocv.h", "simplemath.h", "simpleomp.h",
-        "simplevk.h", "expression.h", "layer_type.h", "layer_shader_type.h",
-        "benchmark.h", "vulkan_header_fix.h",
-    ]
-    for h in headers:
-        ctx.execute(["cp", "src/" + h, "include/ncnn/" + h])
-
-    # Determine linkopts.
-    if "mac" in os_name or "darwin" in os_name:
-        linkopts = '["-lc++"]'
+cc_library(
+    name = "ncnn",
+    deps = [":ncnn_lib", ":omp_lib"],
+    linkopts = ["-lc++"],
+)
+""")
     else:
-        linkopts = '["-lstdc++", "-lpthread"]'
-
-    # Create BUILD file.
-    ctx.file("BUILD.bazel", """\
-load("@rules_cc//cc:cc_import.bzl", "cc_import")
-load("@rules_cc//cc:cc_library.bzl", "cc_library")
-
+        ctx.file("BUILD.bazel", _load_cc + """\
 package(default_visibility = ["//visibility:public"])
 
 cc_import(
@@ -109,9 +103,9 @@ cc_import(
 cc_library(
     name = "ncnn",
     deps = [":ncnn_lib"],
-    linkopts = {linkopts},
+    linkopts = ["-lstdc++", "-lgomp", "-lpthread"],
 )
-""".format(linkopts = linkopts))
+""")
 
 ncnn_repo = repository_rule(
     implementation = _ncnn_repo_impl,

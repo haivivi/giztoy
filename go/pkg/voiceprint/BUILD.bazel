@@ -4,16 +4,22 @@ go_library(
     name = "voiceprint",
     srcs = [
         "detector.go",
+        "fbank.go",
         "hasher.go",
         "model.go",
+        "model_ncnn.go",
         "transformer.go",
         "voiceprint.go",
     ],
+    cgo = True,
     importpath = "github.com/haivivi/giztoy/go/pkg/voiceprint",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/buffer",
         "//go/pkg/genx",
+    ],
+    cdeps = [
+        "@ncnn",
     ],
 )
 
@@ -21,6 +27,7 @@ go_test(
     name = "voiceprint_test",
     srcs = [
         "detector_test.go",
+        "fbank_test.go",
         "hasher_test.go",
         "transformer_test.go",
     ],

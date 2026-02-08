@@ -144,19 +144,6 @@ use_repo(audio_libs, "lame", "ogg", "opus", "portaudio")
 ncnn_ext = use_extension("//:extensions.bzl", "ncnn_ext")
 use_repo(ncnn_ext, "ncnn")
 
-# ONNX Runtime (pre-built shared library)
-onnxruntime_ext = use_extension("//:extensions.bzl", "onnxruntime_ext")
-use_repo(onnxruntime_ext, "onnxruntime")
-
-# PNNX + ONNX models (for model conversion)
-pnnx_ext = use_extension("//:extensions.bzl", "pnnx_ext")
-use_repo(
-    pnnx_ext,
-    "pnnx",
-    "onnx_speaker_eres2net",
-    "model_vad_silero",
-)
-
 # Luau scripting language
 luau_ext = use_extension("//:extensions.bzl", "luau")
 use_repo(luau_ext, "luau")
