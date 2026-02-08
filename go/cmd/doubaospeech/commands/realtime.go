@@ -126,6 +126,9 @@ func runRealtimeConnect(ctx context.Context, client *ds.Client, config *ds.Realt
 		if err != nil {
 			return fmt.Errorf("read audio file: %w", err)
 		}
+		if len(audioData) == 0 {
+			return fmt.Errorf("empty audio file: %s", audioFile)
+		}
 
 		printVerbose("Sending audio (%s)...", formatBytes(int64(len(audioData))))
 
