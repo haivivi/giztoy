@@ -73,3 +73,46 @@ func TestNetClose(t *testing.T) {
 	n := &Net{}
 	n.Close()
 }
+
+func TestRegisterAndLoadModel(t *testing.T) {
+	// Register a fake model (will fail to load, but tests the registry).
+	RegisterModel("test-model", []byte("fake-param"), []byte("fake-bin"))
+	defer func() {
+		// Clean up.
+		registryMu.Lock()
+		delete(registry, "test-model")
+		registryMu.Unlock()
+	}()
+
+	ids := ListModels()
+	found := false
+	for _, id := range ids {
+		if id == "test-model" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("registered model not found in ListModels()")
+	}
+
+	info := GetModelInfo("test-model")
+	if info == nil {
+		t.Fatal("GetModelInfo returned nil")
+	}
+	if string(info.ParamData) != "fake-param" {
+		t.Errorf("ParamData = %q, want fake-param", info.ParamData)
+	}
+
+	// LoadModel will fail because the data isn't valid ncnn format.
+	_, err := LoadModel("test-model")
+	if err == nil {
+		t.Error("expected error loading fake model data")
+	}
+}
+
+func TestLoadModelNotRegistered(t *testing.T) {
+	_, err := LoadModel("nonexistent-model")
+	if err == nil {
+		t.Error("expected error for unregistered model")
+	}
+}
