@@ -342,6 +342,22 @@
         }
       }
     },
+    "//:extensions.bzl%ncnn_ext": {
+      "general": {
+        "bzlTransitiveDigest": "8wWNJVNKfX1+WmtXVqQqySNBUOE5yDZJxmNOd/YYFxM=",
+        "usagesDigest": "7FXmzMt45LZCdeJCmHX1Yx5NwpRhNuQktngUfiRN+vQ=",
+        "recordedInputs": [
+          "REPO_MAPPING:,gazelle gazelle+",
+          "REPO_MAPPING:gazelle+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "ncnn": {
+            "repoRuleId": "@@//third_party/ncnn:defs.bzl%ncnn_repo",
+            "attributes": {}
+          }
+        }
+      }
+    },
     "//:extensions.bzl%yq": {
       "general": {
         "bzlTransitiveDigest": "RFQ6ib6PNpreqgD922RkcuEJ2rSwDeJTwhNLpawtI/0=",

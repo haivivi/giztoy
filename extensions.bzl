@@ -9,6 +9,7 @@ load("//devops/tools/yq:defs.bzl", "yq_repo")
 
 # Third-party libraries
 load("//third_party/mermaidjs:defs.bzl", "mermaid_repo")
+load("//third_party/ncnn:defs.bzl", "ncnn_repo")
 load("//third_party/ogg:defs.bzl", "ogg_repo")
 load("//third_party/opus:defs.bzl", "opus_repo")
 load("//third_party/portaudio:defs.bzl", "portaudio_repo")
@@ -73,6 +74,18 @@ def _luau_impl(_ctx):
 
 luau = module_extension(
     implementation = _luau_impl,
+)
+
+# =============================================================================
+# ncnn Extension (neural network inference, static library)
+# =============================================================================
+
+def _ncnn_impl(_ctx):
+    """Module extension for ncnn static library."""
+    ncnn_repo(name = "ncnn")
+
+ncnn_ext = module_extension(
+    implementation = _ncnn_impl,
 )
 
 # =============================================================================
