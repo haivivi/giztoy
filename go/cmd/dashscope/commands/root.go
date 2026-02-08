@@ -51,6 +51,11 @@ Examples:
 	SilenceErrors: true,
 }
 
+// Command returns the root cobra command for mounting into a parent CLI.
+func Command() *cobra.Command {
+	return rootCmd
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() error {
 	return rootCmd.Execute()
