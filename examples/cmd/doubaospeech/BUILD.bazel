@@ -1,5 +1,4 @@
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -15,7 +14,7 @@ filegroup(
     srcs = glob(["commands/*.yaml"]),
 )
 
-# All data files needed for run.sh
+# All data files needed for the test runner
 filegroup(
     name = "run_data",
     srcs = [
@@ -24,32 +23,23 @@ filegroup(
     ],
 )
 
-# Shell script for running API tests
+go_library(
+    name = "run_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/examples/cmd/doubaospeech",
+    visibility = ["//visibility:private"],
+)
+
+# Go-based test runner (replaces run.sh)
 # Usage:
-#   bazel run //examples/cmd/doubaospeech:run -- tts
-#   bazel run //examples/cmd/doubaospeech:run -- all
-sh_binary(
+#   bazel run //examples/cmd/doubaospeech:run -- 1        # TTS V1
+#   bazel run //examples/cmd/doubaospeech:run -- quick    # Quick smoke test
+#   bazel run //examples/cmd/doubaospeech:run -- all      # All tests
+go_binary(
     name = "run",
-    srcs = ["run.sh"],
+    embed = [":run_lib"],
     data = [
         ":run_data",
         "//go/cmd/doubaospeech",
-        "@yq",
-    ],
-)
-
-# Test target for CI
-sh_test(
-    name = "run_test",
-    size = "large",
-    srcs = ["run.sh"],
-    args = ["help"],  # Only show help by default
-    data = [
-        ":run_data",
-        "@yq",
-    ],
-    tags = [
-        "external",  # Network access required
-        "manual",  # Don't run in CI without credentials
     ],
 )
