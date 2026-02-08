@@ -2,9 +2,9 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 # MiniMax CLI 测试脚本
 # 用法:
-#   bazel run //examples/cmd/minimax:run -- go all
-#   bazel run //examples/cmd/minimax:run -- rust 1
-#   bazel run //examples/cmd/minimax:run -- both quick
+#   bazel run //e2e/cmd/minimax:run -- go all
+#   bazel run //e2e/cmd/minimax:run -- rust 1
+#   bazel run //e2e/cmd/minimax:run -- both quick
 sh_binary(
     name = "run",
     srcs = ["run.sh"],

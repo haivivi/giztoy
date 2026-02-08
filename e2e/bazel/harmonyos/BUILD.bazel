@@ -19,8 +19,8 @@ harmonyos_application(
 )
 
 # 生成的 targets:
-# - //examples/bazel/harmonyos:hello_bazel_hap   (HAP 包)
-# - //examples/bazel/harmonyos:hello_bazel       (安装脚本)
+# - //e2e/bazel/harmonyos:hello_bazel_hap   (HAP 包)
+# - //e2e/bazel/harmonyos:hello_bazel       (安装脚本)
 
 # ============================================================================
 # 方式 2: 分步构建（更多控制）
