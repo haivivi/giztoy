@@ -115,6 +115,53 @@ func TestStoreAndGetSegment(t *testing.T) {
 	}
 }
 
+func TestStoreSegmentReplacesOldTimestamp(t *testing.T) {
+	idx, _ := newTestIndex(t)
+	ctx := context.Background()
+
+	// Store a segment with timestamp T1.
+	seg := Segment{
+		ID:        "seg-rewrite",
+		Summary:   "dinosaurs",
+		Keywords:  []string{"dinosaur"},
+		Timestamp: 1000,
+	}
+	if err := idx.StoreSegment(ctx, seg); err != nil {
+		t.Fatal(err)
+	}
+
+	// Re-store the same ID with a different timestamp T2.
+	seg.Timestamp = 2000
+	seg.Summary = "updated dinosaurs"
+	if err := idx.StoreSegment(ctx, seg); err != nil {
+		t.Fatal(err)
+	}
+
+	// GetSegment should return the updated version.
+	got, err := idx.GetSegment(ctx, "seg-rewrite")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil {
+		t.Fatal("expected segment, got nil")
+	}
+	if got.Timestamp != 2000 {
+		t.Errorf("Timestamp = %d, want 2000", got.Timestamp)
+	}
+	if got.Summary != "updated dinosaurs" {
+		t.Errorf("Summary = %q, want 'updated dinosaurs'", got.Summary)
+	}
+
+	// RecentSegments should only return 1 (no orphan).
+	recent, err := idx.RecentSegments(ctx, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(recent) != 1 {
+		t.Errorf("expected 1 segment (no orphan), got %d", len(recent))
+	}
+}
+
 func TestDeleteSegment(t *testing.T) {
 	idx, _ := newTestIndex(t)
 	ctx := context.Background()
@@ -458,9 +505,9 @@ func TestKeyHelpers(t *testing.T) {
 		t.Errorf("key = %v", key)
 	}
 
-	gotTs, err := parseSegmentKey(key, 2)
+	gotTs, err := ParseSegmentKey(key, 2)
 	if err != nil {
-		t.Fatalf("parseSegmentKey: %v", err)
+		t.Fatalf("ParseSegmentKey: %v", err)
 	}
 	if gotTs != ts {
 		t.Errorf("parsed ts = %d, want %d", gotTs, ts)
@@ -485,30 +532,30 @@ func TestKeyHelpers(t *testing.T) {
 func TestSegmentDatePrefix(t *testing.T) {
 	prefix := kv.Key{"mem", "cat"}
 	d := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
-	dp := segmentDatePrefix(prefix, d)
+	dp := SegmentDatePrefix(prefix, d)
 	if len(dp) != 4 {
 		t.Fatalf("len = %d, want 4", len(dp))
 	}
 	if dp[2] != "seg" || dp[3] != "20250615" {
-		t.Errorf("segmentDatePrefix = %v", dp)
+		t.Errorf("SegmentDatePrefix = %v", dp)
 	}
 }
 
 func TestParseSegmentKeyErrors(t *testing.T) {
 	// Too short.
-	_, err := parseSegmentKey(kv.Key{"a", "b"}, 2)
+	_, err := ParseSegmentKey(kv.Key{"a", "b"}, 2)
 	if err == nil {
 		t.Error("expected error for short key")
 	}
 
 	// Wrong segment marker.
-	_, err = parseSegmentKey(kv.Key{"a", "b", "notSeg", "20250615", "123"}, 2)
+	_, err = ParseSegmentKey(kv.Key{"a", "b", "notSeg", "20250615", "123"}, 2)
 	if err == nil {
 		t.Error("expected error for wrong segment marker")
 	}
 
 	// Invalid timestamp.
-	_, err = parseSegmentKey(kv.Key{"a", "b", "seg", "20250615", "notanumber"}, 2)
+	_, err = ParseSegmentKey(kv.Key{"a", "b", "seg", "20250615", "notanumber"}, 2)
 	if err == nil {
 		t.Error("expected error for invalid timestamp")
 	}

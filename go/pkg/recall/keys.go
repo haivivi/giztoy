@@ -44,9 +44,11 @@ func segmentPrefix(prefix kv.Key) kv.Key {
 	return k
 }
 
-// segmentDatePrefix returns the KV prefix for listing segments on a date.
+// SegmentDatePrefix returns the KV prefix for listing segments on a given date.
+// This can be used to efficiently scan segments within a specific day without
+// loading all segments.
 // Format: {prefix} + "seg" + "YYYYMMDD"
-func segmentDatePrefix(prefix kv.Key, date time.Time) kv.Key {
+func SegmentDatePrefix(prefix kv.Key, date time.Time) kv.Key {
 	k := make(kv.Key, len(prefix)+2)
 	copy(k, prefix)
 	k[len(prefix)] = "seg"
@@ -54,10 +56,11 @@ func segmentDatePrefix(prefix kv.Key, date time.Time) kv.Key {
 	return k
 }
 
-// parseSegmentKey extracts the timestamp from a segment KV key.
-// The key must have the form {prefix}:seg:{YYYYMMDD}:{ts_ns}.
+// ParseSegmentKey extracts the nanosecond timestamp from a segment KV key.
+// The key must have the form {prefix}:seg:{YYYYMMDD}:{ts_ns} where prefixLen
+// is the number of segments in the prefix portion.
 // Returns 0 and an error if the key is malformed.
-func parseSegmentKey(key kv.Key, prefixLen int) (int64, error) {
+func ParseSegmentKey(key kv.Key, prefixLen int) (int64, error) {
 	// Expected: prefixLen segments + "seg" + date + ts_ns = prefixLen + 3
 	if len(key) != prefixLen+3 {
 		return 0, fmt.Errorf("recall: malformed segment key: expected %d segments, got %d", prefixLen+3, len(key))

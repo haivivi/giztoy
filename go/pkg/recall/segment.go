@@ -35,6 +35,12 @@ func (idx *Index) StoreSegment(ctx context.Context, seg Segment) error {
 	sidK := sidKey(idx.prefix, seg.ID)
 	tsBytes := []byte(strconv.FormatInt(seg.Timestamp, 10))
 
+	// If this ID already exists with a different timestamp, delete the
+	// old segment key to prevent orphaned data.
+	if oldTs, err := idx.lookupSegmentTS(ctx, seg.ID); err == nil && oldTs != seg.Timestamp {
+		_ = idx.store.Delete(ctx, segmentKey(idx.prefix, oldTs))
+	}
+
 	// Write segment data + reverse index atomically.
 	if err := idx.store.BatchSet(ctx, []kv.Entry{
 		{Key: segK, Value: data},

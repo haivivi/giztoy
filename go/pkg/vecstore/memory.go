@@ -1,6 +1,7 @@
 package vecstore
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -32,6 +33,9 @@ func (m *Memory) Insert(id string, vector []float32) error {
 }
 
 func (m *Memory) BatchInsert(ids []string, vectors [][]float32) error {
+	if len(ids) != len(vectors) {
+		return fmt.Errorf("vecstore: BatchInsert length mismatch: %d ids, %d vectors", len(ids), len(vectors))
+	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for i, id := range ids {

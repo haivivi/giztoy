@@ -50,6 +50,14 @@ func TestMemoryBatchInsert(t *testing.T) {
 	}
 }
 
+func TestMemoryBatchInsertMismatch(t *testing.T) {
+	vec := NewMemory()
+	err := vec.BatchInsert([]string{"a", "b"}, [][]float32{{1, 0}})
+	if err == nil {
+		t.Fatal("expected error for mismatched lengths")
+	}
+}
+
 func TestMemoryDelete(t *testing.T) {
 	vec := NewMemory()
 	_ = vec.Insert("a", []float32{1, 0})
