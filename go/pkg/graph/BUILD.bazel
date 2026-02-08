@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "graph",
+    srcs = [
+        "graph.go",
+        "kvgraph.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/graph",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/kv",
+    ],
+)
+
+go_test(
+    name = "graph_test",
+    srcs = ["kvgraph_test.go"],
+    deps = [
+        ":graph",
+        "//go/pkg/kv",
+    ],
+)
