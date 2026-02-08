@@ -76,28 +76,7 @@ responses through your speakers.
 Examples:
   doubaospeech -c myctx realtime interactive -f realtime.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := requireInputFile(); err != nil {
-			return err
-		}
-
-		ctx, err := getContext()
-		if err != nil {
-			return err
-		}
-
-		var req ds.RealtimeConfig
-		if err := loadRequest(getInputFile(), &req); err != nil {
-			return err
-		}
-
-		printVerbose("Using context: %s", ctx.Name)
-
-		// TODO: Implement interactive mode
-		fmt.Println("[Interactive mode not implemented yet]")
-		fmt.Println("Would start interactive voice conversation...")
-		fmt.Println("Press Ctrl+C to exit")
-
-		return nil
+		return fmt.Errorf("not implemented: interactive realtime mode requires microphone/speaker hardware integration; use 'doubaospeech realtime connect' for programmatic access")
 	},
 }
 

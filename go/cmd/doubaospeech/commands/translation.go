@@ -93,30 +93,7 @@ translated audio through your speakers.
 Examples:
   doubaospeech -c myctx translation interactive -f translation.yaml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if err := requireInputFile(); err != nil {
-			return err
-		}
-
-		ctx, err := getContext()
-		if err != nil {
-			return err
-		}
-
-		var req ds.TranslationConfig
-		if err := loadRequest(getInputFile(), &req); err != nil {
-			return err
-		}
-
-		printVerbose("Using context: %s", ctx.Name)
-		printVerbose("Source language: %s", req.SourceLanguage)
-		printVerbose("Target language: %s", req.TargetLanguage)
-
-		// TODO: Implement interactive mode
-		fmt.Println("[Interactive translation not implemented yet]")
-		fmt.Println("Would start interactive translation...")
-		fmt.Println("Press Ctrl+C to exit")
-
-		return nil
+		return fmt.Errorf("not implemented: interactive translation mode requires microphone/speaker hardware integration; use 'doubaospeech translation stream' for file-based translation")
 	},
 }
 

@@ -315,6 +315,68 @@ func (s *TTSService) CreateAsyncTask(ctx context.Context, req *AsyncTTSRequest) 
 	return newTask[TTSAsyncResult](resp.TaskID, s.client, taskTypeTTSAsync, submitReq.ReqID), nil
 }
 
+// TTSAsyncTaskStatus represents async TTS task status
+type TTSAsyncTaskStatus struct {
+	TaskID        string     `json:"task_id"`
+	Status        TaskStatus `json:"status"`
+	Progress      int        `json:"progress,omitempty"`
+	AudioURL      string     `json:"audio_url,omitempty"`
+	AudioDuration int        `json:"audio_duration,omitempty"`
+}
+
+// GetAsyncTask queries async TTS task status
+func (s *TTSService) GetAsyncTask(ctx context.Context, taskID string) (*TTSAsyncTaskStatus, error) {
+	queryReq := map[string]any{
+		"appid":   s.client.config.appID,
+		"task_id": taskID,
+	}
+
+	var apiResp struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Data    struct {
+			TaskID        string `json:"task_id"`
+			Status        string `json:"status"`
+			Progress      int    `json:"progress,omitempty"`
+			AudioURL      string `json:"audio_url,omitempty"`
+			AudioDuration int    `json:"audio_duration,omitempty"`
+		} `json:"data"`
+	}
+
+	if err := s.client.doJSONRequest(ctx, http.MethodPost, "/api/v1/tts_async/query", queryReq, &apiResp); err != nil {
+		return nil, err
+	}
+
+	if apiResp.Code != 0 {
+		return nil, &Error{
+			Code:    apiResp.Code,
+			Message: apiResp.Message,
+		}
+	}
+
+	status := &TTSAsyncTaskStatus{
+		TaskID:        apiResp.Data.TaskID,
+		Progress:      apiResp.Data.Progress,
+		AudioURL:      apiResp.Data.AudioURL,
+		AudioDuration: apiResp.Data.AudioDuration,
+	}
+
+	switch apiResp.Data.Status {
+	case "submitted", "pending":
+		status.Status = TaskStatusPending
+	case "running", "processing":
+		status.Status = TaskStatusProcessing
+	case "success":
+		status.Status = TaskStatusSuccess
+	case "failed":
+		status.Status = TaskStatusFailed
+	default:
+		status.Status = TaskStatusPending
+	}
+
+	return status, nil
+}
+
 // buildRequest builds TTS request
 func (s *TTSService) buildRequest(req *TTSRequest) *ttsRequest {
 	ttsReq := s.client.buildTTSRequest(req.Text, req.VoiceType)
