@@ -163,6 +163,10 @@ func sendAudioChunked(ctx context.Context, sender audioSender, audioFile string)
 		return fmt.Errorf("failed to read audio: %w", err)
 	}
 
+	if len(audioData) == 0 {
+		return fmt.Errorf("empty audio data: provide a non-empty audio file")
+	}
+
 	printVerbose("Sending audio (%s)...", formatBytes(int64(len(audioData))))
 
 	chunkSize := 3200 // 100ms of 16kHz 16-bit mono
