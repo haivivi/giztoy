@@ -8,11 +8,12 @@ asr:
     end_smooth_window_ms: 200
 
 tts:
-  # Speaker voice
-  speaker: zh_female_cancan
+  # Speaker voice (Realtime requires _jupiter_bigtts suffix)
+  # Available: zh_female_vv_jupiter_bigtts, zh_male_yunzhou_jupiter_bigtts
+  speaker: zh_female_vv_jupiter_bigtts
   audio_config:
     channel: 1
-    format: mp3
+    format: pcm
     sample_rate: 24000
   extra: {}
 

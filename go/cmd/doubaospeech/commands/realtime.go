@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -42,9 +41,14 @@ var realtimeConnectCmd = &cobra.Command{
 	Long: `Connect to the real-time conversation service.
 
 Establishes a WebSocket connection for bidirectional communication.
+Supports both audio input (--audio) and text input (--greeting/-g).
 
 Examples:
-  doubaospeech -c myctx realtime connect -f realtime.yaml`,
+  # Send a text greeting and get audio response
+  doubaospeech -c myctx realtime connect -f realtime.yaml -g "你好" -o reply.pcm
+
+  # Send audio file
+  doubaospeech -c myctx realtime connect -f realtime.yaml --audio input.pcm -o reply.pcm`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := requireInputFile(); err != nil {
 			return err
@@ -68,11 +72,16 @@ Examples:
 		printVerbose("Using context: %s", cliCtx.Name)
 
 		audioFile, _ := cmd.Flags().GetString("audio")
+		greeting, _ := cmd.Flags().GetString("greeting")
 
-		reqCtx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+		if audioFile == "" && greeting == "" {
+			return fmt.Errorf("either --audio or --greeting/-g is required")
+		}
+
+		reqCtx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 		defer cancel()
 
-		return runRealtimeConnect(reqCtx, client, &config, audioFile)
+		return runRealtimeConnect(reqCtx, client, &config, audioFile, greeting)
 	},
 }
 
@@ -95,7 +104,7 @@ Examples:
 // Implementation Functions
 // ============================================================================
 
-func runRealtimeConnect(ctx context.Context, client *ds.Client, config *ds.RealtimeConfig, audioFile string) error {
+func runRealtimeConnect(ctx context.Context, client *ds.Client, config *ds.RealtimeConfig, audioFile, greeting string) error {
 	session, err := client.Realtime.Connect(ctx, config)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
@@ -104,8 +113,15 @@ func runRealtimeConnect(ctx context.Context, client *ds.Client, config *ds.Realt
 
 	printSuccess("Connected to realtime service (session: %s)", session.SessionID())
 
-	// If audio file provided, send it; otherwise read from stdin
-	if audioFile != "" {
+	// Send input
+	if greeting != "" {
+		// Text input mode: send greeting via SayHello
+		printVerbose("Sending greeting: %s", greeting)
+		if err := session.SayHello(ctx, greeting); err != nil {
+			return fmt.Errorf("send greeting: %w", err)
+		}
+	} else if audioFile != "" {
+		// Audio input mode
 		audioData, err := os.ReadFile(audioFile)
 		if err != nil {
 			return fmt.Errorf("read audio file: %w", err)
@@ -113,46 +129,23 @@ func runRealtimeConnect(ctx context.Context, client *ds.Client, config *ds.Realt
 
 		printVerbose("Sending audio (%s)...", formatBytes(int64(len(audioData))))
 
-		// Send audio in chunks
 		chunkSize := 3200 // 100ms of 16kHz 16-bit mono
 		for i := 0; i < len(audioData); i += chunkSize {
 			end := i + chunkSize
 			if end > len(audioData) {
 				end = len(audioData)
 			}
-
 			if err := session.SendAudio(ctx, audioData[i:end]); err != nil {
 				return fmt.Errorf("send audio: %w", err)
 			}
 			time.Sleep(100 * time.Millisecond)
 		}
-	} else {
-		// Read audio from stdin
-		var buf bytes.Buffer
-		if _, err := io.Copy(&buf, os.Stdin); err != nil {
-			return fmt.Errorf("read stdin: %w", err)
-		}
-		audioData := buf.Bytes()
-
-		if len(audioData) > 0 {
-			printVerbose("Sending audio from stdin (%s)...", formatBytes(int64(len(audioData))))
-			chunkSize := 3200
-			for i := 0; i < len(audioData); i += chunkSize {
-				end := i + chunkSize
-				if end > len(audioData) {
-					end = len(audioData)
-				}
-				if err := session.SendAudio(ctx, audioData[i:end]); err != nil {
-					return fmt.Errorf("send audio: %w", err)
-				}
-				time.Sleep(100 * time.Millisecond)
-			}
-		}
 	}
 
-	// Receive events
+	// Receive events with timeout
 	outputPath := getOutputFile()
 	var audioBuf bytes.Buffer
+	var responseText string
 
 	for event, err := range session.Recv() {
 		if err != nil {
@@ -169,18 +162,24 @@ func runRealtimeConnect(ctx context.Context, client *ds.Client, config *ds.Realt
 				}
 			}
 		case ds.EventChatResponse:
+			responseText += event.Text
 			fmt.Print(event.Text)
 		case ds.EventChatEnded:
 			fmt.Println()
+			// Chat ended = response complete, we can exit after collecting remaining audio
 		case ds.EventAudioReceived:
 			if len(event.Audio) > 0 {
 				audioBuf.Write(event.Audio)
-				printVerbose("[Audio] +%d bytes", len(event.Audio))
+				printVerbose("[Audio] +%d bytes (total: %s)", len(event.Audio), formatBytes(int64(audioBuf.Len())))
 			}
+		case ds.EventTTSFinished:
+			printVerbose("TTS finished")
+			goto done
 		case ds.EventSessionFailed:
 			if event.Error != nil {
 				return fmt.Errorf("session failed: %s", event.Error.Message)
 			}
+			return fmt.Errorf("session failed")
 		case ds.EventSessionFinished:
 			printVerbose("Session finished")
 			goto done
@@ -195,11 +194,21 @@ done:
 		printSuccess("Audio saved to: %s (%s)", outputPath, formatBytes(int64(audioBuf.Len())))
 	}
 
+	if isJSONOutput() {
+		result := map[string]any{
+			"session_id":    session.SessionID(),
+			"response_text": responseText,
+			"audio_size":    audioBuf.Len(),
+		}
+		return outputResult(result, "", true)
+	}
+
 	return nil
 }
 
 func init() {
-	realtimeConnectCmd.Flags().String("audio", "", "Audio file to send (optional, defaults to stdin)")
+	realtimeConnectCmd.Flags().String("audio", "", "Audio file to send (PCM format)")
+	realtimeConnectCmd.Flags().StringP("greeting", "g", "", "Text greeting to send (uses SayHello API)")
 
 	realtimeCmd.AddCommand(realtimeConnectCmd)
 	realtimeCmd.AddCommand(realtimeInteractiveCmd)

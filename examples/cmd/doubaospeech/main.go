@@ -230,11 +230,11 @@ func buildTestCases(commandsDir, outputDir, _ string) []testCase {
 			Args: []string{"media", "subtitle", "-f", cmd("subtitle.yaml"), "--json"},
 		},
 
-		// Level 9: Realtime
+		// Level 9: Realtime (text greeting mode)
 		{
 			Name:  "Realtime Connect",
 			Level: 9, Tags: []string{"realtime"},
-			Args: []string{"realtime", "connect", "-f", cmd("realtime.yaml"), "--json"},
+			Args: []string{"realtime", "connect", "-f", cmd("realtime.yaml"), "-g", "你好，今天天气怎么样？", "--json"},
 		},
 	}
 }
