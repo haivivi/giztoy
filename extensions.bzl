@@ -11,6 +11,7 @@ load("//devops/tools/yq:defs.bzl", "yq_repo")
 # Third-party libraries
 load("//third_party/mermaidjs:defs.bzl", "mermaid_repo")
 load("//third_party/ncnn:defs.bzl", "ncnn_repo")
+load("//third_party/onnxruntime:defs.bzl", "onnxruntime_repo")
 load("//third_party/ogg:defs.bzl", "ogg_repo")
 load("//third_party/opus:defs.bzl", "opus_repo")
 load("//third_party/portaudio:defs.bzl", "portaudio_repo")
@@ -87,6 +88,18 @@ def _ncnn_impl(_ctx):
 
 ncnn_ext = module_extension(
     implementation = _ncnn_impl,
+)
+
+# =============================================================================
+# ONNX Runtime Extension (pre-built shared library)
+# =============================================================================
+
+def _onnxruntime_impl(_ctx):
+    """Module extension for ONNX Runtime pre-built library."""
+    onnxruntime_repo(name = "onnxruntime")
+
+onnxruntime_ext = module_extension(
+    implementation = _onnxruntime_impl,
 )
 
 # =============================================================================
