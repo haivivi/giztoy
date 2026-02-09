@@ -6,24 +6,38 @@ import (
 )
 
 // FbankConfig configures mel filterbank feature extraction.
+//
+// Default configuration matches Kaldi/sherpa-onnx for speaker embedding models:
+// Povey window, 25ms frames, 10ms shift, 80 mel bins, 20-7600 Hz range.
 type FbankConfig struct {
-	SampleRate  int     // Input sample rate in Hz (default: 16000)
-	NumMels     int     // Number of mel filterbank channels (default: 80)
-	FrameLength int     // Frame length in samples (default: 400 = 25ms @ 16kHz)
-	FrameShift  int     // Frame shift in samples (default: 160 = 10ms @ 16kHz)
-	PreEmphasis float64 // Pre-emphasis coefficient (default: 0.97)
-	EnergyFloor float64 // Floor for log energy (default: 1e-10)
+	SampleRate    int     // Input sample rate in Hz (default: 16000)
+	NumMels       int     // Number of mel filterbank channels (default: 80)
+	FrameLength   int     // Frame length in samples (default: 400 = 25ms @ 16kHz)
+	FrameShift    int     // Frame shift in samples (default: 160 = 10ms @ 16kHz)
+	PreEmphasis   float64 // Pre-emphasis coefficient (default: 0.97)
+	EnergyFloor   float64 // Floor for log energy (default: 1e-10)
+	LowFreq       float64 // Low cutoff frequency for mel bins (default: 20 Hz)
+	HighFreq      float64 // High cutoff frequency, negative = offset from Nyquist (default: -400)
+	RemoveDC      bool    // Remove DC offset per frame (default: true)
+	PoveyWindow   bool    // Use Povey window (hamming^0.85) instead of Hamming (default: true)
+	NormalizePCM  bool    // Normalize PCM16 samples to [-1, 1] range (default: true)
 }
 
 // DefaultFbankConfig returns the default configuration for 16kHz audio.
+// Matches Kaldi/sherpa-onnx speaker embedding feature extraction.
 func DefaultFbankConfig() FbankConfig {
 	return FbankConfig{
-		SampleRate:  16000,
-		NumMels:     80,
-		FrameLength: 400,  // 25ms @ 16kHz
-		FrameShift:  160,  // 10ms @ 16kHz
-		PreEmphasis: 0.97,
-		EnergyFloor: 1e-10,
+		SampleRate:   16000,
+		NumMels:      80,
+		FrameLength:  400,   // 25ms @ 16kHz
+		FrameShift:   160,   // 10ms @ 16kHz
+		PreEmphasis:  0.97,
+		EnergyFloor:  1e-10,
+		LowFreq:      20.0,  // Kaldi default
+		HighFreq:     -400,  // Nyquist - 400 = 7600 Hz for 16kHz
+		RemoveDC:     true,
+		PoveyWindow:  true,
+		NormalizePCM: true,
 	}
 }
 
@@ -33,13 +47,12 @@ func DefaultFbankConfig() FbankConfig {
 // Output: 2D slice [numFrames][numMels] of log mel filterbank energies.
 //
 // The algorithm:
-//  1. Convert PCM16 bytes to float64 samples
-//  2. Apply pre-emphasis filter
-//  3. Split into overlapping frames
-//  4. Apply Hamming window
-//  5. Compute power spectrum via FFT
-//  6. Apply mel filterbank
-//  7. Take log of energies
+//  1. Convert PCM16 bytes to float64 samples (optionally normalize to [-1,1])
+//  2. Split into overlapping frames
+//  3. Per frame: remove DC offset, apply pre-emphasis, apply window
+//  4. Compute power spectrum via FFT
+//  5. Apply mel filterbank
+//  6. Take log of energies
 func ComputeFbank(audio []byte, cfg FbankConfig) [][]float32 {
 	// Convert PCM16 to float64 samples.
 	nSamples := len(audio) / 2
@@ -54,12 +67,11 @@ func ComputeFbank(audio []byte, cfg FbankConfig) [][]float32 {
 		samples[i] = float64(s)
 	}
 
-	// Pre-emphasis.
-	if cfg.PreEmphasis > 0 {
-		for i := nSamples - 1; i > 0; i-- {
-			samples[i] -= cfg.PreEmphasis * samples[i-1]
+	// Normalize to [-1, 1] if configured.
+	if cfg.NormalizePCM {
+		for i := range samples {
+			samples[i] /= 32768.0
 		}
-		samples[0] *= 1.0 - cfg.PreEmphasis
 	}
 
 	// Compute number of frames.
@@ -72,11 +84,22 @@ func ComputeFbank(audio []byte, cfg FbankConfig) [][]float32 {
 	fftSize := nextPow2(cfg.FrameLength)
 	halfFFT := fftSize/2 + 1
 
-	// Pre-compute Hamming window.
-	window := hammingWindow(cfg.FrameLength)
+	// Pre-compute window.
+	var window []float64
+	if cfg.PoveyWindow {
+		window = poveyWindow(cfg.FrameLength)
+	} else {
+		window = hammingWindow(cfg.FrameLength)
+	}
+
+	// Resolve high frequency.
+	highFreq := cfg.HighFreq
+	if highFreq <= 0 {
+		highFreq = float64(cfg.SampleRate)/2.0 + highFreq
+	}
 
 	// Pre-compute mel filterbank.
-	filterbank := melFilterbank(cfg.NumMels, fftSize, cfg.SampleRate)
+	filterbank := melFilterbank(cfg.NumMels, fftSize, cfg.SampleRate, cfg.LowFreq, highFreq)
 
 	// Process each frame.
 	result := make([][]float32, numFrames)
@@ -85,12 +108,36 @@ func ComputeFbank(audio []byte, cfg FbankConfig) [][]float32 {
 	for f := 0; f < numFrames; f++ {
 		offset := f * cfg.FrameShift
 
+		// Extract frame.
+		frameBuf := make([]float64, cfg.FrameLength)
+		copy(frameBuf, samples[offset:offset+cfg.FrameLength])
+
+		// Remove DC offset.
+		if cfg.RemoveDC {
+			var sum float64
+			for _, v := range frameBuf {
+				sum += v
+			}
+			mean := sum / float64(cfg.FrameLength)
+			for i := range frameBuf {
+				frameBuf[i] -= mean
+			}
+		}
+
+		// Pre-emphasis (applied per frame after DC removal).
+		if cfg.PreEmphasis > 0 {
+			for i := cfg.FrameLength - 1; i > 0; i-- {
+				frameBuf[i] -= cfg.PreEmphasis * frameBuf[i-1]
+			}
+			frameBuf[0] *= 1.0 - cfg.PreEmphasis
+		}
+
 		// Apply window and zero-pad to FFT size.
 		for i := range fftBuf {
 			fftBuf[i] = 0
 		}
 		for i := 0; i < cfg.FrameLength; i++ {
-			fftBuf[i] = complex(samples[offset+i]*window[i], 0)
+			fftBuf[i] = complex(frameBuf[i]*window[i], 0)
 		}
 
 		// In-place FFT.
@@ -140,6 +187,16 @@ func hammingWindow(n int) []float64 {
 	return w
 }
 
+// poveyWindow computes a Povey window (hamming^0.85) used by Kaldi.
+// This is the default window type in sherpa-onnx for speaker embedding models.
+func poveyWindow(n int) []float64 {
+	w := hammingWindow(n)
+	for i := range w {
+		w[i] = math.Pow(w[i], 0.85)
+	}
+	return w
+}
+
 // hzToMel converts frequency in Hz to mel scale.
 func hzToMel(hz float64) float64 {
 	return 2595.0 * math.Log10(1.0+hz/700.0)
@@ -152,12 +209,12 @@ func melToHz(mel float64) float64 {
 
 // melFilterbank computes triangular mel filterbank weights.
 // Returns [numMels][halfFFT] weights.
-func melFilterbank(numMels, fftSize, sampleRate int) [][]float64 {
+func melFilterbank(numMels, fftSize, sampleRate int, lowFreq, highFreq float64) [][]float64 {
 	halfFFT := fftSize/2 + 1
 
 	// Mel scale boundaries.
-	melLow := hzToMel(0)
-	melHigh := hzToMel(float64(sampleRate) / 2)
+	melLow := hzToMel(lowFreq)
+	melHigh := hzToMel(highFreq)
 
 	// Equally spaced mel points.
 	melPoints := make([]float64, numMels+2)
@@ -172,6 +229,9 @@ func melFilterbank(numMels, fftSize, sampleRate int) [][]float64 {
 		binIndices[i] = int(math.Floor(hz * float64(fftSize) / float64(sampleRate)))
 		if binIndices[i] >= halfFFT {
 			binIndices[i] = halfFFT - 1
+		}
+		if binIndices[i] < 0 {
+			binIndices[i] = 0
 		}
 	}
 
