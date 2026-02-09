@@ -1,10 +1,30 @@
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
-# ============================================================================
-# Rust Version
-# ============================================================================
+go_library(
+    name = "matchtest_lib",
+    srcs = [
+        "benchmark.go",
+        "main.go",
+        "runner.go",
+        "server.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/e2e/matchtest",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/match",
+        "//go/pkg/genx/modelloader",
+        "@com_github_goccy_go_yaml//:go-yaml",
+    ],
+)
 
-# Run benchmark (Rust), output report.json to bazel-out
+go_binary(
+    name = "matchtest",
+    embed = [":matchtest_lib"],
+    visibility = ["//visibility:public"],
+)
+
+# Run benchmark (Go), output report.json
 # tags = ["manual"] prevents automatic build by //... (requires network/API keys)
 genrule(
     name = "run",
@@ -13,6 +33,28 @@ genrule(
         ":models",
     ],
     outs = ["report.json"],
+    cmd = """
+        RULES_DIR=$$(dirname $$(echo "$(locations :rules)" | cut -d' ' -f1))
+        MODELS_DIR=$$(dirname $$(echo "$(locations :models)" | cut -d' ' -f1))
+        $(location :matchtest) \
+            -rules $$RULES_DIR \
+            -models $$MODELS_DIR \
+            -model qwen/turbo \
+            -o $@
+    """,
+    tools = [":matchtest"],
+    local = True,
+    tags = ["manual", "requires-network"],
+)
+
+# Run benchmark (Rust), output report.json
+genrule(
+    name = "run_rust",
+    srcs = [
+        ":rules",
+        ":models",
+    ],
+    outs = ["report_rust.json"],
     cmd = """
         RULES_DIR=$$(dirname $$(echo "$(locations :rules)" | cut -d' ' -f1))
         MODELS_DIR=$$(dirname $$(echo "$(locations :models)" | cut -d' ' -f1))
@@ -25,105 +67,6 @@ genrule(
     tools = ["//rust/cmd/matchtest"],
     local = True,
     tags = ["manual", "requires-network"],
-)
-
-# ============================================================================
-# Go Version
-# ============================================================================
-
-# Run benchmark (Go), output report.json to bazel-out
-# tags = ["manual"] prevents automatic build by //... (requires network/API keys)
-genrule(
-    name = "run_go",
-    srcs = [
-        ":rules",
-        ":models",
-    ],
-    outs = ["report_go.json"],
-    cmd = """
-        RULES_DIR=$$(dirname $$(echo "$(locations :rules)" | cut -d' ' -f1))
-        MODELS_DIR=$$(dirname $$(echo "$(locations :models)" | cut -d' ' -f1))
-        $(location //go/cmd/genx/matchtest) \
-            -rules $$RULES_DIR \
-            -models $$MODELS_DIR \
-            -model qwen/turbo \
-            -o $@
-    """,
-    tools = ["//go/cmd/genx/matchtest"],
-    local = True,
-    tags = ["manual", "requires-network"],
-)
-
-# Serve results (Rust) - depends on :run output
-# tags = ["manual"] because it depends on :run which requires network/API keys
-sh_binary(
-    name = "serve",
-    srcs = ["serve.sh"],
-    data = [
-        "//rust/cmd/matchtest",
-        "//html/matchtest:files",
-        ":run",  # depends on report.json
-    ],
-    env = {
-        "MATCHTEST_BIN": "$(rootpath //rust/cmd/matchtest)",
-        "STATIC_DIR": "html/matchtest",
-        "REPORT_FILE": "$(rootpath :run)",
-    },
-    tags = ["manual"],
-)
-
-# Serve results (Go) - depends on :run_go output
-# tags = ["manual"] because it depends on :run_go which requires network/API keys
-sh_binary(
-    name = "serve_go",
-    srcs = ["serve_go.sh"],
-    data = [
-        "//go/cmd/genx/matchtest",
-        "//html/matchtest:files",
-        ":run_go",  # depends on report_go.json
-    ],
-    env = {
-        "MATCHTEST_BIN": "$(rootpath //go/cmd/genx/matchtest)",
-        "STATIC_DIR": "html/matchtest",
-        "REPORT_FILE": "$(rootpath :run_go)",
-    },
-    tags = ["manual"],
-)
-
-# Live mode (Rust): run benchmark with live web UI, no caching
-sh_binary(
-    name = "live",
-    srcs = ["live.sh"],
-    data = [
-        "//rust/cmd/matchtest",
-        "//html/matchtest:files",
-        ":rules",
-        ":models",
-    ],
-    env = {
-        "MATCHTEST_BIN": "$(rootpath //rust/cmd/matchtest)",
-        "STATIC_DIR": "html/matchtest",
-        "RULES_DIR": "testdata/matchtest/rules",
-        "MODELS_DIR": "testdata/models",
-    },
-)
-
-# Live mode (Go): run benchmark with live web UI, no caching
-sh_binary(
-    name = "live_go",
-    srcs = ["live_go.sh"],
-    data = [
-        "//go/cmd/genx/matchtest",
-        "//html/matchtest:files",
-        ":rules",
-        ":models",
-    ],
-    env = {
-        "MATCHTEST_BIN": "$(rootpath //go/cmd/genx/matchtest)",
-        "STATIC_DIR": "html/matchtest",
-        "RULES_DIR": "testdata/matchtest/rules",
-        "MODELS_DIR": "testdata/models",
-    },
 )
 
 # Test rules - shared from testdata
