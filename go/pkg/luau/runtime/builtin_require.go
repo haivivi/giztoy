@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +21,7 @@ func (rt *Runtime) builtinRequire(state *luau.State) int {
 
 	// Validate module name to prevent path traversal
 	if err := validateModuleName(name); err != nil {
-		fmt.Printf("[luau] require error: %v\n", err)
+		slog.Error("require: validation error", "error", err)
 		state.PushNil()
 		return 1
 	}
@@ -36,7 +37,7 @@ func (rt *Runtime) builtinRequire(state *luau.State) int {
 
 	// Mark as loading to prevent circular requires
 	if rt.loaded[name] {
-		fmt.Printf("[luau] warning: circular require detected for module %q\n", name)
+		slog.Warn("require: circular dependency detected", "module", name)
 		state.PushNil()
 		return 1
 	}
@@ -49,13 +50,13 @@ func (rt *Runtime) builtinRequire(state *luau.State) int {
 	if bytecode := rt.GetBytecode(name); bytecode != nil {
 		// Load from bytecode cache
 		if err := state.LoadBytecode(bytecode, name); err != nil {
-			fmt.Printf("[luau] require: failed to load bytecode for %q: %v\n", name, err)
+			slog.Error("require: failed to load bytecode", "module", name, "error", err)
 			state.PushNil()
 			return 1
 		}
 		// Execute the loaded chunk
 		if err := state.PCall(0, 1); err != nil {
-			fmt.Printf("[luau] require: failed to execute %q: %v\n", name, err)
+			slog.Error("require: failed to execute", "module", name, "error", err)
 			state.PushNil()
 			return 1
 		}
@@ -75,7 +76,7 @@ func (rt *Runtime) builtinRequire(state *luau.State) int {
 		}
 
 		if modulePath == "" {
-			fmt.Printf("[luau] require: module %q not found\n", name)
+			slog.Error("require: module not found", "module", name)
 			state.PushNil()
 			return 1
 		}
@@ -83,14 +84,14 @@ func (rt *Runtime) builtinRequire(state *luau.State) int {
 		// Read module source
 		source, err := os.ReadFile(modulePath)
 		if err != nil {
-			fmt.Printf("[luau] require: failed to read %q: %v\n", modulePath, err)
+			slog.Error("require: failed to read module", "path", modulePath, "error", err)
 			state.PushNil()
 			return 1
 		}
 
 		// Compile and execute (fallback path)
 		if err := state.DoStringOpt(string(source), modulePath, luau.OptO2); err != nil {
-			fmt.Printf("[luau] require: failed to execute %q: %v\n", modulePath, err)
+			slog.Error("require: failed to execute module", "path", modulePath, "error", err)
 			state.PushNil()
 			return 1
 		}
