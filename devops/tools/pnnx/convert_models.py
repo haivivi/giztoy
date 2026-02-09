@@ -245,6 +245,10 @@ class DTLNModel2(nn.Module):
 
 
 def convert_dtln2(onnx_path, pnnx_bin, output_dir):
+    # Note: DTLN2 weights come from an ONNX export of a TF/Keras model.
+    # The ONNX export decomposes TF LSTM into MatMul ops with ONNX gate
+    # ordering (i, o, f, c). We use load_onnx() here, not load_pytorch().
+    # The .T transpose is needed because ONNX MatMul stores weights transposed.
     w = onnx_weights(onnx_path)
 
     model = DTLNModel2()

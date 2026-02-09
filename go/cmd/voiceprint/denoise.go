@@ -208,25 +208,28 @@ func (d *dtlnDenoiser) runStage1(mag, h1, c1, h2, c2 []float32) (
 	}
 	defer outMask.Close()
 
-	z := make([]float32, 128)
 	outH1, err1 := ex.Extract("out1")
 	if err1 != nil {
-		return outMask.FloatData(), z, z, z, z, nil
+		return outMask.FloatData(), make([]float32, 128), make([]float32, 128),
+			make([]float32, 128), make([]float32, 128), nil
 	}
 	defer outH1.Close()
 	outC1, err2 := ex.Extract("out2")
 	if err2 != nil {
-		return outMask.FloatData(), outH1.FloatData(), z, z, z, nil
+		return outMask.FloatData(), outH1.FloatData(), make([]float32, 128),
+			make([]float32, 128), make([]float32, 128), nil
 	}
 	defer outC1.Close()
 	outH2, err3 := ex.Extract("out3")
 	if err3 != nil {
-		return outMask.FloatData(), outH1.FloatData(), outC1.FloatData(), z, z, nil
+		return outMask.FloatData(), outH1.FloatData(), outC1.FloatData(),
+			make([]float32, 128), make([]float32, 128), nil
 	}
 	defer outH2.Close()
 	outC2, err4 := ex.Extract("out4")
 	if err4 != nil {
-		return outMask.FloatData(), outH1.FloatData(), outC1.FloatData(), outH2.FloatData(), z, nil
+		return outMask.FloatData(), outH1.FloatData(), outC1.FloatData(),
+			outH2.FloatData(), make([]float32, 128), nil
 	}
 	defer outC2.Close()
 
@@ -280,132 +283,33 @@ func (d *dtlnDenoiser) runStage2(frame, h3, c3, h4, c4 []float32) (
 	}
 	defer outFrame.Close()
 
-	z := make([]float32, 128)
 	outH3, err3 := ex.Extract("out1")
 	if err3 != nil {
-		return outFrame.FloatData(), z, z, z, z, nil
+		return outFrame.FloatData(), make([]float32, 128), make([]float32, 128),
+			make([]float32, 128), make([]float32, 128), nil
 	}
 	defer outH3.Close()
 	outC3, err4 := ex.Extract("out2")
 	if err4 != nil {
-		return outFrame.FloatData(), outH3.FloatData(), z, z, z, nil
+		return outFrame.FloatData(), outH3.FloatData(), make([]float32, 128),
+			make([]float32, 128), make([]float32, 128), nil
 	}
 	defer outC3.Close()
 	outH4, err5 := ex.Extract("out3")
 	if err5 != nil {
-		return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(), z, z, nil
+		return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(),
+			make([]float32, 128), make([]float32, 128), nil
 	}
 	defer outH4.Close()
 	outC4, err6 := ex.Extract("out4")
 	if err6 != nil {
-		return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(), outH4.FloatData(), z, nil
+		return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(),
+			outH4.FloatData(), make([]float32, 128), nil
 	}
 	defer outC4.Close()
 
 	return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(),
 		outH4.FloatData(), outC4.FloatData(), nil
-}
-
-// DenoiseMaskOnly runs only DTLN Stage 1 (frequency-domain masking),
-// skipping Stage 2 (time-domain enhancement). This is more conservative
-// and preserves speaker characteristics better.
-func (d *dtlnDenoiser) DenoiseMaskOnly(pcm []byte) ([]byte, error) {
-	const (
-		fftSize = 512
-		hopSize = 128
-		halfFFT = fftSize/2 + 1
-	)
-
-	numSamples := len(pcm) / 2
-	if numSamples < fftSize {
-		return pcm, nil
-	}
-
-	samples := make([]float32, numSamples)
-	for i := 0; i < numSamples; i++ {
-		s := int16(pcm[i*2]) | int16(pcm[i*2+1])<<8
-		samples[i] = float32(s) / 32768.0
-	}
-
-	hann := make([]float64, fftSize)
-	for i := range hann {
-		hann[i] = 0.5 * (1.0 - math.Cos(2*math.Pi*float64(i)/float64(fftSize)))
-	}
-
-	h1 := make([]float32, 128)
-	c1 := make([]float32, 128)
-	h2 := make([]float32, 128)
-	c2 := make([]float32, 128)
-
-	output := make([]float64, numSamples)
-	winSum := make([]float64, numSamples)
-	numFrames := (numSamples - fftSize) / hopSize + 1
-
-	for t := 0; t < numFrames; t++ {
-		start := t * hopSize
-		re := make([]float64, fftSize)
-		im := make([]float64, fftSize)
-		for i := 0; i < fftSize; i++ {
-			re[i] = float64(samples[start+i]) * hann[i]
-		}
-		fbank.FFT(re, im)
-
-		// Magnitude for DTLN1
-		mag := make([]float32, halfFFT)
-		for i := 0; i < halfFFT; i++ {
-			mag[i] = float32(math.Sqrt(re[i]*re[i] + im[i]*im[i]))
-		}
-
-		// DTLN1 mask
-		mask, nh1, nc1, nh2, nc2, err := d.runStage1(mag, h1, c1, h2, c2)
-		if err != nil {
-			return nil, fmt.Errorf("DTLN1 frame %d: %w", t, err)
-		}
-		h1, c1, h2, c2 = nh1, nc1, nh2, nc2
-
-		// Apply mask directly to complex spectrum
-		for i := 0; i < halfFFT; i++ {
-			g := float64(mask[i])
-			re[i] *= g
-			im[i] *= g
-			if i > 0 && i < halfFFT-1 {
-				re[fftSize-i] = re[i]
-				im[fftSize-i] = -im[i]
-			}
-		}
-
-		// IFFT
-		fbank.IFFT(re, im)
-
-		// Overlap-add
-		for i := 0; i < fftSize; i++ {
-			idx := start + i
-			if idx < numSamples {
-				output[idx] += re[i] * hann[i]
-				winSum[idx] += hann[i] * hann[i]
-			}
-		}
-	}
-
-	for i := range output {
-		if winSum[i] > 1e-8 {
-			output[i] /= winSum[i]
-		}
-	}
-
-	result := make([]byte, numSamples*2)
-	for i := 0; i < numSamples; i++ {
-		s := output[i] * 32768.0
-		if s > 32767 {
-			s = 32767
-		} else if s < -32768 {
-			s = -32768
-		}
-		v := int16(s)
-		result[i*2] = byte(v)
-		result[i*2+1] = byte(v >> 8)
-	}
-	return result, nil
 }
 
 // --------------------------------------------------------------------------
