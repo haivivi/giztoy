@@ -44,5 +44,5 @@ else
     fi
 fi
 
-echo "Running: $RUNNER --dir=$LIBS_DIR --runtime=$RUNTIME $SCRIPT"
-exec "$RUNNER" --dir="$LIBS_DIR" --runtime="$RUNTIME" "$SCRIPT"
+echo "Running: $RUNNER luau run --libs=$LIBS_DIR --runtime=$RUNTIME $SCRIPT"
+exec "$RUNNER" luau run --libs="$LIBS_DIR" --runtime="$RUNTIME" "$SCRIPT"

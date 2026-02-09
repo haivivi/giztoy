@@ -87,7 +87,7 @@ sequenceDiagram
 ## 示例目录
 
 - `examples/go/dashscope/` - Go SDK 示例
-- `examples/cmd/dashscope/` - CLI 测试脚本
+- `e2e/cmd/dashscope/` - CLI 测试脚本
 
 ## 对于文本/聊天 API
 
@@ -110,4 +110,4 @@ client := openai.NewClientWithConfig(config)
 ## 相关
 
 - CLI 工具：`go/cmd/dashscope/`
-- CLI 测试：`examples/cmd/dashscope/`
+- CLI 测试：`e2e/cmd/dashscope/`

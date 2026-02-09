@@ -24,14 +24,14 @@ Giztoy uses [Bazel](https://bazel.build) as its unified build system across all 
 bazel build //...
 
 # Build specific targets
-bazel build //go/cmd/minimax      # Go CLI
+bazel build //go/cmd/giztoy      # Go CLI
 bazel build //rust/cmd/minimax    # Rust CLI
 
 # Run tests
 bazel test //...
 
 # Run a binary
-bazel run //go/cmd/minimax -- --help
+bazel run //go/cmd/giztoy -- --help
 ```
 
 ## Project Structure
@@ -173,20 +173,20 @@ bazel run //pages:deploy
 
 ```bash
 # MiniMax CLI
-bazel run //go/cmd/minimax -- --help
-bazel run //go/cmd/minimax -- text chat "Hello"
-bazel run //go/cmd/minimax -- speech tts -t "Test speech"
+bazel run //go/cmd/giztoy -- --help
+bazel run //go/cmd/giztoy -- minimax text chat "Hello"
+bazel run //go/cmd/giztoy -- minimax speech tts -t "Test speech"
 
 # Doubao Speech CLI
-bazel run //go/cmd/doubaospeech -- --help
-bazel run //go/cmd/doubaospeech -- tts -t "Test speech"
+bazel run //go/cmd/giztoy -- doubao --help
+bazel run //go/cmd/giztoy -- doubao tts -t "Test speech"
 
 # DashScope CLI
-bazel run //go/cmd/dashscope -- --help
+bazel run //go/cmd/giztoy -- dashscope --help
 
 # GearTest (device simulation testing tool)
-bazel run //go/cmd/geartest -- --help
-bazel run //go/cmd/geartest -- run --config config.yaml
+bazel run //go/cmd/giztoy -- gear --help
+bazel run //go/cmd/giztoy -- gear run --config config.yaml
 ```
 
 #### Rust CLI
@@ -205,20 +205,20 @@ bazel run //rust/cmd/dashscope -- --help
 
 ### Example Test Scripts
 
-Example test scripts are located in `examples/cmd/` for batch testing API features:
+Example test scripts are located in `e2e/cmd/` for batch testing API features:
 
 ```bash
 # MiniMax example tests
-bazel run //examples/cmd/minimax:run -- go all      # Run all Go tests
-bazel run //examples/cmd/minimax:run -- rust 1      # Run Rust level 1 tests
-bazel run //examples/cmd/minimax:run -- both quick  # Test both Go and Rust
+bazel run //e2e/cmd/minimax:run -- go all      # Run all Go tests
+bazel run //e2e/cmd/minimax:run -- rust 1      # Run Rust level 1 tests
+bazel run //e2e/cmd/minimax:run -- both quick  # Test both Go and Rust
 
 # Doubao Speech example tests
-bazel run //examples/cmd/doubaospeech:run -- tts
-bazel run //examples/cmd/doubaospeech:run -- asr-stream
+bazel run //e2e/cmd/doubaospeech:run -- tts
+bazel run //e2e/cmd/doubaospeech:run -- asr-stream
 
 # DashScope example tests
-bazel run //examples/cmd/dashscope:run -- omni-chat
+bazel run //e2e/cmd/dashscope:run -- omni-chat
 ```
 
 ### Go Examples

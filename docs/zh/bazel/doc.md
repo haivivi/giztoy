@@ -24,14 +24,14 @@ Giztoy 使用 [Bazel](https://bazel.build) 作为跨所有语言和平台的统�
 bazel build //...
 
 # 构建特定目标
-bazel build //go/cmd/minimax      # Go CLI
+bazel build //go/cmd/giztoy      # Go CLI
 bazel build //rust/cmd/minimax    # Rust CLI
 
 # 运行测试
 bazel test //...
 
 # 运行二进制文件
-bazel run //go/cmd/minimax -- --help
+bazel run //go/cmd/giztoy -- --help
 ```
 
 ## 项目结构
@@ -173,20 +173,20 @@ bazel run //pages:deploy
 
 ```bash
 # MiniMax CLI
-bazel run //go/cmd/minimax -- --help
-bazel run //go/cmd/minimax -- text chat "你好"
-bazel run //go/cmd/minimax -- speech tts -t "测试语音"
+bazel run //go/cmd/giztoy -- --help
+bazel run //go/cmd/giztoy -- minimax text chat "你好"
+bazel run //go/cmd/giztoy -- minimax speech tts -t "测试语音"
 
 # Doubao Speech CLI
-bazel run //go/cmd/doubaospeech -- --help
-bazel run //go/cmd/doubaospeech -- tts -t "测试语音"
+bazel run //go/cmd/giztoy -- doubao --help
+bazel run //go/cmd/giztoy -- doubao tts -t "测试语音"
 
 # DashScope CLI
-bazel run //go/cmd/dashscope -- --help
+bazel run //go/cmd/giztoy -- dashscope --help
 
 # GearTest（设备模拟测试工具）
-bazel run //go/cmd/geartest -- --help
-bazel run //go/cmd/geartest -- run --config config.yaml
+bazel run //go/cmd/giztoy -- gear --help
+bazel run //go/cmd/giztoy -- gear run --config config.yaml
 ```
 
 #### Rust CLI
@@ -205,20 +205,20 @@ bazel run //rust/cmd/dashscope -- --help
 
 ### 示例测试脚本
 
-示例测试脚本位于 `examples/cmd/`，用于批量测试 API 功能：
+示例测试脚本位于 `e2e/cmd/`，用于批量测试 API 功能：
 
 ```bash
 # MiniMax 示例测试
-bazel run //examples/cmd/minimax:run -- go all      # 运行所有 Go 测试
-bazel run //examples/cmd/minimax:run -- rust 1      # 运行 Rust 第 1 级测试
-bazel run //examples/cmd/minimax:run -- both quick  # 同时测试 Go 和 Rust
+bazel run //e2e/cmd/minimax:run -- go all      # 运行所有 Go 测试
+bazel run //e2e/cmd/minimax:run -- rust 1      # 运行 Rust 第 1 级测试
+bazel run //e2e/cmd/minimax:run -- both quick  # 同时测试 Go 和 Rust
 
 # Doubao Speech 示例测试
-bazel run //examples/cmd/doubaospeech:run -- tts
-bazel run //examples/cmd/doubaospeech:run -- asr-stream
+bazel run //e2e/cmd/doubaospeech:run -- tts
+bazel run //e2e/cmd/doubaospeech:run -- asr-stream
 
 # DashScope 示例测试
-bazel run //examples/cmd/dashscope:run -- omni-chat
+bazel run //e2e/cmd/dashscope:run -- omni-chat
 ```
 
 ### Go 示例程序

@@ -177,7 +177,7 @@ session, err := client.Realtime.Connect(ctx, &dashscope.RealtimeConfig{
 // 发送音频、接收事件...
 ```
 
-CLI 工具: `bazel run //go/cmd/dashscope -- omni chat`
+CLI 工具: `bazel run //go/cmd/giztoy -- dashscope omni chat`
 
 ### 官方 SDK
 

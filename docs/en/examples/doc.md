@@ -34,11 +34,11 @@ graph LR
 
 ### CLI Script Examples
 - Minimax CLI test runner:
-  - `./examples/cmd/minimax/run.sh go 1`
-  - Bazel: `bazel run //examples/cmd/minimax:run -- go 1`
+  - `./e2e/cmd/minimax/run.sh go 1`
+  - Bazel: `bazel run //e2e/cmd/minimax:run -- go 1`
 - Doubao Speech CLI test runner:
-  - `./examples/cmd/doubaospeech/run.sh tts`
-  - Bazel: `bazel run //examples/cmd/doubaospeech:run -- tts`
+  - `./e2e/cmd/doubaospeech/run.sh tts`
+  - Bazel: `bazel run //e2e/cmd/doubaospeech:run -- tts`
 
 ### Go Examples
 All Go examples share one module at `examples/go/go.mod` and depend on the
