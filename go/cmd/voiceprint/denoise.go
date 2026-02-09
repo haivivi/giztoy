@@ -175,7 +175,10 @@ func (d *dtlnDenoiser) runStage1(mag, h1, c1, h2, c2 []float32) (
 	inC2 := ncnn.NewMat2D(128, 1, c2)
 	defer inC2.Close()
 
-	ex := d.net1.NewExtractor()
+	ex, exErr := d.net1.NewExtractor()
+	if exErr != nil {
+		return nil, nil, nil, nil, nil, exErr
+	}
 	defer ex.Close()
 	ex.SetInput("in0", inMag)
 	ex.SetInput("in1", inH1)
@@ -220,7 +223,10 @@ func (d *dtlnDenoiser) runStage2(frame, h3, c3, h4, c4 []float32) (
 	inC4 := ncnn.NewMat2D(128, 1, c4)
 	defer inC4.Close()
 
-	ex := d.net2.NewExtractor()
+	ex, exErr := d.net2.NewExtractor()
+	if exErr != nil {
+		return nil, nil, nil, nil, nil, exErr
+	}
 	defer ex.Close()
 	ex.SetInput("in0", inFrame)
 	ex.SetInput("in1", inH3)

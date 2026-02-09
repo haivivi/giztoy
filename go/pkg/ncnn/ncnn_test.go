@@ -151,7 +151,7 @@ func BenchmarkSpeakerInference(b *testing.B) {
 	b.ReportAllocs()
 	for range b.N {
 		input := NewMat2D(80, 40, data)
-		ex := net.NewExtractor()
+		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", input)
 		output, err := ex.Extract("out0")
 		if err != nil {
@@ -181,7 +181,7 @@ func BenchmarkVADInference(b *testing.B) {
 		inAudio := NewMat2D(512, 1, audio)
 		inH := NewMat2D(128, 1, h)
 		inC := NewMat2D(128, 1, c)
-		ex := net.NewExtractor()
+		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", inAudio)
 		ex.SetInput("in1", inH)
 		ex.SetInput("in2", inC)
@@ -220,7 +220,7 @@ func BenchmarkDTLN1Inference(b *testing.B) {
 		inC1 := NewMat2D(128, 1, state)
 		inH2 := NewMat2D(128, 1, state)
 		inC2 := NewMat2D(128, 1, state)
-		ex := net.NewExtractor()
+		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", inMag)
 		ex.SetInput("in1", inH1)
 		ex.SetInput("in2", inC1)
@@ -259,7 +259,7 @@ func BenchmarkDTLN2Inference(b *testing.B) {
 		inC1 := NewMat2D(128, 1, state)
 		inH2 := NewMat2D(128, 1, state)
 		inC2 := NewMat2D(128, 1, state)
-		ex := net.NewExtractor()
+		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", inFeat)
 		ex.SetInput("in1", inH1)
 		ex.SetInput("in2", inC1)
@@ -297,7 +297,7 @@ func BenchmarkConcurrentSpeakerInference(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			input := NewMat2D(80, 40, data)
-			ex := net.NewExtractor()
+			ex, _ := net.NewExtractor()
 			ex.SetInput("in0", input)
 			output, err := ex.Extract("out0")
 			if err != nil {
@@ -356,7 +356,10 @@ func TestEmbeddedModelInference(t *testing.T) {
 	input := NewMat2D(80, 40, data)
 	defer input.Close()
 
-	ex := net.NewExtractor()
+	ex, err := net.NewExtractor()
+	if err != nil {
+		t.Fatalf("NewExtractor: %v", err)
+	}
 	defer ex.Close()
 
 	if err := ex.SetInput("in0", input); err != nil {

@@ -149,7 +149,10 @@ func TestDTLN1ModelOutput(t *testing.T) {
 	inC2 := ncnn.NewMat2D(128, 1, state)
 	defer inC2.Close()
 
-	ex := net.NewExtractor()
+	ex, err := net.NewExtractor()
+	if err != nil {
+		t.Fatalf("NewExtractor: %v", err)
+	}
 	defer ex.Close()
 	ex.SetInput("in0", inMag)
 	ex.SetInput("in1", inH1)
@@ -246,7 +249,10 @@ func TestDTLN2ModelOutput(t *testing.T) {
 	inC2 := ncnn.NewMat2D(128, 1, state)
 	defer inC2.Close()
 
-	ex := net.NewExtractor()
+	ex, err := net.NewExtractor()
+	if err != nil {
+		t.Fatalf("NewExtractor: %v", err)
+	}
 	defer ex.Close()
 	ex.SetInput("in0", inFrame)
 	ex.SetInput("in1", inH1)
@@ -340,7 +346,7 @@ func TestDTLN1StatePropagation(t *testing.T) {
 		inH2 := ncnn.NewMat2D(128, 1, h2)
 		inC2 := ncnn.NewMat2D(128, 1, c2)
 
-		ex := net.NewExtractor()
+		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", inMag)
 		ex.SetInput("in1", inH1)
 		ex.SetInput("in2", inC1)
@@ -497,7 +503,7 @@ func TestDenoiseMaskOnly(t *testing.T) {
 		inC1 := ncnn.NewMat2D(128, 1, c1)
 		inH2 := ncnn.NewMat2D(128, 1, h2)
 		inC2 := ncnn.NewMat2D(128, 1, c2)
-		ex := net1.NewExtractor()
+		ex, _ := net1.NewExtractor()
 		ex.SetInput("in0", inMag)
 		ex.SetInput("in1", inH1)
 		ex.SetInput("in2", inC1)
@@ -702,7 +708,7 @@ func TestDenoiseRealOGG(t *testing.T) {
 		inC1 := ncnn.NewMat2D(128, 1, c1)
 		inH2 := ncnn.NewMat2D(128, 1, h2)
 		inC2 := ncnn.NewMat2D(128, 1, c2)
-		ex := net1.NewExtractor()
+		ex, _ := net1.NewExtractor()
 		ex.SetInput("in0", inMag)
 		ex.SetInput("in1", inH1)
 		ex.SetInput("in2", inC1)

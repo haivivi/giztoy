@@ -18,7 +18,7 @@
 //	net, _ := ncnn.NewNetFromMemory(paramData, binData)
 //	defer net.Close()
 //
-//	ex := net.NewExtractor()
+//	ex, _ := net.NewExtractor()
 //	defer ex.Close()
 //
 //	ex.SetInput("in0", inputMat)
@@ -98,6 +98,13 @@ func NewNet(paramPath, binPath string) (*Net, error) {
 // opts is an optional Option to configure the net (FP16, threads, etc.).
 // The option must be set before loading for it to take effect.
 func NewNetFromMemory(paramData, binData []byte, opts ...*Option) (*Net, error) {
+	if len(paramData) == 0 {
+		return nil, fmt.Errorf("ncnn: empty param data")
+	}
+	if len(binData) == 0 {
+		return nil, fmt.Errorf("ncnn: empty bin data")
+	}
+
 	n := &Net{net: C.ncnn_net_create()}
 	if n.net == nil {
 		return nil, fmt.Errorf("ncnn: net_create failed")
@@ -140,8 +147,13 @@ type Option struct {
 }
 
 // NewOption creates a new Option with default settings.
+// Returns nil if allocation fails.
 func NewOption() *Option {
-	o := &Option{opt: C.ncnn_option_create()}
+	opt := C.ncnn_option_create()
+	if opt == nil {
+		return nil
+	}
+	o := &Option{opt: opt}
 	runtime.SetFinalizer(o, (*Option).Close)
 	return o
 }
@@ -177,11 +189,15 @@ func (o *Option) Close() error {
 
 // NewExtractor creates a new inference session for this Net.
 // The Extractor must be closed after use.
-func (n *Net) NewExtractor() *Extractor {
+// Returns an error if the extractor cannot be created.
+func (n *Net) NewExtractor() (*Extractor, error) {
 	ex := C.ncnn_extractor_create(n.net)
+	if ex == nil {
+		return nil, fmt.Errorf("ncnn: extractor_create failed")
+	}
 	e := &Extractor{ex: ex}
 	runtime.SetFinalizer(e, (*Extractor).Close)
-	return e
+	return e, nil
 }
 
 // Close releases the ncnn network resources.
@@ -257,7 +273,11 @@ type Mat struct {
 
 // NewMat2D creates a 2D Mat (h rows × w cols) backed by external float32 data.
 // The data slice must remain valid for the lifetime of the Mat.
+// Panics if data is empty.
 func NewMat2D(w, h int, data []float32) *Mat {
+	if len(data) == 0 {
+		panic("ncnn: NewMat2D called with empty data")
+	}
 	m := &Mat{
 		mat: C.ncnn_mat_create_external_2d(
 			C.int(w), C.int(h),
@@ -270,7 +290,11 @@ func NewMat2D(w, h int, data []float32) *Mat {
 }
 
 // NewMat3D creates a 3D Mat (c channels × h rows × w cols) backed by external data.
+// Panics if data is empty.
 func NewMat3D(w, h, c int, data []float32) *Mat {
+	if len(data) == 0 {
+		panic("ncnn: NewMat3D called with empty data")
+	}
 	m := &Mat{
 		mat: C.ncnn_mat_create_external_3d(
 			C.int(w), C.int(h), C.int(c),
