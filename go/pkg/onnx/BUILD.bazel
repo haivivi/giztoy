@@ -4,6 +4,8 @@ go_library(
     name = "onnx",
     srcs = ["onnx.go"],
     cgo = True,
+    # rpath so shared library is found in Bazel's _solib directory at runtime.
+    clinkopts = ["-Wl,-rpath,@loader_path/onnx_test.runfiles/_main/_solib_darwin_arm64/_U_A_A+onnxruntime_Uext+onnxruntime_S_S_Connxruntime_Ulib___Ulib"],
     importpath = "github.com/haivivi/giztoy/go/pkg/onnx",
     visibility = ["//visibility:public"],
     cdeps = ["@onnxruntime"],
@@ -12,8 +14,6 @@ go_library(
 go_test(
     name = "onnx_test",
     srcs = ["onnx_test.go"],
-    data = [
-        "//data/models/ncnn:speaker_eres2net",  # ONNX source model via external
-    ],
+    data = ["@onnx_speaker_eres2net//:model"],
     embed = [":onnx"],
 )

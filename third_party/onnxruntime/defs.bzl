@@ -68,6 +68,16 @@ def _onnxruntime_repo_impl(ctx):
     lib_path = platform["lib"]
     is_dylib = lib_path.endswith(".dylib")
 
+    # Fix macOS dylib install_name so it can be found at runtime.
+    # The pre-built dylib has install_name @rpath/libonnxruntime.1.x.x.dylib
+    # which doesn't work with Bazel sandboxed execution.
+    if is_dylib:
+        ctx.execute([
+            "install_name_tool", "-id",
+            "@loader_path/libonnxruntime.dylib",
+            "lib/libonnxruntime.1.24.1.dylib",
+        ])
+
     linkopts = ", ".join(['"{}"'.format(l) for l in platform["linkopts"]])
 
     if is_dylib:
@@ -90,6 +100,7 @@ cc_import(
 
 cc_library(
     name = "onnxruntime",
+    data = glob(["lib/*"]),
     deps = [":onnxruntime_lib"],
     linkopts = [{linkopts}],
 )
