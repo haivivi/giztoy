@@ -1,15 +1,2 @@
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
-
-go_library(
-    name = "doubaospeech_lib",
-    srcs = ["main.go"],
-    importpath = "github.com/haivivi/giztoy/go/cmd/doubaospeech",
-    visibility = ["//visibility:private"],
-    deps = ["//go/cmd/doubaospeech/commands"],
-)
-
-go_binary(
-    name = "doubaospeech",
-    embed = [":doubaospeech_lib"],
-    visibility = ["//visibility:public"],
-)
+# doubaospeech CLI commands package - used by giztoy unified binary
+# See //go/cmd/giztoy for the unified entry point

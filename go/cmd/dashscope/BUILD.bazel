@@ -1,15 +1,2 @@
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
-
-go_library(
-    name = "dashscope_lib",
-    srcs = ["main.go"],
-    importpath = "github.com/haivivi/giztoy/go/cmd/dashscope",
-    visibility = ["//visibility:private"],
-    deps = ["//go/cmd/dashscope/commands"],
-)
-
-go_binary(
-    name = "dashscope",
-    embed = [":dashscope_lib"],
-    visibility = ["//visibility:public"],
-)
+# dashscope CLI commands package - used by giztoy unified binary
+# See //go/cmd/giztoy for the unified entry point
