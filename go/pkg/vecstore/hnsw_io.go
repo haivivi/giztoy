@@ -171,6 +171,9 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 	if err := read(&dim); err != nil {
 		return nil, err
 	}
+	if dim == 0 {
+		return nil, fmt.Errorf("vecstore: invalid dimension 0 in serialized index")
+	}
 	if err := read(&m); err != nil {
 		return nil, err
 	}
