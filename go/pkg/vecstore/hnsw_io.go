@@ -210,6 +210,9 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 		if err := read(&free[i]); err != nil {
 			return nil, err
 		}
+		if free[i] >= numSlots {
+			return nil, fmt.Errorf("vecstore: free list entry %d out of bounds (numSlots=%d)", free[i], numSlots)
+		}
 	}
 
 	// Nodes.
@@ -239,6 +242,9 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 		var level uint32
 		if err := read(&level); err != nil {
 			return nil, err
+		}
+		if level > 31 {
+			return nil, fmt.Errorf("vecstore: node level %d exceeds maximum 31", level)
 		}
 
 		// Vector.
