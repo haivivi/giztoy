@@ -1,0 +1,22 @@
+# chatgear — Chatgear Protocol Client Library (Zig)
+#
+# Client-side implementation of the chatgear device-server communication
+# protocol. Generic over MqttClient (transport) and Rt (runtime).
+#
+# Based on go/pkg/chatgear.
+
+load("@embed_zig//bazel/zig:defs.bzl", "zig_package")
+
+package(default_visibility = ["//visibility:public"])
+
+zig_package(
+    name = "chatgear",
+    deps = [
+        "@embed_zig//lib/trait",
+        "@embed_zig//lib/pkg/channel",
+        "@embed_zig//lib/pkg/cancellation",
+    ],
+    # port.zig imports channel/cancellation/trait, which need runtime for tests.
+    # Types/wire/conn tests work without runtime deps.
+    test = False,
+)
