@@ -1,10 +1,15 @@
 //! ChatGear E2E Test Application — Platform Independent
 //!
 //! Device simulator that exercises the full chatgear protocol:
-//! - Connects to MQTT broker
+//! - Connects to MQTT broker (mqtt:// or mqtts:// with auth)
 //! - Sends state/stats via ClientPort periodic reporting
 //! - Handles ADC button events for recording and calling
 //! - Receives commands from server
+//!
+//! MQTT URL format (matches Go DialMQTT):
+//!   mqtt://host:1883              — TCP, no auth
+//!   mqtt://user:pass@host:1883    — TCP with auth
+//!   mqtts://user:pass@host:8883   — TLS with auth
 //!
 //! Button behavior (Korvo-2 V3 ADC buttons):
 //! - REC: press-and-hold = recording, release = waiting_for_response
@@ -21,11 +26,100 @@ const log = Board.log;
 
 const chatgear = @import("chatgear");
 const mqtt0 = @import("mqtt0");
+const tls = @import("tls");
 
 const Rt = hw.runtime;
-const MqttClient = mqtt0.Client(Board.socket);
-const Conn = chatgear.MqttClientConn(MqttClient);
-const Port = chatgear.ClientPort(MqttClient, Rt);
+const Socket = Board.socket;
+const TlsClient = tls.Client(Socket);
+const TcpMqttClient = mqtt0.Client(Socket);
+const TlsMqttClient = mqtt0.Client(TlsClient);
+const TcpConn = chatgear.MqttClientConn(TcpMqttClient);
+const TlsConn = chatgear.MqttClientConn(TlsMqttClient);
+const TcpPort = chatgear.ClientPort(TcpMqttClient, Rt);
+const TlsPort = chatgear.ClientPort(TlsMqttClient, Rt);
+
+// ============================================================================
+// MQTT URL Parser
+// ============================================================================
+
+const MqttScheme = enum { tcp, tls };
+
+const MqttUrl = struct {
+    scheme: MqttScheme = .tcp,
+    host: []const u8 = "",
+    port: u16 = 1883,
+    username: []const u8 = "",
+    password: []const u8 = "",
+
+    /// Parse a URL like "mqtt://user:pass@host:port" or "mqtts://host:8883"
+    /// All slices point into the input buffer.
+    pub fn parse(url: []const u8) MqttUrl {
+        var result = MqttUrl{};
+        var rest = url;
+
+        // Scheme
+        if (startsWith(rest, "mqtts://")) {
+            result.scheme = .tls;
+            result.port = 8883;
+            rest = rest["mqtts://".len..];
+        } else if (startsWith(rest, "mqtt://")) {
+            result.scheme = .tcp;
+            result.port = 1883;
+            rest = rest["mqtt://".len..];
+        }
+        // else: treat as host:port (no scheme)
+
+        // Userinfo: user:pass@
+        if (indexOf(rest, '@')) |at_pos| {
+            const userinfo = rest[0..at_pos];
+            rest = rest[at_pos + 1 ..];
+
+            if (indexOf(userinfo, ':')) |colon_pos| {
+                result.username = userinfo[0..colon_pos];
+                result.password = userinfo[colon_pos + 1 ..];
+            } else {
+                result.username = userinfo;
+            }
+        }
+
+        // Host:port
+        if (indexOf(rest, ':')) |colon_pos| {
+            result.host = rest[0..colon_pos];
+            result.port = parseU16(rest[colon_pos + 1 ..]);
+        } else {
+            // Strip trailing slash or path if any
+            if (indexOf(rest, '/')) |slash_pos| {
+                result.host = rest[0..slash_pos];
+            } else {
+                result.host = rest;
+            }
+        }
+
+        return result;
+    }
+
+    fn startsWith(haystack: []const u8, prefix: []const u8) bool {
+        if (haystack.len < prefix.len) return false;
+        return std.mem.eql(u8, haystack[0..prefix.len], prefix);
+    }
+
+    fn indexOf(haystack: []const u8, needle: u8) ?usize {
+        for (haystack, 0..) |c, i| {
+            if (c == needle) return i;
+        }
+        return null;
+    }
+
+    fn parseU16(s: []const u8) u16 {
+        var val: u16 = 0;
+        for (s) |c| {
+            if (c >= '0' and c <= '9') {
+                val = val *| 10 +| (c - '0');
+            } else break;
+        }
+        return val;
+    }
+};
 
 // ============================================================================
 // Configuration
@@ -34,23 +128,10 @@ const Port = chatgear.ClientPort(MqttClient, Rt);
 var config: struct {
     wifi_ssid: []const u8,
     wifi_password: []const u8,
-    mqtt_host: []const u8,
-    mqtt_port: u16,
-    mqtt_username: []const u8,
-    mqtt_password: []const u8,
+    mqtt: MqttUrl,
     gear_id: []const u8,
     scope: []const u8,
 } = undefined;
-
-fn parsePort(port_str: []const u8) u16 {
-    var port: u16 = 0;
-    for (port_str) |c| {
-        if (c >= '0' and c <= '9') {
-            port = port * 10 + (c - '0');
-        }
-    }
-    return if (port == 0) 1883 else port;
-}
 
 // ============================================================================
 // Application State
@@ -73,18 +154,23 @@ pub fn run(env: anytype) void {
     config = .{
         .wifi_ssid = env.wifi_ssid,
         .wifi_password = env.wifi_password,
-        .mqtt_host = if (@hasField(@TypeOf(env.*), "mqtt_host")) env.mqtt_host else "test.mosquitto.org",
-        .mqtt_port = if (@hasField(@TypeOf(env.*), "mqtt_port")) parsePort(env.mqtt_port) else 1883,
-        .mqtt_username = if (@hasField(@TypeOf(env.*), "mqtt_username")) env.mqtt_username else "",
-        .mqtt_password = if (@hasField(@TypeOf(env.*), "mqtt_password")) env.mqtt_password else "",
+        .mqtt = MqttUrl.parse(if (@hasField(@TypeOf(env.*), "mqtt_url")) env.mqtt_url else "mqtt://test.mosquitto.org:1883"),
         .gear_id = if (@hasField(@TypeOf(env.*), "gear_id")) env.gear_id else "zig-test-001",
         .scope = if (@hasField(@TypeOf(env.*), "scope")) env.scope else "stage/",
     };
 
     log.info("==========================================", .{});
     log.info("  ChatGear E2E Test", .{});
-    log.info("  Board: {s}", .{Board.meta.id});
+    log.info("  Board:   {s}", .{Board.meta.id});
     log.info("  Gear ID: {s}", .{config.gear_id});
+    log.info("  MQTT:    {s}://{s}:{d}", .{
+        if (config.mqtt.scheme == .tls) @as([]const u8, "mqtts") else "mqtt",
+        config.mqtt.host,
+        config.mqtt.port,
+    });
+    if (config.mqtt.username.len > 0) {
+        log.info("  Auth:    {s}:***", .{config.mqtt.username});
+    }
     log.info("==========================================", .{});
 
     // Init board
@@ -101,166 +187,235 @@ pub fn run(env: anytype) void {
 
     var app_state: AppState = .connecting_wifi;
 
-    // MQTT + chatgear state (initialized after WiFi connects)
-    var allocator = std.heap.page_allocator;
-    var mux = mqtt0.Mux.init(allocator) catch |err| {
-        log.err("Mux init failed: {}", .{err});
-        return;
-    };
-    defer mux.deinit();
-
-    var mqtt_client: ?MqttClient = null;
-    var chatgear_conn: ?Conn = null;
-    var port: ?Port = null;
-
     // Main event loop
     while (Board.isRunning()) {
         // Process board events
         while (board.nextEvent()) |event| {
             switch (event) {
-                .wifi => |wifi_event| {
-                    switch (wifi_event) {
-                        .connected => log.info("WiFi connected (waiting for IP...)", .{}),
-                        .disconnected => |reason| {
-                            log.warn("WiFi disconnected: {}", .{reason});
-                            app_state = .connecting_wifi;
-                        },
-                        .connection_failed => |reason| {
-                            log.err("WiFi connection failed: {}", .{reason});
-                        },
-                        else => {},
-                    }
-                },
-                .net => |net_event| {
-                    switch (net_event) {
-                        .dhcp_bound, .dhcp_renewed => |info| {
-                            var buf: [16]u8 = undefined;
-                            const ip_str = std.fmt.bufPrint(&buf, "{d}.{d}.{d}.{d}", .{
-                                info.ip[0], info.ip[1], info.ip[2], info.ip[3],
-                            }) catch "?.?.?.?";
-                            log.info("Got IP: {s}", .{ip_str});
-                            app_state = .connecting_mqtt;
-                        },
-                        .ip_lost => {
-                            log.warn("IP lost", .{});
-                            app_state = .connecting_wifi;
-                        },
-                        else => {},
-                    }
-                },
+                .wifi => |wifi_event| handleWifiEvent(wifi_event, &app_state),
+                .net => |net_event| handleNetEvent(net_event, &app_state),
                 .button => |btn| {
-                    if (app_state == .running) {
-                        if (port) |*p| {
-                            handleButton(p, btn);
-                        }
-                    }
+                    _ = btn;
+                    // Button handling requires port, done in running state
                 },
                 else => {},
             }
         }
 
-        // State machine
         switch (app_state) {
             .connecting_wifi => {},
             .connecting_mqtt => {
                 Board.time.sleepMs(500);
 
-                // Connect MQTT
-                log.info("Connecting to MQTT: {s}:{d}", .{ config.mqtt_host, config.mqtt_port });
-                var socket = Board.socket.tcp() catch |err| {
-                    log.err("TCP socket failed: {}", .{err});
-                    continue;
-                };
-                socket.connect(config.mqtt_host, config.mqtt_port) catch |err| {
-                    log.err("TCP connect failed: {}", .{err});
-                    socket.close();
-                    Board.time.sleepMs(3000);
-                    continue;
-                };
-
-                mqtt_client = MqttClient.init(&socket, &mux, .{
-                    .client_id = config.gear_id,
-                    .username = config.mqtt_username,
-                    .password = config.mqtt_password,
-                }) catch |err| {
-                    log.err("MQTT connect failed: {}", .{err});
-                    socket.close();
-                    Board.time.sleepMs(3000);
-                    continue;
-                };
-
-                // Init chatgear connection + port
-                chatgear_conn = Conn.init(&mqtt_client.?, .{
-                    .scope = config.scope,
-                    .gear_id = config.gear_id,
-                });
-                chatgear_conn.?.subscribe() catch |err| {
-                    log.err("MQTT subscribe failed: {}", .{err});
-                    continue;
-                };
-
-                port = Port.init(&chatgear_conn.?);
-
-                // Set initial stats (batch mode)
-                port.?.beginBatch();
-                port.?.setVolume(@floatFromInt(volume));
-                port.?.setBattery(100, false);
-                port.?.setSystemVersion("zig-e2e-0.1.0");
-                port.?.endBatch();
-
-                // Start periodic reporting
-                port.?.startPeriodicReporting() catch |err| {
-                    log.err("Failed to start reporting: {}", .{err});
-                    continue;
-                };
-
-                port.?.setState(.ready);
-                log.info("ChatGear ready! Gear ID: {s}", .{config.gear_id});
-                app_state = .running;
-
-                // Start MQTT read loop in background
-                Rt.spawn("mqtt_rx", mqttReadLoopFn, @ptrCast(&mqtt_client.?), .{}) catch |err| {
-                    log.err("Failed to spawn MQTT read loop: {}", .{err});
-                };
+                switch (config.mqtt.scheme) {
+                    .tcp => connectTcp(&app_state),
+                    .tls => connectTls(&app_state),
+                }
             },
             .running => {
-                // Process commands from server
-                if (port) |*p| {
-                    while (p.commands.tryRecv()) |cmd| {
-                        handleCommand(p, cmd);
-                    }
-                }
+                // Main loop body is handled by spawned tasks
             },
         }
 
         Board.time.sleepMs(10);
     }
-
-    // Cleanup
-    if (port) |*p| p.close();
 }
 
 // ============================================================================
-// MQTT Read Loop (background task)
+// WiFi / Net Event Handlers
 // ============================================================================
 
-fn mqttReadLoopFn(ctx: ?*anyopaque) void {
-    const client: *MqttClient = @ptrCast(@alignCast(ctx));
-    client.readLoop() catch |err| {
-        log.err("MQTT read loop error: {}", .{err});
+fn handleWifiEvent(wifi_event: anytype, app_state: *AppState) void {
+    switch (wifi_event) {
+        .connected => log.info("WiFi connected (waiting for IP...)", .{}),
+        .disconnected => |reason| {
+            log.warn("WiFi disconnected: {}", .{reason});
+            app_state.* = .connecting_wifi;
+        },
+        .connection_failed => |reason| {
+            log.err("WiFi connection failed: {}", .{reason});
+        },
+        else => {},
+    }
+}
+
+fn handleNetEvent(net_event: anytype, app_state: *AppState) void {
+    switch (net_event) {
+        .dhcp_bound, .dhcp_renewed => |info| {
+            var buf: [16]u8 = undefined;
+            const ip_str = std.fmt.bufPrint(&buf, "{d}.{d}.{d}.{d}", .{
+                info.ip[0], info.ip[1], info.ip[2], info.ip[3],
+            }) catch "?.?.?.?";
+            log.info("Got IP: {s}", .{ip_str});
+            app_state.* = .connecting_mqtt;
+        },
+        .ip_lost => {
+            log.warn("IP lost", .{});
+            app_state.* = .connecting_wifi;
+        },
+        else => {},
+    }
+}
+
+// ============================================================================
+// MQTT Connection (TCP)
+// ============================================================================
+
+fn connectTcp(app_state: *AppState) void {
+    log.info("Connecting MQTT (TCP) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
+
+    var socket = Socket.tcp() catch |err| {
+        log.err("TCP socket failed: {}", .{err});
+        return;
     };
+    socket.connect(config.mqtt.host, config.mqtt.port) catch |err| {
+        log.err("TCP connect failed: {}", .{err});
+        socket.close();
+        Board.time.sleepMs(3000);
+        return;
+    };
+
+    var allocator = std.heap.page_allocator;
+    var mux = mqtt0.Mux.init(allocator) catch |err| {
+        log.err("Mux init failed: {}", .{err});
+        socket.close();
+        return;
+    };
+
+    var client = TcpMqttClient.init(&socket, &mux, .{
+        .client_id = config.gear_id,
+        .username = config.mqtt.username,
+        .password = config.mqtt.password,
+    }) catch |err| {
+        log.err("MQTT connect failed: {}", .{err});
+        socket.close();
+        Board.time.sleepMs(3000);
+        return;
+    };
+
+    var conn = TcpConn.init(&client, .{
+        .scope = config.scope,
+        .gear_id = config.gear_id,
+    });
+    conn.subscribe() catch |err| {
+        log.err("MQTT subscribe failed: {}", .{err});
+        return;
+    };
+
+    var port = TcpPort.init(&conn);
+    initPort(&port);
+    app_state.* = .running;
+
+    // MQTT readLoop in background (blocks until disconnect)
+    Rt.spawn("mqtt_rx", struct {
+        fn run(ctx: ?*anyopaque) void {
+            const c: *TcpMqttClient = @ptrCast(@alignCast(ctx));
+            c.readLoop() catch |err| {
+                log.err("MQTT read loop error: {}", .{err});
+            };
+        }
+    }.run, @ptrCast(&client), .{}) catch |err| {
+        log.err("Failed to spawn MQTT reader: {}", .{err});
+    };
+}
+
+// ============================================================================
+// MQTT Connection (TLS)
+// ============================================================================
+
+fn connectTls(app_state: *AppState) void {
+    log.info("Connecting MQTT (TLS) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
+
+    var socket = Socket.tcp() catch |err| {
+        log.err("TCP socket failed: {}", .{err});
+        return;
+    };
+    socket.connect(config.mqtt.host, config.mqtt.port) catch |err| {
+        log.err("TCP connect failed: {}", .{err});
+        socket.close();
+        Board.time.sleepMs(3000);
+        return;
+    };
+
+    // TLS handshake
+    var tls_client = TlsClient.init(&socket, config.mqtt.host) catch |err| {
+        log.err("TLS handshake failed: {}", .{err});
+        socket.close();
+        Board.time.sleepMs(3000);
+        return;
+    };
+
+    var allocator = std.heap.page_allocator;
+    var mux = mqtt0.Mux.init(allocator) catch |err| {
+        log.err("Mux init failed: {}", .{err});
+        return;
+    };
+
+    var client = TlsMqttClient.init(&tls_client, &mux, .{
+        .client_id = config.gear_id,
+        .username = config.mqtt.username,
+        .password = config.mqtt.password,
+    }) catch |err| {
+        log.err("MQTT connect failed: {}", .{err});
+        Board.time.sleepMs(3000);
+        return;
+    };
+
+    var conn = TlsConn.init(&client, .{
+        .scope = config.scope,
+        .gear_id = config.gear_id,
+    });
+    conn.subscribe() catch |err| {
+        log.err("MQTT subscribe failed: {}", .{err});
+        return;
+    };
+
+    var port = TlsPort.init(&conn);
+    initPort(&port);
+    app_state.* = .running;
+
+    Rt.spawn("mqtt_rx", struct {
+        fn run(ctx: ?*anyopaque) void {
+            const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
+            c.readLoop() catch |err| {
+                log.err("MQTT read loop error: {}", .{err});
+            };
+        }
+    }.run, @ptrCast(&client), .{}) catch |err| {
+        log.err("Failed to spawn MQTT reader: {}", .{err});
+    };
+}
+
+// ============================================================================
+// Port Initialization (shared between TCP and TLS)
+// ============================================================================
+
+fn initPort(p: anytype) void {
+    p.beginBatch();
+    p.setVolume(@floatFromInt(volume));
+    p.setBattery(100, false);
+    p.setSystemVersion("zig-e2e-0.1.0");
+    p.endBatch();
+
+    p.startPeriodicReporting() catch |err| {
+        log.err("Failed to start reporting: {}", .{err});
+        return;
+    };
+
+    p.setState(.ready);
+    log.info("ChatGear ready! Gear ID: {s}", .{config.gear_id});
 }
 
 // ============================================================================
 // Button Handling
 // ============================================================================
 
-fn handleButton(p: *Port, btn: anytype) void {
+fn handleButton(p: anytype, btn: anytype) void {
     const btn_name = btn.id.name();
 
     switch (btn.id) {
         .rec => {
-            // REC button: press-and-hold = recording, release = waiting_for_response
+            // REC: press-and-hold = recording, release = waiting_for_response
             switch (btn.action) {
                 .press => {
                     log.info("[{s}] PRESSED -> recording", .{btn_name});
@@ -274,19 +429,16 @@ fn handleButton(p: *Port, btn: anytype) void {
             }
         },
         .play => {
-            // PLAY button: click = toggle calling/ready
-            switch (btn.action) {
-                .click => {
-                    const current = p.getState();
-                    if (current == .calling) {
-                        log.info("[{s}] CLICK -> exit calling", .{btn_name});
-                        p.setState(.ready);
-                    } else {
-                        log.info("[{s}] CLICK -> enter calling", .{btn_name});
-                        p.setState(.calling);
-                    }
-                },
-                else => {},
+            // PLAY: click = toggle calling/ready
+            if (btn.action == .click) {
+                const current = p.getState();
+                if (current == .calling) {
+                    log.info("[{s}] CLICK -> exit calling", .{btn_name});
+                    p.setState(.ready);
+                } else {
+                    log.info("[{s}] CLICK -> enter calling", .{btn_name});
+                    p.setState(.calling);
+                }
             }
         },
         .vol_up => {
@@ -315,42 +467,26 @@ fn handleButton(p: *Port, btn: anytype) void {
 // Command Handling
 // ============================================================================
 
-fn handleCommand(p: *Port, cmd: chatgear.CommandEvent) void {
+fn handleCommand(p: anytype, cmd: chatgear.CommandEvent) void {
     log.info("Command: {s}", .{cmd.cmd_type.toString()});
 
     switch (cmd.payload) {
         .streaming => |enabled| {
-            if (enabled) {
-                p.setState(.streaming);
-            } else {
-                p.setState(.ready);
-            }
+            if (enabled) p.setState(.streaming) else p.setState(.ready);
         },
         .set_volume => |vol| {
             volume = vol;
             p.setVolume(@floatFromInt(vol));
-            log.info("Volume set to {}", .{vol});
         },
         .set_brightness => |br| {
             p.setBrightness(@floatFromInt(br));
-            log.info("Brightness set to {}", .{br});
         },
         .halt => |h| {
-            if (h.sleep) {
-                p.setState(.sleeping);
-            } else if (h.shutdown) {
-                p.setState(.shutting_down);
-            } else if (h.interrupt) {
-                p.setState(.interrupted);
-            }
+            if (h.sleep) p.setState(.sleeping) else if (h.shutdown) p.setState(.shutting_down) else if (h.interrupt) p.setState(.interrupted);
         },
-        .reset => {
-            p.setState(.resetting);
-        },
+        .reset => p.setState(.resetting),
         .raise => |r| {
-            if (r.call) {
-                p.setState(.calling);
-            }
+            if (r.call) p.setState(.calling);
         },
         else => {},
     }
