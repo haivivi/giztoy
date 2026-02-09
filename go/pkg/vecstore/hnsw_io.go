@@ -196,6 +196,9 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 	if err := read(&maxLev); err != nil {
 		return nil, err
 	}
+	if maxLev > 31 {
+		return nil, fmt.Errorf("vecstore: maxLevel %d exceeds maximum 31", maxLev)
+	}
 	if err := read(&entryID); err != nil {
 		return nil, err
 	}
