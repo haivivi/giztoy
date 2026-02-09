@@ -351,30 +351,38 @@ fn connectTls(app_state: *AppState) void {
         log.err("TCP socket failed: {}", .{err});
         return;
     };
+
+    // Set recv timeout (critical for TLS handshake)
+    socket.setRecvTimeout(30000);
+
     socket.connect(ip, config.mqtt.port) catch |err| {
         log.err("TCP connect failed: {}", .{err});
         socket.close();
         Board.time.sleepMs(3000);
         return;
     };
+    log.info("TCP connected", .{});
 
     // TLS handshake
+    log.info("TLS handshake...", .{});
     var tls_client = TlsClient.init(&socket, .{
         .hostname = config.mqtt.host,
         .allocator = hw.allocator,
-        .skip_verify = true, // ESP32 has no CA store, skip cert verification
+        .skip_verify = true,
+        .timeout_ms = 30000,
     }) catch |err| {
-        log.err("TLS handshake failed: {}", .{err});
+        log.err("TLS init failed: {}", .{err});
         socket.close();
         Board.time.sleepMs(3000);
         return;
     };
     tls_client.connect() catch |err| {
-        log.err("TLS connect failed: {}", .{err});
-        socket.close();
+        log.err("TLS handshake failed: {}", .{err});
+        tls_client.deinit();
         Board.time.sleepMs(3000);
         return;
     };
+    log.info("TLS connected!", .{});
 
     var mux = mqtt0.Mux(MqttRt).init(hw.allocator) catch |err| {
         log.err("Mux init failed: {}", .{err});
