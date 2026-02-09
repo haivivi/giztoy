@@ -116,15 +116,21 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
         // Lifecycle
         // ====================================================================
 
+        /// Stack size for spawned tasks. TLS encryption needs large stacks.
+        const TASK_STACK_SIZE: u32 = 32768;
+
+        /// Spawn options for chatgear background tasks.
+        const task_opts: Rt.Options = .{ .stack_size = TASK_STACK_SIZE };
+
         /// Start background tasks for periodic state/stats reporting
         /// and uplink transmission. Matches Go StartPeriodicReporting +
         /// WriteTo goroutines.
         pub fn startPeriodicReporting(self: *Self) !void {
-            try Rt.spawn("cg_state", stateSendLoopFn, @ptrCast(self), .{});
-            try Rt.spawn("cg_stats", statsReportLoopFn, @ptrCast(self), .{});
-            try Rt.spawn("cg_tx_audio", txAudioLoopFn, @ptrCast(self), .{});
-            try Rt.spawn("cg_tx_state", txStateLoopFn, @ptrCast(self), .{});
-            try Rt.spawn("cg_tx_stats", txStatsLoopFn, @ptrCast(self), .{});
+            try Rt.spawn("cg_state", stateSendLoopFn, @ptrCast(self), task_opts);
+            try Rt.spawn("cg_stats", statsReportLoopFn, @ptrCast(self), task_opts);
+            try Rt.spawn("cg_tx_audio", txAudioLoopFn, @ptrCast(self), task_opts);
+            try Rt.spawn("cg_tx_state", txStateLoopFn, @ptrCast(self), task_opts);
+            try Rt.spawn("cg_tx_stats", txStatsLoopFn, @ptrCast(self), task_opts);
         }
 
         /// Cancel all background tasks and close channels.
