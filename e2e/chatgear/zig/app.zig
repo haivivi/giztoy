@@ -341,7 +341,7 @@ fn connectTcp(app_state: *AppState) void {
 // MQTT Connection (TLS)
 // ============================================================================
 
-fn connectTls(app_state: *AppState) void {
+fn connectTls(_: *AppState) void {
     log.info("Connecting MQTT (TLS) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
 
     const ip = resolveHost(config.mqtt.host) orelse return;
@@ -384,45 +384,57 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("TLS connected!", .{});
 
+    // Debug: raw MQTT CONNECT test via TLS
+    // MQTT 3.1.1 CONNECT packet (minimal, with username+password)
+    log.info("Sending raw MQTT CONNECT...", .{});
+    {
+        var pkt_buf: [256]u8 = undefined;
+        const len = buildMqttConnect(&pkt_buf, config.gear_id, config.mqtt.username, config.mqtt.password);
+        log.info("CONNECT packet: {} bytes", .{len});
+
+        const sent = tls_client.send(pkt_buf[0..len]) catch |err| {
+            log.err("TLS send failed: {}", .{err});
+            return;
+        };
+        log.info("TLS sent {} bytes, waiting for CONNACK...", .{sent});
+
+        var recv_buf: [256]u8 = undefined;
+        const n = tls_client.recv(&recv_buf) catch |err| {
+            log.err("TLS recv failed: {}", .{err});
+            return;
+        };
+        log.info("TLS recv {} bytes: type=0x{x}", .{ n, if (n > 0) recv_buf[0] else 0 });
+        if (n >= 4 and recv_buf[0] == 0x20) {
+            // CONNACK
+            const rc = recv_buf[3];
+            log.info("CONNACK received! return_code={}", .{rc});
+            if (rc == 0) {
+                log.info("MQTT authentication SUCCESS", .{});
+            } else {
+                log.err("MQTT authentication FAILED: rc={}", .{rc});
+                return;
+            }
+        } else {
+            log.err("Unexpected response: {} bytes", .{n});
+            return;
+        }
+    }
+
+    // Now do proper mqtt0 init
     var mux = mqtt0.Mux(MqttRt).init(hw.allocator) catch |err| {
         log.err("Mux init failed: {}", .{err});
         return;
     };
 
-    var client = TlsMqttClient.init(&tls_client, &mux, .{
-        .client_id = config.gear_id,
-        .username = config.mqtt.username,
-        .password = config.mqtt.password,
-        .allocator = hw.allocator,
-    }) catch |err| {
-        log.err("MQTT connect failed: {}", .{err});
-        Board.time.sleepMs(3000);
-        return;
-    };
+    // For now, skip mqtt0 — we already proved TLS+MQTT works via raw packet
+    _ = &mux;
+    log.info("Raw MQTT test passed! (mqtt0.Client integration TBD)", .{});
 
-    var conn = TlsConn.init(&client, .{
-        .scope = config.scope,
-        .gear_id = config.gear_id,
-    });
-    conn.subscribe() catch |err| {
-        log.err("MQTT subscribe failed: {}", .{err});
-        return;
-    };
-
-    var port = TlsPort.init(&conn);
-    initPort(&port);
-    app_state.* = .running;
-
-    FullRt.spawn("mqtt_rx", struct {
-        fn run(ctx: ?*anyopaque) void {
-            const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
-            c.readLoop() catch |err| {
-                log.err("MQTT read loop error: {}", .{err});
-            };
-        }
-    }.run, @ptrCast(&client), .{}) catch |err| {
-        log.err("Failed to spawn MQTT reader: {}", .{err});
-    };
+    // Keep alive
+    while (Board.isRunning()) {
+        Board.time.sleepMs(5000);
+        log.info("alive", .{});
+    }
 }
 
 // ============================================================================
@@ -443,6 +455,70 @@ fn initPort(p: anytype) void {
 
     p.setState(.ready);
     log.info("ChatGear ready! Gear ID: {s}", .{config.gear_id});
+}
+
+// ============================================================================
+// Raw MQTT CONNECT packet builder (for debug)
+// ============================================================================
+
+fn buildMqttConnect(buf: []u8, client_id: []const u8, username: []const u8, password: []const u8) usize {
+    // MQTT 3.1.1 CONNECT: fixed header + variable header + payload
+    var payload_buf: [200]u8 = undefined;
+    var pos: usize = 0;
+
+    // Variable header: Protocol Name "MQTT"
+    payload_buf[pos] = 0;
+    payload_buf[pos + 1] = 4;
+    pos += 2;
+    @memcpy(payload_buf[pos..][0..4], "MQTT");
+    pos += 4;
+
+    // Protocol Level (4 = MQTT 3.1.1)
+    payload_buf[pos] = 4;
+    pos += 1;
+
+    // Connect Flags: username + password + clean session
+    var flags: u8 = 0x02; // clean session
+    if (username.len > 0) flags |= 0x80; // username flag
+    if (password.len > 0) flags |= 0x40; // password flag
+    payload_buf[pos] = flags;
+    pos += 1;
+
+    // Keep Alive (60s)
+    payload_buf[pos] = 0;
+    payload_buf[pos + 1] = 60;
+    pos += 2;
+
+    // Payload: Client ID
+    payload_buf[pos] = @truncate(client_id.len >> 8);
+    payload_buf[pos + 1] = @truncate(client_id.len);
+    pos += 2;
+    @memcpy(payload_buf[pos..][0..client_id.len], client_id);
+    pos += client_id.len;
+
+    // Payload: Username
+    if (username.len > 0) {
+        payload_buf[pos] = @truncate(username.len >> 8);
+        payload_buf[pos + 1] = @truncate(username.len);
+        pos += 2;
+        @memcpy(payload_buf[pos..][0..username.len], username);
+        pos += username.len;
+    }
+
+    // Payload: Password
+    if (password.len > 0) {
+        payload_buf[pos] = @truncate(password.len >> 8);
+        payload_buf[pos + 1] = @truncate(password.len);
+        pos += 2;
+        @memcpy(payload_buf[pos..][0..password.len], password);
+        pos += password.len;
+    }
+
+    // Fixed header: packet type (CONNECT = 0x10) + remaining length
+    buf[0] = 0x10;
+    buf[1] = @truncate(pos);
+    @memcpy(buf[2..][0..pos], payload_buf[0..pos]);
+    return 2 + pos;
 }
 
 // ============================================================================
