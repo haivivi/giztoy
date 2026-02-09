@@ -46,6 +46,7 @@ type Runtime struct {
 	pendingOps    map[uint64]*PendingOp
 	completedOps  chan *PendingOp
 	currentThread *luau.Thread // Currently executing thread (for yield)
+	threadErr     error        // First async thread error (propagated to Run caller)
 
 	// Promise support
 	promises *promiseRegistry
@@ -684,6 +685,9 @@ const (
 // All async operations (HTTP, stream recv/send) will yield and be resumed
 // when their results are ready.
 func (rt *Runtime) Run(source, chunkname string) error {
+	// Reset thread error from previous run
+	rt.threadErr = nil
+
 	// Compile script to bytecode
 	bytecode, err := rt.state.Compile(source, luau.OptO2)
 	if err != nil {
@@ -721,6 +725,12 @@ func (rt *Runtime) Run(source, chunkname string) error {
 				// Got work done - reset to fast polling
 				pollInterval = minPollInterval
 				consecutiveEmpty = 0
+
+				// Check for async thread errors
+				if rt.threadErr != nil {
+					rt.currentThread = nil
+					return rt.threadErr
+				}
 			} else {
 				// No work available - back off gradually
 				consecutiveEmpty++
@@ -761,6 +771,12 @@ func (rt *Runtime) Run(source, chunkname string) error {
 // RunAsync is an alias for Run (kept for backward compatibility).
 func (rt *Runtime) RunAsync(source, chunkname string) error {
 	return rt.Run(source, chunkname)
+}
+
+// ThreadError returns the first async thread error encountered during polling.
+// Useful for callers who drive the event loop manually via PollCompleted/PollCompletedNonBlocking.
+func (rt *Runtime) ThreadError() error {
+	return rt.threadErr
 }
 
 // registerPendingPromise registers a promise as pending, waiting to be resolved.
@@ -848,6 +864,10 @@ func (rt *Runtime) processCompletedOp(op *PendingOp) {
 	if status != luau.CoStatusOK && status != luau.CoStatusYield {
 		errMsg := op.Thread.ToString(-1)
 		slog.Error("luau thread error", "error", errMsg)
+		// Propagate first thread error to Run() caller
+		if rt.threadErr == nil {
+			rt.threadErr = fmt.Errorf("async thread error: %s", errMsg)
+		}
 	}
 }
 
