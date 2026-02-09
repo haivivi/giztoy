@@ -296,6 +296,15 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 		if nodes[entryID] == nil {
 			return nil, fmt.Errorf("vecstore: entryID %d points to a nil node", entryID)
 		}
+	} else if activeCount > 0 {
+		return nil, fmt.Errorf("vecstore: entryID is -1 but activeCount is %d", activeCount)
+	}
+
+	// Validate free list entries point to nil slots.
+	for _, f := range free {
+		if nodes[f] != nil {
+			return nil, fmt.Errorf("vecstore: free list entry %d points to an active node", f)
+		}
 	}
 
 	cfg := HNSWConfig{
