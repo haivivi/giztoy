@@ -13,7 +13,11 @@ go_library(
 
 go_test(
     name = "onnx_test",
-    srcs = ["onnx_test.go"],
+    srcs = [
+        "compare_test.go",
+        "onnx_test.go",
+    ],
     data = ["@onnx_speaker_eres2net//:model"],
     embed = [":onnx"],
+    deps = ["//go/pkg/ncnn"],
 )
