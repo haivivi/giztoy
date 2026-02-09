@@ -341,7 +341,7 @@ fn connectTcp(app_state: *AppState) void {
 // MQTT Connection (TLS)
 // ============================================================================
 
-fn connectTls(_: *AppState) void {
+fn connectTls(app_state: *AppState) void {
     log.info("Connecting MQTT (TLS) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
 
     const ip = resolveHost(config.mqtt.host) orelse return;
@@ -384,57 +384,48 @@ fn connectTls(_: *AppState) void {
     };
     log.info("TLS connected!", .{});
 
-    // Debug: raw MQTT CONNECT test via TLS
-    // MQTT 3.1.1 CONNECT packet (minimal, with username+password)
-    log.info("Sending raw MQTT CONNECT...", .{});
-    {
-        var pkt_buf: [256]u8 = undefined;
-        const len = buildMqttConnect(&pkt_buf, config.gear_id, config.mqtt.username, config.mqtt.password);
-        log.info("CONNECT packet: {} bytes", .{len});
-
-        const sent = tls_client.send(pkt_buf[0..len]) catch |err| {
-            log.err("TLS send failed: {}", .{err});
-            return;
-        };
-        log.info("TLS sent {} bytes, waiting for CONNACK...", .{sent});
-
-        var recv_buf: [256]u8 = undefined;
-        const n = tls_client.recv(&recv_buf) catch |err| {
-            log.err("TLS recv failed: {}", .{err});
-            return;
-        };
-        log.info("TLS recv {} bytes: type=0x{x}", .{ n, if (n > 0) recv_buf[0] else 0 });
-        if (n >= 4 and recv_buf[0] == 0x20) {
-            // CONNACK
-            const rc = recv_buf[3];
-            log.info("CONNACK received! return_code={}", .{rc});
-            if (rc == 0) {
-                log.info("MQTT authentication SUCCESS", .{});
-            } else {
-                log.err("MQTT authentication FAILED: rc={}", .{rc});
-                return;
-            }
-        } else {
-            log.err("Unexpected response: {} bytes", .{n});
-            return;
-        }
-    }
-
-    // Now do proper mqtt0 init
     var mux = mqtt0.Mux(MqttRt).init(hw.allocator) catch |err| {
         log.err("Mux init failed: {}", .{err});
         return;
     };
 
-    // For now, skip mqtt0 — we already proved TLS+MQTT works via raw packet
-    _ = &mux;
-    log.info("Raw MQTT test passed! (mqtt0.Client integration TBD)", .{});
+    log.info("MQTT connecting...", .{});
+    var client = TlsMqttClient.init(&tls_client, &mux, .{
+        .client_id = config.gear_id,
+        .username = config.mqtt.username,
+        .password = config.mqtt.password,
+        .allocator = hw.allocator,
+    }) catch |err| {
+        log.err("MQTT connect failed: {}", .{err});
+        Board.time.sleepMs(3000);
+        return;
+    };
+    log.info("MQTT connected!", .{});
 
-    // Keep alive
-    while (Board.isRunning()) {
-        Board.time.sleepMs(5000);
-        log.info("alive", .{});
-    }
+    var conn = TlsConn.init(&client, .{
+        .scope = config.scope,
+        .gear_id = config.gear_id,
+    });
+    conn.subscribe() catch |err| {
+        log.err("MQTT subscribe failed: {}", .{err});
+        return;
+    };
+    log.info("MQTT subscribed to downlink topics", .{});
+
+    var port = TlsPort.init(&conn);
+    initPort(&port);
+    app_state.* = .running;
+
+    FullRt.spawn("mqtt_rx", struct {
+        fn run(ctx: ?*anyopaque) void {
+            const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
+            c.readLoop() catch |err| {
+                log.err("MQTT read loop error: {}", .{err});
+            };
+        }
+    }.run, @ptrCast(&client), .{}) catch |err| {
+        log.err("Failed to spawn MQTT reader: {}", .{err});
+    };
 }
 
 // ============================================================================
