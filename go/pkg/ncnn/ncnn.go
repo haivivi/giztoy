@@ -268,7 +268,8 @@ func (e *Extractor) Close() error {
 // Mat is an N-dimensional tensor. Create with [NewMat2D], [NewMat3D],
 // or [NewMatFromFloat32].
 type Mat struct {
-	mat C.ncnn_mat_t
+	mat    C.ncnn_mat_t
+	pinned any // prevents GC of external data backing this Mat
 }
 
 // NewMat2D creates a 2D Mat (h rows × w cols) backed by external float32 data.
@@ -288,7 +289,7 @@ func NewMat2D(w, h int, data []float32) (*Mat, error) {
 	if mat == nil {
 		return nil, fmt.Errorf("ncnn: mat_create_external_2d failed")
 	}
-	m := &Mat{mat: mat}
+	m := &Mat{mat: mat, pinned: data}
 	runtime.SetFinalizer(m, (*Mat).Close)
 	return m, nil
 }
@@ -309,7 +310,7 @@ func NewMat3D(w, h, c int, data []float32) (*Mat, error) {
 	if mat == nil {
 		return nil, fmt.Errorf("ncnn: mat_create_external_3d failed")
 	}
-	m := &Mat{mat: mat}
+	m := &Mat{mat: mat, pinned: data}
 	runtime.SetFinalizer(m, (*Mat).Close)
 	return m, nil
 }
