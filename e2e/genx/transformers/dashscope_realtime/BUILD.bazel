@@ -9,7 +9,7 @@ go_binary(
         "//go/pkg/doubaospeech",
         "//go/pkg/genx",
         "//go/pkg/genx/transformers",
-        "//e2e/go/genx/transformers/internal",
+        "//e2e/genx/transformers/internal",
         "//go/pkg/minimax",
     ],
 )

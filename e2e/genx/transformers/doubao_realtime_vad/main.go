@@ -29,7 +29,7 @@ import (
 	"github.com/haivivi/giztoy/go/pkg/doubaospeech"
 	"github.com/haivivi/giztoy/go/pkg/genx"
 	"github.com/haivivi/giztoy/go/pkg/genx/transformers"
-	"github.com/haivivi/giztoy/e2e/go/genx/transformers/internal"
+	"github.com/haivivi/giztoy/e2e/genx/transformers/internal"
 	"github.com/haivivi/giztoy/go/pkg/minimax"
 )
 
