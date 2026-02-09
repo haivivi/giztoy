@@ -121,10 +121,24 @@ func (c *Config) ListContexts() ([]string, error) {
 	return names, nil
 }
 
-// AddContext creates a new context directory.
-func (c *Config) AddContext(name string) error {
+// validateContextName checks that a context name is safe for use as a directory name.
+func validateContextName(name string) error {
 	if name == "" {
 		return fmt.Errorf("context name cannot be empty")
+	}
+	if strings.ContainsAny(name, "/\\") {
+		return fmt.Errorf("context name %q must not contain path separators", name)
+	}
+	if strings.HasPrefix(name, ".") {
+		return fmt.Errorf("context name %q must not start with '.'", name)
+	}
+	return nil
+}
+
+// AddContext creates a new context directory.
+func (c *Config) AddContext(name string) error {
+	if err := validateContextName(name); err != nil {
+		return err
 	}
 
 	dir := c.ContextDir(name)
@@ -140,8 +154,8 @@ func (c *Config) AddContext(name string) error {
 
 // DeleteContext removes a context directory and all its service configs.
 func (c *Config) DeleteContext(name string) error {
-	if name == "" {
-		return fmt.Errorf("context name cannot be empty")
+	if err := validateContextName(name); err != nil {
+		return err
 	}
 
 	dir := c.ContextDir(name)
@@ -163,8 +177,8 @@ func (c *Config) DeleteContext(name string) error {
 
 // UseContext switches the current context.
 func (c *Config) UseContext(name string) error {
-	if name == "" {
-		return fmt.Errorf("context name cannot be empty")
+	if err := validateContextName(name); err != nil {
+		return err
 	}
 
 	dir := c.ContextDir(name)
