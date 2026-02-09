@@ -1,11 +1,14 @@
-# End-to-end tests and examples
+# End-to-end integration tests
 #
 # e2e/
-# ├── bazel/        - Bazel mobile platform examples
-# ├── cmd/          - CLI end-to-end test runners (Go binaries)
+# ├── cmd/              - CLI e2e test runners
 # │   ├── minimax/
-# │   └── doubaospeech/
-# ├── go/           - Go SDK examples (single go.mod)
-# └── rust/         - Rust SDK examples
+# │   ├── doubaospeech/
+# │   └── dashscope/
+# ├── chatgear/         - ChatGear integration tests
+# ├── genx/             - GenX transformer chain tests
+# ├── doubaospeech/     - Doubao Speech integration tests
+# ├── doubao_minimax/   - Cross-service integration tests
+# └── matchtest/        - Intent matching e2e tests
 
 package(default_visibility = ["//visibility:public"])

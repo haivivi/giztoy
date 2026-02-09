@@ -14,13 +14,13 @@ harmonyos_application(
     srcs = glob(["HelloWorld/**/*.ets"]),
     ability_name = "EntryAbility",
     bundle_name = "com.example.hellobazel",
-    project_dir = "e2e/bazel/harmonyos/HelloWorld",
+    project_dir = "examples/bazel/harmonyos/HelloWorld",
     resources = glob(["HelloWorld/**/resources/**"]),
 )
 
 # 生成的 targets:
-# - //e2e/bazel/harmonyos:hello_bazel_hap   (HAP 包)
-# - //e2e/bazel/harmonyos:hello_bazel       (安装脚本)
+# - //examples/bazel/harmonyos:hello_bazel_hap   (HAP 包)
+# - //examples/bazel/harmonyos:hello_bazel       (安装脚本)
 
 # ============================================================================
 # 方式 2: 分步构建（更多控制）
@@ -33,7 +33,7 @@ harmonyos_hap(
     bundle_name = "com.example.hellobazel",
     module_name = "entry",
     product = "default",
-    project_dir = "e2e/bazel/harmonyos/HelloWorld",
+    project_dir = "examples/bazel/harmonyos/HelloWorld",
     resources = glob(["HelloWorld/**/resources/**"]),
     tags = ["manual"],
 )
