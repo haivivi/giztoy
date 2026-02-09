@@ -198,6 +198,10 @@ var configGetCmd = &cobra.Command{
 			return err
 		}
 
+		if *m == nil {
+			return fmt.Errorf("key %q not found in %s config (file is empty)", key, service)
+		}
+
 		val, ok := (*m)[key]
 		if !ok {
 			return fmt.Errorf("key %q not found in %s config", key, service)

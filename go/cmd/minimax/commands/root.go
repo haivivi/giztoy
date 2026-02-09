@@ -90,17 +90,29 @@ func init() {
 }
 
 func initConfig() {
-	var err error
-	globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
-	if err != nil {
-		// Log but don't exit — allows the binary to run non-config commands
-		// (e.g., when mounted in a unified CLI like giztoy).
-		fmt.Fprintf(os.Stderr, "Warning: %s config: %v\n", appName, err)
+	if cfgFile != "" {
+		var err error
+		globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: %s config: %v\n", appName, err)
+		}
+		return
 	}
+	// Don't auto-create config dir — avoids side effects when mounted
+	// in a unified CLI. Config is created on first write (add-context).
+	globalConfig = cli.LoadConfigIfExists(appName)
 }
 
-// getConfig returns the global configuration
+// getConfig returns the global configuration, lazily initializing if needed.
 func getConfig() *cli.Config {
+	if globalConfig == nil {
+		var err error
+		globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: %s config: %v\n", appName, err)
+			return nil
+		}
+	}
 	return globalConfig
 }
 
