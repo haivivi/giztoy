@@ -144,6 +144,43 @@ func (e *Extractor) ExtractFromInt16(pcm []byte) [][]float32 {
 	return e.Extract(samples)
 }
 
+// CMVN applies Cepstral Mean and Variance Normalization in-place.
+// For each mel dimension, subtracts the mean and divides by the standard
+// deviation across all frames. This removes channel and environment effects,
+// significantly improving speaker verification accuracy.
+func CMVN(features [][]float32) {
+	if len(features) == 0 {
+		return
+	}
+	numMels := len(features[0])
+	T := float64(len(features))
+
+	for m := 0; m < numMels; m++ {
+		// Compute mean
+		sum := float64(0)
+		for _, f := range features {
+			sum += float64(f[m])
+		}
+		mean := sum / T
+
+		// Compute variance
+		varSum := float64(0)
+		for _, f := range features {
+			d := float64(f[m]) - mean
+			varSum += d * d
+		}
+		std := math.Sqrt(varSum / T)
+		if std < 1e-10 {
+			std = 1e-10
+		}
+
+		// Normalize
+		for _, f := range features {
+			f[m] = float32((float64(f[m]) - mean) / std)
+		}
+	}
+}
+
 // Flatten converts [T][numMels] to a flat [T*numMels] slice suitable for
 // creating an ncnn Mat2D(numMels, T, data).
 func Flatten(features [][]float32) []float32 {

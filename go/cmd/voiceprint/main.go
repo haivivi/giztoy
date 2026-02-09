@@ -90,10 +90,13 @@ func main() {
 			continue
 		}
 
+		// Trim silence from PCM before feature extraction
+		pcm16k = trimSilence(pcm16k, 300) // threshold: ~300/32768 ≈ -40dB
+
 		// fbank features
 		features := fbankExt.ExtractFromInt16(pcm16k)
-		if len(features) < 10 {
-			fmt.Fprintf(os.Stderr, "  skip %s: too short (%d frames)\n", filepath.Base(path), len(features))
+		if len(features) < 30 { // ~0.3s minimum
+			fmt.Fprintf(os.Stderr, "  skip %s: too short after VAD (%d frames)\n", filepath.Base(path), len(features))
 			continue
 		}
 
@@ -220,7 +223,59 @@ func decodeOGGTo16kMono(path string) ([]byte, error) {
 
 // extractEmbedding runs ERes2Net inference on fbank features.
 // features is [T][80] mel filterbank. Returns [512] speaker embedding.
+//
+// For long audio (> segFrames), the features are split into overlapping
+// segments, each segment produces an embedding, and the final embedding
+// is the L2-normalized average. This significantly improves robustness.
 func extractEmbedding(net *ncnn.Net, features [][]float32) ([]float32, error) {
+	const segFrames = 300 // ~3 seconds
+	const hopFrames = 150 // 50% overlap
+
+	if len(features) <= segFrames {
+		return extractSegment(net, features)
+	}
+
+	// Multi-segment averaging
+	var embeddings [][]float32
+	for start := 0; start+segFrames <= len(features); start += hopFrames {
+		seg := features[start : start+segFrames]
+		emb, err := extractSegment(net, seg)
+		if err != nil {
+			continue
+		}
+		embeddings = append(embeddings, emb)
+	}
+	// Include the last segment if we missed it
+	if lastStart := len(features) - segFrames; lastStart > 0 {
+		seg := features[lastStart:]
+		emb, err := extractSegment(net, seg)
+		if err == nil {
+			embeddings = append(embeddings, emb)
+		}
+	}
+
+	if len(embeddings) == 0 {
+		return extractSegment(net, features) // fallback to full
+	}
+
+	// Average and L2-normalize
+	dim := len(embeddings[0])
+	avg := make([]float32, dim)
+	for _, emb := range embeddings {
+		for i, v := range emb {
+			avg[i] += v
+		}
+	}
+	n := float32(len(embeddings))
+	for i := range avg {
+		avg[i] /= n
+	}
+	l2Normalize(avg)
+	return avg, nil
+}
+
+// extractSegment runs ERes2Net on a single feature segment.
+func extractSegment(net *ncnn.Net, features [][]float32) ([]float32, error) {
 	flat := fbank.Flatten(features)
 	numFrames := len(features)
 	numMels := len(features[0])
@@ -246,19 +301,21 @@ func extractEmbedding(net *ncnn.Net, features [][]float32) ([]float32, error) {
 		return nil, fmt.Errorf("empty embedding")
 	}
 
-	// L2-normalize the embedding
+	l2Normalize(emb)
+	return emb, nil
+}
+
+func l2Normalize(v []float32) {
 	norm := float32(0)
-	for _, v := range emb {
-		norm += v * v
+	for _, x := range v {
+		norm += x * x
 	}
 	norm = float32(math.Sqrt(float64(norm)))
 	if norm > 0 {
-		for i := range emb {
-			emb[i] /= norm
+		for i := range v {
+			v[i] /= norm
 		}
 	}
-
-	return emb, nil
 }
 
 // cosineSimilarity computes the cosine similarity between two vectors.
@@ -272,6 +329,67 @@ func cosineSimilarity(a, b []float32) float64 {
 		dot += float64(a[i]) * float64(b[i])
 	}
 	return dot
+}
+
+// trimSilence removes leading and trailing silence from int16 PCM bytes.
+// It uses a simple energy-based VAD: scans for the first/last frame where
+// the RMS energy exceeds the threshold.
+// frameSize is 320 samples (20ms at 16kHz).
+func trimSilence(pcm []byte, threshold int16) []byte {
+	const frameBytes = 640 // 320 samples * 2 bytes
+	numFrames := len(pcm) / frameBytes
+	if numFrames < 3 {
+		return pcm
+	}
+
+	// Compute RMS energy per frame
+	rms := func(start int) float64 {
+		sum := float64(0)
+		for i := 0; i < 320; i++ {
+			off := start + i*2
+			if off+1 >= len(pcm) {
+				break
+			}
+			s := int16(pcm[off]) | int16(pcm[off+1])<<8
+			sum += float64(s) * float64(s)
+		}
+		return math.Sqrt(sum / 320)
+	}
+
+	thresh := float64(threshold)
+
+	// Find first active frame
+	first := 0
+	for f := 0; f < numFrames; f++ {
+		if rms(f*frameBytes) > thresh {
+			first = f
+			break
+		}
+	}
+
+	// Find last active frame
+	last := numFrames - 1
+	for f := numFrames - 1; f >= first; f-- {
+		if rms(f*frameBytes) > thresh {
+			last = f
+			break
+		}
+	}
+
+	// Add 1 frame padding on each side
+	if first > 0 {
+		first--
+	}
+	if last < numFrames-1 {
+		last++
+	}
+
+	startByte := first * frameBytes
+	endByte := (last + 1) * frameBytes
+	if endByte > len(pcm) {
+		endByte = len(pcm)
+	}
+	return pcm[startByte:endByte]
 }
 
 func printSpeakerAnalysis(samples []sample) {

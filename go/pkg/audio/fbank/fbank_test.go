@@ -147,6 +147,43 @@ func TestFlatten(t *testing.T) {
 	}
 }
 
+func TestCMVN(t *testing.T) {
+	cfg := DefaultConfig()
+	ext := New(cfg)
+
+	pcm := make([]float32, 16000)
+	for i := range pcm {
+		pcm[i] = float32(math.Sin(2*math.Pi*440*float64(i)/16000)) * 0.5
+	}
+
+	features := ext.Extract(pcm)
+	CMVN(features)
+
+	// After CMVN, each dimension should have mean ~0 and std ~1
+	numMels := len(features[0])
+	for m := 0; m < numMels; m++ {
+		sum := float64(0)
+		for _, f := range features {
+			sum += float64(f[m])
+		}
+		mean := sum / float64(len(features))
+		if math.Abs(mean) > 0.01 {
+			t.Errorf("mel[%d] mean = %f, want ~0", m, mean)
+		}
+
+		varSum := float64(0)
+		for _, f := range features {
+			d := float64(f[m]) - mean
+			varSum += d * d
+		}
+		std := math.Sqrt(varSum / float64(len(features)))
+		if math.Abs(std-1.0) > 0.01 {
+			t.Errorf("mel[%d] std = %f, want ~1", m, std)
+		}
+	}
+	t.Log("CMVN: all dimensions have mean≈0, std≈1")
+}
+
 func BenchmarkExtract(b *testing.B) {
 	cfg := DefaultConfig()
 	ext := New(cfg)
