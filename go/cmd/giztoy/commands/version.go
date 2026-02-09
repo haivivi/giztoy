@@ -16,7 +16,11 @@ var versionCmd = &cobra.Command{
 		fmt.Println(build.String())
 		if IsVerbose() {
 			fmt.Printf("  go:     %s\n", runtime.Version())
-			fmt.Printf("  config: %s\n", GetConfig().Dir)
+			if cfg, err := GetConfig(); err == nil {
+				fmt.Printf("  config: %s\n", cfg.Dir)
+			} else {
+				fmt.Printf("  config: (unavailable: %v)\n", err)
+			}
 		}
 	},
 }

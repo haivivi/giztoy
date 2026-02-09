@@ -35,7 +35,10 @@ var configListContextsCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List all contexts",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := GetConfig()
+		cfg, err := GetConfig()
+		if err != nil {
+			return err
+		}
 		names, err := cfg.ListContexts()
 		if err != nil {
 			return err
@@ -77,7 +80,10 @@ var configAddContextCmd = &cobra.Command{
 	Short: "Create a new context",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := GetConfig()
+		cfg, err := GetConfig()
+		if err != nil {
+			return err
+		}
 		name := args[0]
 
 		if err := cfg.AddContext(name); err != nil {
@@ -94,7 +100,10 @@ var configDeleteContextCmd = &cobra.Command{
 	Short: "Delete a context and all its service configs",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := GetConfig()
+		cfg, err := GetConfig()
+		if err != nil {
+			return err
+		}
 		name := args[0]
 
 		if err := cfg.DeleteContext(name); err != nil {
@@ -110,7 +119,10 @@ var configUseContextCmd = &cobra.Command{
 	Short: "Set the current context",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := GetConfig()
+		cfg, err := GetConfig()
+		if err != nil {
+			return err
+		}
 		name := args[0]
 
 		if err := cfg.UseContext(name); err != nil {
@@ -125,7 +137,10 @@ var configCurrentContextCmd = &cobra.Command{
 	Use:   "current-context",
 	Short: "Display the current context name",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := GetConfig()
+		cfg, err := GetConfig()
+		if err != nil {
+			return err
+		}
 		if cfg.CurrentContext == "" {
 			fmt.Println("No current context set.")
 			return nil
@@ -146,7 +161,10 @@ Examples:
   giztoy config set dev dashscope api_key sk-xxxx`,
 	Args: cobra.ExactArgs(4),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := GetConfig()
+		cfg, err := GetConfig()
+		if err != nil {
+			return err
+		}
 		ctxName, service, key, value := args[0], args[1], args[2], args[3]
 
 		contextDir := cfg.ContextDir(ctxName)
@@ -189,7 +207,10 @@ var configGetCmd = &cobra.Command{
 	Short: "Get a service config value",
 	Args:  cobra.ExactArgs(3),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := GetConfig()
+		cfg, err := GetConfig()
+		if err != nil {
+			return err
+		}
 		ctxName, service, key := args[0], args[1], args[2]
 
 		contextDir := cfg.ContextDir(ctxName)
@@ -217,7 +238,10 @@ var configEditCmd = &cobra.Command{
 	Short: "Open a service config in the default editor",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := GetConfig()
+		cfg, err := GetConfig()
+		if err != nil {
+			return err
+		}
 		ctxName, service := args[0], args[1]
 
 		path := cfg.ServicePath(ctxName, service)

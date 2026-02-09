@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"github.com/haivivi/giztoy/go/cmd/giztoy/internal/config"
@@ -59,18 +61,36 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 }
 
+// configLoadErr stores the error from config.Load() for deferred reporting.
+var configLoadErr error
+
 func initConfig() {
 	cfg, err := config.Load()
 	if err != nil {
-		// Non-fatal: config dir may not exist yet.
-		cfg = &config.Config{}
+		// Store error for deferred reporting — commands that need config
+		// will get a clear error via GetConfig(). This avoids failing
+		// non-config commands like 'giztoy version'.
+		configLoadErr = err
+		return
 	}
 	globalConfig = cfg
 }
 
 // GetConfig returns the global configuration.
-func GetConfig() *config.Config {
-	return globalConfig
+// Returns an error if the config could not be loaded (e.g., HOME not set).
+func GetConfig() (*config.Config, error) {
+	if globalConfig == nil {
+		if configLoadErr != nil {
+			return nil, fmt.Errorf("config not available: %w", configLoadErr)
+		}
+		// Try loading again (e.g., dir was created since init).
+		cfg, err := config.Load()
+		if err != nil {
+			return nil, fmt.Errorf("config not available: %w", err)
+		}
+		globalConfig = cfg
+	}
+	return globalConfig, nil
 }
 
 // IsVerbose returns whether verbose mode is enabled.
