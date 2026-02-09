@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "onnx",
+    srcs = ["onnx.go"],
+    cgo = True,
+    importpath = "github.com/haivivi/giztoy/go/pkg/onnx",
+    visibility = ["//visibility:public"],
+    cdeps = ["@onnxruntime"],
+)
+
+go_test(
+    name = "onnx_test",
+    srcs = ["onnx_test.go"],
+    data = [
+        "//data/models/ncnn:speaker_eres2net",  # ONNX source model via external
+    ],
+    embed = [":onnx"],
+)
