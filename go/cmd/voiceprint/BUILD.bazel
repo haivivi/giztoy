@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "voiceprint_lib",
-    srcs = ["main.go"],
+    srcs = [
+        "denoise.go",
+        "main.go",
+    ],
     importpath = "github.com/haivivi/giztoy/go/cmd/voiceprint",
     visibility = ["//visibility:private"],
     deps = [

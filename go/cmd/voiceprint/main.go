@@ -462,6 +462,19 @@ func printSpeakerAnalysis(samples []sample) {
 	}
 }
 
+func pcmRMS(pcm []byte) float64 {
+	n := len(pcm) / 2
+	if n == 0 {
+		return 0
+	}
+	sum := 0.0
+	for i := 0; i < n; i++ {
+		s := int16(pcm[i*2]) | int16(pcm[i*2+1])<<8
+		sum += float64(s) * float64(s)
+	}
+	return math.Sqrt(sum / float64(n))
+}
+
 func stats(vals []float64) (avg, min, max float64) {
 	if len(vals) == 0 {
 		return
