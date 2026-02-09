@@ -1,9 +1,361 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"math/cmplx"
+
+	"github.com/haivivi/giztoy/go/pkg/ncnn"
 )
+
+// --------------------------------------------------------------------------
+// DTLN Denoiser (two-stage neural network)
+// --------------------------------------------------------------------------
+
+type dtlnDenoiser struct {
+	net1 *ncnn.Net
+	net2 *ncnn.Net
+}
+
+func newDTLNDenoiser() (*dtlnDenoiser, error) {
+	net1, err := ncnn.LoadModel(ncnn.ModelDenoiseDTLN1)
+	if err != nil {
+		return nil, fmt.Errorf("load DTLN1: %w", err)
+	}
+	net2, err := ncnn.LoadModel(ncnn.ModelDenoiseDTLN2)
+	if err != nil {
+		net1.Close()
+		return nil, fmt.Errorf("load DTLN2: %w", err)
+	}
+	return &dtlnDenoiser{net1: net1, net2: net2}, nil
+}
+
+func (d *dtlnDenoiser) Close() {
+	d.net1.Close()
+	d.net2.Close()
+}
+
+// Denoise runs the full DTLN two-stage pipeline on 16kHz mono int16 PCM.
+func (d *dtlnDenoiser) Denoise(pcm []byte) ([]byte, error) {
+	const (
+		fftSize  = 512
+		hopSize  = 128
+		halfFFT  = fftSize/2 + 1
+		stateLen = 128
+	)
+
+	numSamples := len(pcm) / 2
+	if numSamples < fftSize {
+		return pcm, nil
+	}
+
+	samples := make([]float32, numSamples)
+	for i := 0; i < numSamples; i++ {
+		s := int16(pcm[i*2]) | int16(pcm[i*2+1])<<8
+		samples[i] = float32(s) / 32768.0
+	}
+
+	hann := make([]float64, fftSize)
+	for i := range hann {
+		hann[i] = 0.5 * (1.0 - math.Cos(2*math.Pi*float64(i)/float64(fftSize)))
+	}
+
+	// LSTM states
+	h1 := make([]float32, stateLen)
+	c1 := make([]float32, stateLen)
+	h2 := make([]float32, stateLen)
+	c2 := make([]float32, stateLen)
+	h3 := make([]float32, stateLen)
+	c3 := make([]float32, stateLen)
+	h4 := make([]float32, stateLen)
+	c4 := make([]float32, stateLen)
+
+	output := make([]float64, numSamples)
+	winSum := make([]float64, numSamples)
+	numFrames := (numSamples - fftSize) / hopSize + 1
+
+	for t := 0; t < numFrames; t++ {
+		start := t * hopSize
+
+		// STFT
+		fftR := make([]float64, fftSize)
+		fftI := make([]float64, fftSize)
+		for i := 0; i < fftSize; i++ {
+			fftR[i] = float64(samples[start+i]) * hann[i]
+		}
+		fftInPlace(fftR, fftI)
+
+		mag := make([]float32, halfFFT)
+		phase := make([]complex128, halfFFT)
+		for i := 0; i < halfFFT; i++ {
+			c := complex(fftR[i], fftI[i])
+			mag[i] = float32(cmplx.Abs(c))
+			phase[i] = c
+		}
+
+		// Stage 1: DTLN1
+		mask, nh1, nc1, nh2, nc2, err := d.runStage1(mag, h1, c1, h2, c2)
+		if err != nil {
+			return nil, fmt.Errorf("DTLN1 frame %d: %w", t, err)
+		}
+		h1, c1, h2, c2 = nh1, nc1, nh2, nc2
+
+		// Apply mask
+		ifftR := make([]float64, fftSize)
+		ifftI := make([]float64, fftSize)
+		for i := 0; i < halfFFT; i++ {
+			enhMag := float64(mag[i]) * float64(mask[i])
+			if cmplx.Abs(phase[i]) > 1e-10 {
+				angle := cmplx.Phase(phase[i])
+				c := cmplx.Rect(enhMag, angle)
+				ifftR[i] = real(c)
+				ifftI[i] = imag(c)
+			}
+			if i > 0 && i < halfFFT-1 {
+				ifftR[fftSize-i] = ifftR[i]
+				ifftI[fftSize-i] = -ifftI[i]
+			}
+		}
+		ifftInPlace(ifftR, ifftI)
+
+		timeFrame := make([]float32, fftSize)
+		for i := 0; i < fftSize; i++ {
+			timeFrame[i] = float32(ifftR[i])
+		}
+
+		// Stage 2: DTLN2
+		enhanced, nh3, nc3, nh4, nc4, err := d.runStage2(timeFrame, h3, c3, h4, c4)
+		if err != nil {
+			return nil, fmt.Errorf("DTLN2 frame %d: %w", t, err)
+		}
+		h3, c3, h4, c4 = nh3, nc3, nh4, nc4
+
+		// Overlap-add
+		for i := 0; i < fftSize; i++ {
+			idx := start + i
+			if idx < numSamples {
+				output[idx] += float64(enhanced[i]) * hann[i]
+				winSum[idx] += hann[i] * hann[i]
+			}
+		}
+	}
+
+	for i := range output {
+		if winSum[i] > 1e-8 {
+			output[i] /= winSum[i]
+		}
+	}
+
+	result := make([]byte, numSamples*2)
+	for i := 0; i < numSamples; i++ {
+		s := output[i] * 32768.0
+		if s > 32767 {
+			s = 32767
+		} else if s < -32768 {
+			s = -32768
+		}
+		v := int16(s)
+		result[i*2] = byte(v)
+		result[i*2+1] = byte(v >> 8)
+	}
+	return result, nil
+}
+
+func (d *dtlnDenoiser) runStage1(mag, h1, c1, h2, c2 []float32) (
+	mask, nh1, nc1, nh2, nc2 []float32, err error,
+) {
+	inMag := ncnn.NewMat2D(257, 1, mag)
+	defer inMag.Close()
+	inH1 := ncnn.NewMat2D(128, 1, h1)
+	defer inH1.Close()
+	inC1 := ncnn.NewMat2D(128, 1, c1)
+	defer inC1.Close()
+	inH2 := ncnn.NewMat2D(128, 1, h2)
+	defer inH2.Close()
+	inC2 := ncnn.NewMat2D(128, 1, c2)
+	defer inC2.Close()
+
+	ex := d.net1.NewExtractor()
+	defer ex.Close()
+	ex.SetInput("in0", inMag)
+	ex.SetInput("in1", inH1)
+	ex.SetInput("in2", inC1)
+	ex.SetInput("in3", inH2)
+	ex.SetInput("in4", inC2)
+
+	outMask, err := ex.Extract("out0")
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	defer outMask.Close()
+
+	outH1, err1 := ex.Extract("out1")
+	if err1 != nil {
+		z := make([]float32, 128)
+		return outMask.FloatData(), z, z, z, z, nil
+	}
+	defer outH1.Close()
+	outC1, _ := ex.Extract("out2")
+	defer outC1.Close()
+	outH2, _ := ex.Extract("out3")
+	defer outH2.Close()
+	outC2, _ := ex.Extract("out4")
+	defer outC2.Close()
+
+	return outMask.FloatData(), outH1.FloatData(), outC1.FloatData(),
+		outH2.FloatData(), outC2.FloatData(), nil
+}
+
+func (d *dtlnDenoiser) runStage2(frame, h3, c3, h4, c4 []float32) (
+	enhanced, nh3, nc3, nh4, nc4 []float32, err error,
+) {
+	inFrame := ncnn.NewMat2D(512, 1, frame)
+	defer inFrame.Close()
+	inH3 := ncnn.NewMat2D(128, 1, h3)
+	defer inH3.Close()
+	inC3 := ncnn.NewMat2D(128, 1, c3)
+	defer inC3.Close()
+	inH4 := ncnn.NewMat2D(128, 1, h4)
+	defer inH4.Close()
+	inC4 := ncnn.NewMat2D(128, 1, c4)
+	defer inC4.Close()
+
+	ex := d.net2.NewExtractor()
+	defer ex.Close()
+	ex.SetInput("in0", inFrame)
+	ex.SetInput("in1", inH3)
+	ex.SetInput("in2", inC3)
+	ex.SetInput("in3", inH4)
+	ex.SetInput("in4", inC4)
+
+	outFrame, err := ex.Extract("out0")
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	defer outFrame.Close()
+
+	outH3, err3 := ex.Extract("out1")
+	if err3 != nil {
+		z := make([]float32, 128)
+		return outFrame.FloatData(), z, z, z, z, nil
+	}
+	defer outH3.Close()
+	outC3, _ := ex.Extract("out2")
+	defer outC3.Close()
+	outH4, _ := ex.Extract("out3")
+	defer outH4.Close()
+	outC4, _ := ex.Extract("out4")
+	defer outC4.Close()
+
+	return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(),
+		outH4.FloatData(), outC4.FloatData(), nil
+}
+
+// DenoiseMaskOnly runs only DTLN Stage 1 (frequency-domain masking),
+// skipping Stage 2 (time-domain enhancement). This is more conservative
+// and preserves speaker characteristics better.
+func (d *dtlnDenoiser) DenoiseMaskOnly(pcm []byte) ([]byte, error) {
+	const (
+		fftSize = 512
+		hopSize = 128
+		halfFFT = fftSize/2 + 1
+	)
+
+	numSamples := len(pcm) / 2
+	if numSamples < fftSize {
+		return pcm, nil
+	}
+
+	samples := make([]float32, numSamples)
+	for i := 0; i < numSamples; i++ {
+		s := int16(pcm[i*2]) | int16(pcm[i*2+1])<<8
+		samples[i] = float32(s) / 32768.0
+	}
+
+	hann := make([]float64, fftSize)
+	for i := range hann {
+		hann[i] = 0.5 * (1.0 - math.Cos(2*math.Pi*float64(i)/float64(fftSize)))
+	}
+
+	h1 := make([]float32, 128)
+	c1 := make([]float32, 128)
+	h2 := make([]float32, 128)
+	c2 := make([]float32, 128)
+
+	output := make([]float64, numSamples)
+	winSum := make([]float64, numSamples)
+	numFrames := (numSamples - fftSize) / hopSize + 1
+
+	for t := 0; t < numFrames; t++ {
+		start := t * hopSize
+		re := make([]float64, fftSize)
+		im := make([]float64, fftSize)
+		for i := 0; i < fftSize; i++ {
+			re[i] = float64(samples[start+i]) * hann[i]
+		}
+		fftInPlace(re, im)
+
+		// Magnitude for DTLN1
+		mag := make([]float32, halfFFT)
+		for i := 0; i < halfFFT; i++ {
+			mag[i] = float32(math.Sqrt(re[i]*re[i] + im[i]*im[i]))
+		}
+
+		// DTLN1 mask
+		mask, nh1, nc1, nh2, nc2, err := d.runStage1(mag, h1, c1, h2, c2)
+		if err != nil {
+			return nil, fmt.Errorf("DTLN1 frame %d: %w", t, err)
+		}
+		h1, c1, h2, c2 = nh1, nc1, nh2, nc2
+
+		// Apply mask directly to complex spectrum
+		for i := 0; i < halfFFT; i++ {
+			g := float64(mask[i])
+			re[i] *= g
+			im[i] *= g
+			if i > 0 && i < halfFFT-1 {
+				re[fftSize-i] = re[i]
+				im[fftSize-i] = -im[i]
+			}
+		}
+
+		// IFFT
+		ifftInPlace(re, im)
+
+		// Overlap-add
+		for i := 0; i < fftSize; i++ {
+			idx := start + i
+			if idx < numSamples {
+				output[idx] += re[i] * hann[i]
+				winSum[idx] += hann[i] * hann[i]
+			}
+		}
+	}
+
+	for i := range output {
+		if winSum[i] > 1e-8 {
+			output[i] /= winSum[i]
+		}
+	}
+
+	result := make([]byte, numSamples*2)
+	for i := 0; i < numSamples; i++ {
+		s := output[i] * 32768.0
+		if s > 32767 {
+			s = 32767
+		} else if s < -32768 {
+			s = -32768
+		}
+		v := int16(s)
+		result[i*2] = byte(v)
+		result[i*2+1] = byte(v >> 8)
+	}
+	return result, nil
+}
+
+// --------------------------------------------------------------------------
+// Spectral subtraction (simple, stateless)
+// --------------------------------------------------------------------------
 
 // spectralDenoise applies spectral subtraction noise reduction to 16kHz mono
 // int16 PCM bytes.
