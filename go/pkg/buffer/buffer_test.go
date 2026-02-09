@@ -305,6 +305,38 @@ func TestBuffer_BlockingRead(t *testing.T) {
 	}
 }
 
+func TestBuffer_AddUnblocksReader(t *testing.T) {
+	buf := N[int](10)
+
+	done := make(chan struct{})
+	go func() {
+		v, err := buf.Next()
+		if err != nil {
+			t.Errorf("Next error: %v", err)
+			return
+		}
+		if v != 42 {
+			t.Errorf("Next() = %d, want 42", v)
+		}
+		close(done)
+	}()
+
+	// Give reader time to block
+	time.Sleep(50 * time.Millisecond)
+
+	// Add() should unblock the waiting reader
+	if err := buf.Add(42); err != nil {
+		t.Fatalf("Add error: %v", err)
+	}
+
+	select {
+	case <-done:
+		// Success
+	case <-time.After(time.Second):
+		t.Fatal("Next() was not unblocked by Add()")
+	}
+}
+
 func TestBuffer_AddToClosedBuffer(t *testing.T) {
 	buf := N[int](10)
 	buf.CloseWrite()
