@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "asr_sauc_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/examples/doubaospeech/asr_sauc",
+    visibility = ["//visibility:private"],
+    deps = ["//go/pkg/doubaospeech"],
+)
+
+go_binary(
+    name = "asr_sauc",
+    embed = [":asr_sauc_lib"],
+    visibility = ["//visibility:public"],
+)

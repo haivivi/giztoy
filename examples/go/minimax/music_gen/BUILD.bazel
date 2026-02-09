@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "music_gen_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/examples/minimax/music_gen",
+    visibility = ["//visibility:private"],
+    deps = ["//go/pkg/minimax"],
+)
+
+go_binary(
+    name = "music_gen",
+    embed = [":music_gen_lib"],
+    visibility = ["//visibility:public"],
+)
