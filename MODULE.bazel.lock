@@ -344,7 +344,7 @@
     },
     "//:extensions.bzl%ncnn_ext": {
       "general": {
-        "bzlTransitiveDigest": "npPdZBwrLMkoj+kTKdDBjt1EhB84qiBShzizYzvG2o0=",
+        "bzlTransitiveDigest": "gdr840KgIUBnT04jvcfFgbNQM+R5phlqaH6igSDmcWM=",
         "usagesDigest": "7FXmzMt45LZCdeJCmHX1Yx5NwpRhNuQktngUfiRN+vQ=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -360,7 +360,7 @@
     },
     "//:extensions.bzl%pnnx_ext": {
       "general": {
-        "bzlTransitiveDigest": "npPdZBwrLMkoj+kTKdDBjt1EhB84qiBShzizYzvG2o0=",
+        "bzlTransitiveDigest": "gdr840KgIUBnT04jvcfFgbNQM+R5phlqaH6igSDmcWM=",
         "usagesDigest": "Sfi6G4M1DeRrfXTKujPY38s0GENlMxXWPwOKW9HVcRw=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
