@@ -9,7 +9,7 @@ go_library(
     visibility = ["//visibility:private"],
 )
 
-# Go-based test runner for doubaospeech CLI
+# Go-based test runner for doubaospeech CLI (via giztoy doubao)
 # Usage:
 #   bazel run //e2e/cmd/doubaospeech:run -- 1        # TTS V2 HTTP
 #   bazel run //e2e/cmd/doubaospeech:run -- quick    # Quick smoke test
@@ -18,7 +18,7 @@ go_binary(
     name = "run",
     embed = [":run_lib"],
     data = [
-        "//go/cmd/doubaospeech",
+        "//go/cmd/giztoy",
         "//testdata/doubaospeech:doubaospeech",
     ],
     tags = ["manual"],

@@ -1,15 +1,14 @@
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_go//go:def.bzl", "go_binary")
 
 package(default_visibility = ["//visibility:public"])
 
-sh_binary(
+# DashScope CLI e2e test runner (Go)
+# Usage:
+#   bazel run //e2e/cmd/dashscope:run -- go all
+#   bazel run //e2e/cmd/dashscope:run -- rust 1
+go_binary(
     name = "run",
-    srcs = ["run.sh"],
-    data = [
-        ":commands",
-        "//go/cmd/dashscope",
-        "//rust/cmd/dashscope",
-    ],
+    srcs = ["run.go"],
 )
 
 filegroup(
