@@ -1,13 +1,39 @@
-# Convert all ONNX/JIT models to ncnn format.
+# Convert ONNX/JIT models to ncnn format.
 #
-# Usage:
+# These targets are tagged "manual" — they are NOT built by `bazel build //...`.
+# Run them explicitly when you need to regenerate model files:
+#
 #   bazel build //devops/tools/pnnx:models
 #
-# Output files (in bazel-bin/devops/tools/pnnx/):
+# Then copy the output to data/models/ncnn/:
+#
+#   cp bazel-bin/devops/tools/pnnx/*.ncnn.{param,bin} data/models/ncnn/
+#
+# Prerequisites (system Python packages):
+#   pip3 install numpy onnx torch
+#
+# Output files:
 #   speaker_eres2net.ncnn.{param,bin}   — speaker embedding (19 MB)
 #   vad_silero.ncnn.{param,bin}         — voice activity detection (608 KB)
 #   denoise_dtln1.ncnn.{param,bin}      — noise suppression stage 1 (714 KB)
 #   denoise_dtln2.ncnn.{param,bin}      — noise suppression stage 2 (1.2 MB)
+
+_PYTHON_CHECK = """
+python3 -c "import numpy, onnx, torch" 2>/dev/null || {
+    echo ""
+    echo "============================================================"
+    echo "ERROR: Missing Python dependencies for model conversion."
+    echo ""
+    echo "Please install:"
+    echo "  pip3 install numpy onnx torch"
+    echo ""
+    echo "These are only needed for converting ONNX models to ncnn."
+    echo "Pre-converted models are checked in at data/models/ncnn/."
+    echo "============================================================"
+    echo ""
+    exit 1
+}
+"""
 
 # ERes2Net: direct PNNX conversion (no LSTM issues)
 genrule(
@@ -28,6 +54,7 @@ genrule(
         cp $$WORK/m.ncnn.param $(location speaker_eres2net.ncnn.param)
         cp $$WORK/m.ncnn.bin $(location speaker_eres2net.ncnn.bin)
     """,
+    tags = ["manual"],
     tools = ["@pnnx//:pnnx"],
     visibility = ["//visibility:public"],
 )
@@ -49,7 +76,7 @@ genrule(
         "denoise_dtln2.ncnn.param",
         "denoise_dtln2.ncnn.bin",
     ],
-    cmd = """
+    cmd = _PYTHON_CHECK + """
         set -e
         PNNX=$$(realpath $(execpath @pnnx//:pnnx))
         SCRIPT=$$(realpath $(location convert_models.py))
@@ -67,6 +94,7 @@ genrule(
         cp $$WORK/denoise_dtln2.ncnn.param $(location denoise_dtln2.ncnn.param)
         cp $$WORK/denoise_dtln2.ncnn.bin $(location denoise_dtln2.ncnn.bin)
     """,
+    tags = ["manual"],
     tools = ["@pnnx//:pnnx"],
     visibility = ["//visibility:public"],
 )
@@ -78,5 +106,6 @@ filegroup(
         ":model_speaker",
         ":model_vad_denoise",
     ],
+    tags = ["manual"],
     visibility = ["//visibility:public"],
 )

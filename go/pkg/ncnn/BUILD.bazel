@@ -1,11 +1,13 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 
-# Copy model files to this package directory for go:embed.
+# Copy pre-built model files from data/ for go:embed.
 genrule(
     name = "embed_models",
     srcs = [
-        "//devops/tools/pnnx:model_speaker",
-        "//devops/tools/pnnx:model_vad_denoise",
+        "//data/models/ncnn:speaker_eres2net",
+        "//data/models/ncnn:vad_silero",
+        "//data/models/ncnn:denoise_dtln1",
+        "//data/models/ncnn:denoise_dtln2",
     ],
     outs = [
         "speaker_eres2net.ncnn.param",
