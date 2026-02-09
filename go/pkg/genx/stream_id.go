@@ -25,7 +25,9 @@ func NewStreamID() string {
 
 	// Random component: 6 bytes
 	randomBytes := make([]byte, 6)
-	rand.Read(randomBytes)
+	if _, err := rand.Read(randomBytes); err != nil {
+		panic("crypto/rand: " + err.Error())
+	}
 	randomPart := base62Encode(randomBytes)
 
 	return timePart + randomPart
