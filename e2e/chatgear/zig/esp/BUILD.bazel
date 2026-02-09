@@ -1,7 +1,7 @@
 # ChatGear E2E Test — ESP32 Platform (Korvo-2 V3)
 
 load("@embed_zig//bazel:env.bzl", "make_env_file")
-load("@embed_zig//bazel/esp:defs.bzl", "esp_modules", "esp_flash", "esp_sdkconfig", "esp_zig_app")
+load("@embed_zig//bazel/esp:defs.bzl", "esp_modules", "esp_flash", "esp_monitor", "esp_sdkconfig", "esp_zig_app")
 load("@embed_zig//bazel/esp/sdkconfig:app.bzl", "esp_app")
 load("@embed_zig//bazel/esp/sdkconfig:core.bzl", "esp_core")
 load("@embed_zig//bazel/esp/sdkconfig:freertos.bzl", "esp_freertos")
@@ -9,6 +9,7 @@ load("@embed_zig//bazel/esp/sdkconfig:log.bzl", "esp_log")
 load("@embed_zig//bazel/esp/sdkconfig:lwip.bzl", "esp_lwip")
 load("@embed_zig//bazel/esp/sdkconfig:psram.bzl", "esp_psram")
 load("@embed_zig//bazel/esp/sdkconfig:wifi.bzl", "esp_wifi")
+load("@embed_zig//bazel/esp/sdkconfig:crypto.bzl", "esp_crypto")
 load("@embed_zig//bazel/esp/partition:entry.bzl", "esp_partition_entry")
 load("@embed_zig//bazel/esp/partition:table.bzl", "esp_partition_table")
 
@@ -32,6 +33,7 @@ esp_psram(
     chip = "esp32s3",
     mode = "oct",
     speed = "80m",
+    xip_from_psram = True,
 )
 
 esp_freertos(
@@ -56,6 +58,11 @@ esp_wifi(
     tx_ba_win = 6,
 )
 
+esp_crypto(
+    name = "mbedtls_full",
+    disable_mbedtls = False,
+)
+
 esp_lwip(
     name = "lwip",
     max_active_tcp = 16,
@@ -74,6 +81,7 @@ esp_sdkconfig(
     lwip = ":lwip",
     psram = ":psram",
     wifi = ":wifi",
+    crypto = ":mbedtls_full",
 )
 
 # =============================================================================
@@ -82,7 +90,7 @@ esp_sdkconfig(
 
 esp_app(
     name = "app_config",
-    run_in_psram = 131072,  # 128KB stack in PSRAM
+    run_in_psram = 262144,  # 256KB stack in PSRAM (TLS handshake needs large stack)
 )
 
 # =============================================================================
@@ -204,4 +212,8 @@ esp_flash(
     name = "flash",
     app = ":app",
     partition_table = ":partitions",
+)
+
+esp_monitor(
+    name = "monitor",
 )
