@@ -112,156 +112,98 @@ pub fn stampedSize(opus_frame_len: usize) usize {
 // JSON Encoding — State Event
 // ============================================================================
 
-/// Encode a StateEvent to JSON.
+/// Encode a StateEvent to JSON using fmt.bufPrint.
 /// Go format: {"v":1,"t":123,"s":"ready","c":{...},"ut":123}
 /// Returns the number of bytes written.
 pub fn encodeStateEvent(event: *const types.StateEvent, output: []u8) !usize {
-    var stream = std.io.fixedBufferStream(output);
-    var writer = std.json.writeStream(stream.writer(), .{});
+    var fbs = std.io.fixedBufferStream(output);
+    const w = fbs.writer();
 
-    try writer.beginObject();
-
-    try writer.objectField("v");
-    try writer.write(event.version);
-
-    try writer.objectField("t");
-    try writer.write(event.time);
-
-    try writer.objectField("s");
-    try writer.write(event.state.toString());
+    try w.print("{{\"v\":{d},\"t\":{d}", .{ event.version, event.time });
+    try w.writeAll(",\"s\":\"");
+    try w.writeAll(event.state.toString());
+    try w.writeByte('"');
 
     if (event.cause) |cause| {
-        try writer.objectField("c");
-        try writer.beginObject();
+        try w.writeAll(",\"c\":{");
+        var first = true;
         if (cause.calling_initiated) {
-            try writer.objectField("calling_initiated");
-            try writer.write(true);
+            try w.writeAll("\"calling_initiated\":true");
+            first = false;
         }
         if (cause.calling_resume) {
-            try writer.objectField("calling_resume");
-            try writer.write(true);
+            if (!first) try w.writeByte(',');
+            try w.writeAll("\"calling_resume\":true");
         }
-        try writer.endObject();
+        try w.writeByte('}');
     }
 
-    try writer.objectField("ut");
-    try writer.write(event.update_at);
+    try w.print(",\"ut\":{d}}}", .{event.update_at});
 
-    try writer.endObject();
-
-    return stream.pos;
+    return fbs.pos;
 }
 
 // ============================================================================
 // JSON Encoding — Stats Event
 // ============================================================================
 
-/// Encode a StatsEvent to JSON.
+/// Encode a StatsEvent to JSON using fmt.
 /// Only encodes non-null fields (diff upload).
 /// Returns the number of bytes written.
 pub fn encodeStatsEvent(event: *const types.StatsEvent, output: []u8) !usize {
-    var stream = std.io.fixedBufferStream(output);
-    var writer = std.json.writeStream(stream.writer(), .{});
+    var fbs = std.io.fixedBufferStream(output);
+    const w = fbs.writer();
 
-    try writer.beginObject();
-
-    try writer.objectField("time");
-    try writer.write(event.time);
+    try w.print("{{\"time\":{d}", .{event.time});
 
     if (event.last_reset_at != 0) {
-        try writer.objectField("last_reset_at");
-        try writer.write(event.last_reset_at);
+        try w.print(",\"last_reset_at\":{d}", .{event.last_reset_at});
     }
 
     if (event.battery) |bat| {
-        try writer.objectField("battery");
-        try writer.beginObject();
-        try writer.objectField("percentage");
-        try writer.write(bat.percentage);
-        try writer.objectField("is_charging");
-        try writer.write(bat.is_charging);
-        if (bat.voltage != 0) {
-            try writer.objectField("voltage");
-            try writer.write(bat.voltage);
-        }
-        if (bat.temperature != 0) {
-            try writer.objectField("temperature");
-            try writer.write(bat.temperature);
-        }
-        try writer.endObject();
+        try w.print(",\"battery\":{{\"percentage\":{d},\"is_charging\":{s}}}", .{
+            @as(i32, @intFromFloat(bat.percentage)),
+            if (bat.is_charging) @as([]const u8, "true") else "false",
+        });
     }
 
     if (event.system_version) |sv| {
-        try writer.objectField("system_version");
-        try writer.beginObject();
-        try writer.objectField("current_version");
-        try writer.write(sv.current_version);
-        try writer.endObject();
+        try w.writeAll(",\"system_version\":{\"current_version\":\"");
+        try w.writeAll(sv.current_version);
+        try w.writeAll("\"}");
     }
 
     if (event.volume) |vol| {
-        try writer.objectField("volume");
-        try writer.beginObject();
-        try writer.objectField("percentage");
-        try writer.write(vol.percentage);
-        try writer.objectField("update_at");
-        try writer.write(vol.update_at);
-        try writer.endObject();
+        try w.print(",\"volume\":{{\"percentage\":{d},\"update_at\":{d}}}", .{ @as(i32, @intFromFloat(vol.percentage)), vol.update_at });
     }
 
     if (event.brightness) |br| {
-        try writer.objectField("brightness");
-        try writer.beginObject();
-        try writer.objectField("percentage");
-        try writer.write(br.percentage);
-        try writer.objectField("update_at");
-        try writer.write(br.update_at);
-        try writer.endObject();
+        try w.print(",\"brightness\":{{\"percentage\":{d},\"update_at\":{d}}}", .{ @as(i32, @intFromFloat(br.percentage)), br.update_at });
     }
 
     if (event.light_mode) |lm| {
-        try writer.objectField("light_mode");
-        try writer.beginObject();
-        try writer.objectField("mode");
-        try writer.write(lm.mode);
-        try writer.objectField("update_at");
-        try writer.write(lm.update_at);
-        try writer.endObject();
+        try w.print(",\"light_mode\":{{\"mode\":\"{s}\",\"update_at\":{d}}}", .{ lm.mode, lm.update_at });
     }
 
     if (event.wifi_network) |wifi| {
-        try writer.objectField("wifi_network");
-        try writer.beginObject();
-        try writer.objectField("ssid");
-        try writer.write(wifi.ssid);
-        try writer.objectField("ip");
-        try writer.write(wifi.ip);
-        try writer.objectField("rssi");
-        try writer.write(wifi.rssi);
-        try writer.endObject();
+        try w.print(",\"wifi_network\":{{\"ssid\":\"{s}\",\"ip\":\"{s}\",\"rssi\":{d}}}", .{
+            wifi.ssid,
+            wifi.ip,
+            @as(i32, @intFromFloat(wifi.rssi)),
+        });
     }
 
     if (event.pair_status) |ps| {
-        try writer.objectField("pair_status");
-        try writer.beginObject();
-        try writer.objectField("pair_with");
-        try writer.write(ps.pair_with);
-        try writer.objectField("update_at");
-        try writer.write(ps.update_at);
-        try writer.endObject();
+        try w.print(",\"pair_status\":{{\"pair_with\":\"{s}\",\"update_at\":{d}}}", .{ ps.pair_with, ps.update_at });
     }
 
     if (event.shaking) |sh| {
-        try writer.objectField("shaking");
-        try writer.beginObject();
-        try writer.objectField("level");
-        try writer.write(sh.level);
-        try writer.endObject();
+        try w.print(",\"shaking\":{{\"level\":{d}}}", .{@as(i32, @intFromFloat(sh.level))});
     }
 
-    try writer.endObject();
+    try w.writeByte('}');
 
-    return stream.pos;
+    return fbs.pos;
 }
 
 // ============================================================================

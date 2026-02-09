@@ -31,11 +31,45 @@ pub const Hardware = struct {
 pub const socket = idf.socket.Socket;
 
 // ============================================================================
-// Runtime (for Channel, WaitGroup, Spawner)
-// Uses FreeRTOS-based EspRuntime from idf binding layer.
+// mqtt0 Runtime — FreeRTOS Mutex + ESP time
+// (mqtt0 only needs Mutex + Time, not full Channel/Spawner runtime)
 // ============================================================================
 
-pub const runtime = idf.runtime;
+pub const MqttRt = struct {
+    pub const Mutex = idf.runtime.Mutex;
+    pub const Time = struct {
+        pub fn sleepMs(ms: u32) void {
+            idf.time.sleepMs(ms);
+        }
+        pub fn getTimeMs() u64 {
+            return idf.time.nowMs();
+        }
+    };
+};
+
+// ============================================================================
+// Full Runtime (for Channel, WaitGroup, Spawner)
+// Uses FreeRTOS-based EspRuntime + Time from idf.
+// ============================================================================
+
+pub const FullRt = struct {
+    pub const Mutex = idf.runtime.Mutex;
+    pub const Condition = idf.runtime.Condition;
+    pub const Options = idf.runtime.Options;
+    pub const spawn = idf.runtime.spawn;
+    pub fn sleepMs(ms: u32) void {
+        idf.time.sleepMs(ms);
+    }
+    pub fn getTimeMs() u64 {
+        return idf.time.nowMs();
+    }
+};
+
+// ============================================================================
+// Heap Allocator (PSRAM)
+// ============================================================================
+
+pub const allocator = idf.heap.psram;
 
 // ============================================================================
 // Crypto Suite (for TLS)

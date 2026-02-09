@@ -86,9 +86,7 @@ esp_app(
 )
 
 # =============================================================================
-# Compile-time Environment Variables
-# Override with: --define WIFI_SSID=MyWiFi --define WIFI_PASSWORD=secret
-#                --define MQTT_HOST=broker.example.com
+# Environment Variables (--define WIFI_SSID=... --define MQTT_URL=... etc.)
 # =============================================================================
 
 make_env_file(
@@ -164,6 +162,26 @@ esp_zig_app(
     app_config = ":app_config",
     boards = ["korvo2_v3"],
     env = ":env",
+    requires = ["esp_wifi", "esp_event", "esp_netif", "nvs_flash", "lwip", "mbedtls", "driver", "esp_adc", "freertos"],
+    force_link = [
+        "${EVENT_FORCE_LINK}",
+        "${WIFI_FORCE_LINK}",
+        "${NET_FORCE_LINK}",
+        "${RUNTIME_FORCE_LINK}",
+        "adc_oneshot_new_unit",
+        "adc_oneshot_config_channel",
+        "adc_oneshot_read",
+        "adc_oneshot_del_unit",
+        "verify_with_esp_bundle",
+    ],
+    extra_cmake = [
+        "include(${_ESP_LIB}/platform/esp/idf/src/event/event.cmake)",
+        "include(${_ESP_LIB}/platform/esp/idf/src/wifi/wifi.cmake)",
+        "include(${_ESP_LIB}/platform/esp/idf/src/net/net.cmake)",
+        "include(${_ESP_LIB}/platform/esp/idf/src/mbed_tls/mbed_tls.cmake)",
+        "include(${_ESP_LIB}/platform/esp/idf/src/runtime/runtime.cmake)",
+    ],
+    extra_c_sources = ["EVENT_SRCS", "WIFI_C_SOURCES", "NET_C_SOURCES", "MBED_TLS_C_SOURCES", "RUNTIME_C_SOURCES"],
     deps = [
         ":idf",
         ":esp",
@@ -174,15 +192,10 @@ esp_zig_app(
         "@embed_zig//lib/pkg/dns",
         "@embed_zig//lib/pkg/channel",
         "@embed_zig//lib/pkg/cancellation",
+        "@embed_zig//lib/pkg/math",
+        "@embed_zig//lib/pkg/motion",
         "//zig/chatgear",
     ],
-    force_link = [
-        "adc_oneshot_new_unit",
-        "adc_oneshot_config_channel",
-        "adc_oneshot_read",
-        "adc_oneshot_del_unit",
-    ],
-    requires = ["driver", "esp_adc", "freertos"],
     sdkconfig = ":sdkconfig",
     partition_table = ":partitions",
 )

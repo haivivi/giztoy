@@ -29,16 +29,17 @@ const mqtt0 = @import("mqtt0");
 const tls = @import("tls");
 const dns = @import("dns");
 
-const Rt = hw.runtime;
+const MqttRt = hw.MqttRt;
+const FullRt = hw.FullRt;
 const Socket = Board.socket;
 const Crypto = hw.crypto;
 const TlsClient = tls.Client(Socket, Crypto);
-const TcpMqttClient = mqtt0.Client(Socket);
-const TlsMqttClient = mqtt0.Client(TlsClient);
+const TcpMqttClient = mqtt0.Client(Socket, MqttRt);
+const TlsMqttClient = mqtt0.Client(TlsClient, MqttRt);
 const TcpConn = chatgear.MqttClientConn(TcpMqttClient);
 const TlsConn = chatgear.MqttClientConn(TlsMqttClient);
-const TcpPort = chatgear.ClientPort(TcpMqttClient, Rt);
-const TlsPort = chatgear.ClientPort(TlsMqttClient, Rt);
+const TcpPort = chatgear.ClientPort(TcpMqttClient, FullRt);
+const TlsPort = chatgear.ClientPort(TlsMqttClient, FullRt);
 
 // ============================================================================
 // MQTT URL Parser
@@ -292,7 +293,7 @@ fn connectTcp(app_state: *AppState) void {
         return;
     };
 
-    var mux = mqtt0.Mux.init(std.heap.c_allocator) catch |err| {
+    var mux = mqtt0.Mux(MqttRt).init(hw.allocator) catch |err| {
         log.err("Mux init failed: {}", .{err});
         socket.close();
         return;
@@ -302,6 +303,7 @@ fn connectTcp(app_state: *AppState) void {
         .client_id = config.gear_id,
         .username = config.mqtt.username,
         .password = config.mqtt.password,
+        .allocator = hw.allocator,
     }) catch |err| {
         log.err("MQTT connect failed: {}", .{err});
         socket.close();
@@ -323,7 +325,7 @@ fn connectTcp(app_state: *AppState) void {
     app_state.* = .running;
 
     // MQTT readLoop in background (blocks until disconnect)
-    Rt.spawn("mqtt_rx", struct {
+    FullRt.spawn("mqtt_rx", struct {
         fn run(ctx: ?*anyopaque) void {
             const c: *TcpMqttClient = @ptrCast(@alignCast(ctx));
             c.readLoop() catch |err| {
@@ -357,14 +359,24 @@ fn connectTls(app_state: *AppState) void {
     };
 
     // TLS handshake
-    var tls_client = TlsClient.init(&socket, config.mqtt.host) catch |err| {
+    var tls_client = TlsClient.init(&socket, .{
+        .hostname = config.mqtt.host,
+        .allocator = hw.allocator,
+        .skip_verify = true, // ESP32 has no CA store, skip cert verification
+    }) catch |err| {
         log.err("TLS handshake failed: {}", .{err});
         socket.close();
         Board.time.sleepMs(3000);
         return;
     };
+    tls_client.connect() catch |err| {
+        log.err("TLS connect failed: {}", .{err});
+        socket.close();
+        Board.time.sleepMs(3000);
+        return;
+    };
 
-    var mux = mqtt0.Mux.init(std.heap.c_allocator) catch |err| {
+    var mux = mqtt0.Mux(MqttRt).init(hw.allocator) catch |err| {
         log.err("Mux init failed: {}", .{err});
         return;
     };
@@ -373,6 +385,7 @@ fn connectTls(app_state: *AppState) void {
         .client_id = config.gear_id,
         .username = config.mqtt.username,
         .password = config.mqtt.password,
+        .allocator = hw.allocator,
     }) catch |err| {
         log.err("MQTT connect failed: {}", .{err});
         Board.time.sleepMs(3000);
@@ -392,7 +405,7 @@ fn connectTls(app_state: *AppState) void {
     initPort(&port);
     app_state.* = .running;
 
-    Rt.spawn("mqtt_rx", struct {
+    FullRt.spawn("mqtt_rx", struct {
         fn run(ctx: ?*anyopaque) void {
             const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
             c.readLoop() catch |err| {
