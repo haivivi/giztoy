@@ -59,8 +59,9 @@ func initConfig() {
 	var err error
 	globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
+		// Log but don't exit — allows the binary to run non-config commands
+		// (e.g., when mounted in a unified CLI like giztoy).
+		fmt.Fprintf(os.Stderr, "Warning: %s config: %v\n", appName, err)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -153,15 +154,26 @@ Examples:
 			return fmt.Errorf("context %q not found", ctxName)
 		}
 
-		// Load existing service config as map, or create new.
-		existing, err := config.LoadService[map[string]any](contextDir, service)
-		if err != nil {
+		// Load existing service config, or create new if file doesn't exist.
+		servicePath := filepath.Join(contextDir, service+".yaml")
+		var m map[string]any
+		if _, statErr := os.Stat(servicePath); os.IsNotExist(statErr) {
 			// File doesn't exist yet — start fresh.
-			m := map[string]any{key: value}
-			existing = &m
+			m = map[string]any{key: value}
 		} else {
-			(*existing)[key] = value
+			existing, loadErr := config.LoadService[map[string]any](contextDir, service)
+			if loadErr != nil {
+				return fmt.Errorf("cannot read existing %s config: %w", service, loadErr)
+			}
+			// Handle empty YAML files (unmarshal produces nil map).
+			if *existing == nil {
+				m = map[string]any{key: value}
+			} else {
+				m = *existing
+				m[key] = value
+			}
 		}
+		existing := &m
 
 		if err := config.SaveService(contextDir, service, existing); err != nil {
 			return err

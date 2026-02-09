@@ -8,8 +8,7 @@ import (
 
 var (
 	// Global flags
-	contextName string
-	verbose     bool
+	verbose bool
 
 	// Global configuration (loaded at init time)
 	globalConfig *config.Config
@@ -39,12 +38,12 @@ Examples:
   giztoy config add-context dev
   giztoy config set dev minimax api_key YOUR_KEY
 
-  # Run a command with a specific context
-  giztoy -c dev minimax speech synthesize -f request.yaml
-
-  # Use the current context
+  # Use the current context for subcommands
   giztoy config use-context dev
-  giztoy minimax text chat -f chat.yaml`,
+  giztoy minimax text chat -f chat.yaml
+
+  # Or specify context on the subcommand
+  giztoy minimax -c dev speech synthesize -f request.yaml`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
@@ -57,7 +56,6 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVarP(&contextName, "context", "c", "", "context name (default: current-context)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 }
 
@@ -73,11 +71,6 @@ func initConfig() {
 // GetConfig returns the global configuration.
 func GetConfig() *config.Config {
 	return globalConfig
-}
-
-// GetContextName returns the context name from the flag.
-func GetContextName() string {
-	return contextName
 }
 
 // IsVerbose returns whether verbose mode is enabled.
