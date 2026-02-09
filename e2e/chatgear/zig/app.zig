@@ -341,18 +341,7 @@ fn connectTcp(app_state: *AppState) void {
 // MQTT Connection (TLS)
 // ============================================================================
 
-/// Heap-allocated connection state — outlives connectTls() stack frame.
-/// All spawned tasks hold pointers into this struct.
-const TlsSession = struct {
-    socket: Socket,
-    tls_client: TlsClient,
-    mux: mqtt0.Mux(MqttRt),
-    client: TlsMqttClient,
-    conn: TlsConn,
-    port: TlsPort,
-};
-
-var tls_session: ?*TlsSession = null;
+const alloc = hw.allocator;
 
 fn connectTls(app_state: *AppState) void {
     log.info("Connecting MQTT (TLS) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
@@ -360,98 +349,113 @@ fn connectTls(app_state: *AppState) void {
     const ip = resolveHost(config.mqtt.host) orelse return;
     log.info("Resolved {s} -> {d}.{d}.{d}.{d}", .{ config.mqtt.host, ip[0], ip[1], ip[2], ip[3] });
 
-    // Heap-allocate session in PSRAM — must outlive this function
-    const s = hw.allocator.create(TlsSession) catch |err| {
-        log.err("Failed to allocate TLS session: {}", .{err});
+    // Each component separately heap-allocated in PSRAM.
+    // Avoids Zig value-copy issues with self-referential pointers.
+
+    const sock = alloc.create(Socket) catch |err| {
+        log.err("alloc socket: {}", .{err});
         return;
     };
-
-    s.socket = Socket.tcp() catch |err| {
+    sock.* = Socket.tcp() catch |err| {
         log.err("TCP socket failed: {}", .{err});
-        hw.allocator.destroy(s);
         return;
     };
-
-    // Set recv timeout (critical for TLS handshake)
-    s.socket.setRecvTimeout(30000);
-
-    s.socket.connect(ip, config.mqtt.port) catch |err| {
+    sock.setRecvTimeout(30000);
+    sock.connect(ip, config.mqtt.port) catch |err| {
         log.err("TCP connect failed: {}", .{err});
-        s.socket.close();
-        hw.allocator.destroy(s);
+        sock.close();
         Board.time.sleepMs(3000);
         return;
     };
     log.info("TCP connected", .{});
 
-    // TLS handshake
+    // TLS
     log.info("TLS handshake...", .{});
-    s.tls_client = TlsClient.init(&s.socket, .{
+    const tls_c = alloc.create(TlsClient) catch |err| {
+        log.err("alloc tls: {}", .{err});
+        return;
+    };
+    tls_c.* = TlsClient.init(sock, .{
         .hostname = config.mqtt.host,
-        .allocator = hw.allocator,
+        .allocator = alloc,
         .skip_verify = true,
         .timeout_ms = 30000,
     }) catch |err| {
         log.err("TLS init failed: {}", .{err});
-        s.socket.close();
-        hw.allocator.destroy(s);
+        sock.close();
         Board.time.sleepMs(3000);
         return;
     };
-    s.tls_client.connect() catch |err| {
+    tls_c.connect() catch |err| {
         log.err("TLS handshake failed: {}", .{err});
-        s.tls_client.deinit();
-        hw.allocator.destroy(s);
+        tls_c.deinit();
         Board.time.sleepMs(3000);
         return;
     };
     log.info("TLS connected!", .{});
 
-    s.mux = mqtt0.Mux(MqttRt).init(hw.allocator) catch |err| {
+    // MQTT mux
+    const mux = alloc.create(mqtt0.Mux(MqttRt)) catch |err| {
+        log.err("alloc mux: {}", .{err});
+        return;
+    };
+    mux.* = mqtt0.Mux(MqttRt).init(alloc) catch |err| {
         log.err("Mux init failed: {}", .{err});
-        hw.allocator.destroy(s);
         return;
     };
 
+    // MQTT client
     log.info("MQTT connecting...", .{});
-    s.client = TlsMqttClient.init(&s.tls_client, &s.mux, .{
+    const client = alloc.create(TlsMqttClient) catch |err| {
+        log.err("alloc client: {}", .{err});
+        return;
+    };
+    client.* = TlsMqttClient.init(tls_c, mux, .{
         .client_id = config.gear_id,
         .username = config.mqtt.username,
         .password = config.mqtt.password,
-        .allocator = hw.allocator,
+        .allocator = alloc,
     }) catch |err| {
         log.err("MQTT connect failed: {}", .{err});
-        hw.allocator.destroy(s);
         Board.time.sleepMs(3000);
         return;
     };
     log.info("MQTT connected!", .{});
 
-    s.conn = TlsConn.init(&s.client, .{
+    // ChatGear connection
+    const conn = alloc.create(TlsConn) catch |err| {
+        log.err("alloc conn: {}", .{err});
+        return;
+    };
+    conn.* = TlsConn.init(client, .{
         .scope = config.scope,
         .gear_id = config.gear_id,
     });
-    s.conn.subscribe() catch |err| {
+    conn.subscribe() catch |err| {
         log.err("MQTT subscribe failed: {}", .{err});
-        hw.allocator.destroy(s);
         return;
     };
     log.info("MQTT subscribed to downlink topics", .{});
 
-    s.port = TlsPort.init(&s.conn);
-    tls_session = s;
+    // ChatGear port
+    const port = alloc.create(TlsPort) catch |err| {
+        log.err("alloc port: {}", .{err});
+        return;
+    };
+    port.* = TlsPort.init(conn);
 
-    initPort(&s.port);
+    initPort(port);
     app_state.* = .running;
 
+    // MQTT readLoop in background
     FullRt.spawn("mqtt_rx", struct {
         fn run(ctx: ?*anyopaque) void {
-            const sess: *TlsSession = @ptrCast(@alignCast(ctx));
-            sess.client.readLoop() catch |err| {
+            const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
+            c.readLoop() catch |err| {
                 log.err("MQTT read loop error: {}", .{err});
             };
         }
-    }.run, @ptrCast(s), .{}) catch |err| {
+    }.run, @ptrCast(client), .{ .stack_size = 32768 }) catch |err| {
         log.err("Failed to spawn MQTT reader: {}", .{err});
     };
 }
