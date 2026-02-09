@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "commands",
+    srcs = [
+        "config.go",
+        "cortex.go",
+        "dashscope.go",
+        "doubao.go",
+        "gear.go",
+        "minimax.go",
+        "root.go",
+        "version.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/cmd/giztoy/commands",
+    visibility = ["//go/cmd/giztoy:__subpackages__"],
+    deps = [
+        "//go/cmd/cortextest/commands",
+        "//go/cmd/dashscope/commands",
+        "//go/cmd/doubaospeech/commands",
+        "//go/cmd/geartest/commands",
+        "//go/cmd/giztoy/internal/build",
+        "//go/cmd/giztoy/internal/config",
+        "//go/cmd/minimax/commands",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)

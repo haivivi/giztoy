@@ -121,7 +121,11 @@ For full CLI usage, run: minimax --help`)
 }
 
 func handleContextCommand(args []string) {
-	cfg := getConfig()
+	cfg, err := getConfig()
+	if err != nil {
+		printError("%v", err)
+		return
+	}
 
 	if len(args) == 0 {
 		// Show current context

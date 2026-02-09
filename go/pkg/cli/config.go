@@ -84,6 +84,42 @@ func LoadConfig(appName string) (*Config, error) {
 	return LoadConfigWithPath(appName, "")
 }
 
+// LoadConfigIfExists loads the configuration only if the config file exists.
+// Returns nil (no error) if the config file does not exist, without creating
+// any directories or files. This is useful for initConfig callbacks that run
+// globally (e.g., when mounted in a unified CLI) to avoid creating config
+// directories for services the user may never use.
+func LoadConfigIfExists(appName string) *Config {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	configPath := filepath.Join(home, DefaultBaseDir, appName, DefaultConfigFile)
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil // File doesn't exist or can't be read — skip silently.
+	}
+
+	cfg := &Config{
+		AppName:    appName,
+		Contexts:   make(map[string]*Context),
+		configPath: configPath,
+	}
+
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil // Malformed config — skip silently.
+	}
+
+	if cfg.Contexts == nil {
+		cfg.Contexts = make(map[string]*Context)
+	}
+
+	cfg.AppName = appName
+	cfg.configPath = configPath
+	return cfg
+}
+
 // LoadConfigWithPath loads configuration from a custom path
 func LoadConfigWithPath(appName, customPath string) (*Config, error) {
 	var configPath string

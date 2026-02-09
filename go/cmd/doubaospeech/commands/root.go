@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -60,6 +59,11 @@ Examples:
 	SilenceErrors: true,
 }
 
+// Command returns the root cobra command for mounting into a parent CLI.
+func Command() *cobra.Command {
+	return rootCmd
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() error {
 	return rootCmd.Execute()
@@ -89,25 +93,37 @@ func init() {
 	rootCmd.AddCommand(interactiveCmd)
 }
 
+// configErr stores the config load error for deferred reporting.
+var configErr error
+
 func initConfig() {
-	var err error
-	globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error initializing config: %v\n", err)
-		os.Exit(1)
+	if cfgFile != "" {
+		globalConfig, configErr = cli.LoadConfigWithPath(appName, cfgFile)
+		return
 	}
+	globalConfig = cli.LoadConfigIfExists(appName)
 }
 
-// getConfig returns the global configuration
-func getConfig() *cli.Config {
-	return globalConfig
+// getConfig returns the global configuration, lazily initializing if needed.
+func getConfig() (*cli.Config, error) {
+	if globalConfig == nil {
+		if configErr != nil {
+			return nil, fmt.Errorf("%s config: %w", appName, configErr)
+		}
+		var err error
+		globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
+		if err != nil {
+			return nil, fmt.Errorf("%s config: %w", appName, err)
+		}
+	}
+	return globalConfig, nil
 }
 
 // getContext returns the context configuration to use
 func getContext() (*cli.Context, error) {
-	cfg := getConfig()
-	if cfg == nil {
-		return nil, fmt.Errorf("configuration not initialized")
+	cfg, err := getConfig()
+	if err != nil {
+		return nil, err
 	}
 
 	ctx, err := cfg.ResolveContext(contextName)

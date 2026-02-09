@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/haivivi/giztoy/go/pkg/cli"
@@ -34,6 +33,11 @@ allowing you to switch between different environments (dev, staging, prod).`,
 	},
 }
 
+// Command returns the root cobra command for mounting into a parent CLI.
+func Command() *cobra.Command {
+	return rootCmd
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() error {
 	return rootCmd.Execute()
@@ -50,17 +54,30 @@ func init() {
 	rootCmd.AddCommand(configCmd)
 }
 
+// configErr stores the config load error for deferred reporting.
+var configErr error
+
 func initConfig() {
-	var err error
-	globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
+	if cfgFile != "" {
+		globalConfig, configErr = cli.LoadConfigWithPath(appName, cfgFile)
+		return
 	}
+	globalConfig = cli.LoadConfigIfExists(appName)
 }
 
 // getContext returns the context to use, resolving from flag or current context.
 func getContext() (*cli.Context, error) {
+	if globalConfig == nil {
+		if configErr != nil {
+			return nil, fmt.Errorf("%s config: %w", appName, configErr)
+		}
+		// Lazy init: create config on first use.
+		var err error
+		globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
+		if err != nil {
+			return nil, fmt.Errorf("%s config: %w", appName, err)
+		}
+	}
 	return globalConfig.ResolveContext(contextName)
 }
 

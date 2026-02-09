@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "giztoy_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/go/cmd/giztoy",
+    visibility = ["//visibility:private"],
+    deps = ["//go/cmd/giztoy/commands"],
+)
+
+go_binary(
+    name = "giztoy",
+    embed = [":giztoy_lib"],
+    visibility = ["//visibility:public"],
+)
