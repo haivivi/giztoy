@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"math"
 	"math/cmplx"
+	"os"
 	"testing"
 
+	"github.com/haivivi/giztoy/go/pkg/audio/fbank"
 	"github.com/haivivi/giztoy/go/pkg/ncnn"
 )
 
@@ -23,10 +25,10 @@ func TestFFTRoundTrip(t *testing.T) {
 	copy(original, re)
 
 	// Forward FFT
-	fftInPlace(re, im)
+	fbank.FFT(re, im)
 
 	// Inverse FFT
-	ifftInPlace(re, im)
+	fbank.IFFT(re, im)
 
 	// Should recover original signal
 	maxErr := 0.0
@@ -76,7 +78,7 @@ func TestSTFTRoundTrip(t *testing.T) {
 		}
 
 		// Forward FFT
-		fftInPlace(re, im)
+		fbank.FFT(re, im)
 
 		// NO modification — just reconstruct
 
@@ -88,7 +90,7 @@ func TestSTFTRoundTrip(t *testing.T) {
 		}
 
 		// Inverse FFT
-		ifftInPlace(re, im)
+		fbank.IFFT(re, im)
 
 		// Overlap-add
 		for i := 0; i < fftSize; i++ {
@@ -489,7 +491,7 @@ func TestDenoiseMaskOnly(t *testing.T) {
 		for i := 0; i < fftSize; i++ {
 			re[i] = float64(samples[start+i]) * hann[i]
 		}
-		fftInPlace(re, im)
+		fbank.FFT(re, im)
 
 		// Get magnitude for DTLN1
 		mag := make([]float32, halfFFT)
@@ -538,7 +540,7 @@ func TestDenoiseMaskOnly(t *testing.T) {
 		}
 
 		// IFFT
-		ifftInPlace(re, im)
+		fbank.IFFT(re, im)
 
 		// Overlap-add
 		for i := 0; i < fftSize; i++ {
@@ -647,10 +649,13 @@ func TestDenoiseRealSpeech(t *testing.T) {
 }
 
 func TestDenoiseRealOGG(t *testing.T) {
-	oggPath := "/Users/idy/Vibing/cursorcat/chat_history/2026_02_08_19_35_05_胡子_8f10db8d.ogg"
+	oggPath := os.Getenv("VOICEPRINT_TEST_OGG")
+	if oggPath == "" {
+		t.Skip("skip: set VOICEPRINT_TEST_OGG to an OGG file path to run this test")
+	}
 	pcm16k, err := decodeOGGTo16kMono(oggPath)
 	if err != nil {
-		t.Skipf("skip (no OGG): %v", err)
+		t.Skipf("skip (decode failed): %v", err)
 	}
 	numSamples := len(pcm16k) / 2
 	t.Logf("decoded 胡子: %d samples (%.1fs)", numSamples, float64(numSamples)/16000)
@@ -693,7 +698,7 @@ func TestDenoiseRealOGG(t *testing.T) {
 		for i := 0; i < fftSize; i++ {
 			re[i] = float64(samples[start+i]) * hann[i]
 		}
-		fftInPlace(re, im)
+		fbank.FFT(re, im)
 
 		mag := make([]float32, halfFFT)
 		totalEnergy := 0.0

@@ -104,7 +104,7 @@ func (e *Extractor) Extract(pcm []float32) [][]float32 {
 		for i := range imag {
 			imag[i] = 0
 		}
-		fft(real, imag)
+		FFT(real, imag)
 
 		// Power spectrum
 		power := make([]float64, halfFFT)

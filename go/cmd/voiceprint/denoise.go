@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/cmplx"
 
+	"github.com/haivivi/giztoy/go/pkg/audio/fbank"
 	"github.com/haivivi/giztoy/go/pkg/ncnn"
 )
 
@@ -83,7 +84,7 @@ func (d *dtlnDenoiser) Denoise(pcm []byte) ([]byte, error) {
 		for i := 0; i < fftSize; i++ {
 			fftR[i] = float64(samples[start+i]) * hann[i]
 		}
-		fftInPlace(fftR, fftI)
+		fbank.FFT(fftR, fftI)
 
 		mag := make([]float32, halfFFT)
 		phase := make([]complex128, halfFFT)
@@ -116,7 +117,7 @@ func (d *dtlnDenoiser) Denoise(pcm []byte) ([]byte, error) {
 				ifftI[fftSize-i] = -ifftI[i]
 			}
 		}
-		ifftInPlace(ifftR, ifftI)
+		fbank.IFFT(ifftR, ifftI)
 
 		timeFrame := make([]float32, fftSize)
 		for i := 0; i < fftSize; i++ {
@@ -317,7 +318,7 @@ func (d *dtlnDenoiser) DenoiseMaskOnly(pcm []byte) ([]byte, error) {
 		for i := 0; i < fftSize; i++ {
 			re[i] = float64(samples[start+i]) * hann[i]
 		}
-		fftInPlace(re, im)
+		fbank.FFT(re, im)
 
 		// Magnitude for DTLN1
 		mag := make([]float32, halfFFT)
@@ -344,7 +345,7 @@ func (d *dtlnDenoiser) DenoiseMaskOnly(pcm []byte) ([]byte, error) {
 		}
 
 		// IFFT
-		ifftInPlace(re, im)
+		fbank.IFFT(re, im)
 
 		// Overlap-add
 		for i := 0; i < fftSize; i++ {
@@ -436,7 +437,7 @@ func spectralDenoise(pcm []byte) []byte {
 		for i := 0; i < fftSize; i++ {
 			re[i] = float64(samples[start+i]) * hann[i]
 		}
-		fftInPlace(re, im)
+		fbank.FFT(re, im)
 		pwr := make([]float64, halfFFT)
 		energy := 0.0
 		for i := 0; i < halfFFT; i++ {
@@ -482,7 +483,7 @@ func spectralDenoise(pcm []byte) []byte {
 		for i := 0; i < fftSize; i++ {
 			re[i] = float64(samples[start+i]) * hann[i]
 		}
-		fftInPlace(re, im)
+		fbank.FFT(re, im)
 
 		// Apply spectral subtraction with soft floor
 		for i := 0; i < halfFFT; i++ {
@@ -514,7 +515,7 @@ func spectralDenoise(pcm []byte) []byte {
 		}
 
 		// IFFT
-		ifftInPlace(re, im)
+		fbank.IFFT(re, im)
 
 		// Overlap-add
 		for i := 0; i < fftSize; i++ {
@@ -572,57 +573,3 @@ func percentile(data []float64, pct int) float64 {
 	return sorted[idx]
 }
 
-// fftInPlace performs an in-place radix-2 Cooley-Tukey FFT.
-func fftInPlace(real, imag []float64) {
-	n := len(real)
-	if n <= 1 {
-		return
-	}
-	j := 0
-	for i := 0; i < n-1; i++ {
-		if i < j {
-			real[i], real[j] = real[j], real[i]
-			imag[i], imag[j] = imag[j], imag[i]
-		}
-		k := n >> 1
-		for k <= j {
-			j -= k
-			k >>= 1
-		}
-		j += k
-	}
-	for size := 2; size <= n; size <<= 1 {
-		half := size >> 1
-		angle := -2.0 * math.Pi / float64(size)
-		wR := math.Cos(angle)
-		wI := math.Sin(angle)
-		for start := 0; start < n; start += size {
-			tR, tI := 1.0, 0.0
-			for k := 0; k < half; k++ {
-				u := start + k
-				v := u + half
-				tmpR := tR*real[v] - tI*imag[v]
-				tmpI := tR*imag[v] + tI*real[v]
-				real[v] = real[u] - tmpR
-				imag[v] = imag[u] - tmpI
-				real[u] += tmpR
-				imag[u] += tmpI
-				tR, tI = tR*wR-tI*wI, tR*wI+tI*wR
-			}
-		}
-	}
-}
-
-// ifftInPlace performs an in-place inverse FFT.
-func ifftInPlace(real, imag []float64) {
-	n := len(real)
-	for i := range imag {
-		imag[i] = -imag[i]
-	}
-	fftInPlace(real, imag)
-	scale := 1.0 / float64(n)
-	for i := range real {
-		real[i] *= scale
-		imag[i] *= -scale
-	}
-}

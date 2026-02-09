@@ -2,9 +2,31 @@ package fbank
 
 import "math"
 
-// fft performs an in-place radix-2 Cooley-Tukey FFT.
+// FFT performs an in-place radix-2 Cooley-Tukey FFT.
 // real and imag must have the same power-of-2 length.
-func fft(real, imag []float64) {
+func FFT(real, imag []float64) {
+	fftCore(real, imag)
+}
+
+// IFFT performs an in-place inverse FFT.
+// real and imag must have the same power-of-2 length.
+func IFFT(real, imag []float64) {
+	n := len(real)
+	// Conjugate
+	for i := range imag {
+		imag[i] = -imag[i]
+	}
+	// Forward FFT
+	fftCore(real, imag)
+	// Conjugate and scale
+	scale := 1.0 / float64(n)
+	for i := range real {
+		real[i] *= scale
+		imag[i] *= -scale
+	}
+}
+
+func fftCore(real, imag []float64) {
 	n := len(real)
 	if n <= 1 {
 		return

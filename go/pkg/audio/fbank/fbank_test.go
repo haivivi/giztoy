@@ -68,7 +68,7 @@ func TestFFT(t *testing.T) {
 	for i := range real {
 		real[i] = 1.0 + math.Cos(2*math.Pi*float64(i)/float64(n))
 	}
-	fft(real, imag)
+	FFT(real, imag)
 
 	// DC component should be n (sum of 1.0*8)
 	if math.Abs(real[0]-float64(n)) > 0.01 {

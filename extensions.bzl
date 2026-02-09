@@ -108,7 +108,7 @@ def _pnnx_impl(_ctx):
     _onnx_model_repo(
         name = "model_vad_silero",
         url = "https://github.com/snakers4/silero-vad/raw/v6.2/src/silero_vad/data/silero_vad.jit",
-        sha256 = "",  # JIT model, SHA256 computed after first download
+        sha256 = "e1122837f4154c511485fe0b9c64455f7b929c96fbb8d79fbdb336383ebd3720",
     )
 
     # DTLN noise suppression — stage 1
