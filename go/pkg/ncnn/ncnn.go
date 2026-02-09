@@ -277,6 +277,9 @@ func NewMat2D(w, h int, data []float32) (*Mat, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("ncnn: NewMat2D called with empty data")
 	}
+	if len(data) < w*h {
+		return nil, fmt.Errorf("ncnn: NewMat2D data too short: got %d, need %d (w=%d, h=%d)", len(data), w*h, w, h)
+	}
 	mat := C.ncnn_mat_create_external_2d(
 		C.int(w), C.int(h),
 		unsafe.Pointer(&data[0]),
@@ -294,6 +297,9 @@ func NewMat2D(w, h int, data []float32) (*Mat, error) {
 func NewMat3D(w, h, c int, data []float32) (*Mat, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("ncnn: NewMat3D called with empty data")
+	}
+	if len(data) < w*h*c {
+		return nil, fmt.Errorf("ncnn: NewMat3D data too short: got %d, need %d (w=%d, h=%d, c=%d)", len(data), w*h*c, w, h, c)
 	}
 	mat := C.ncnn_mat_create_external_3d(
 		C.int(w), C.int(h), C.int(c),

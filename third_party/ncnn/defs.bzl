@@ -59,7 +59,7 @@ def _ncnn_repo_impl(ctx):
     build_result = ctx.execute(
         ["make", "-j{}".format(nproc)],
         working_directory = "build",
-        timeout = 300,
+        timeout = 600,
     )
     if build_result.return_code != 0:
         fail("ncnn build failed:\n" + build_result.stderr)
