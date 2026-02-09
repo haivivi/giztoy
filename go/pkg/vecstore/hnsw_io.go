@@ -273,19 +273,22 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 		idMap[nd.id] = i
 	}
 
+	cfg := HNSWConfig{
+		Dim:            int(dim),
+		M:              int(m),
+		EfConstruction: int(efC),
+		EfSearch:       int(efS),
+	}
+	cfg.setDefaults() // clamp M < 2 to avoid log(1)=0 → +Inf
+
 	return &HNSW{
-		cfg: HNSWConfig{
-			Dim:            int(dim),
-			M:              int(m),
-			EfConstruction: int(efC),
-			EfSearch:       int(efS),
-		},
+		cfg:      cfg,
 		nodes:    nodes,
 		idMap:    idMap,
 		entryID:  entryID,
 		maxLevel: int(maxLev),
 		count:    int(activeCount),
 		free:     free,
-		levelMul: 1.0 / math.Log(float64(m)),
+		levelMul: 1.0 / math.Log(float64(cfg.M)),
 	}, nil
 }

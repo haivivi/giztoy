@@ -37,7 +37,7 @@ type HNSWConfig struct {
 }
 
 func (c *HNSWConfig) setDefaults() {
-	if c.M <= 0 {
+	if c.M < 2 {
 		c.M = 16
 	}
 	if c.EfConstruction <= 0 {
