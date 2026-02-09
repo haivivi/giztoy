@@ -273,37 +273,39 @@ type Mat struct {
 
 // NewMat2D creates a 2D Mat (h rows × w cols) backed by external float32 data.
 // The data slice must remain valid for the lifetime of the Mat.
-// Panics if data is empty.
-func NewMat2D(w, h int, data []float32) *Mat {
+func NewMat2D(w, h int, data []float32) (*Mat, error) {
 	if len(data) == 0 {
-		panic("ncnn: NewMat2D called with empty data")
+		return nil, fmt.Errorf("ncnn: NewMat2D called with empty data")
 	}
-	m := &Mat{
-		mat: C.ncnn_mat_create_external_2d(
-			C.int(w), C.int(h),
-			unsafe.Pointer(&data[0]),
-			nil,
-		),
+	mat := C.ncnn_mat_create_external_2d(
+		C.int(w), C.int(h),
+		unsafe.Pointer(&data[0]),
+		nil,
+	)
+	if mat == nil {
+		return nil, fmt.Errorf("ncnn: mat_create_external_2d failed")
 	}
+	m := &Mat{mat: mat}
 	runtime.SetFinalizer(m, (*Mat).Close)
-	return m
+	return m, nil
 }
 
 // NewMat3D creates a 3D Mat (c channels × h rows × w cols) backed by external data.
-// Panics if data is empty.
-func NewMat3D(w, h, c int, data []float32) *Mat {
+func NewMat3D(w, h, c int, data []float32) (*Mat, error) {
 	if len(data) == 0 {
-		panic("ncnn: NewMat3D called with empty data")
+		return nil, fmt.Errorf("ncnn: NewMat3D called with empty data")
 	}
-	m := &Mat{
-		mat: C.ncnn_mat_create_external_3d(
-			C.int(w), C.int(h), C.int(c),
-			unsafe.Pointer(&data[0]),
-			nil,
-		),
+	mat := C.ncnn_mat_create_external_3d(
+		C.int(w), C.int(h), C.int(c),
+		unsafe.Pointer(&data[0]),
+		nil,
+	)
+	if mat == nil {
+		return nil, fmt.Errorf("ncnn: mat_create_external_3d failed")
 	}
+	m := &Mat{mat: mat}
 	runtime.SetFinalizer(m, (*Mat).Close)
-	return m
+	return m, nil
 }
 
 // W returns the width (first dimension) of the Mat.

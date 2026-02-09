@@ -282,7 +282,10 @@ func extractSegment(net *ncnn.Net, features [][]float32) ([]float32, error) {
 	numFrames := len(features)
 	numMels := len(features[0])
 
-	input := ncnn.NewMat2D(numMels, numFrames, flat)
+	input, err := ncnn.NewMat2D(numMels, numFrames, flat)
+	if err != nil {
+		return nil, err
+	}
 	defer input.Close()
 
 	ex, err := net.NewExtractor()

@@ -165,15 +165,30 @@ func (d *dtlnDenoiser) Denoise(pcm []byte) ([]byte, error) {
 func (d *dtlnDenoiser) runStage1(mag, h1, c1, h2, c2 []float32) (
 	mask, nh1, nc1, nh2, nc2 []float32, err error,
 ) {
-	inMag := ncnn.NewMat2D(257, 1, mag)
+	inMag, err := ncnn.NewMat2D(257, 1, mag)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inMag.Close()
-	inH1 := ncnn.NewMat2D(128, 1, h1)
+	inH1, err := ncnn.NewMat2D(128, 1, h1)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inH1.Close()
-	inC1 := ncnn.NewMat2D(128, 1, c1)
+	inC1, err := ncnn.NewMat2D(128, 1, c1)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inC1.Close()
-	inH2 := ncnn.NewMat2D(128, 1, h2)
+	inH2, err := ncnn.NewMat2D(128, 1, h2)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inH2.Close()
-	inC2 := ncnn.NewMat2D(128, 1, c2)
+	inC2, err := ncnn.NewMat2D(128, 1, c2)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inC2.Close()
 
 	ex, exErr := d.net1.NewExtractor()
@@ -222,15 +237,30 @@ func (d *dtlnDenoiser) runStage1(mag, h1, c1, h2, c2 []float32) (
 func (d *dtlnDenoiser) runStage2(frame, h3, c3, h4, c4 []float32) (
 	enhanced, nh3, nc3, nh4, nc4 []float32, err error,
 ) {
-	inFrame := ncnn.NewMat2D(512, 1, frame)
+	inFrame, err := ncnn.NewMat2D(512, 1, frame)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inFrame.Close()
-	inH3 := ncnn.NewMat2D(128, 1, h3)
+	inH3, err := ncnn.NewMat2D(128, 1, h3)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inH3.Close()
-	inC3 := ncnn.NewMat2D(128, 1, c3)
+	inC3, err := ncnn.NewMat2D(128, 1, c3)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inC3.Close()
-	inH4 := ncnn.NewMat2D(128, 1, h4)
+	inH4, err := ncnn.NewMat2D(128, 1, h4)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inH4.Close()
-	inC4 := ncnn.NewMat2D(128, 1, c4)
+	inC4, err := ncnn.NewMat2D(128, 1, c4)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
 	defer inC4.Close()
 
 	ex, exErr := d.net2.NewExtractor()

@@ -12,13 +12,23 @@ func TestVersion(t *testing.T) {
 	t.Logf("ncnn version: %s", v)
 }
 
+// mustMat2D is a test helper that creates a Mat2D or fails the test.
+func mustMat2D(tb testing.TB, w, h int, data []float32) *Mat {
+	tb.Helper()
+	m, err := NewMat2D(w, h, data)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return m
+}
+
 func TestMat2D(t *testing.T) {
 	data := make([]float32, 80*40) // 40 rows × 80 cols
 	for i := range data {
 		data[i] = float32(i) * 0.001
 	}
 
-	mat := NewMat2D(80, 40, data)
+	mat := mustMat2D(t, 80, 40, data)
 	defer mat.Close()
 
 	if mat.W() != 80 {
@@ -31,7 +41,10 @@ func TestMat2D(t *testing.T) {
 
 func TestMat3D(t *testing.T) {
 	data := make([]float32, 10*20*3)
-	mat := NewMat3D(10, 20, 3, data)
+	mat, err := NewMat3D(10, 20, 3, data)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer mat.Close()
 
 	if mat.W() != 10 {
@@ -47,7 +60,7 @@ func TestMat3D(t *testing.T) {
 
 func TestMatFloatData(t *testing.T) {
 	data := []float32{1.0, 2.0, 3.0, 4.0, 5.0}
-	mat := NewMat2D(5, 1, data)
+	mat := mustMat2D(t, 5, 1, data)
 	defer mat.Close()
 
 	out := mat.FloatData()
@@ -63,9 +76,16 @@ func TestMatFloatData(t *testing.T) {
 
 func TestMatDoubleClose(t *testing.T) {
 	data := []float32{1, 2, 3}
-	mat := NewMat2D(3, 1, data)
+	mat := mustMat2D(t, 3, 1, data)
 	mat.Close()
 	mat.Close() // should not panic
+}
+
+func TestMat2DEmptyData(t *testing.T) {
+	_, err := NewMat2D(0, 0, nil)
+	if err == nil {
+		t.Error("expected error for empty data")
+	}
 }
 
 func TestNetClose(t *testing.T) {
@@ -150,7 +170,7 @@ func BenchmarkSpeakerInference(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for range b.N {
-		input := NewMat2D(80, 40, data)
+		input := mustMat2D(b, 80, 40, data)
 		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", input)
 		output, err := ex.Extract("out0")
@@ -178,9 +198,9 @@ func BenchmarkVADInference(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for range b.N {
-		inAudio := NewMat2D(512, 1, audio)
-		inH := NewMat2D(128, 1, h)
-		inC := NewMat2D(128, 1, c)
+		inAudio := mustMat2D(b, 512, 1, audio)
+		inH := mustMat2D(b, 128, 1, h)
+		inC := mustMat2D(b, 128, 1, c)
 		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", inAudio)
 		ex.SetInput("in1", inH)
@@ -215,11 +235,11 @@ func BenchmarkDTLN1Inference(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for range b.N {
-		inMag := NewMat2D(257, 1, mag)
-		inH1 := NewMat2D(128, 1, state)
-		inC1 := NewMat2D(128, 1, state)
-		inH2 := NewMat2D(128, 1, state)
-		inC2 := NewMat2D(128, 1, state)
+		inMag := mustMat2D(b, 257, 1, mag)
+		inH1 := mustMat2D(b, 128, 1, state)
+		inC1 := mustMat2D(b, 128, 1, state)
+		inH2 := mustMat2D(b, 128, 1, state)
+		inC2 := mustMat2D(b, 128, 1, state)
 		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", inMag)
 		ex.SetInput("in1", inH1)
@@ -254,11 +274,11 @@ func BenchmarkDTLN2Inference(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 	for range b.N {
-		inFeat := NewMat2D(512, 1, feat)
-		inH1 := NewMat2D(128, 1, state)
-		inC1 := NewMat2D(128, 1, state)
-		inH2 := NewMat2D(128, 1, state)
-		inC2 := NewMat2D(128, 1, state)
+		inFeat := mustMat2D(b, 512, 1, feat)
+		inH1 := mustMat2D(b, 128, 1, state)
+		inC1 := mustMat2D(b, 128, 1, state)
+		inH2 := mustMat2D(b, 128, 1, state)
+		inC2 := mustMat2D(b, 128, 1, state)
 		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", inFeat)
 		ex.SetInput("in1", inH1)
@@ -296,7 +316,7 @@ func BenchmarkConcurrentSpeakerInference(b *testing.B) {
 	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			input := NewMat2D(80, 40, data)
+			input := mustMat2D(b, 80, 40, data)
 			ex, _ := net.NewExtractor()
 			ex.SetInput("in0", input)
 			output, err := ex.Extract("out0")
@@ -353,7 +373,7 @@ func TestEmbeddedModelInference(t *testing.T) {
 	for i := range data {
 		data[i] = float32(i%100) * 0.01
 	}
-	input := NewMat2D(80, 40, data)
+	input := mustMat2D(t, 80, 40, data)
 	defer input.Close()
 
 	ex, err := net.NewExtractor()

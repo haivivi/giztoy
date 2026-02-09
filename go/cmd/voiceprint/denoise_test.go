@@ -11,6 +11,16 @@ import (
 	"github.com/haivivi/giztoy/go/pkg/ncnn"
 )
 
+// mustMat2D creates a Mat2D or fails the test.
+func mustMat2D(tb testing.TB, w, h int, data []float32) *ncnn.Mat {
+	tb.Helper()
+	m, err := ncnn.NewMat2D(w, h, data)
+	if err != nil {
+		tb.Fatal(err)
+	}
+	return m
+}
+
 // === Step 1: Verify FFT/IFFT round-trip ===
 
 func TestFFTRoundTrip(t *testing.T) {
@@ -140,15 +150,15 @@ func TestDTLN1ModelOutput(t *testing.T) {
 	}
 	state := make([]float32, 128)
 
-	inMag := ncnn.NewMat2D(257, 1, mag)
+	inMag := mustMat2D(t, 257, 1, mag)
 	defer inMag.Close()
-	inH1 := ncnn.NewMat2D(128, 1, state)
+	inH1 := mustMat2D(t, 128, 1, state)
 	defer inH1.Close()
-	inC1 := ncnn.NewMat2D(128, 1, state)
+	inC1 := mustMat2D(t, 128, 1, state)
 	defer inC1.Close()
-	inH2 := ncnn.NewMat2D(128, 1, state)
+	inH2 := mustMat2D(t, 128, 1, state)
 	defer inH2.Close()
-	inC2 := ncnn.NewMat2D(128, 1, state)
+	inC2 := mustMat2D(t, 128, 1, state)
 	defer inC2.Close()
 
 	ex, err := net.NewExtractor()
@@ -240,15 +250,15 @@ func TestDTLN2ModelOutput(t *testing.T) {
 	}
 	state := make([]float32, 128)
 
-	inFrame := ncnn.NewMat2D(512, 1, frame)
+	inFrame := mustMat2D(t, 512, 1, frame)
 	defer inFrame.Close()
-	inH1 := ncnn.NewMat2D(128, 1, state)
+	inH1 := mustMat2D(t, 128, 1, state)
 	defer inH1.Close()
-	inC1 := ncnn.NewMat2D(128, 1, state)
+	inC1 := mustMat2D(t, 128, 1, state)
 	defer inC1.Close()
-	inH2 := ncnn.NewMat2D(128, 1, state)
+	inH2 := mustMat2D(t, 128, 1, state)
 	defer inH2.Close()
-	inC2 := ncnn.NewMat2D(128, 1, state)
+	inC2 := mustMat2D(t, 128, 1, state)
 	defer inC2.Close()
 
 	ex, err := net.NewExtractor()
@@ -342,11 +352,11 @@ func TestDTLN1StatePropagation(t *testing.T) {
 			mag[i] = float32(math.Exp(-float64(i)*0.02)) * (10 + float32(frame))
 		}
 
-		inMag := ncnn.NewMat2D(257, 1, mag)
-		inH1 := ncnn.NewMat2D(128, 1, h1)
-		inC1 := ncnn.NewMat2D(128, 1, c1)
-		inH2 := ncnn.NewMat2D(128, 1, h2)
-		inC2 := ncnn.NewMat2D(128, 1, c2)
+		inMag := mustMat2D(t, 257, 1, mag)
+		inH1 := mustMat2D(t, 128, 1, h1)
+		inC1 := mustMat2D(t, 128, 1, c1)
+		inH2 := mustMat2D(t, 128, 1, h2)
+		inC2 := mustMat2D(t, 128, 1, c2)
 
 		ex, _ := net.NewExtractor()
 		ex.SetInput("in0", inMag)
@@ -500,11 +510,11 @@ func TestDenoiseMaskOnly(t *testing.T) {
 		}
 
 		// DTLN1 mask
-		inMag := ncnn.NewMat2D(257, 1, mag)
-		inH1 := ncnn.NewMat2D(128, 1, h1)
-		inC1 := ncnn.NewMat2D(128, 1, c1)
-		inH2 := ncnn.NewMat2D(128, 1, h2)
-		inC2 := ncnn.NewMat2D(128, 1, c2)
+		inMag := mustMat2D(t, 257, 1, mag)
+		inH1 := mustMat2D(t, 128, 1, h1)
+		inC1 := mustMat2D(t, 128, 1, c1)
+		inH2 := mustMat2D(t, 128, 1, h2)
+		inC2 := mustMat2D(t, 128, 1, c2)
 		ex, _ := net1.NewExtractor()
 		ex.SetInput("in0", inMag)
 		ex.SetInput("in1", inH1)
@@ -708,11 +718,11 @@ func TestDenoiseRealOGG(t *testing.T) {
 		}
 
 		// DTLN1
-		inMag := ncnn.NewMat2D(257, 1, mag)
-		inH1 := ncnn.NewMat2D(128, 1, h1)
-		inC1 := ncnn.NewMat2D(128, 1, c1)
-		inH2 := ncnn.NewMat2D(128, 1, h2)
-		inC2 := ncnn.NewMat2D(128, 1, c2)
+		inMag := mustMat2D(t, 257, 1, mag)
+		inH1 := mustMat2D(t, 128, 1, h1)
+		inC1 := mustMat2D(t, 128, 1, c1)
+		inH2 := mustMat2D(t, 128, 1, h2)
+		inC2 := mustMat2D(t, 128, 1, c2)
 		ex, _ := net1.NewExtractor()
 		ex.SetInput("in0", inMag)
 		ex.SetInput("in1", inH1)
