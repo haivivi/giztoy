@@ -27,10 +27,12 @@ const log = Board.log;
 const chatgear = @import("chatgear");
 const mqtt0 = @import("mqtt0");
 const tls = @import("tls");
+const dns = @import("dns");
 
 const Rt = hw.runtime;
 const Socket = Board.socket;
-const TlsClient = tls.Client(Socket);
+const Crypto = hw.crypto;
+const TlsClient = tls.Client(Socket, Crypto);
 const TcpMqttClient = mqtt0.Client(Socket);
 const TlsMqttClient = mqtt0.Client(TlsClient);
 const TcpConn = chatgear.MqttClientConn(TcpMqttClient);
@@ -154,9 +156,9 @@ pub fn run(env: anytype) void {
     config = .{
         .wifi_ssid = env.wifi_ssid,
         .wifi_password = env.wifi_password,
-        .mqtt = MqttUrl.parse(if (@hasField(@TypeOf(env.*), "mqtt_url")) env.mqtt_url else "mqtt://test.mosquitto.org:1883"),
-        .gear_id = if (@hasField(@TypeOf(env.*), "gear_id")) env.gear_id else "zig-test-001",
-        .scope = if (@hasField(@TypeOf(env.*), "scope")) env.scope else "stage/",
+        .mqtt = MqttUrl.parse(if (@hasField(@TypeOf(env), "mqtt_url")) env.mqtt_url else "mqtt://test.mosquitto.org:1883"),
+        .gear_id = if (@hasField(@TypeOf(env), "gear_id")) env.gear_id else "zig-test-001",
+        .scope = if (@hasField(@TypeOf(env), "scope")) env.scope else "stage/",
     };
 
     log.info("==========================================", .{});
@@ -261,22 +263,36 @@ fn handleNetEvent(net_event: anytype, app_state: *AppState) void {
 // MQTT Connection (TCP)
 // ============================================================================
 
+fn resolveHost(hostname: []const u8) ?[4]u8 {
+    const DnsResolver = dns.Resolver(Socket);
+    var resolver = DnsResolver{
+        .server = .{ 223, 5, 5, 5 }, // AliDNS
+        .protocol = .udp,
+    };
+    return resolver.resolve(hostname) catch |err| {
+        log.err("DNS resolve failed for {s}: {}", .{ hostname, err });
+        return null;
+    };
+}
+
 fn connectTcp(app_state: *AppState) void {
     log.info("Connecting MQTT (TCP) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
+
+    const ip = resolveHost(config.mqtt.host) orelse return;
+    log.info("Resolved {s} -> {d}.{d}.{d}.{d}", .{ config.mqtt.host, ip[0], ip[1], ip[2], ip[3] });
 
     var socket = Socket.tcp() catch |err| {
         log.err("TCP socket failed: {}", .{err});
         return;
     };
-    socket.connect(config.mqtt.host, config.mqtt.port) catch |err| {
+    socket.connect(ip, config.mqtt.port) catch |err| {
         log.err("TCP connect failed: {}", .{err});
         socket.close();
         Board.time.sleepMs(3000);
         return;
     };
 
-    var allocator = std.heap.page_allocator;
-    var mux = mqtt0.Mux.init(allocator) catch |err| {
+    var mux = mqtt0.Mux.init(std.heap.c_allocator) catch |err| {
         log.err("Mux init failed: {}", .{err});
         socket.close();
         return;
@@ -326,11 +342,14 @@ fn connectTcp(app_state: *AppState) void {
 fn connectTls(app_state: *AppState) void {
     log.info("Connecting MQTT (TLS) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
 
+    const ip = resolveHost(config.mqtt.host) orelse return;
+    log.info("Resolved {s} -> {d}.{d}.{d}.{d}", .{ config.mqtt.host, ip[0], ip[1], ip[2], ip[3] });
+
     var socket = Socket.tcp() catch |err| {
         log.err("TCP socket failed: {}", .{err});
         return;
     };
-    socket.connect(config.mqtt.host, config.mqtt.port) catch |err| {
+    socket.connect(ip, config.mqtt.port) catch |err| {
         log.err("TCP connect failed: {}", .{err});
         socket.close();
         Board.time.sleepMs(3000);
@@ -345,8 +364,7 @@ fn connectTls(app_state: *AppState) void {
         return;
     };
 
-    var allocator = std.heap.page_allocator;
-    var mux = mqtt0.Mux.init(allocator) catch |err| {
+    var mux = mqtt0.Mux.init(std.heap.c_allocator) catch |err| {
         log.err("Mux init failed: {}", .{err});
         return;
     };

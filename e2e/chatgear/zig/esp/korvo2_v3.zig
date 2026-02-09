@@ -32,9 +32,16 @@ pub const socket = idf.socket.Socket;
 
 // ============================================================================
 // Runtime (for Channel, WaitGroup, Spawner)
+// Uses FreeRTOS-based EspRuntime from idf binding layer.
 // ============================================================================
 
-pub const runtime = impl.runtime;
+pub const runtime = idf.runtime;
+
+// ============================================================================
+// Crypto Suite (for TLS)
+// ============================================================================
+
+pub const crypto = impl.crypto.Suite;
 
 // ============================================================================
 // RTC Driver

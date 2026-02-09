@@ -171,6 +171,7 @@ esp_zig_app(
         "@embed_zig//lib/trait",
         "@embed_zig//lib/pkg/mqtt0",
         "@embed_zig//lib/pkg/tls",
+        "@embed_zig//lib/pkg/dns",
         "@embed_zig//lib/pkg/channel",
         "@embed_zig//lib/pkg/cancellation",
         "//zig/chatgear",
@@ -181,7 +182,7 @@ esp_zig_app(
         "adc_oneshot_read",
         "adc_oneshot_del_unit",
     ],
-    requires = ["driver", "esp_adc"],
+    requires = ["driver", "esp_adc", "freertos"],
     sdkconfig = ":sdkconfig",
     partition_table = ":partitions",
 )
