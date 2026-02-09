@@ -192,17 +192,26 @@ func (d *dtlnDenoiser) runStage1(mag, h1, c1, h2, c2 []float32) (
 	}
 	defer outMask.Close()
 
+	z := make([]float32, 128)
 	outH1, err1 := ex.Extract("out1")
 	if err1 != nil {
-		z := make([]float32, 128)
 		return outMask.FloatData(), z, z, z, z, nil
 	}
 	defer outH1.Close()
-	outC1, _ := ex.Extract("out2")
+	outC1, err2 := ex.Extract("out2")
+	if err2 != nil {
+		return outMask.FloatData(), outH1.FloatData(), z, z, z, nil
+	}
 	defer outC1.Close()
-	outH2, _ := ex.Extract("out3")
+	outH2, err3 := ex.Extract("out3")
+	if err3 != nil {
+		return outMask.FloatData(), outH1.FloatData(), outC1.FloatData(), z, z, nil
+	}
 	defer outH2.Close()
-	outC2, _ := ex.Extract("out4")
+	outC2, err4 := ex.Extract("out4")
+	if err4 != nil {
+		return outMask.FloatData(), outH1.FloatData(), outC1.FloatData(), outH2.FloatData(), z, nil
+	}
 	defer outC2.Close()
 
 	return outMask.FloatData(), outH1.FloatData(), outC1.FloatData(),
@@ -240,17 +249,26 @@ func (d *dtlnDenoiser) runStage2(frame, h3, c3, h4, c4 []float32) (
 	}
 	defer outFrame.Close()
 
+	z := make([]float32, 128)
 	outH3, err3 := ex.Extract("out1")
 	if err3 != nil {
-		z := make([]float32, 128)
 		return outFrame.FloatData(), z, z, z, z, nil
 	}
 	defer outH3.Close()
-	outC3, _ := ex.Extract("out2")
+	outC3, err4 := ex.Extract("out2")
+	if err4 != nil {
+		return outFrame.FloatData(), outH3.FloatData(), z, z, z, nil
+	}
 	defer outC3.Close()
-	outH4, _ := ex.Extract("out3")
+	outH4, err5 := ex.Extract("out3")
+	if err5 != nil {
+		return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(), z, z, nil
+	}
 	defer outH4.Close()
-	outC4, _ := ex.Extract("out4")
+	outC4, err6 := ex.Extract("out4")
+	if err6 != nil {
+		return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(), outH4.FloatData(), z, nil
+	}
 	defer outC4.Close()
 
 	return outFrame.FloatData(), outH3.FloatData(), outC3.FloatData(),

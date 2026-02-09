@@ -237,6 +237,7 @@ func extractEmbedding(net *ncnn.Net, features [][]float32) ([]float32, error) {
 
 	// Multi-segment averaging
 	var embeddings [][]float32
+	var lastLoopStart int
 	for start := 0; start+segFrames <= len(features); start += hopFrames {
 		seg := features[start : start+segFrames]
 		emb, err := extractSegment(net, seg)
@@ -244,9 +245,10 @@ func extractEmbedding(net *ncnn.Net, features [][]float32) ([]float32, error) {
 			continue
 		}
 		embeddings = append(embeddings, emb)
+		lastLoopStart = start
 	}
-	// Include the last segment if we missed it
-	if lastStart := len(features) - segFrames; lastStart > 0 {
+	// Include the last segment only if it wasn't already covered by the loop
+	if lastStart := len(features) - segFrames; lastStart > lastLoopStart {
 		seg := features[lastStart:]
 		emb, err := extractSegment(net, seg)
 		if err == nil {
@@ -463,19 +465,6 @@ func printSpeakerAnalysis(samples []sample) {
 			fmt.Println("-> Model has weak speaker discrimination")
 		}
 	}
-}
-
-func pcmRMS(pcm []byte) float64 {
-	n := len(pcm) / 2
-	if n == 0 {
-		return 0
-	}
-	sum := 0.0
-	for i := 0; i < n; i++ {
-		s := int16(pcm[i*2]) | int16(pcm[i*2+1])<<8
-		sum += float64(s) * float64(s)
-	}
-	return math.Sqrt(sum / float64(n))
 }
 
 func stats(vals []float64) (avg, min, max float64) {

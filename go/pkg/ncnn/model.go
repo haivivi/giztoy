@@ -72,6 +72,9 @@ func LoadModel(id ModelID) (*Net, error) {
 	// Disable FP16 by default — some models (Silero VAD, DTLN) produce
 	// intermediate values >65504 which overflow in FP16.
 	opt := NewOption()
+	if opt == nil {
+		return nil, fmt.Errorf("ncnn: option_create failed for model %q", id)
+	}
 	opt.SetFP16(false)
 	return NewNetFromMemory(info.ParamData, info.BinData, opt)
 }
