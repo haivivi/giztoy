@@ -166,6 +166,9 @@ Examples:
 			return err
 		}
 		ctxName, service, key, value := args[0], args[1], args[2], args[3]
+		if ctxName == "" {
+			return fmt.Errorf("context name cannot be empty")
+		}
 
 		contextDir := cfg.ContextDir(ctxName)
 		if _, err := os.Stat(contextDir); os.IsNotExist(err) {
@@ -212,6 +215,9 @@ var configGetCmd = &cobra.Command{
 			return err
 		}
 		ctxName, service, key := args[0], args[1], args[2]
+		if ctxName == "" {
+			return fmt.Errorf("context name cannot be empty")
+		}
 
 		contextDir := cfg.ContextDir(ctxName)
 		m, err := config.LoadService[map[string]any](contextDir, service)
@@ -243,6 +249,9 @@ var configEditCmd = &cobra.Command{
 			return err
 		}
 		ctxName, service := args[0], args[1]
+		if ctxName == "" {
+			return fmt.Errorf("context name cannot be empty")
+		}
 
 		path := cfg.ServicePath(ctxName, service)
 
