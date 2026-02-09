@@ -184,43 +184,38 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 		return nil, err
 	}
 
-	// Metadata.
-	var numSlots, activeCount, maxLev uint32
-	var entryID int32
+	// Metadata — read but don't trust; we recompute derived state after
+	// loading all nodes so that corrupt metadata can't cause panics.
+	var numSlots, fileActiveCount, fileMaxLev uint32
+	var fileEntryID int32
 	if err := read(&numSlots); err != nil {
 		return nil, err
 	}
-	if err := read(&activeCount); err != nil {
+	if err := read(&fileActiveCount); err != nil {
 		return nil, err
 	}
-	if err := read(&maxLev); err != nil {
+	if err := read(&fileMaxLev); err != nil {
 		return nil, err
 	}
-	if maxLev > 31 {
-		return nil, fmt.Errorf("vecstore: maxLevel %d exceeds maximum 31", maxLev)
-	}
-	if err := read(&entryID); err != nil {
+	if err := read(&fileEntryID); err != nil {
 		return nil, err
 	}
 
-	// Free list.
+	// Free list — read to advance the stream, but discard; we rebuild it.
 	var freeCount uint32
 	if err := read(&freeCount); err != nil {
 		return nil, err
 	}
-	free := make([]uint32, freeCount)
-	for i := range free {
-		if err := read(&free[i]); err != nil {
+	for range freeCount {
+		var skip uint32
+		if err := read(&skip); err != nil {
 			return nil, err
-		}
-		if free[i] >= numSlots {
-			return nil, fmt.Errorf("vecstore: free list entry %d out of bounds (numSlots=%d)", free[i], numSlots)
 		}
 	}
 
 	// Nodes.
 	nodes := make([]*hnswNode, numSlots)
-	idMap := make(map[string]uint32, activeCount)
+	idMap := make(map[string]uint32)
 
 	for i := uint32(0); i < numSlots; i++ {
 		var active uint8
@@ -288,23 +283,27 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 		idMap[nd.id] = i
 	}
 
-	// Validate entryID bounds.
-	if entryID >= 0 {
-		if uint32(entryID) >= numSlots {
-			return nil, fmt.Errorf("vecstore: entryID %d out of bounds (numSlots=%d)", entryID, numSlots)
+	// Recompute derived state from actual data — don't trust file metadata.
+	// This eliminates all cross-field consistency issues (entryID vs count,
+	// free list vs active nodes, maxLevel vs node levels, etc.) in one pass.
+	count := 0
+	bestEntry := int32(-1)
+	bestLevel := -1
+	var free []uint32
+	for i, nd := range nodes {
+		if nd == nil {
+			free = append(free, uint32(i))
+			continue
 		}
-		if nodes[entryID] == nil {
-			return nil, fmt.Errorf("vecstore: entryID %d points to a nil node", entryID)
+		count++
+		if nd.level > bestLevel {
+			bestEntry = int32(i)
+			bestLevel = nd.level
 		}
-	} else if activeCount > 0 {
-		return nil, fmt.Errorf("vecstore: entryID is -1 but activeCount is %d", activeCount)
 	}
-
-	// Validate free list entries point to nil slots.
-	for _, f := range free {
-		if nodes[f] != nil {
-			return nil, fmt.Errorf("vecstore: free list entry %d points to an active node", f)
-		}
+	maxLevel := 0
+	if bestLevel >= 0 {
+		maxLevel = bestLevel
 	}
 
 	cfg := HNSWConfig{
@@ -319,9 +318,9 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 		cfg:      cfg,
 		nodes:    nodes,
 		idMap:    idMap,
-		entryID:  entryID,
-		maxLevel: int(maxLev),
-		count:    int(activeCount),
+		entryID:  bestEntry,
+		maxLevel: maxLevel,
+		count:    count,
 		free:     free,
 		levelMul: 1.0 / math.Log(float64(cfg.M)),
 	}, nil
