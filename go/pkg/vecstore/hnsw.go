@@ -557,6 +557,13 @@ func (h *HNSW) findNewEntry() {
 			bestLevel = nd.level
 		}
 	}
+	if best < 0 {
+		// No active nodes found — treat as empty regardless of count.
+		h.entryID = -1
+		h.maxLevel = 0
+		h.count = 0
+		return
+	}
 	h.entryID = best
 	h.maxLevel = bestLevel
 }
