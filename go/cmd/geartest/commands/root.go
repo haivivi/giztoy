@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/haivivi/giztoy/go/pkg/cli"
@@ -55,13 +54,12 @@ func init() {
 	rootCmd.AddCommand(configCmd)
 }
 
+// configErr stores the config load error for deferred reporting.
+var configErr error
+
 func initConfig() {
 	if cfgFile != "" {
-		var err error
-		globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %s config: %v\n", appName, err)
-		}
+		globalConfig, configErr = cli.LoadConfigWithPath(appName, cfgFile)
 		return
 	}
 	globalConfig = cli.LoadConfigIfExists(appName)
@@ -70,11 +68,14 @@ func initConfig() {
 // getContext returns the context to use, resolving from flag or current context.
 func getContext() (*cli.Context, error) {
 	if globalConfig == nil {
+		if configErr != nil {
+			return nil, fmt.Errorf("%s config: %w", appName, configErr)
+		}
 		// Lazy init: create config on first use.
 		var err error
 		globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
 		if err != nil {
-			return nil, fmt.Errorf("configuration not initialized: %w", err)
+			return nil, fmt.Errorf("%s config: %w", appName, err)
 		}
 	}
 	return globalConfig.ResolveContext(contextName)

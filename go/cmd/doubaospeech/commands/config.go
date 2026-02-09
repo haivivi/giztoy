@@ -119,7 +119,10 @@ Example:
 			}
 		}
 
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		if err := cfg.AddContext(name, ctx); err != nil {
 			return err
 		}
@@ -136,7 +139,10 @@ var configDeleteContextCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		if err := cfg.DeleteContext(name); err != nil {
 			return err
 		}
@@ -153,7 +159,10 @@ var configUseContextCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		if err := cfg.UseContext(name); err != nil {
 			return err
 		}
@@ -167,7 +176,10 @@ var configGetContextCmd = &cobra.Command{
 	Use:   "get-context",
 	Short: "Display the current context",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 
 		if cfg.CurrentContext == "" {
 			fmt.Println("No current context set")
@@ -184,7 +196,10 @@ var configListContextsCmd = &cobra.Command{
 	Aliases: []string{"get-contexts"},
 	Short:   "List all contexts",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 
 		if len(cfg.Contexts) == 0 {
 			fmt.Println("No contexts configured")
@@ -219,7 +234,10 @@ var configViewCmd = &cobra.Command{
 	Use:   "view",
 	Short: "View the current configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 
 		fmt.Printf("Config file: %s\n", cfg.Path())
 		fmt.Printf("Current context: %s\n", cfg.CurrentContext)

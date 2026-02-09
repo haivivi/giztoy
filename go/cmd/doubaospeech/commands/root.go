@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 
@@ -94,36 +93,37 @@ func init() {
 	rootCmd.AddCommand(interactiveCmd)
 }
 
+// configErr stores the config load error for deferred reporting.
+var configErr error
+
 func initConfig() {
 	if cfgFile != "" {
-		var err error
-		globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %s config: %v\n", appName, err)
-		}
+		globalConfig, configErr = cli.LoadConfigWithPath(appName, cfgFile)
 		return
 	}
 	globalConfig = cli.LoadConfigIfExists(appName)
 }
 
 // getConfig returns the global configuration, lazily initializing if needed.
-func getConfig() *cli.Config {
+func getConfig() (*cli.Config, error) {
 	if globalConfig == nil {
+		if configErr != nil {
+			return nil, fmt.Errorf("%s config: %w", appName, configErr)
+		}
 		var err error
 		globalConfig, err = cli.LoadConfigWithPath(appName, cfgFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %s config: %v\n", appName, err)
-			return nil
+			return nil, fmt.Errorf("%s config: %w", appName, err)
 		}
 	}
-	return globalConfig
+	return globalConfig, nil
 }
 
 // getContext returns the context configuration to use
 func getContext() (*cli.Context, error) {
-	cfg := getConfig()
-	if cfg == nil {
-		return nil, fmt.Errorf("configuration not initialized")
+	cfg, err := getConfig()
+	if err != nil {
+		return nil, err
 	}
 
 	ctx, err := cfg.ResolveContext(contextName)

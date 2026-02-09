@@ -50,7 +50,10 @@ Examples:
 			ctx.Extra["workspace"] = workspace
 		}
 
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		if err := cfg.AddContext(name, ctx); err != nil {
 			return err
 		}
@@ -66,7 +69,10 @@ var configDeleteContextCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		if err := cfg.DeleteContext(name); err != nil {
 			return err
 		}
@@ -81,7 +87,10 @@ var configUseContextCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		if err := cfg.UseContext(name); err != nil {
 			return err
 		}
@@ -94,7 +103,10 @@ var configGetContextCmd = &cobra.Command{
 	Use:   "get-context",
 	Short: "Show the current context",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		if cfg.CurrentContext == "" {
 			fmt.Println("No current context set")
 		} else {
@@ -108,7 +120,10 @@ var configListContextsCmd = &cobra.Command{
 	Use:   "list-contexts",
 	Short: "List all contexts",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		if len(cfg.Contexts) == 0 {
 			fmt.Println("No contexts configured")
 			return nil
@@ -129,7 +144,10 @@ var configViewCmd = &cobra.Command{
 	Use:   "view",
 	Short: "View full configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := getConfig()
+		cfg, err := getConfig()
+		if err != nil {
+			return err
+		}
 		return outputResult(cfg, "", isJSONOutput())
 	},
 }
