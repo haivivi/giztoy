@@ -5,12 +5,27 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
 	"github.com/haivivi/giztoy/go/cmd/giztoy/internal/config"
 )
+
+// validateServiceName checks that a service name is non-empty and safe for use as a filename.
+func validateServiceName(service string) error {
+	if service == "" {
+		return fmt.Errorf("service name cannot be empty")
+	}
+	if strings.ContainsAny(service, "/\\") {
+		return fmt.Errorf("service name %q must not contain path separators", service)
+	}
+	if strings.HasPrefix(service, ".") {
+		return fmt.Errorf("service name %q must not start with '.'", service)
+	}
+	return nil
+}
 
 var configCmd = &cobra.Command{
 	Use:   "config",
@@ -169,6 +184,9 @@ Examples:
 		if ctxName == "" {
 			return fmt.Errorf("context name cannot be empty")
 		}
+		if err := validateServiceName(service); err != nil {
+			return err
+		}
 
 		contextDir := cfg.ContextDir(ctxName)
 		if _, err := os.Stat(contextDir); os.IsNotExist(err) {
@@ -218,6 +236,9 @@ var configGetCmd = &cobra.Command{
 		if ctxName == "" {
 			return fmt.Errorf("context name cannot be empty")
 		}
+		if err := validateServiceName(service); err != nil {
+			return err
+		}
 
 		contextDir := cfg.ContextDir(ctxName)
 		m, err := config.LoadService[map[string]any](contextDir, service)
@@ -252,6 +273,9 @@ var configEditCmd = &cobra.Command{
 		if ctxName == "" {
 			return fmt.Errorf("context name cannot be empty")
 		}
+		if err := validateServiceName(service); err != nil {
+			return err
+		}
 
 		path := cfg.ServicePath(ctxName, service)
 
@@ -261,7 +285,7 @@ var configEditCmd = &cobra.Command{
 			return fmt.Errorf("context %q not found", ctxName)
 		}
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			if err := os.WriteFile(path, []byte("# "+service+" configuration\n"), 0644); err != nil {
+			if err := os.WriteFile(path, []byte("# "+service+" configuration\n"), 0600); err != nil {
 				return fmt.Errorf("create %s: %w", path, err)
 			}
 		}
