@@ -181,8 +181,8 @@ Examples:
 			return err
 		}
 		ctxName, service, key, value := args[0], args[1], args[2], args[3]
-		if ctxName == "" {
-			return fmt.Errorf("context name cannot be empty")
+		if err := config.ValidateContextName(ctxName); err != nil {
+			return err
 		}
 		if err := validateServiceName(service); err != nil {
 			return err
@@ -233,8 +233,8 @@ var configGetCmd = &cobra.Command{
 			return err
 		}
 		ctxName, service, key := args[0], args[1], args[2]
-		if ctxName == "" {
-			return fmt.Errorf("context name cannot be empty")
+		if err := config.ValidateContextName(ctxName); err != nil {
+			return err
 		}
 		if err := validateServiceName(service); err != nil {
 			return err
@@ -270,8 +270,8 @@ var configEditCmd = &cobra.Command{
 			return err
 		}
 		ctxName, service := args[0], args[1]
-		if ctxName == "" {
-			return fmt.Errorf("context name cannot be empty")
+		if err := config.ValidateContextName(ctxName); err != nil {
+			return err
 		}
 		if err := validateServiceName(service); err != nil {
 			return err

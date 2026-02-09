@@ -121,8 +121,8 @@ func (c *Config) ListContexts() ([]string, error) {
 	return names, nil
 }
 
-// validateContextName checks that a context name is safe for use as a directory name.
-func validateContextName(name string) error {
+// ValidateContextName checks that a context name is safe for use as a directory name.
+func ValidateContextName(name string) error {
 	if name == "" {
 		return fmt.Errorf("context name cannot be empty")
 	}
@@ -137,7 +137,7 @@ func validateContextName(name string) error {
 
 // AddContext creates a new context directory.
 func (c *Config) AddContext(name string) error {
-	if err := validateContextName(name); err != nil {
+	if err := ValidateContextName(name); err != nil {
 		return err
 	}
 
@@ -154,7 +154,7 @@ func (c *Config) AddContext(name string) error {
 
 // DeleteContext removes a context directory and all its service configs.
 func (c *Config) DeleteContext(name string) error {
-	if err := validateContextName(name); err != nil {
+	if err := ValidateContextName(name); err != nil {
 		return err
 	}
 
@@ -177,7 +177,7 @@ func (c *Config) DeleteContext(name string) error {
 
 // UseContext switches the current context.
 func (c *Config) UseContext(name string) error {
-	if err := validateContextName(name); err != nil {
+	if err := ValidateContextName(name); err != nil {
 		return err
 	}
 
