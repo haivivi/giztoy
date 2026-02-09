@@ -262,6 +262,9 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 					if err := read(&friends[lev][k]); err != nil {
 						return nil, err
 					}
+					if friends[lev][k] >= numSlots {
+						return nil, fmt.Errorf("vecstore: friend ID %d out of bounds (numSlots=%d)", friends[lev][k], numSlots)
+					}
 				}
 			}
 		}
@@ -274,6 +277,16 @@ func LoadHNSW(r io.Reader) (*HNSW, error) {
 		}
 		nodes[i] = nd
 		idMap[nd.id] = i
+	}
+
+	// Validate entryID bounds.
+	if entryID >= 0 {
+		if uint32(entryID) >= numSlots {
+			return nil, fmt.Errorf("vecstore: entryID %d out of bounds (numSlots=%d)", entryID, numSlots)
+		}
+		if nodes[entryID] == nil {
+			return nil, fmt.Errorf("vecstore: entryID %d points to a nil node", entryID)
+		}
 	}
 
 	cfg := HNSWConfig{
