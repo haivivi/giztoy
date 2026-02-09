@@ -110,14 +110,25 @@ pub fn MqttClientConn(comptime MqttClient: type) type {
         json_buf: [wire.STATS_EVENT_JSON_SIZE]u8 = undefined,
 
         /// Initialize a new chatgear connection.
+        /// Scope is normalized to end with '/' if non-empty (matching Go behavior).
         pub fn init(mqtt: *MqttClient, config: Config) Self {
             var self = Self{ .mqtt = mqtt };
 
-            self.input_audio_topic = self.tb_input_audio.build(config.scope, config.gear_id, "input_audio_stream");
-            self.state_topic = self.tb_state.build(config.scope, config.gear_id, "state");
-            self.stats_topic = self.tb_stats.build(config.scope, config.gear_id, "stats");
-            self.output_audio_topic = self.tb_output_audio.build(config.scope, config.gear_id, "output_audio_stream");
-            self.command_topic = self.tb_command.build(config.scope, config.gear_id, "command");
+            // Normalize scope: ensure trailing '/' if non-empty
+            // Matches Go: if scope != "" && !strings.HasSuffix(scope, "/") { scope += "/" }
+            var scope_buf: [MAX_TOPIC_LEN]u8 = undefined;
+            var scope = config.scope;
+            if (scope.len > 0 and scope[scope.len - 1] != '/') {
+                @memcpy(scope_buf[0..scope.len], scope);
+                scope_buf[scope.len] = '/';
+                scope = scope_buf[0 .. scope.len + 1];
+            }
+
+            self.input_audio_topic = self.tb_input_audio.build(scope, config.gear_id, "input_audio_stream");
+            self.state_topic = self.tb_state.build(scope, config.gear_id, "state");
+            self.stats_topic = self.tb_stats.build(scope, config.gear_id, "stats");
+            self.output_audio_topic = self.tb_output_audio.build(scope, config.gear_id, "output_audio_stream");
+            self.command_topic = self.tb_command.build(scope, config.gear_id, "command");
 
             return self;
         }
@@ -225,4 +236,36 @@ test "MqttClientConn init builds topics" {
     try std.testing.expectEqualStrings("palr/cn/device/test-001/stats", conn.stats_topic);
     try std.testing.expectEqualStrings("palr/cn/device/test-001/output_audio_stream", conn.output_audio_topic);
     try std.testing.expectEqualStrings("palr/cn/device/test-001/command", conn.command_topic);
+}
+
+test "MqttClientConn auto-appends trailing slash to scope" {
+    const MockMqtt = struct {
+        pub fn publish(_: *@This(), _: []const u8, _: []const u8) !void {}
+        pub fn subscribe(_: *@This(), _: []const []const u8) !void {}
+    };
+
+    var mqtt = MockMqtt{};
+    // Scope without trailing slash — should be normalized
+    const conn = MqttClientConn(MockMqtt).init(&mqtt, .{
+        .scope = "RyBFG6",
+        .gear_id = "zig-001",
+    });
+
+    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/state", conn.state_topic);
+    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/command", conn.command_topic);
+}
+
+test "MqttClientConn empty scope" {
+    const MockMqtt = struct {
+        pub fn publish(_: *@This(), _: []const u8, _: []const u8) !void {}
+        pub fn subscribe(_: *@This(), _: []const []const u8) !void {}
+    };
+
+    var mqtt = MockMqtt{};
+    const conn = MqttClientConn(MockMqtt).init(&mqtt, .{
+        .scope = "",
+        .gear_id = "dev-001",
+    });
+
+    try std.testing.expectEqualStrings("device/dev-001/state", conn.state_topic);
 }
