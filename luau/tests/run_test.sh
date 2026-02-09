@@ -44,5 +44,12 @@ else
     fi
 fi
 
-echo "Running: $RUNNER luau run --libs=$LIBS_DIR --runtime=$RUNTIME $SCRIPT"
-exec "$RUNNER" luau run --libs="$LIBS_DIR" --runtime="$RUNTIME" "$SCRIPT"
+# Detect if runner is giztoy (needs "luau run" subcommand) or standalone luau binary
+RUNNER_NAME=$(basename "$RUNNER")
+if [[ "$RUNNER_NAME" == "giztoy" || "$RUNNER_NAME" == "giztoy_" ]]; then
+    echo "Running: $RUNNER luau run --libs=$LIBS_DIR --runtime=$RUNTIME $SCRIPT"
+    exec "$RUNNER" luau run --libs="$LIBS_DIR" --runtime="$RUNTIME" "$SCRIPT"
+else
+    echo "Running: $RUNNER --dir=$LIBS_DIR --runtime=$RUNTIME $SCRIPT"
+    exec "$RUNNER" --dir="$LIBS_DIR" --runtime="$RUNTIME" "$SCRIPT"
+fi
