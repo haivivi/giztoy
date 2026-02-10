@@ -3,6 +3,7 @@
 # Models:
 #   speaker_eres2net  — 3D-Speaker ERes2Net, speaker embedding (512-dim)
 #   vad_silero        — Silero VAD, voice activity detection
+#   denoise_nsnet2    — Microsoft NSNet2, noise suppression (freq-domain gain mask)
 
 filegroup(
     name = "speaker_eres2net",
@@ -23,10 +24,20 @@ filegroup(
 )
 
 filegroup(
+    name = "denoise_nsnet2",
+    srcs = [
+        "denoise_nsnet2.ncnn.param",
+        "denoise_nsnet2.ncnn.bin",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
     name = "all",
     srcs = [
         ":speaker_eres2net",
         ":vad_silero",
+        ":denoise_nsnet2",
     ],
     visibility = ["//visibility:public"],
 )

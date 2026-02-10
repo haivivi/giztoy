@@ -19,6 +19,12 @@ const (
 	// Input: [batch, sequence] float32 (audio samples)
 	// Output: [batch, 1] float32 (speech probability)
 	ModelVADSilero ModelID = "vad-silero"
+
+	// ModelDenoiseNSNet2 is Microsoft's NSNet2 noise suppression model.
+	// Operates frame-by-frame on log-power spectrum features.
+	// Input:  in0 [1, 161] (log-power spectrum), in1 [1, 400] (GRU1 state), in2 [1, 400] (GRU2 state)
+	// Output: out0 [1, 161] (frequency gain mask), out1 [1, 400] (GRU1 new state), out2 [1, 400] (GRU2 new state)
+	ModelDenoiseNSNet2 ModelID = "denoise-nsnet2"
 )
 
 // ModelInfo describes a registered model.

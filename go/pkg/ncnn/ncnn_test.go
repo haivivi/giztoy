@@ -128,7 +128,7 @@ func TestLoadModelNotRegistered(t *testing.T) {
 // ============================================================================
 
 func BenchmarkLoadModel(b *testing.B) {
-	for _, id := range []ModelID{ModelSpeakerERes2Net, ModelVADSilero} {
+	for _, id := range []ModelID{ModelSpeakerERes2Net, ModelVADSilero, ModelDenoiseNSNet2} {
 		b.Run(string(id), func(b *testing.B) {
 			for range b.N {
 				net, err := LoadModel(id)
@@ -236,8 +236,8 @@ func BenchmarkConcurrentSpeakerInference(b *testing.B) {
 func TestLoadEmbeddedModels(t *testing.T) {
 	models := ListModels()
 	t.Logf("registered models: %v", models)
-	if len(models) < 2 {
-		t.Fatalf("expected at least 2 registered models, got %d", len(models))
+	if len(models) < 3 {
+		t.Fatalf("expected at least 3 registered models, got %d", len(models))
 	}
 	tests := []struct {
 		id     ModelID
@@ -245,6 +245,7 @@ func TestLoadEmbeddedModels(t *testing.T) {
 	}{
 		{ModelSpeakerERes2Net, 80},
 		{ModelVADSilero, 512},
+		{ModelDenoiseNSNet2, 161},
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.id), func(t *testing.T) {
@@ -256,6 +257,124 @@ func TestLoadEmbeddedModels(t *testing.T) {
 			t.Logf("loaded %s OK", tt.id)
 		})
 	}
+}
+
+func BenchmarkNSNet2Inference(b *testing.B) {
+	net, err := LoadModel(ModelDenoiseNSNet2)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer net.Close()
+	feat := make([]float32, 161)
+	h1 := make([]float32, 400)
+	h2 := make([]float32, 400)
+	b.ResetTimer()
+	b.ReportAllocs()
+	for range b.N {
+		inFeat := mustMat2D(b, 161, 1, feat)
+		inH1 := mustMat2D(b, 400, 1, h1)
+		inH2 := mustMat2D(b, 400, 1, h2)
+		ex, _ := net.NewExtractor()
+		ex.SetInput("in0", inFeat)
+		ex.SetInput("in1", inH1)
+		ex.SetInput("in2", inH2)
+		mask, err := ex.Extract("out0")
+		if err != nil {
+			b.Fatal(err)
+		}
+		outH1, _ := ex.Extract("out1")
+		outH2, _ := ex.Extract("out2")
+		_ = mask.FloatData()
+		mask.Close()
+		outH1.Close()
+		outH2.Close()
+		ex.Close()
+		inFeat.Close()
+		inH1.Close()
+		inH2.Close()
+	}
+}
+
+func TestNSNet2Inference(t *testing.T) {
+	net, err := LoadModel(ModelDenoiseNSNet2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer net.Close()
+
+	// Simulate a log-power spectrum frame
+	feat := make([]float32, 161)
+	for i := range feat {
+		feat[i] = float32(i) * -0.1 // decaying spectrum
+	}
+	h1 := make([]float32, 400)
+	h2 := make([]float32, 400)
+
+	inFeat := mustMat2D(t, 161, 1, feat)
+	defer inFeat.Close()
+	inH1 := mustMat2D(t, 400, 1, h1)
+	defer inH1.Close()
+	inH2 := mustMat2D(t, 400, 1, h2)
+	defer inH2.Close()
+
+	ex, err := net.NewExtractor()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ex.Close()
+
+	ex.SetInput("in0", inFeat)
+	ex.SetInput("in1", inH1)
+	ex.SetInput("in2", inH2)
+
+	mask, err := ex.Extract("out0")
+	if err != nil {
+		t.Fatalf("extract out0: %v", err)
+	}
+	defer mask.Close()
+
+	maskData := mask.FloatData()
+	if len(maskData) != 161 {
+		t.Fatalf("mask len = %d, want 161", len(maskData))
+	}
+
+	// Mask should be in [0, 1] (sigmoid output)
+	for i, v := range maskData {
+		if v < 0 || v > 1 {
+			t.Errorf("mask[%d] = %f, out of [0,1] range", i, v)
+		}
+	}
+	t.Logf("NSNet2 mask: first 5 = [%.4f, %.4f, %.4f, %.4f, %.4f]",
+		maskData[0], maskData[1], maskData[2], maskData[3], maskData[4])
+
+	// Check state outputs exist
+	outH1, err := ex.Extract("out1")
+	if err != nil {
+		t.Fatalf("extract out1: %v", err)
+	}
+	defer outH1.Close()
+	outH2, err := ex.Extract("out2")
+	if err != nil {
+		t.Fatalf("extract out2: %v", err)
+	}
+	defer outH2.Close()
+
+	h1Data := outH1.FloatData()
+	h2Data := outH2.FloatData()
+	if len(h1Data) != 400 || len(h2Data) != 400 {
+		t.Errorf("state dims: h1=%d h2=%d, want 400,400", len(h1Data), len(h2Data))
+	}
+	t.Logf("NSNet2 states: h1 nonzero=%d, h2 nonzero=%d", countNonZero(h1Data), countNonZero(h2Data))
+}
+
+func countNonZero(v []float32) int {
+	n := 0
+	for _, x := range v {
+		if x != 0 {
+			n++
+		}
+	}
+	return n
 }
 
 func TestEmbeddedModelInference(t *testing.T) {

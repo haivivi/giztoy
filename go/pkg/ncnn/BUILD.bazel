@@ -6,12 +6,15 @@ genrule(
     srcs = [
         "//data/models/ncnn:speaker_eres2net",
         "//data/models/ncnn:vad_silero",
+        "//data/models/ncnn:denoise_nsnet2",
     ],
     outs = [
         "speaker_eres2net.ncnn.param",
         "speaker_eres2net.ncnn.bin",
         "vad_silero.ncnn.param",
         "vad_silero.ncnn.bin",
+        "denoise_nsnet2.ncnn.param",
+        "denoise_nsnet2.ncnn.bin",
     ],
     cmd = """
         for f in $(SRCS); do
