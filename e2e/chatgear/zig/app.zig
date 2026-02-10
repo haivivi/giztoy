@@ -480,6 +480,7 @@ fn connectTls(app_state: *AppState) void {
     initPort(port);
 
     // Init opus codec in main task (256KB stack) then pass to audio tasks
+    log.info("Initializing opus codec...", .{});
     const opus_alloc = idf.heap.psram;
     const enc = opus_alloc.create(opus.Encoder) catch |err| {
         log.err("alloc encoder: {}", .{err});
