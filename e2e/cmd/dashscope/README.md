@@ -13,7 +13,7 @@
 
 ```bash
 # Go CLI
-bazel run //go/cmd/dashscope -- config add-context dashscope_cn --api-key YOUR_API_KEY
+bazel run //go/cmd/giztoy -- dashscope config add-context dashscope_cn --api-key YOUR_API_KEY
 
 # 或 Rust CLI
 bazel run //rust/cmd/dashscope -- config add-context dashscope_cn --api-key YOUR_API_KEY

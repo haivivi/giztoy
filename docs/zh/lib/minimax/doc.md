@@ -129,9 +129,9 @@ sequenceDiagram
 
 - `examples/go/minimax/` - Go SDK 示例
 - `examples/rust/minimax/` - Rust SDK 示例
-- `examples/cmd/minimax/` - CLI 测试脚本
+- `e2e/cmd/minimax/` - CLI 测试脚本
 
 ## 相关
 
 - CLI 工具：`go/cmd/minimax/`
-- CLI 测试：`examples/cmd/minimax/`
+- CLI 测试：`e2e/cmd/minimax/`

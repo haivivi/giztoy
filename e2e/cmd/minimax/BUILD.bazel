@@ -1,22 +1,21 @@
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_go//go:def.bzl", "go_binary")
 
-# MiniMax CLI 测试脚本
-# 用法:
+# MiniMax CLI e2e test runner (Go)
+# Usage:
 #   bazel run //e2e/cmd/minimax:run -- go all
 #   bazel run //e2e/cmd/minimax:run -- rust 1
 #   bazel run //e2e/cmd/minimax:run -- both quick
-sh_binary(
+go_binary(
     name = "run",
-    srcs = ["run.sh"],
+    srcs = ["run.go"],
     data = [
-        ":commands",
-        "//go/cmd/minimax",
-        "//rust/cmd/minimax",
+        "//go/cmd/giztoy",
     ],
     visibility = ["//visibility:public"],
+    tags = ["manual"],
 )
 
-# 导出请求文件供其他目标使用
+# Export request files for other targets
 filegroup(
     name = "commands",
     srcs = glob(["commands/*.yaml"]),

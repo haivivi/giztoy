@@ -129,9 +129,9 @@ Common error codes:
 
 - `examples/go/minimax/` - Go SDK examples
 - `examples/rust/minimax/` - Rust SDK examples
-- `examples/cmd/minimax/` - CLI test scripts
+- `e2e/cmd/minimax/` - CLI test scripts
 
 ## Related
 
 - CLI tool: `go/cmd/minimax/`
-- CLI tests: `examples/cmd/minimax/`
+- CLI tests: `e2e/cmd/minimax/`

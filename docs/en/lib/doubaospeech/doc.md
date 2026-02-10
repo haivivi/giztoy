@@ -244,11 +244,11 @@ graph TB
 ## Examples Directory
 
 - `examples/go/doubaospeech/` - Go SDK examples
-- `examples/cmd/doubaospeech/` - CLI test scripts
+- `e2e/cmd/doubaospeech/` - CLI test scripts
 
 ## Related
 
 - Go CLI tool: `go/cmd/doubaospeech/`
 - Rust CLI tool: `rust/cmd/doubaospeech/`
-- CLI test scripts: `examples/cmd/doubaospeech/`
+- CLI test scripts: `e2e/cmd/doubaospeech/`
 - AI Development Guide (Go): `go/pkg/doubaospeech/AGENTS.md`

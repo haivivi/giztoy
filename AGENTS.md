@@ -10,8 +10,9 @@ giztoy is a Bazel-based multi-language project supporting the following language
 ## Core Design Principles
 
 1. **Language Isolation**: All Go code resides in `go/`, all Rust code resides in `rust/`
-2. **Independent Examples**: Examples are organized by language under `examples/`, each with its own module definition
-3. **Dual Build Support**: Supports both native toolchains (go build, cargo) and Bazel builds
+2. **Single CLI Entry Point**: `giztoy` is the only Go binary in `go/cmd/`
+3. **Examples vs E2E**: `examples/` for SDK usage demos, `e2e/` for integration tests
+4. **Dual Build Support**: Supports both native toolchains (go build, cargo) and Bazel builds
 
 ## Directory Structure
 
@@ -34,18 +35,28 @@ giztoy/
 ├── go/                       # Go code root directory
 │   ├── go.mod                # Go module definition (github.com/haivivi/giztoy/go)
 │   ├── go.sum                # Go dependency checksum
-│   ├── cmd/                  # CLI executables
-│   │   ├── dashscope/        # DashScope CLI
-│   │   ├── doubaospeech/     # Doubao Speech CLI
-│   │   └── minimax/          # MiniMax CLI
+│   ├── cmd/
+│   │   └── giztoy/           # Unified CLI (the only binary)
+│   │       ├── commands/     # Subcommands: minimax, doubao, dashscope, cortex, gear, luau
+│   │       └── internal/     # Internal packages (config, build)
 │   └── pkg/                  # Public libraries
 │       ├── audio/            # Audio processing library
 │       ├── buffer/           # Buffer utilities
+│       ├── chatgear/         # ChatGear device communication
 │       ├── cli/              # CLI common utilities
 │       ├── dashscope/        # DashScope SDK
 │       ├── doubaospeech/     # Doubao Speech SDK
+│       ├── embed/            # Embedding interface
 │       ├── genx/             # GenX (LLM universal interface)
-│       └── minimax/          # MiniMax SDK
+│       ├── graph/            # Entity-relation graph
+│       ├── kv/               # KV store interface
+│       ├── luau/             # Luau scripting runtime
+│       ├── minimax/          # MiniMax SDK
+│       ├── mqtt0/            # MQTT client/broker
+│       ├── openai-realtime/  # OpenAI Realtime API
+│       ├── recall/           # Search engine
+│       ├── storage/          # File storage interface
+│       └── vecstore/         # Vector store
 │
 ├── rust/                     # Rust code root directory
 │   ├── Cargo.toml            # Rust workspace definition
@@ -55,25 +66,38 @@ giztoy/
 │   └── cmd/
 │       └── minimax/          # MiniMax CLI
 │
-├── examples/                 # Example code
-│   ├── cmd/                  # CLI test scripts (shell)
-│   │   ├── minimax/          # MiniMax CLI test scripts
-│   │   │   ├── run.sh
-│   │   │   └── commands/     # YAML command configs
-│   │   └── doubaospeech/     # Doubao Speech CLI test scripts
-│   │       ├── run.sh
-│   │       └── commands/     # YAML command configs
+├── examples/                 # SDK usage examples (for humans)
+│   ├── bazel/                # Bazel mobile platform examples
+│   │   ├── android/
+│   │   ├── ios/
+│   │   └── harmonyos/
 │   ├── go/                   # Go examples (single go.mod)
 │   │   ├── go.mod            # Module: github.com/haivivi/giztoy/examples
 │   │   ├── audio/            # Audio processing examples
 │   │   ├── dashscope/        # DashScope examples
 │   │   ├── doubaospeech/     # Doubao Speech examples
-│   │   ├── genx/             # GenX examples
-│   │   └── minimax/          # MiniMax examples
+│   │   ├── embed/            # Embedding examples
+│   │   ├── minimax/          # MiniMax examples
+│   │   ├── mqtt/             # MQTT examples
+│   │   └── openai_realtime/  # OpenAI Realtime examples
 │   └── rust/                 # Rust examples
-│       └── minimax/          # MiniMax Rust examples
-│           ├── Cargo.toml
-│           └── src/bin/      # Binary examples
+│       ├── minimax/
+│       ├── dashscope/
+│       ├── doubaospeech/
+│       ├── audio/
+│       ├── genx/
+│       └── openai_realtime/
+│
+├── e2e/                      # Integration tests (for machines)
+│   ├── cmd/                  # CLI e2e test runners (Go binaries)
+│   │   ├── minimax/          # giztoy minimax tests
+│   │   ├── doubaospeech/     # giztoy doubao tests
+│   │   └── dashscope/        # giztoy dashscope tests
+│   ├── chatgear/             # ChatGear integration tests
+│   ├── genx/                 # GenX transformer chain tests
+│   ├── doubaospeech/         # Doubao Speech integration tests
+│   ├── doubao_minimax/       # Cross-service integration tests
+│   └── matchtest/            # Intent matching benchmark
 │
 └── third_party/              # Third-party C library configurations
     ├── portaudio/
@@ -84,7 +108,8 @@ giztoy/
 
 | Directory | Purpose |
 |-----------|---------|
-| `go/cmd/` | CLI executables, each subdirectory is an independent command-line tool |
+| `go/cmd/giztoy/` | Unified CLI binary with subcommands: minimax, doubao, dashscope, cortex, gear, luau |
+| `go/cmd/*/commands/` | Subcommand packages imported by giztoy (no standalone binaries) |
 | `go/pkg/` | Public libraries, import path: `github.com/haivivi/giztoy/go/pkg/...` |
 
 ## Rust Directory Description
@@ -134,36 +159,36 @@ name = "speech"
 path = "src/bin/speech.rs"
 ```
 
-### CLI Test Scripts
+### E2E Test Runners
 
-CLI test scripts are located in `examples/cmd/`:
+CLI e2e test runners are located in `e2e/cmd/`:
 
 ```
-examples/cmd/
+e2e/cmd/
 ├── minimax/
-│   ├── run.sh              # Test runner
+│   ├── run.go             # Go test runner
 │   ├── BUILD.bazel
-│   └── commands/           # YAML command configs
-│       ├── chat.yaml
-│       ├── speech.yaml
-│       └── ...
-└── doubaospeech/
-    ├── run.sh
-    ├── BUILD.bazel
-    └── commands/
-        ├── tts.yaml
-        └── ...
+│   └── commands/          # YAML command configs
+├── doubaospeech/
+│   ├── run.go
+│   └── BUILD.bazel
+└── dashscope/
+    ├── run.go
+    └── BUILD.bazel
 ```
 
 Running methods:
 ```bash
-# Direct execution
-./examples/cmd/minimax/run.sh go 1
-./examples/cmd/doubaospeech/run.sh tts
-
 # Bazel execution
-bazel run //examples/cmd/minimax:run -- go 1
-bazel run //examples/cmd/doubaospeech:run -- tts
+bazel run //e2e/cmd/minimax:run -- go 1
+bazel run //e2e/cmd/doubaospeech:run -- 1
+bazel run //e2e/cmd/dashscope:run -- go all
+
+# Unified CLI
+giztoy minimax text chat -f chat.yaml
+giztoy doubao tts v2 stream -f tts.yaml
+giztoy dashscope omni chat -f omni.yaml
+giztoy luau run script.luau
 ```
 
 ## Bazel Rules
@@ -171,7 +196,7 @@ bazel run //examples/cmd/doubaospeech:run -- tts
 - **Go**: rules_go + Gazelle
 - **Rust**: rules_rust + crate_universe
 - **C/C++**: Built-in rules (cc_library, cc_binary)
-- **Shell**: rules_shell (sh_binary, sh_test)
+- **Shell**: rules_shell (sh_test for luau tests)
 
 ## Build Commands
 
@@ -184,7 +209,7 @@ bazel test //...
 
 ```bash
 # Go native build
-cd go && go build ./cmd/...
+cd go && go build ./cmd/giztoy/...
 
 # Go examples native build
 cd examples/go && go build ./...
@@ -196,7 +221,7 @@ cd rust && cargo build --release
 bazel build //...
 
 # Bazel build Go CLI
-bazel build //go/cmd/...
+bazel build //go/cmd/giztoy
 
 # Bazel build Rust CLI
 bazel build //rust/cmd/...

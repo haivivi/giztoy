@@ -30,7 +30,7 @@ sh_binary(
     name = "run_test",
     srcs = ["run_test.sh"],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         ":haivivi_tests",
         ":unit_tests",
@@ -46,12 +46,12 @@ sh_test(
     name = "test_builtin_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location test_builtin.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "test_builtin.luau",
     ],
@@ -62,12 +62,12 @@ sh_test(
     name = "test_require_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location test_require.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "test_require.luau",
     ],
@@ -78,12 +78,12 @@ sh_test(
     name = "test_json_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location test_json.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "test_json.luau",
     ],
@@ -94,12 +94,12 @@ sh_test(
     name = "test_kvs_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location test_kvs.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "test_kvs.luau",
     ],
@@ -110,12 +110,12 @@ sh_test(
     name = "test_env_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location test_env.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "test_env.luau",
     ],
@@ -126,12 +126,12 @@ sh_test(
     name = "test_http_unit_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location test_http_unit.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "test_http_unit.luau",
     ],
@@ -239,12 +239,12 @@ sh_test(
     name = "test_time_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location test_time.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "test_time.luau",
     ],
@@ -271,12 +271,12 @@ sh_test(
     name = "test_coroutine_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location test_coroutine.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "test_coroutine.luau",
     ],
@@ -308,12 +308,12 @@ sh_test(
     name = "test_auth_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location haivivi/test_auth.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "haivivi/test_auth.luau",
     ],
@@ -331,12 +331,12 @@ sh_test(
     name = "test_pal_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location haivivi/test_pal.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "haivivi/test_pal.luau",
     ],
@@ -355,12 +355,12 @@ sh_test(
     name = "test_aiot_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location haivivi/test_aiot.luau)",
         "luau/libs",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "haivivi/test_aiot.luau",
     ],
@@ -457,13 +457,13 @@ sh_test(
     name = "test_tool_basic_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location tool/test_basic.luau)",
         "luau/libs",
         "tool",  # runtime mode
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "tool/test_basic.luau",
     ],
@@ -491,13 +491,13 @@ sh_test(
     name = "test_tool_require_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location tool/test_require.luau)",
         "luau/libs",
         "tool",  # runtime mode
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "tool/test_require.luau",
     ],
@@ -525,13 +525,13 @@ sh_test(
     name = "test_tool_stream_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location tool/test_stream.luau)",
         "luau/libs",
         "tool",  # runtime mode
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "tool/test_stream.luau",
     ],
@@ -546,13 +546,13 @@ sh_test(
     name = "test_agent_basic_go",
     srcs = ["run_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location agent/test_basic.luau)",
         "luau/libs",
         "agent",  # runtime mode
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "agent/test_basic.luau",
     ],
@@ -584,7 +584,7 @@ sh_test(
     name = "test_generate_go",
     srcs = ["run_genx_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location //testdata/luau/runtime:generate.luau)",
         "luau/libs",
         "testdata/models",
@@ -592,7 +592,7 @@ sh_test(
         "tool",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "//testdata/luau/runtime:generate.luau",
         "//testdata/models",
@@ -611,7 +611,7 @@ sh_test(
     name = "test_generate_stream_go",
     srcs = ["run_genx_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location //testdata/luau/runtime:generate_stream.luau)",
         "luau/libs",
         "testdata/models",
@@ -619,7 +619,7 @@ sh_test(
         "tool",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "//testdata/luau/runtime:generate_stream.luau",
         "//testdata/models",
@@ -638,7 +638,7 @@ sh_test(
     name = "test_tts_go",
     srcs = ["run_genx_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location //testdata/luau/runtime:tts.luau)",
         "luau/libs",
         "testdata/models",
@@ -646,7 +646,7 @@ sh_test(
         "tool",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "//testdata/luau/runtime:tts.luau",
         "//testdata/models",
@@ -666,7 +666,7 @@ sh_test(
     name = "test_tts_doubao_go",
     srcs = ["run_genx_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location //testdata/luau/runtime:tts.luau)",
         "luau/libs",
         "testdata/models",
@@ -674,7 +674,7 @@ sh_test(
         "tool",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "//testdata/luau/runtime:tts.luau",
         "//testdata/models",
@@ -694,7 +694,7 @@ sh_test(
     name = "test_realtime_go",
     srcs = ["run_genx_test.sh"],
     args = [
-        "$(location //go/cmd/luau)",
+        "$(location //go/cmd/giztoy)",
         "$(location //testdata/luau/runtime:realtime.luau)",
         "luau/libs",
         "testdata/models",
@@ -702,7 +702,7 @@ sh_test(
         "tool",
     ],
     data = [
-        "//go/cmd/luau",
+        "//go/cmd/giztoy",
         "//luau/libs:haivivi",
         "//testdata/luau/runtime:realtime.luau",
         "//testdata/models",

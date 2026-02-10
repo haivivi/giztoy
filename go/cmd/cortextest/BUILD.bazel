@@ -1,15 +1,2 @@
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
-
-go_library(
-    name = "cortextest_lib",
-    srcs = ["main.go"],
-    importpath = "github.com/haivivi/giztoy/go/cmd/cortextest",
-    visibility = ["//visibility:private"],
-    deps = ["//go/cmd/cortextest/commands"],
-)
-
-go_binary(
-    name = "cortextest",
-    embed = [":cortextest_lib"],
-    visibility = ["//visibility:public"],
-)
+# cortextest CLI commands package - used by giztoy unified binary
+# See //go/cmd/giztoy for the unified entry point

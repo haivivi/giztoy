@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "voice_clone_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/examples/doubaospeech/voice_clone",
+    visibility = ["//visibility:private"],
+    deps = ["//go/pkg/doubaospeech"],
+)
+
+go_binary(
+    name = "voice_clone",
+    embed = [":voice_clone_lib"],
+    visibility = ["//visibility:public"],
+)

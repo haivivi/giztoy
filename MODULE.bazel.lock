@@ -598,7 +598,7 @@
     "@@rules_rust+//crate_universe:extension.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "RJpzElnJclpivxfYqzUhF/ChsQulhe5qCHaGylfu3SA=",
-        "usagesDigest": "uzJ2p1KcNNV7MZBTfUDzAAEdIXur1F9bRgHo/cPn28I=",
+        "usagesDigest": "YZCEa/8yELbYP73tgouXDicSGfOg3Cuwqhb+iEBbI4I=",
         "recordedInputs": [
           "ENV:CARGO_BAZEL_DEBUG \\0",
           "ENV:CARGO_BAZEL_GENERATOR_SHA256 \\0",
@@ -633,9 +633,9 @@
           "FILE:@@//rust/luau/Cargo.toml b2bbfcfbffbef9077f59e67a9255a5fc6a5e17bd34dbd21a1922d652de6f3870",
           "FILE:@@//rust/cmd/dashscope/Cargo.toml 159b2a6e03053bed90d4788b6f3fb0828880a1b3861ca38a3c4d71550e94ae53",
           "FILE:@@//rust/cmd/minimax/Cargo.toml 776c6ce31d1952e3ace3dd7ed43870fda60947567dcff0b08a4abc88724fee48",
-          "FILE:@@//e2e/rust/audio/Cargo.toml 34e3d306c17be36326faf0f317d5058868d18554c192acc80e478380086054df",
-          "FILE:@@//e2e/rust/minimax/Cargo.toml 4ccecf89636d39760b456688d5b3a96df6e9e069aeb1c66e98c06f6129900d3e",
-          "FILE:@@//e2e/rust/genx/Cargo.toml b384ec8aa569eddc9740edca4377f7285142338f347ef89f7ab5dadb90aeb43b",
+          "FILE:@@//examples/rust/audio/Cargo.toml 34e3d306c17be36326faf0f317d5058868d18554c192acc80e478380086054df",
+          "FILE:@@//examples/rust/minimax/Cargo.toml 4ccecf89636d39760b456688d5b3a96df6e9e069aeb1c66e98c06f6129900d3e",
+          "FILE:@@//examples/rust/genx/Cargo.toml b384ec8aa569eddc9740edca4377f7285142338f347ef89f7ab5dadb90aeb43b",
           "FILE:@@//rust/doubaospeech/Cargo.toml bd93db28ad1f23256d10c8e2512d6e8dfb755d0e81cc9d6623c9da781a402158",
           "FILE:@@//rust/openai-realtime/Cargo.toml bc29d9a9e423da175e3fe1ce088b43e3f3e0ab17667ba044734f3c9d911ef540",
           "FILE:@@//rust/jsontime/Cargo.toml 4ca32b7eecc439a93885e953f70905abba1c76490fe2f4dc85ca94924dbf0cb2",

@@ -32,11 +32,11 @@ graph LR
 
 ### CLI 脚本示例
 - Minimax CLI 测试运行器：
-  - `./examples/cmd/minimax/run.sh go 1`
-  - Bazel：`bazel run //examples/cmd/minimax:run -- go 1`
+  - `./e2e/cmd/minimax/run.sh go 1`
+  - Bazel：`bazel run //e2e/cmd/minimax:run -- go 1`
 - 豆包语音 CLI 测试运行器：
-  - `./examples/cmd/doubaospeech/run.sh tts`
-  - Bazel：`bazel run //examples/cmd/doubaospeech:run -- tts`
+  - `./e2e/cmd/doubaospeech/run.sh tts`
+  - Bazel：`bazel run //e2e/cmd/doubaospeech:run -- tts`
 
 ### Go 示例
 所有 Go 示例共享 `examples/go/go.mod` 中的一个模块，并通过 `replace` 依赖于本地 `go/` 模块。

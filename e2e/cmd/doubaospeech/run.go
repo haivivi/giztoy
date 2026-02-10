@@ -68,15 +68,15 @@ func projectRoot() string {
 	return dir
 }
 
-// findCLI locates the doubaospeech CLI binary.
+// findCLI locates the giztoy binary (unified CLI entry point).
 func findCLI(root string) string {
 	// Bazel-built binary location
-	bazelBin := filepath.Join(root, "bazel-bin", "go", "cmd", "doubaospeech", "doubaospeech_", "doubaospeech")
+	bazelBin := filepath.Join(root, "bazel-bin", "go", "cmd", "giztoy", "giztoy_", "giztoy")
 	if _, err := os.Stat(bazelBin); err == nil {
 		return bazelBin
 	}
 	// Fallback: PATH lookup
-	if p, err := exec.LookPath("doubaospeech"); err == nil {
+	if p, err := exec.LookPath("giztoy"); err == nil {
 		return p
 	}
 	return ""
@@ -104,7 +104,7 @@ func main() {
 	// Find CLI binary
 	cli := findCLI(root)
 	if cli == "" {
-		logError("Cannot find doubaospeech binary. Run: bazel build //go/cmd/doubaospeech")
+		logError("Cannot find giztoy binary. Run: bazel build //go/cmd/giztoy")
 		os.Exit(1)
 	}
 	logInfo("CLI binary: %s", cli)
@@ -136,10 +136,10 @@ func main() {
 	logInfo("Tests:       %d", len(selected))
 	fmt.Println()
 
-	// Run tests
+	// Run tests (prepend "doubao" subcommand for giztoy)
 	passed, failed := 0, 0
 	for _, tc := range selected {
-		args := append([]string{"-c", contextName}, tc.Args...)
+		args := append([]string{"doubao", "-c", contextName}, tc.Args...)
 		if runTest(cli, tc.Name, args) {
 			passed++
 		} else {
@@ -293,19 +293,19 @@ func setupContext(cli, contextName string) {
 	apiKey := os.Getenv("DOUBAO_API_KEY")
 
 	if appID != "" && apiKey != "" {
-		// Auto-create context
-		run(cli, "config", "add-context", contextName,
+		// Auto-create context (via giztoy doubao subcommand)
+		run(cli, "doubao", "config", "add-context", contextName,
 			"--app-id", appID, "--api-key", apiKey)
 	}
 
 	// Try to use the context
-	run(cli, "config", "use-context", contextName)
+	run(cli, "doubao", "config", "use-context", contextName)
 
 	// Verify context exists
-	out, err := exec.Command(cli, "config", "list-contexts").CombinedOutput()
+	out, err := exec.Command(cli, "doubao", "config", "list-contexts").CombinedOutput()
 	if err != nil || !strings.Contains(string(out), contextName) {
 		logError("Context '%s' not found. Set DOUBAO_APP_ID and DOUBAO_API_KEY, or run:", contextName)
-		logError("  doubaospeech config add-context %s --app-id YOUR_APP_ID --api-key YOUR_API_KEY", contextName)
+		logError("  giztoy doubao config add-context %s --app-id YOUR_APP_ID --api-key YOUR_API_KEY", contextName)
 		os.Exit(1)
 	}
 
