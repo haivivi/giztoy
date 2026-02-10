@@ -5,10 +5,12 @@ genrule(
     name = "embed_models",
     srcs = [
         "//data/models/onnx:speaker_eres2net",
+        "//data/models/onnx:vad_silero",
         "//data/models/onnx:denoise_nsnet2",
     ],
     outs = [
         "speaker_eres2net.onnx",
+        "vad_silero.onnx",
         "denoise_nsnet2.onnx",
     ],
     cmd = """

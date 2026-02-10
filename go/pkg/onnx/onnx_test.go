@@ -70,8 +70,8 @@ func TestEnvDoubleClose(t *testing.T) {
 func TestListModels(t *testing.T) {
 	models := ListModels()
 	t.Logf("registered ONNX models: %v", models)
-	if len(models) < 2 {
-		t.Fatalf("expected at least 2 models, got %d", len(models))
+	if len(models) < 3 {
+		t.Fatalf("expected at least 3 models, got %d", len(models))
 	}
 }
 
@@ -123,6 +123,44 @@ func TestERes2NetONNX(t *testing.T) {
 			t.Fatalf("emb[%d] = %f (NaN/Inf)", i, v)
 		}
 	}
+}
+
+func TestSileroVADONNX(t *testing.T) {
+	env, err := NewEnv("test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer env.Close()
+
+	session, err := LoadModel(env, ModelVADSilero)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+
+	// Input: audio [1, 512], state [2, 1, 128], sr scalar int64
+	audio := make([]float32, 512)
+	for i := range audio {
+		audio[i] = float32(i%100) * 0.001
+	}
+	state := make([]float32, 2*1*128)
+
+	inputAudio, err := NewTensor([]int64{1, 512}, audio)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer inputAudio.Close()
+
+	inputState, err := NewTensor([]int64{2, 1, 128}, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer inputState.Close()
+
+	// Note: full inference requires int64 "sr" tensor which our API
+	// doesn't support yet (only float32). Test model load + session creation.
+	t.Logf("Silero VAD ONNX: session OK, audio=[1,512], state=[2,1,128], model=%d bytes",
+		len(vadSileroData))
 }
 
 func TestNSNet2ONNX(t *testing.T) {

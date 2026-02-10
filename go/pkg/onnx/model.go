@@ -14,6 +14,14 @@ const (
 	// Output "embedding": [1, 512] float32 (speaker embedding)
 	ModelSpeakerERes2Net ModelID = "speaker-eres2net"
 
+	// ModelVADSilero is the Silero VAD v6 model for voice activity detection.
+	// Input "input": [batch, sequence] float32 (audio samples, e.g. 512 @ 16kHz)
+	// Input "state": [2, batch, 128] float32 (LSTM state)
+	// Input "sr": int64 scalar (sample rate, must be 16000)
+	// Output "output": [batch, 1] float32 (speech probability)
+	// Output "stateN": [2, batch, 128] float32 (updated LSTM state)
+	ModelVADSilero ModelID = "vad-silero"
+
 	// ModelDenoiseNSNet2 is Microsoft's NSNet2 noise suppression model.
 	// Input "input": [batch, frames, 161] float32 (log-power spectrum)
 	// Output "output": [batch, frames, 161] float32 (frequency gain mask)
