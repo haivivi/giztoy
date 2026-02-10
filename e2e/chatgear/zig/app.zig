@@ -478,7 +478,33 @@ fn connectTls(app_state: *AppState) void {
     active_port = port;
 
     initPort(port);
-    startAudioPipeline(port);
+
+    // Init opus codec in main task (256KB stack) then pass to audio tasks
+    const opus_alloc = idf.heap.psram;
+    const enc = opus_alloc.create(opus.Encoder) catch |err| {
+        log.err("alloc encoder: {}", .{err});
+        return;
+    };
+    enc.* = opus.Encoder.init(opus_alloc, Audio.sample_rate, 1, .voip) catch |err| {
+        log.err("opus encoder init: {}", .{err});
+        return;
+    };
+    enc.setBitrate(24000) catch {};
+    enc.setComplexity(0) catch {};
+    enc.setSignal(.voice) catch {};
+    log.info("Opus encoder ready (16kHz mono, 24kbps)", .{});
+
+    const dec = opus_alloc.create(opus.Decoder) catch |err| {
+        log.err("alloc decoder: {}", .{err});
+        return;
+    };
+    dec.* = opus.Decoder.init(opus_alloc, Audio.sample_rate, 1) catch |err| {
+        log.err("opus decoder init: {}", .{err});
+        return;
+    };
+    log.info("Opus decoder ready", .{});
+
+    startAudioPipeline(port, enc, dec);
     app_state.* = .running;
 
     // MQTT readLoop in background
@@ -655,21 +681,20 @@ const MIC_GAIN: i32 = 4;
 
 var g_recording: bool = false;
 
-/// Mic capture task — reads mic, opus encode, sends to chatgear uplink
-fn micTaskFn(ctx: ?*anyopaque) void {
-    const port: *TlsPort = @ptrCast(@alignCast(ctx));
-    log.info("[mic] task started", .{});
+const AudioCtx = struct {
+    port: *TlsPort,
+    encoder: *opus.Encoder,
+    decoder: *opus.Decoder,
+};
 
-    // Init opus encoder (PSRAM alloc, complexity=0, voice optimized)
-    var encoder = opus.Encoder.init(idf.heap.psram, Audio.sample_rate, 1, .voip) catch |err| {
-        log.err("[mic] opus encoder init: {}", .{err});
-        return;
-    };
-    defer encoder.deinit(idf.heap.psram);
-    encoder.setBitrate(24000) catch {};
-    encoder.setComplexity(0) catch {};
-    encoder.setSignal(.voice) catch {};
-    log.info("[mic] opus encoder ready (16kHz mono, 24kbps)", .{});
+var g_audio_ctx: ?*AudioCtx = null;
+
+/// Mic capture task — reads mic, opus encode, sends to chatgear uplink
+fn micTaskFn(_: ?*anyopaque) void {
+    const actx = g_audio_ctx orelse return;
+    const port = actx.port;
+    const encoder = actx.encoder;
+    log.info("[mic] task started", .{});
 
     const i2s = &(g_i2s orelse return);
     var raw_buf: [FRAME_SAMPLES * 2]u8 = undefined; // 16-bit samples = 2 bytes each
@@ -716,7 +741,7 @@ fn micTaskFn(ctx: ?*anyopaque) void {
         if (n < FRAME_SAMPLES) continue;
 
         // Opus encode
-        const encoded = encoder.encode(pcm_buf[0..FRAME_SAMPLES], @intCast(FRAME_SAMPLES), &opus_buf) catch |err| {
+        const encoded = encoder.encode(pcm_buf[0..FRAME_SAMPLES], FRAME_SAMPLES, &opus_buf) catch |err| {
             log.err("[mic] encode: {}", .{err});
             continue;
         };
@@ -729,17 +754,11 @@ fn micTaskFn(ctx: ?*anyopaque) void {
 }
 
 /// Downlink audio task — receives opus from MQTT, decodes, plays on speaker
-fn speakerTaskFn(ctx: ?*anyopaque) void {
-    const port: *TlsPort = @ptrCast(@alignCast(ctx));
+fn speakerTaskFn(_: ?*anyopaque) void {
+    const actx = g_audio_ctx orelse return;
+    const port = actx.port;
+    const decoder = actx.decoder;
     log.info("[spk] task started", .{});
-
-    // Init opus decoder (PSRAM alloc)
-    var decoder = opus.Decoder.init(idf.heap.psram, Audio.sample_rate, 1) catch |err| {
-        log.err("[spk] opus decoder init: {}", .{err});
-        return;
-    };
-    defer decoder.deinit(idf.heap.psram);
-    log.info("[spk] opus decoder ready", .{});
 
     const spk = &(g_spk orelse return);
     var pcm_buf: [FRAME_SAMPLES * 2]i16 = undefined; // stereo output
@@ -770,11 +789,19 @@ fn speakerTaskFn(ctx: ?*anyopaque) void {
 }
 
 /// Start audio pipeline tasks (called after chatgear port is ready)
-fn startAudioPipeline(port: *TlsPort) void {
-    FullRt.spawn("mic", micTaskFn, @ptrCast(port), .{ .stack_size = 32768 }) catch |err| {
+fn startAudioPipeline(port: *TlsPort, enc: *opus.Encoder, dec: *opus.Decoder) void {
+    // Heap-allocate context so it outlives this function
+    const ctx = alloc.create(AudioCtx) catch |err| {
+        log.err("alloc audio ctx: {}", .{err});
+        return;
+    };
+    ctx.* = .{ .port = port, .encoder = enc, .decoder = dec };
+    g_audio_ctx = ctx;
+
+    FullRt.spawn("mic", micTaskFn, null, .{ .stack_size = 32768 }) catch |err| {
         log.err("spawn mic task: {}", .{err});
     };
-    FullRt.spawn("spk", speakerTaskFn, @ptrCast(port), .{ .stack_size = 32768 }) catch |err| {
+    FullRt.spawn("spk", speakerTaskFn, null, .{ .stack_size = 32768 }) catch |err| {
         log.err("spawn spk task: {}", .{err});
     };
     log.info("Audio pipeline started (mic + speaker)", .{});

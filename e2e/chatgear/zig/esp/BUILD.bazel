@@ -35,7 +35,8 @@ esp_psram(
     chip = "esp32s3",
     mode = "oct",
     speed = "80m",
-    xip_from_psram = True,
+    # XIP disabled — opus xtensa code can't execute from PSRAM
+    # TLS also needs to run from internal flash
 )
 
 esp_freertos(
