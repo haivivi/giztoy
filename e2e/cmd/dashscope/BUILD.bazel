@@ -9,6 +9,10 @@ package(default_visibility = ["//visibility:public"])
 go_binary(
     name = "run",
     srcs = ["run.go"],
+    data = [
+        "//go/cmd/giztoy",
+    ],
+    tags = ["manual"],
 )
 
 filegroup(
