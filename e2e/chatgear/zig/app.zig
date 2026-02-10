@@ -516,7 +516,7 @@ fn connectTls(app_state: *AppState) void {
                 log.err("MQTT read loop error: {}", .{err});
             };
         }
-    }.run, @ptrCast(client), .{ .stack_size = 32768 }) catch |err| {
+    }.run, @ptrCast(client), .{ .stack_size = 65536 }) catch |err| {
         log.err("Failed to spawn MQTT reader: {}", .{err});
     };
 
@@ -532,7 +532,7 @@ fn connectTls(app_state: *AppState) void {
                 };
             }
         }
-    }.run, @ptrCast(client), .{ .stack_size = 32768 }) catch |err| {
+    }.run, @ptrCast(client), .{ .stack_size = 65536 }) catch |err| {
         log.err("Failed to spawn MQTT keepalive: {}", .{err});
     };
 }

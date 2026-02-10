@@ -117,7 +117,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
         // ====================================================================
 
         /// Stack size for spawned tasks. TLS encryption needs large stacks.
-        const TASK_STACK_SIZE: u32 = 32768;
+        const TASK_STACK_SIZE: u32 = 65536;
 
         /// Spawn options for chatgear background tasks.
         const task_opts: Rt.Options = .{ .stack_size = TASK_STACK_SIZE };
