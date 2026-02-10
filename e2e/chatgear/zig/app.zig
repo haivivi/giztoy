@@ -469,6 +469,18 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("MQTT subscribed to downlink topics", .{});
 
+    // Send initial state=ready immediately (before port tasks start)
+    const init_state = chatgear.StateEvent{
+        .version = 1,
+        .time = @as(i64, @intCast(Board.time.getTimeMs())),
+        .state = .ready,
+        .update_at = @as(i64, @intCast(Board.time.getTimeMs())),
+    };
+    conn.sendState(&init_state) catch |err| {
+        log.err("Initial state send failed: {}", .{err});
+    };
+    log.info("Sent initial state=ready", .{});
+
     // ChatGear port
     const port = alloc.create(TlsPort) catch |err| {
         log.err("alloc port: {}", .{err});
@@ -520,16 +532,19 @@ fn connectTls(app_state: *AppState) void {
         log.err("Failed to spawn MQTT reader: {}", .{err});
     };
 
-    // MQTT keep-alive ping every 20s (keep_alive=60s, ping at 1/3 interval)
+    // MQTT keep-alive ping every 10s
     FullRt.spawn("mqtt_ka", struct {
         fn run(ctx: ?*anyopaque) void {
             const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
+            // First ping after 5s, then every 10s
+            hw.MqttRt.Time.sleepMs(5_000);
             while (true) {
-                hw.MqttRt.Time.sleepMs(20_000);
                 c.ping() catch |err| {
                     log.err("MQTT ping failed: {}", .{err});
                     return;
                 };
+                log.info("MQTT ping OK", .{});
+                hw.MqttRt.Time.sleepMs(10_000);
             }
         }
     }.run, @ptrCast(client), .{ .stack_size = 65536 }) catch |err| {
