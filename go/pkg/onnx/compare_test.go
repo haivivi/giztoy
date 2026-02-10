@@ -2,7 +2,6 @@ package onnx
 
 import (
 	"math"
-	"os"
 	"testing"
 
 	"github.com/haivivi/giztoy/go/pkg/ncnn"
@@ -14,21 +13,14 @@ import (
 // This validates that the pnnx model conversion is correct.
 // A cosine similarity > 0.99 between the two outputs indicates correct conversion.
 func TestERes2NetNCNNvsONNX(t *testing.T) {
-	// Load ONNX model.
-	onnxPath := findRunfile(t, "+pnnx_ext+onnx_speaker_eres2net/model.onnx", "ONNX_ERES2NET_PATH")
-
-	onnxData, err := os.ReadFile(onnxPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	// Load ONNX model from embedded data.
 	env, err := NewEnv("compare")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer env.Close()
 
-	onnxSession, err := env.NewSession(onnxData)
+	onnxSession, err := LoadModel(env, ModelSpeakerERes2Net)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +93,6 @@ func TestERes2NetNCNNvsONNX(t *testing.T) {
 	t.Logf("ONNX embedding: %d dims, first 5: %v", len(onnxEmb), onnxEmb[:5])
 	t.Logf("ncnn embedding: %d dims, first 5: %v", len(ncnnEmb), ncnnEmb[:5])
 
-	// Cosine similarity
 	var dotProduct, normA, normB float64
 	for i := range onnxEmb {
 		a, b := float64(onnxEmb[i]), float64(ncnnEmb[i])
@@ -112,7 +103,6 @@ func TestERes2NetNCNNvsONNX(t *testing.T) {
 	cosSim := dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
 	t.Logf("cosine similarity: %.6f", cosSim)
 
-	// Max absolute difference
 	maxDiff := float64(0)
 	for i := range onnxEmb {
 		diff := math.Abs(float64(onnxEmb[i]) - float64(ncnnEmb[i]))
@@ -122,9 +112,6 @@ func TestERes2NetNCNNvsONNX(t *testing.T) {
 	}
 	t.Logf("max absolute difference: %.6f", maxDiff)
 
-	// Acceptance criteria:
-	// - Cosine similarity > 0.99 (very similar)
-	// - Max diff < 0.1 (no catastrophic divergence)
 	if cosSim < 0.99 {
 		t.Errorf("cosine similarity too low: %.6f (want > 0.99)", cosSim)
 	}

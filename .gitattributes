@@ -1,3 +1,4 @@
 testdata/doubaospeech/*.mp3 filter=lfs diff=lfs merge=lfs -text
 testdata/doubaospeech/*.pcm filter=lfs diff=lfs merge=lfs -text
 data/models/ncnn/*.bin filter=lfs diff=lfs merge=lfs -text
+data/models/onnx/*.onnx filter=lfs diff=lfs merge=lfs -text

@@ -1,9 +1,32 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 
+# Copy ONNX model files from data/ for go:embed.
+genrule(
+    name = "embed_models",
+    srcs = [
+        "//data/models/onnx:speaker_eres2net",
+        "//data/models/onnx:denoise_nsnet2",
+    ],
+    outs = [
+        "speaker_eres2net.onnx",
+        "denoise_nsnet2.onnx",
+    ],
+    cmd = """
+        for f in $(SRCS); do
+            cp $$f $(RULEDIR)/$$(basename $$f)
+        done
+    """,
+)
+
 go_library(
     name = "onnx",
-    srcs = ["onnx.go"],
+    srcs = [
+        "model.go",
+        "model_embed.go",
+        "onnx.go",
+    ],
     cgo = True,
+    embedsrcs = [":embed_models"],
     # rpath so shared library is found in Bazel's _solib directory at runtime.
     clinkopts = ["-Wl,-rpath,@loader_path/onnx_test.runfiles/_main/_solib_darwin_arm64/_U_A_A+onnxruntime_Uext+onnxruntime_S_S_Connxruntime_Ulib___Ulib"],
     importpath = "github.com/haivivi/giztoy/go/pkg/onnx",
@@ -17,7 +40,8 @@ go_test(
         "compare_test.go",
         "onnx_test.go",
     ],
-    data = ["@onnx_speaker_eres2net//:model"],
     embed = [":onnx"],
-    deps = ["//go/pkg/ncnn"],
+    deps = [
+        "//go/pkg/ncnn",
+    ],
 )

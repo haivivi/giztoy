@@ -1,0 +1,26 @@
+# Pre-trained ONNX model files (checked in via git lfs).
+#
+# These are the original ONNX models, embedded into go/pkg/onnx
+# for use with ONNX Runtime. The ncnn-converted versions live in
+# data/models/ncnn/.
+
+filegroup(
+    name = "speaker_eres2net",
+    srcs = ["speaker_eres2net.onnx"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "denoise_nsnet2",
+    srcs = ["denoise_nsnet2.onnx"],
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "all",
+    srcs = [
+        ":speaker_eres2net",
+        ":denoise_nsnet2",
+    ],
+    visibility = ["//visibility:public"],
+)
