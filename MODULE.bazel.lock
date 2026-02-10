@@ -268,7 +268,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%audio_libs": {
       "general": {
-        "bzlTransitiveDigest": "c8+UVE65pUByWzZgRYpzvjn7XZkOYH0Ga3HoITQm+cQ=",
+        "bzlTransitiveDigest": "+vZdNhudGUrMqNkvft37eyCIahJUoLYvqNRHdCdUyic=",
         "usagesDigest": "Xd+WAzFJEryUCjH03YpiXD7zp5I44G4mzlGyoeX1wGo=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -344,7 +344,7 @@
     },
     "//:extensions.bzl%ncnn_ext": {
       "general": {
-        "bzlTransitiveDigest": "c8+UVE65pUByWzZgRYpzvjn7XZkOYH0Ga3HoITQm+cQ=",
+        "bzlTransitiveDigest": "+vZdNhudGUrMqNkvft37eyCIahJUoLYvqNRHdCdUyic=",
         "usagesDigest": "7FXmzMt45LZCdeJCmHX1Yx5NwpRhNuQktngUfiRN+vQ=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -358,9 +358,25 @@
         }
       }
     },
+    "//:extensions.bzl%onnxruntime_ext": {
+      "general": {
+        "bzlTransitiveDigest": "+vZdNhudGUrMqNkvft37eyCIahJUoLYvqNRHdCdUyic=",
+        "usagesDigest": "O6hxtfAkLZSNeO3AQ0EfLubLNZbFCRg812uAwc731sg=",
+        "recordedInputs": [
+          "REPO_MAPPING:,gazelle gazelle+",
+          "REPO_MAPPING:gazelle+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "onnxruntime": {
+            "repoRuleId": "@@//third_party/onnxruntime:defs.bzl%onnxruntime_repo",
+            "attributes": {}
+          }
+        }
+      }
+    },
     "//:extensions.bzl%pnnx_ext": {
       "general": {
-        "bzlTransitiveDigest": "c8+UVE65pUByWzZgRYpzvjn7XZkOYH0Ga3HoITQm+cQ=",
+        "bzlTransitiveDigest": "+vZdNhudGUrMqNkvft37eyCIahJUoLYvqNRHdCdUyic=",
         "usagesDigest": "Sfi6G4M1DeRrfXTKujPY38s0GENlMxXWPwOKW9HVcRw=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
