@@ -2,10 +2,21 @@ package voiceprint
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"sync"
 
 	"github.com/haivivi/giztoy/go/pkg/ncnn"
+)
+
+const (
+	// segFrames is the number of fbank frames per inference segment.
+	// 300 frames = 3 seconds at 10ms hop. Matching the training window
+	// of speaker embedding models improves stability.
+	segFrames = 300
+
+	// hopFrames is the hop between segments for averaging.
+	hopFrames = 150
 )
 
 // NCNNModel implements [Model] using the ncnn inference engine for speaker
@@ -126,8 +137,16 @@ func newNCNNModelDefaults(opts []NCNNModelOption) *NCNNModel {
 	return m
 }
 
-// Extract implements [Model]. It converts PCM16 audio to fbank features
-// and runs ncnn inference to produce a speaker embedding.
+// Extract implements [Model]. It converts PCM16 audio to a normalized
+// speaker embedding using the following pipeline:
+//
+//  1. PCM → fbank features (with Kaldi-compatible parameters)
+//  2. CMVN normalization (removes channel/environment effects)
+//  3. Segment-based inference (300-frame windows with 150-frame hop)
+//  4. Average segment embeddings + L2 normalize
+//
+// The returned embedding is an L2-normalized unit vector suitable for
+// cosine similarity comparison via dot product.
 func (m *NCNNModel) Extract(audio []byte) ([]float32, error) {
 	m.mu.Lock()
 	if m.closed {
@@ -138,21 +157,76 @@ func (m *NCNNModel) Extract(audio []byte) ([]float32, error) {
 	m.mu.Unlock()
 
 	// Step 1: Compute fbank features.
-	fbank := ComputeFbank(audio, m.fbankCfg)
-	if fbank == nil || len(fbank) == 0 {
+	features := ComputeFbank(audio, m.fbankCfg)
+	if features == nil || len(features) == 0 {
 		return nil, fmt.Errorf("voiceprint: audio too short for fbank extraction")
 	}
 
-	numFrames := len(fbank)
-	numMels := m.fbankCfg.NumMels
+	// Step 2: CMVN — subtract mean, divide by std per mel bin.
+	cmvn(features)
 
-	// Step 2: Flatten fbank into [h=numFrames, w=numMels] tensor.
-	flatData := make([]float32, numFrames*numMels)
-	for t := 0; t < numFrames; t++ {
-		copy(flatData[t*numMels:], fbank[t])
+	// Step 3: Segment-based extraction with averaging.
+	numFrames := len(features)
+	if numFrames <= segFrames {
+		// Short audio: single inference.
+		emb, err := m.extractSegment(net, features)
+		if err != nil {
+			return nil, err
+		}
+		l2Normalize(emb)
+		return emb, nil
 	}
 
-	// Step 3: Run inference via ncnn package.
+	// Long audio: sliding window, average all segment embeddings.
+	var embeddings [][]float32
+	var lastStart int
+	for start := 0; start+segFrames <= numFrames; start += hopFrames {
+		emb, err := m.extractSegment(net, features[start:start+segFrames])
+		if err != nil {
+			continue
+		}
+		l2Normalize(emb)
+		embeddings = append(embeddings, emb)
+		lastStart = start
+	}
+	// Ensure the last segment covers the end of the audio.
+	if tail := numFrames - segFrames; tail > lastStart {
+		emb, err := m.extractSegment(net, features[tail:])
+		if err == nil {
+			l2Normalize(emb)
+			embeddings = append(embeddings, emb)
+		}
+	}
+
+	if len(embeddings) == 0 {
+		return nil, fmt.Errorf("voiceprint: all segments failed")
+	}
+
+	// Average all segment embeddings.
+	avg := make([]float32, m.dim)
+	for _, emb := range embeddings {
+		for i, v := range emb {
+			avg[i] += v
+		}
+	}
+	n := float32(len(embeddings))
+	for i := range avg {
+		avg[i] /= n
+	}
+	l2Normalize(avg)
+	return avg, nil
+}
+
+// extractSegment runs ncnn inference on a single fbank segment.
+func (m *NCNNModel) extractSegment(net *ncnn.Net, features [][]float32) ([]float32, error) {
+	numFrames := len(features)
+	numMels := len(features[0])
+
+	flatData := make([]float32, numFrames*numMels)
+	for t := 0; t < numFrames; t++ {
+		copy(flatData[t*numMels:], features[t])
+	}
+
 	input, err := ncnn.NewMat2D(numMels, numFrames, flatData)
 	if err != nil {
 		return nil, fmt.Errorf("voiceprint: create input mat: %w", err)
@@ -175,7 +249,6 @@ func (m *NCNNModel) Extract(audio []byte) ([]float32, error) {
 	}
 	defer output.Close()
 
-	// Step 4: Copy output embedding.
 	data := output.FloatData()
 	if data == nil {
 		return nil, fmt.Errorf("voiceprint: ncnn output data is nil")
@@ -187,8 +260,55 @@ func (m *NCNNModel) Extract(audio []byte) ([]float32, error) {
 	}
 	embedding := make([]float32, m.dim)
 	copy(embedding, data[:n])
-
 	return embedding, nil
+}
+
+// cmvn applies Cepstral Mean and Variance Normalization in-place.
+// For each mel dimension, subtracts the mean and divides by the standard
+// deviation across all frames. This removes channel and environment effects.
+func cmvn(features [][]float32) {
+	if len(features) == 0 {
+		return
+	}
+	numMels := len(features[0])
+	T := float64(len(features))
+
+	for m := 0; m < numMels; m++ {
+		var sum float64
+		for _, f := range features {
+			sum += float64(f[m])
+		}
+		mean := sum / T
+
+		var varSum float64
+		for _, f := range features {
+			d := float64(f[m]) - mean
+			varSum += d * d
+		}
+		std := math.Sqrt(varSum / T)
+		if std < 1e-10 {
+			std = 1e-10
+		}
+
+		for _, f := range features {
+			f[m] = float32((float64(f[m]) - mean) / std)
+		}
+	}
+}
+
+// l2Normalize normalizes a vector to unit length in-place.
+func l2Normalize(v []float32) {
+	var norm float64
+	for _, x := range v {
+		norm += float64(x) * float64(x)
+	}
+	norm = math.Sqrt(norm)
+	if norm > 0 {
+		scale := float32(1.0 / norm)
+		for i := range v {
+			v[i] *= scale
+		}
+	}
 }
 
 // Dimension implements [Model].
