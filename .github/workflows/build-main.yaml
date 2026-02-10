@@ -22,6 +22,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          lfs: true
           fetch-depth: 0  # Full history for deploy detection
 
       - name: Setup Zig
@@ -49,7 +50,7 @@ jobs:
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libmp3lame-dev libopus-dev libasound2-dev libc++-dev libc++abi-dev
+        run: sudo apt-get update && sudo apt-get install -y libmp3lame-dev libopus-dev libasound2-dev libc++-dev libc++abi-dev patchelf
 
       - name: Setup Android SDK (macOS)
         if: runner.os == 'macOS'
@@ -117,6 +118,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          lfs: true
           fetch-depth: 0  # Full history for git operations
 
       - name: Setup Bazel

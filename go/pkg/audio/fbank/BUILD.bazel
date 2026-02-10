@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "fbank",
+    srcs = [
+        "fbank.go",
+        "fft.go",
+        "mel.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/audio/fbank",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "fbank_test",
+    srcs = ["fbank_test.go"],
+    embed = [":fbank"],
+)

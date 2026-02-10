@@ -1,0 +1,44 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+# Copy pre-built model files from data/ for go:embed.
+genrule(
+    name = "embed_models",
+    srcs = [
+        "//data/models/ncnn:speaker_eres2net",
+        "//data/models/ncnn:vad_silero",
+        "//data/models/ncnn:denoise_nsnet2",
+    ],
+    outs = [
+        "speaker_eres2net.ncnn.param",
+        "speaker_eres2net.ncnn.bin",
+        "vad_silero.ncnn.param",
+        "vad_silero.ncnn.bin",
+        "denoise_nsnet2.ncnn.param",
+        "denoise_nsnet2.ncnn.bin",
+    ],
+    cmd = """
+        for f in $(SRCS); do
+            cp $$f $(RULEDIR)/$$(basename $$f)
+        done
+    """,
+)
+
+go_library(
+    name = "ncnn",
+    srcs = [
+        "model.go",
+        "model_embed.go",
+        "ncnn.go",
+    ],
+    cgo = True,
+    embedsrcs = [":embed_models"],
+    importpath = "github.com/haivivi/giztoy/go/pkg/ncnn",
+    visibility = ["//visibility:public"],
+    cdeps = ["@ncnn"],
+)
+
+go_test(
+    name = "ncnn_test",
+    srcs = ["ncnn_test.go"],
+    embed = [":ncnn"],
+)

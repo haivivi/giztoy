@@ -9,6 +9,7 @@
 # ├── genx/             - GenX transformer chain tests
 # ├── doubaospeech/     - Doubao Speech integration tests
 # ├── doubao_minimax/   - Cross-service integration tests
-# └── matchtest/        - Intent matching e2e tests
+# ├── matchtest/        - Intent matching e2e tests
+# └── voiceprint/       - Voiceprint E2E test runner
 
 package(default_visibility = ["//visibility:public"])

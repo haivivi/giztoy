@@ -1,0 +1,96 @@
+# Convert ONNX/JIT models to ncnn format.
+#
+# These targets are tagged "manual" — they are NOT built by `bazel build //...`.
+# Run them explicitly when you need to regenerate model files:
+#
+#   bazel build //devops/tools/pnnx:models
+#
+# Then copy the output to data/models/ncnn/:
+#
+#   cp bazel-bin/devops/tools/pnnx/*.ncnn.{param,bin} data/models/ncnn/
+#
+# Prerequisites (system Python packages):
+#   pip3 install numpy onnx torch
+#
+# Output files:
+#   speaker_eres2net.ncnn.{param,bin}   — speaker embedding (19 MB)
+#   vad_silero.ncnn.{param,bin}         — voice activity detection (608 KB)
+
+_PYTHON_CHECK = """
+python3 -c "import numpy, onnx, torch" 2>/dev/null || {
+    echo ""
+    echo "============================================================"
+    echo "ERROR: Missing Python dependencies for model conversion."
+    echo ""
+    echo "Please install:"
+    echo "  pip3 install numpy onnx torch"
+    echo ""
+    echo "These are only needed for converting ONNX models to ncnn."
+    echo "Pre-converted models are checked in at data/models/ncnn/."
+    echo "============================================================"
+    echo ""
+    exit 1
+}
+"""
+
+# ERes2Net: direct PNNX conversion (no LSTM issues)
+genrule(
+    name = "model_speaker",
+    srcs = ["@onnx_speaker_eres2net//:model"],
+    outs = [
+        "speaker_eres2net.ncnn.param",
+        "speaker_eres2net.ncnn.bin",
+    ],
+    cmd = """
+        set -e
+        PNNX=$$(realpath $(execpath @pnnx//:pnnx))
+        ONNX=$$(realpath $(location @onnx_speaker_eres2net//:model))
+        WORK=$$(mktemp -d)
+        trap "rm -rf $$WORK" EXIT
+        cp $$ONNX $$WORK/m.onnx
+        cd $$WORK && $$PNNX m.onnx inputshape="[1,40,80]" >/dev/null 2>&1 && cd -
+        cp $$WORK/m.ncnn.param $(location speaker_eres2net.ncnn.param)
+        cp $$WORK/m.ncnn.bin $(location speaker_eres2net.ncnn.bin)
+    """,
+    tags = ["manual"],
+    tools = ["@pnnx//:pnnx"],
+    visibility = ["//visibility:public"],
+)
+
+# Silero VAD: need Python for manual LSTM decomposition
+genrule(
+    name = "model_vad",
+    srcs = [
+        "convert_models.py",
+        "@model_vad_silero//:model",
+    ],
+    outs = [
+        "vad_silero.ncnn.param",
+        "vad_silero.ncnn.bin",
+    ],
+    cmd = _PYTHON_CHECK + """
+        set -e
+        PNNX=$$(realpath $(execpath @pnnx//:pnnx))
+        SCRIPT=$$(realpath $(location convert_models.py))
+        VAD=$$(realpath $(location @model_vad_silero//:model))
+        WORK=$$(mktemp -d)
+        trap "rm -rf $$WORK" EXIT
+        python3 $$SCRIPT --pnnx $$PNNX --output $$WORK --silero-vad $$VAD
+        cp $$WORK/vad_silero.ncnn.param $(location vad_silero.ncnn.param)
+        cp $$WORK/vad_silero.ncnn.bin $(location vad_silero.ncnn.bin)
+    """,
+    tags = ["manual"],
+    tools = ["@pnnx//:pnnx"],
+    visibility = ["//visibility:public"],
+)
+
+# All models combined
+filegroup(
+    name = "models",
+    srcs = [
+        ":model_speaker",
+        ":model_vad",
+    ],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
