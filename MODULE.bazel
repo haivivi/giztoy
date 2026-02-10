@@ -154,6 +154,10 @@ bazel_dep(name = "embed_zig", version = "0.1.0")
 zig_toolchain = use_extension("@embed_zig//:extensions.bzl", "zig_toolchain")
 use_repo(zig_toolchain, "zig_toolchain")
 
+# ESP sysroot (for xtensa cross-compilation newlib headers)
+esp_sysroot = use_extension("@embed_zig//:extensions.bzl", "esp_sysroot")
+use_repo(esp_sysroot, "esp_sysroot")
+
 # ============================================================================
 # HarmonyOS SDK (自动下载，无需安装 DevEco Studio)
 # ============================================================================

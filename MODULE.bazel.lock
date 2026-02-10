@@ -380,6 +380,36 @@
         }
       }
     },
+    "@@embed_zig+//:extensions.bzl%audio_libs": {
+      "general": {
+        "bzlTransitiveDigest": "0EST7FhL+03bGhIkr98QPcF09G0mi/IoZ1OCAIhZCNQ=",
+        "usagesDigest": "yixLCcjuKt2gz7OUYkWiNASkq6DQZD6ThJrP8MnC+Ew=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "opus": {
+            "repoRuleId": "@@embed_zig+//:extensions.bzl%_opus_repo",
+            "attributes": {}
+          },
+          "ogg": {
+            "repoRuleId": "@@embed_zig+//:extensions.bzl%_ogg_repo",
+            "attributes": {}
+          }
+        }
+      }
+    },
+    "@@embed_zig+//:extensions.bzl%esp_sysroot": {
+      "general": {
+        "bzlTransitiveDigest": "0EST7FhL+03bGhIkr98QPcF09G0mi/IoZ1OCAIhZCNQ=",
+        "usagesDigest": "yCsJYnmBNNzucqj2SoGDyPfqooCh33m/xcPMTwfV45s=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "esp_sysroot": {
+            "repoRuleId": "@@embed_zig+//:extensions.bzl%_esp_sysroot_repo",
+            "attributes": {}
+          }
+        }
+      }
+    },
     "@@embed_zig+//:extensions.bzl%zig_toolchain": {
       "general": {
         "bzlTransitiveDigest": "0EST7FhL+03bGhIkr98QPcF09G0mi/IoZ1OCAIhZCNQ=",

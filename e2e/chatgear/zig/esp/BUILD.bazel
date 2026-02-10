@@ -2,6 +2,8 @@
 
 load("@embed_zig//bazel:env.bzl", "make_env_file")
 load("@embed_zig//bazel/esp:defs.bzl", "esp_modules", "esp_flash", "esp_monitor", "esp_sdkconfig", "esp_zig_app")
+load("@embed_zig//bazel/zig:defs.bzl", "zig_static_library")
+load("@esp_sysroot//:defs.bzl", "NEWLIB_INCLUDE")
 load("@embed_zig//bazel/esp/sdkconfig:app.bzl", "esp_app")
 load("@embed_zig//bazel/esp/sdkconfig:core.bzl", "esp_core")
 load("@embed_zig//bazel/esp/sdkconfig:freertos.bzl", "esp_freertos")
@@ -152,6 +154,18 @@ esp_partition_table(
 )
 
 # =============================================================================
+# Opus codec (cross-compiled for xtensa)
+# =============================================================================
+
+zig_static_library(
+    name = "opus_xtensa",
+    lib = "@embed_zig//third_party/opus:opus_fixed",
+    target = "xtensa-freestanding-none",
+    optimize = "ReleaseSafe",
+    system_include_dirs = [NEWLIB_INCLUDE],
+)
+
+# =============================================================================
 # Application
 # =============================================================================
 
@@ -207,7 +221,12 @@ esp_zig_app(
         "@embed_zig//lib/pkg/drivers",
         "@embed_zig//lib/pkg/math",
         "@embed_zig//lib/pkg/motion",
+        "@embed_zig//lib/pkg/audio",
+        "@embed_zig//third_party/opus:opus_fixed",
         "//zig/chatgear",
+    ],
+    static_libs = [
+        ":opus_xtensa",
     ],
     sdkconfig = ":sdkconfig",
     partition_table = ":partitions",

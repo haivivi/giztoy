@@ -31,6 +31,7 @@ const chatgear = @import("chatgear");
 const mqtt0 = @import("mqtt0");
 const tls = @import("tls");
 const dns = @import("dns");
+const opus = @import("opus");
 
 const MqttRt = hw.MqttRt;
 const FullRt = hw.FullRt;
@@ -477,6 +478,7 @@ fn connectTls(app_state: *AppState) void {
     active_port = port;
 
     initPort(port);
+    startAudioPipeline(port);
     app_state.* = .running;
 
     // MQTT readLoop in background
@@ -489,6 +491,22 @@ fn connectTls(app_state: *AppState) void {
         }
     }.run, @ptrCast(client), .{ .stack_size = 32768 }) catch |err| {
         log.err("Failed to spawn MQTT reader: {}", .{err});
+    };
+
+    // MQTT keep-alive ping every 20s (keep_alive=60s, ping at 1/3 interval)
+    FullRt.spawn("mqtt_ka", struct {
+        fn run(ctx: ?*anyopaque) void {
+            const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
+            while (true) {
+                hw.MqttRt.Time.sleepMs(20_000);
+                c.ping() catch |err| {
+                    log.err("MQTT ping failed: {}", .{err});
+                    return;
+                };
+            }
+        }
+    }.run, @ptrCast(client), .{ .stack_size = 32768 }) catch |err| {
+        log.err("Failed to spawn MQTT keepalive: {}", .{err});
     };
 }
 
@@ -536,11 +554,11 @@ fn initAudio() void {
     g_i2s = idf.I2s.init(.{
         .port = Audio.i2s_port,
         .sample_rate = Audio.sample_rate,
-        .rx_channels = 0, // No mic for now (add later)
+        .rx_channels = 1, // Mono mic (ES7210)
         .bits_per_sample = 16,
         .bclk_pin = Audio.i2s_bclk,
         .ws_pin = Audio.i2s_ws,
-        .din_pin = null,
+        .din_pin = Audio.i2s_din, // Mic input
         .dout_pin = Audio.i2s_dout,
         .mclk_pin = Audio.i2s_mclk,
     }) catch |err| {
@@ -624,6 +642,142 @@ fn playButtonTone(button_idx: usize) void {
     if (button_idx < button_tones.len) {
         playTone(button_tones[button_idx], 150);
     }
+}
+
+// ============================================================================
+// Audio Pipeline — mic capture + opus encode/decode + speaker playback
+// ============================================================================
+
+const FRAME_MS: u32 = 20;
+const FRAME_SAMPLES: usize = Audio.sample_rate * FRAME_MS / 1000; // 320 @ 16kHz
+const MAX_OPUS: usize = 512;
+const MIC_GAIN: i32 = 4;
+
+var g_recording: bool = false;
+
+/// Mic capture task — reads mic, opus encode, sends to chatgear uplink
+fn micTaskFn(ctx: ?*anyopaque) void {
+    const port: *TlsPort = @ptrCast(@alignCast(ctx));
+    log.info("[mic] task started", .{});
+
+    // Init opus encoder (PSRAM alloc, complexity=0, voice optimized)
+    var encoder = opus.Encoder.init(idf.heap.psram, Audio.sample_rate, 1, .voip) catch |err| {
+        log.err("[mic] opus encoder init: {}", .{err});
+        return;
+    };
+    defer encoder.deinit(idf.heap.psram);
+    encoder.setBitrate(24000) catch {};
+    encoder.setComplexity(0) catch {};
+    encoder.setSignal(.voice) catch {};
+    log.info("[mic] opus encoder ready (16kHz mono, 24kbps)", .{});
+
+    const i2s = &(g_i2s orelse return);
+    var raw_buf: [FRAME_SAMPLES * 2]u8 = undefined; // 16-bit samples = 2 bytes each
+    var pcm_buf: [FRAME_SAMPLES]i16 = undefined;
+    var opus_buf: [MAX_OPUS]u8 = undefined;
+
+    // Enable I2S RX
+    i2s.enableRx() catch |err| {
+        log.err("[mic] enableRx: {}", .{err});
+        return;
+    };
+
+    while (true) {
+        // Wait until recording
+        if (!g_recording) {
+            Board.time.sleepMs(10);
+            continue;
+        }
+
+        // Read raw bytes from I2S
+        const bytes_read = i2s.read(&raw_buf) catch {
+            Board.time.sleepMs(5);
+            continue;
+        };
+        if (bytes_read < 2) {
+            Board.time.sleepMs(1);
+            continue;
+        }
+
+        // Convert bytes to i16 samples (little-endian)
+        const sample_count = bytes_read / 2;
+        const byte_slice = raw_buf[0..bytes_read];
+        const sample_slice = @as([*]const i16, @ptrCast(@alignCast(byte_slice.ptr)))[0..sample_count];
+        @memcpy(pcm_buf[0..sample_count], sample_slice);
+        const n = sample_count;
+
+        // Gain
+        for (&pcm_buf) |*s| {
+            const v: i32 = @as(i32, s.*) * MIC_GAIN;
+            s.* = @intCast(std.math.clamp(v, std.math.minInt(i16), std.math.maxInt(i16)));
+        }
+
+        // Only encode full frames
+        if (n < FRAME_SAMPLES) continue;
+
+        // Opus encode
+        const encoded = encoder.encode(pcm_buf[0..FRAME_SAMPLES], @intCast(FRAME_SAMPLES), &opus_buf) catch |err| {
+            log.err("[mic] encode: {}", .{err});
+            continue;
+        };
+        if (encoded.len == 0) continue;
+
+        // Send opus frame through chatgear port
+        const ts: i64 = @intCast(Board.time.getTimeMs());
+        port.sendOpusFrame(ts, encoded);
+    }
+}
+
+/// Downlink audio task — receives opus from MQTT, decodes, plays on speaker
+fn speakerTaskFn(ctx: ?*anyopaque) void {
+    const port: *TlsPort = @ptrCast(@alignCast(ctx));
+    log.info("[spk] task started", .{});
+
+    // Init opus decoder (PSRAM alloc)
+    var decoder = opus.Decoder.init(idf.heap.psram, Audio.sample_rate, 1) catch |err| {
+        log.err("[spk] opus decoder init: {}", .{err});
+        return;
+    };
+    defer decoder.deinit(idf.heap.psram);
+    log.info("[spk] opus decoder ready", .{});
+
+    const spk = &(g_spk orelse return);
+    var pcm_buf: [FRAME_SAMPLES * 2]i16 = undefined; // stereo output
+
+    while (true) {
+        // Block until we get a downlink audio frame
+        const frame = port.recvDownlinkAudio() orelse return;
+
+        // Decode opus -> mono PCM
+        var mono_buf: [FRAME_SAMPLES]i16 = undefined;
+        const decoded = decoder.decode(frame.frame, &mono_buf, false) catch continue;
+        if (decoded.len == 0) continue;
+
+        // Mono -> stereo (I2S is stereo)
+        for (decoded, 0..) |sample, i| {
+            pcm_buf[i * 2] = sample;
+            pcm_buf[i * 2 + 1] = sample;
+        }
+
+        // Write to speaker
+        const stereo_len = decoded.len * 2;
+        var off: usize = 0;
+        while (off < stereo_len) {
+            const written = spk.write(pcm_buf[off..stereo_len]) catch break;
+            off += written;
+        }
+    }
+}
+
+/// Start audio pipeline tasks (called after chatgear port is ready)
+fn startAudioPipeline(port: *TlsPort) void {
+    FullRt.spawn("mic", micTaskFn, @ptrCast(port), .{ .stack_size = 32768 }) catch |err| {
+        log.err("spawn mic task: {}", .{err});
+    };
+    FullRt.spawn("spk", speakerTaskFn, @ptrCast(port), .{ .stack_size = 32768 }) catch |err| {
+        log.err("spawn spk task: {}", .{err});
+    };
+    log.info("Audio pipeline started (mic + speaker)", .{});
 }
 
 // ============================================================================
@@ -711,14 +865,16 @@ fn handleButton(p: anytype, btn: anytype) void {
             }
         },
         .set => {
-            // mi: press = recording, release = waiting_for_response
+            // mi: press = start recording + mic capture, release = stop
             switch (btn.action) {
                 .press => {
-                    log.info("[mi] recording", .{});
+                    log.info("[mi] recording (mic on)", .{});
+                    g_recording = true;
                     p.setState(.recording);
                 },
                 .release => {
                     log.info("[mi] waiting_for_response ({}ms)", .{btn.duration_ms});
+                    g_recording = false;
                     p.setState(.waiting_for_response);
                 },
                 else => {},
