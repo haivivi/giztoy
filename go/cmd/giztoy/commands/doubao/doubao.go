@@ -102,12 +102,17 @@ func loadServiceConfig() (*ServiceConfig, error) {
 	return svc, nil
 }
 
-// createClient creates a Doubao Speech SDK client from the service config.
+// createClient creates a Doubao Speech SDK client (loads config internally).
 func createClient() (*ds.Client, error) {
 	svc, err := loadServiceConfig()
 	if err != nil {
 		return nil, err
 	}
+	return createClientWith(svc)
+}
+
+// createClientWith creates a Doubao Speech SDK client from an already-loaded config.
+func createClientWith(svc *ServiceConfig) (*ds.Client, error) {
 	if svc.AppID == "" {
 		return nil, fmt.Errorf("doubao app_id not configured; run: giztoy config set <context> doubao app_id <id>")
 	}

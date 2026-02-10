@@ -92,12 +92,17 @@ func loadServiceConfig() (*ServiceConfig, error) {
 	return svc, nil
 }
 
-// createClient creates a MiniMax SDK client from the service config.
+// createClient creates a MiniMax SDK client (loads config internally).
 func createClient() (*minimax.Client, error) {
 	svc, err := loadServiceConfig()
 	if err != nil {
 		return nil, err
 	}
+	return createClientWith(svc)
+}
+
+// createClientWith creates a MiniMax SDK client from an already-loaded config.
+func createClientWith(svc *ServiceConfig) (*minimax.Client, error) {
 	if svc.APIKey == "" {
 		return nil, fmt.Errorf("minimax api_key not configured; run: giztoy config set <context> minimax api_key <key>")
 	}

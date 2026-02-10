@@ -234,9 +234,7 @@ func mergeConfig(dst, src *OmniChatConfig) {
 	if len(src.Modalities) > 0 {
 		dst.Modalities = src.Modalities
 	}
-	if src.EnableInputAudioTranscription {
-		dst.EnableInputAudioTranscription = true
-	}
+	dst.EnableInputAudioTranscription = src.EnableInputAudioTranscription
 	if src.InputAudioTranscriptionModel != "" {
 		dst.InputAudioTranscriptionModel = src.InputAudioTranscriptionModel
 	}

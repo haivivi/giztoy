@@ -62,7 +62,7 @@ Examples:
 		printVerbose("Model: %s", req.Model)
 		printVerbose("Messages: %d", len(req.Messages))
 
-		client, err := createClient()
+		client, err := createClientWith(svc)
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ Examples:
 		printVerbose("Model: %s", req.Model)
 		printVerbose("Streaming mode enabled")
 
-		client, err := createClient()
+		client, err := createClientWith(svc)
 		if err != nil {
 			return err
 		}

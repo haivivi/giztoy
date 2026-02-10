@@ -65,7 +65,7 @@ Examples:
 		printVerbose("Model: %s", req.Model)
 		printVerbose("Text length: %d characters", len(req.Text))
 
-		client, err := createClient()
+		client, err := createClientWith(svc)
 		if err != nil {
 			return err
 		}

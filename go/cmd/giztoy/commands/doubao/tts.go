@@ -63,7 +63,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		client, err := createClient()
+		client, err := createClientWith(svc)
 		if err != nil {
 			return err
 		}
@@ -124,7 +124,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		client, err := createClient()
+		client, err := createClientWith(svc)
 		if err != nil {
 			return err
 		}
@@ -219,7 +219,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		client, err := createClient()
+		client, err := createClientWith(svc)
 		if err != nil {
 			return err
 		}
@@ -293,7 +293,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		client, err := createClient()
+		client, err := createClientWith(svc)
 		if err != nil {
 			return err
 		}
@@ -386,7 +386,7 @@ Example:
 		if err != nil {
 			return err
 		}
-		client, err := createClient()
+		client, err := createClientWith(svc)
 		if err != nil {
 			return err
 		}
