@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gear Simulator - WebRTC Control Panel</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-panel: #12121a;
+            --border: #1e1e2a;
+            --accent: #00ff9f;
+            --accent-dim: #00aa6a;
+            --text: #e0e0e0;
+            --text-dim: #808080;
+            --danger: #ff4444;
+            --warning: #ffaa00;
+            --info: #00aaff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', monospace;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 400;
+            color: var(--accent);
+            text-shadow: 0 0 20px rgba(0, 255, 159, 0.3);
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+        }
+
+        .status-badge .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .status-badge.power-on .dot {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        .status-badge.webrtc-connected .dot {
+            background: var(--info);
+            box-shadow: 0 0 8px var(--info);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .panel h2 {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Control Buttons */
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 16px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-dark);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            border-color: var(--accent);
+            background: rgba(0, 255, 159, 0.1);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn .icon {
+            font-size: 24px;
+        }
+
+        .btn.power-on {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn.danger {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .btn.danger:hover {
+            background: rgba(255, 68, 68, 0.1);
+        }
+
+        .btn.active {
+            background: var(--accent);
+            color: var(--bg-dark);
+            border-color: var(--accent);
+        }
+
+        .btn.recording {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 8px rgba(255, 68, 68, 0);
+            }
+        }
+
+        .btn .shortcut {
+            display: block;
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 4px;
+            font-family: monospace;
+        }
+
+        /* Audio Panel */
+        .audio-status {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .audio-visualizer {
+            height: 60px;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            margin: 16px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        .audio-visualizer.active {
+            border: 1px solid var(--accent);
+        }
+
+        #connectBtn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        #connectBtn:hover {
+            background: var(--accent-dim);
+        }
+
+        #connectBtn.connected {
+            background: var(--bg-dark);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        /* Stats Panel */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        .stat-value {
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        .stat-value.accent {
+            color: var(--accent);
+        }
+
+        /* Sliders */
+        .slider-row {
+            margin: 16px 0;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .slider-label {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .slider-value {
+            font-size: 12px;
+            color: var(--accent);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* State display */
+        .state-display {
+            text-align: center;
+            padding: 24px;
+            margin-bottom: 16px;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .state-name {
+            font-size: 32px;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+
+        .state-name.ready {
+            color: var(--accent);
+        }
+
+        .state-name.recording {
+            color: var(--danger);
+        }
+
+        .state-name.calling {
+            color: var(--info);
+        }
+
+        .state-name.off {
+            color: var(--text-dim);
+        }
+
+        /* WiFi list */
+        .wifi-list {
+            list-style: none;
+        }
+
+        .wifi-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 4px 0;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .wifi-item button {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: var(--bg-panel);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            color: var(--text);
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Help Overlay */
+        .help-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .help-overlay.show {
+            display: flex;
+        }
+
+        .help-content {
+            background: var(--bg-panel);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            box-shadow: 0 0 40px rgba(0, 255, 159, 0.3);
+        }
+
+        .help-content h2 {
+            color: var(--accent);
+            margin-bottom: 24px;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .help-section {
+            margin-bottom: 20px;
+        }
+
+        .help-section h3 {
+            color: var(--text);
+            font-size: 14px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+        }
+
+        .help-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .help-row kbd {
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .help-row span {
+            color: var(--text-dim);
+        }
+
+        .help-footer {
+            text-align: center;
+            margin-top: 24px;
+            color: var(--text-dim);
+            font-size: 12px;
+        }
+
+        /* Keyboard hint */
+        .keyboard-hint {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        kbd {
+            padding: 2px 6px;
+            background: var(--border);
+            border-radius: 3px;
+            font-family: inherit;
+        }
+
+        .version-marker {
+            text-align: center;
+            padding: 16px;
+            color: var(--text-dim);
+            font-size: 11px;
+        }
+
+        /* Log Panel */
+        .log-panel {
+            margin-top: 20px;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .log-header h2 {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .log-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .log-actions button {
+            padding: 6px 12px;
+            font-size: 11px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .log-actions button:hover {
+            border-color: var(--accent);
+        }
+
+        .log-content {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 12px;
+            height: 300px;
+            overflow-y: auto;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-content .log-line {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .log-content .log-line.info {
+            color: var(--accent);
+        }
+
+        .log-content .log-line.warn {
+            color: var(--warning);
+        }
+
+        .log-content .log-line.error {
+            color: var(--danger);
+        }
+
+        .log-content .log-line.debug {
+            color: var(--info);
+        }
+
+        .log-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .log-status .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-dim);
+        }
+
+        .log-status.connected .dot {
+            background: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>// GEARTEST SIMULATOR</h1>
+            <div style="display: flex; gap: 12px;">
+                <div class="status-badge" id="powerBadge">
+                    <span class="dot"></span>
+                    <span id="powerText">POWER: OFF</span>
+                </div>
+                <div class="status-badge" id="webrtcBadge">
+                    <span class="dot"></span>
+                    <span id="webrtcText">AUDIO: DISCONNECTED</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <!-- Left Column: Controls -->
+            <div>
+                <!-- State Display -->
+                <div class="panel">
+                    <h2>Device State</h2>
+                    <div class="state-display">
+                        <div class="state-name off" id="stateName">OFF</div>
+                        <div style="color: var(--text-dim); font-size: 12px;" id="stateHint">Press Power to start</div>
+                    </div>
+
+                    <!-- Control Buttons -->
+                    <div class="control-grid">
+                        <button class="btn" id="btnPower" onclick="control('powerOn')">
+                            <span class="icon">⏻</span>
+                            Power
+                            <span class="shortcut">P</span>
+                        </button>
+                        <button class="btn danger" id="btnSleep" onclick="control('deepSleep')" disabled>
+                            <span class="icon">💤</span>
+                            Sleep
+                            <span class="shortcut">S</span>
+                        </button>
+                        <button class="btn danger" id="btnReset" onclick="control('reset')" disabled>
+                            <span class="icon">🔄</span>
+                            Reset
+                            <span class="shortcut">R</span>
+                        </button>
+
+                        <button class="btn" id="btnRecord" onclick="control('startRecording')" disabled>
+                            <span class="icon">🎤</span>
+                            Record
+                            <span class="shortcut">Space</span>
+                        </button>
+                        <button class="btn" id="btnEndRecord" onclick="control('endRecording')" disabled>
+                            <span class="icon">⏹️</span>
+                            Stop
+                            <span class="shortcut">Space</span>
+                        </button>
+                        <button class="btn" id="btnCancel" onclick="control('cancel')" disabled>
+                            <span class="icon">✕</span>
+                            Cancel
+                            <span class="shortcut">Esc</span>
+                        </button>
+
+                        <button class="btn" id="btnCall" onclick="control('startCalling')" disabled>
+                            <span class="icon">📞</span>
+                            Call
+                            <span class="shortcut">C</span>
+                        </button>
+                        <button class="btn" id="btnEndCall" onclick="control('endCalling')" disabled>
+                            <span class="icon">📵</span>
+                            End Call
+                            <span class="shortcut">C</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Audio Panel -->
+                <div class="panel" style="margin-top: 20px;">
+                    <h2>WebRTC Audio</h2>
+                    <div class="audio-status">
+                        <div class="audio-visualizer" id="audioVisualizer">
+                            Press M or click button to enable microphone
+                        </div>
+                        <button id="connectBtn" onclick="toggleWebRTC()">
+                            Connect Microphone
+                            <span class="shortcut">M</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Stats -->
+            <div>
+                <!-- Device Stats -->
+                <div class="panel">
+                    <h2>Device Stats</h2>
+
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <span class="slider-label">🔋 Battery</span>
+                            <span class="slider-value" id="batteryValue">85%</span>
+                        </div>
+                        <input type="range" id="battery" min="0" max="100" value="85">
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <span class="slider-label">🔊 Volume</span>
+                            <span class="slider-value" id="volumeValue">70%</span>
+                        </div>
+                        <input type="range" id="volume" min="0" max="100" value="70">
+                    </div>
+
+                    <div class="slider-row">
+                        <div class="slider-header">
+                            <span class="slider-label">☀️ Brightness</span>
+                            <span class="slider-value" id="brightnessValue">80%</span>
+                        </div>
+                        <input type="range" id="brightness" min="0" max="100" value="80">
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-label">Charging</span>
+                        <label style="cursor: pointer;">
+                            <input type="checkbox" id="charging" onchange="updateStat('charging', this.checked)">
+                            <span id="chargingText">No</span>
+                        </label>
+                    </div>
+
+                    <div class="stat-row">
+                        <span class="stat-label">System Version</span>
+                        <input type="text" id="version" value="0_zh"
+                            style="background: var(--bg-dark); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; color: var(--text); font-family: inherit; width: 100px; text-align: right;"
+                            onchange="updateStat('version', this.value)">
+                    </div>
+                </div>
+
+                <!-- WiFi Panel -->
+                <div class="panel" style="margin-top: 20px;">
+                    <h2>WiFi Networks</h2>
+
+                    <div class="stat-row">
+                        <span class="stat-label">Connected</span>
+                        <span class="stat-value accent" id="wifiSSID">HomeWiFi</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Signal</span>
+                        <span class="stat-value" id="wifiRSSI">-45 dBm</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">IP Address</span>
+                        <span class="stat-value" id="wifiIP">192.168.1.100</span>
+                    </div>
+
+                    <h3 style="font-size: 12px; color: var(--text-dim); margin: 16px 0 8px;">Saved Networks</h3>
+                    <ul class="wifi-list" id="wifiList"></ul>
+
+                    <div style="display: flex; gap: 8px; margin-top: 12px;">
+                        <input type="text" id="newWifi" placeholder="SSID"
+                            style="flex: 1; background: var(--bg-dark); border: 1px solid var(--border); padding: 8px; border-radius: 4px; color: var(--text); font-family: inherit;">
+                        <button class="btn" onclick="addWifi()" style="padding: 8px 16px;">Add</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MQTT Log Panel -->
+        <div class="panel log-panel">
+            <div class="log-header">
+                <h2>MQTT Logs</h2>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div class="log-status" id="logStatus">
+                        <span class="dot"></span>
+                        <span id="logStatusText">Disconnected</span>
+                    </div>
+                    <div class="log-actions">
+                        <button onclick="copyLogs()">📋 Copy</button>
+                        <button onclick="clearLogs()">🗑️ Clear</button>
+                    </div>
+                </div>
+            </div>
+            <div class="log-content" id="logContent"></div>
+        </div>
+
+        <div class="version-marker">
+            GearTest v2.3 · 2026-02-02 · Press <kbd>H</kbd> for help
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- Help Overlay -->
+    <div class="help-overlay" id="helpOverlay">
+        <div class="help-content">
+            <h2>⌨️ Keyboard Shortcuts</h2>
+
+            <div class="help-section">
+                <h3>Power Control</h3>
+                <div class="help-row"><kbd>P</kbd> <span>Toggle Power On/Off</span></div>
+                <div class="help-row"><kbd>S</kbd> <span>Deep Sleep</span></div>
+                <div class="help-row"><kbd>R</kbd> <span>Factory Reset</span></div>
+            </div>
+
+            <div class="help-section">
+                <h3>Recording</h3>
+                <div class="help-row"><kbd>Space</kbd> <span>Start/Stop Recording</span></div>
+                <div class="help-row"><kbd>Esc</kbd> <span>Cancel Operation</span></div>
+            </div>
+
+            <div class="help-section">
+                <h3>Calling</h3>
+                <div class="help-row"><kbd>C</kbd> <span>Start/End Call</span></div>
+            </div>
+
+            <div class="help-section">
+                <h3>Audio</h3>
+                <div class="help-row"><kbd>M</kbd> <span>Toggle Microphone (WebRTC)</span></div>
+            </div>
+
+            <div class="help-section">
+                <h3>Help</h3>
+                <div class="help-row"><kbd>H</kbd> <span>Show/Hide this help</span></div>
+            </div>
+
+            <div class="help-footer">
+                Press <kbd>H</kbd> or <kbd>Esc</kbd> to close
+            </div>
+        </div>
+    </div>
+
+    <audio id="remoteAudio" autoplay></audio>
+
+    <script>
+        let pc = null;
+        let localStream = null;
+        let isWebRTCConnected = false;
+        let currentState = 'OFF'; // Unified state: OFF, SLEEP, READY, RECORDING, CALLING, etc.
+
+        // Helper to check if device is powered on (not OFF and not SLEEP)
+        function isPowered() {
+            return currentState !== 'OFF' && currentState !== 'SLEEP';
+        }
+
+        // Debounce helper
+        function debounce(func, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        // Toast notification
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        // Fetch stats from server
+        async function fetchStats() {
+            try {
+                const resp = await fetch('/api/stats');
+                const data = await resp.json();
+                updateUI(data);
+            } catch (err) {
+                console.error('Fetch stats error:', err);
+            }
+        }
+
+        // Update UI with stats
+        function updateUI(data) {
+            // Unified state (normalize to uppercase)
+            currentState = data.state.toUpperCase();
+            const powered = isPowered();
+
+            // Power badge
+            const powerBadge = document.getElementById('powerBadge');
+            const powerText = document.getElementById('powerText');
+            powerBadge.classList.toggle('power-on', powered);
+            powerText.textContent = 'STATE: ' + currentState;
+
+            // WebRTC state
+            const webrtcBadge = document.getElementById('webrtcBadge');
+            const webrtcText = document.getElementById('webrtcText');
+            webrtcBadge.classList.toggle('webrtc-connected', data.webrtcConnected);
+            webrtcText.textContent = 'AUDIO: ' + (data.webrtcConnected ? 'CONNECTED' : 'DISCONNECTED');
+
+            // Device state display
+            const stateName = document.getElementById('stateName');
+            const stateHint = document.getElementById('stateHint');
+            stateName.textContent = currentState;
+            stateName.className = 'state-name ' + currentState.toLowerCase();
+
+            // Update state hint
+            const hints = {
+                'OFF': 'Press P to power on',
+                'SLEEP': 'Press P to wake up',
+                'READY': 'Ready for commands',
+                'RECORDING': 'Recording audio...',
+                'CALLING': 'In call...',
+                'WAITING_FOR_RESPONSE': 'Waiting for response...',
+                'STREAMING': 'Playing audio...'
+            };
+            stateHint.textContent = hints[currentState] || '';
+
+            // Update power button
+            const btnPower = document.getElementById('btnPower');
+            if (powered) {
+                btnPower.classList.add('power-on');
+                btnPower.onclick = () => control('powerOff');
+            } else {
+                btnPower.classList.remove('power-on');
+                btnPower.onclick = () => control('powerOn');
+            }
+
+            // Enable/disable control buttons based on power state
+            const controlBtns = ['btnRecord', 'btnEndRecord', 'btnCancel', 'btnCall', 'btnEndCall'];
+            controlBtns.forEach(id => {
+                document.getElementById(id).disabled = !powered;
+            });
+
+            // Power-related buttons: Sleep and Reset only available when powered on
+            document.getElementById('btnSleep').disabled = !powered;
+            document.getElementById('btnReset').disabled = !powered;
+
+            // Highlight active state buttons
+            document.getElementById('btnRecord').classList.toggle('active', currentState === 'RECORDING');
+            document.getElementById('btnCall').classList.toggle('active', currentState === 'CALLING');
+            document.getElementById('btnRecord').classList.toggle('recording', currentState === 'RECORDING');
+
+            // Stats
+            document.getElementById('battery').value = data.battery;
+            document.getElementById('batteryValue').textContent = Math.round(data.battery) + '%';
+            document.getElementById('volume').value = data.volume;
+            document.getElementById('volumeValue').textContent = data.volume + '%';
+            document.getElementById('brightness').value = data.brightness;
+            document.getElementById('brightnessValue').textContent = data.brightness + '%';
+            document.getElementById('charging').checked = data.charging;
+            document.getElementById('chargingText').textContent = data.charging ? 'Yes' : 'No';
+            document.getElementById('version').value = data.version;
+
+            // WiFi
+            document.getElementById('wifiSSID').textContent = data.wifiSSID || '(disconnected)';
+            document.getElementById('wifiRSSI').textContent = data.wifiRSSI + ' dBm';
+            document.getElementById('wifiIP').textContent = data.wifiIP || '-';
+
+            // WiFi list
+            const wifiList = document.getElementById('wifiList');
+            wifiList.innerHTML = '';
+            (data.wifiStore || []).forEach(ssid => {
+                const li = document.createElement('li');
+                li.className = 'wifi-item';
+
+                const span = document.createElement('span');
+                span.textContent = ssid + (ssid === data.wifiSSID ? ' ✓' : '');
+                li.appendChild(span);
+
+                const btn = document.createElement('button');
+                btn.textContent = '✕';
+                btn.addEventListener('click', () => removeWifi(ssid));
+                li.appendChild(btn);
+
+                wifiList.appendChild(li);
+            });
+        }
+
+        // Update a stat
+        async function updateStat(field, value) {
+            if (!field) return;
+            try {
+                const resp = await fetch('/api/stats/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field, value: String(value) })
+                });
+                const data = await resp.json();
+                showToast(data.message);
+                fetchStats();
+            } catch (err) {
+                showToast('Error: ' + err.message);
+            }
+        }
+
+        // Control action
+        async function control(action) {
+            try {
+                const resp = await fetch('/api/control', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                const data = await resp.json();
+                showToast(data.message);
+                fetchStats();
+            } catch (err) {
+                showToast('Error: ' + err.message);
+            }
+        }
+
+        // Add WiFi
+        function addWifi() {
+            const input = document.getElementById('newWifi');
+            if (input.value.trim()) {
+                updateStat('addWifi', input.value.trim());
+                input.value = '';
+            }
+        }
+
+        // Remove WiFi
+        function removeWifi(ssid) {
+            updateStat('removeWifi', ssid);
+        }
+
+        // WebRTC functions
+        async function toggleWebRTC() {
+            if (isWebRTCConnected) {
+                disconnectWebRTC();
+            } else {
+                await connectWebRTC();
+            }
+        }
+
+        async function connectWebRTC() {
+            try {
+                // Get microphone access with echo cancellation
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+
+                // Create peer connection
+                pc = new RTCPeerConnection({
+                    // No ICE servers needed for localhost
+                });
+
+                // Add local audio track
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+
+                // Handle remote audio
+                pc.ontrack = (event) => {
+                    console.log('Received remote track');
+                    document.getElementById('remoteAudio').srcObject = event.streams[0];
+                };
+
+                // Create offer
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                // Wait for ICE gathering
+                await new Promise(resolve => {
+                    if (pc.iceGatheringState === 'complete') {
+                        resolve();
+                    } else {
+                        pc.onicegatheringstatechange = () => {
+                            if (pc.iceGatheringState === 'complete') resolve();
+                        };
+                    }
+                });
+
+                // Send offer to server
+                const resp = await fetch('/api/webrtc/offer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sdp: pc.localDescription.sdp })
+                });
+
+                if (!resp.ok) {
+                    throw new Error('WebRTC offer failed');
+                }
+
+                const answer = await resp.json();
+                await pc.setRemoteDescription({
+                    type: 'answer',
+                    sdp: answer.sdp
+                });
+
+                isWebRTCConnected = true;
+                updateWebRTCUI();
+                showToast('WebRTC connected');
+
+            } catch (err) {
+                console.error('WebRTC connect error:', err);
+                showToast('WebRTC error: ' + err.message);
+                disconnectWebRTC();
+            }
+        }
+
+        function disconnectWebRTC() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            isWebRTCConnected = false;
+            updateWebRTCUI();
+            showToast('WebRTC disconnected');
+        }
+
+        function updateWebRTCUI() {
+            const btn = document.getElementById('connectBtn');
+            const vis = document.getElementById('audioVisualizer');
+
+            if (isWebRTCConnected) {
+                btn.innerHTML = 'Disconnect <span class="shortcut">M</span>';
+                btn.classList.add('connected');
+                vis.textContent = '🎤 Microphone active';
+                vis.classList.add('active');
+            } else {
+                btn.innerHTML = 'Connect Microphone <span class="shortcut">M</span>';
+                btn.classList.remove('connected');
+                vis.textContent = 'Press M or click button to enable microphone';
+                vis.classList.remove('active');
+            }
+        }
+
+        // Slider event listeners with debounce
+        const debouncedUpdate = debounce(updateStat, 100);
+
+        ['battery', 'volume', 'brightness'].forEach(id => {
+            const el = document.getElementById(id);
+            const valEl = document.getElementById(id + 'Value');
+            el.addEventListener('input', () => {
+                valEl.textContent = el.value + '%';
+            });
+            el.addEventListener('change', () => {
+                debouncedUpdate(id, parseFloat(el.value));
+            });
+        });
+
+        // Help overlay toggle
+        function toggleHelp() {
+            const overlay = document.getElementById('helpOverlay');
+            overlay.classList.toggle('show');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+
+            const key = e.key.toLowerCase();
+            const powered = isPowered();
+            const helpVisible = document.getElementById('helpOverlay').classList.contains('show');
+
+            // H key or Escape can close help overlay
+            if (key === 'h') {
+                toggleHelp();
+                return;
+            }
+
+            // If help is visible, only Escape can close it
+            if (helpVisible) {
+                if (key === 'escape') {
+                    toggleHelp();
+                }
+                return;
+            }
+
+            switch (key) {
+                case 'p':
+                    // Toggle power on/off
+                    if (powered) {
+                        control('powerOff');
+                    } else {
+                        control('powerOn');
+                    }
+                    break;
+                case 's':
+                    // Deep sleep (only when powered on)
+                    if (powered) {
+                        control('deepSleep');
+                    }
+                    break;
+                case 'r':
+                    // Reset (only when powered on)
+                    if (powered) {
+                        control('reset');
+                    }
+                    break;
+                case 'm':
+                    // Toggle microphone (WebRTC)
+                    if (isWebRTCConnected) {
+                        disconnectWebRTC();
+                    } else {
+                        connectWebRTC();
+                    }
+                    break;
+                case ' ':
+                    if (currentState === 'RECORDING') {
+                        e.preventDefault();
+                        control('endRecording');
+                    } else if (powered) {
+                        e.preventDefault();
+                        control('startRecording');
+                    }
+                    break;
+                case 'c':
+                    if (currentState === 'CALLING') {
+                        control('endCalling');
+                    } else if (powered) {
+                        control('startCalling');
+                    }
+                    break;
+                case 'escape':
+                    if (powered) {
+                        control('cancel');
+                    }
+                    break;
+            }
+        });
+
+        // Poll stats every second
+        setInterval(fetchStats, 1000);
+
+        // Initial fetch
+        fetchStats();
+
+        // ========================================
+        // MQTT Log Streaming via SSE
+        // ========================================
+        let logEventSource = null;
+        const logContent = document.getElementById('logContent');
+        const logStatus = document.getElementById('logStatus');
+        const logStatusText = document.getElementById('logStatusText');
+        const maxLogLines = 500;
+
+        function connectLogStream() {
+            if (logEventSource) {
+                logEventSource.close();
+            }
+
+            logEventSource = new EventSource('/api/logs');
+
+            logEventSource.onopen = () => {
+                logStatus.classList.add('connected');
+                logStatusText.textContent = 'Connected';
+            };
+
+            logEventSource.onerror = () => {
+                logStatus.classList.remove('connected');
+                logStatusText.textContent = 'Disconnected';
+                // Reconnect after 2 seconds
+                setTimeout(connectLogStream, 2000);
+            };
+
+            logEventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'connected') {
+                        addLogLine('system', '--- Log stream connected ---');
+                        return;
+                    }
+                    addLogLine(data.type, data.msg);
+                } catch (e) {
+                    console.error('Log parse error:', e);
+                }
+            };
+        }
+
+        function addLogLine(type, msg) {
+            const line = document.createElement('div');
+            line.className = 'log-line ' + type;
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            line.textContent = `[${time}] ${msg}`;
+            logContent.appendChild(line);
+
+            // Trim old lines
+            while (logContent.children.length > maxLogLines) {
+                logContent.removeChild(logContent.firstChild);
+            }
+
+            // Auto-scroll to bottom
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        function copyLogs() {
+            const text = Array.from(logContent.children)
+                .map(el => el.textContent)
+                .join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Logs copied to clipboard');
+            }).catch(err => {
+                showToast('Copy failed: ' + err.message);
+            });
+        }
+
+        function clearLogs() {
+            logContent.innerHTML = '';
+            showToast('Logs cleared');
+        }
+
+        // Start log stream
+        connectLogStream();
+    </script>
+</body>
+
+</html>

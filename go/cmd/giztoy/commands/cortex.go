@@ -1,12 +1,9 @@
 package commands
 
 import (
-	cortexcmd "github.com/haivivi/giztoy/go/cmd/cortextest/commands"
+	"github.com/haivivi/giztoy/go/cmd/giztoy/commands/cortex"
 )
 
 func init() {
-	cmd := cortexcmd.Command()
-	cmd.Use = "cortex"
-	cmd.Short = "Cortex server (bridges devices with AI transformers)"
-	rootCmd.AddCommand(cmd)
+	rootCmd.AddCommand(cortex.Cmd)
 }
