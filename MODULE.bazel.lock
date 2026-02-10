@@ -268,7 +268,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%audio_libs": {
       "general": {
-        "bzlTransitiveDigest": "+vZdNhudGUrMqNkvft37eyCIahJUoLYvqNRHdCdUyic=",
+        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
         "usagesDigest": "Xd+WAzFJEryUCjH03YpiXD7zp5I44G4mzlGyoeX1wGo=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -296,7 +296,7 @@
     },
     "//:extensions.bzl%luau": {
       "general": {
-        "bzlTransitiveDigest": "c8+UVE65pUByWzZgRYpzvjn7XZkOYH0Ga3HoITQm+cQ=",
+        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
         "usagesDigest": "fjbt5lB2jzJkQQzLHOFOgBIrHmMvtmXX51ABnEALqAw=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -312,7 +312,7 @@
     },
     "//:extensions.bzl%mdbook": {
       "general": {
-        "bzlTransitiveDigest": "c8+UVE65pUByWzZgRYpzvjn7XZkOYH0Ga3HoITQm+cQ=",
+        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
         "usagesDigest": "DeUHDVsKK0O3cQSbS7yWpGHUDQK83IBeIMK+iIC6rHg=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -328,7 +328,7 @@
     },
     "//:extensions.bzl%mermaid": {
       "general": {
-        "bzlTransitiveDigest": "c8+UVE65pUByWzZgRYpzvjn7XZkOYH0Ga3HoITQm+cQ=",
+        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
         "usagesDigest": "YY1DRcld3A8Ca0vM2D3WFmnI8IJH0clI/cr5wFzy4jE=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -344,7 +344,7 @@
     },
     "//:extensions.bzl%ncnn_ext": {
       "general": {
-        "bzlTransitiveDigest": "+vZdNhudGUrMqNkvft37eyCIahJUoLYvqNRHdCdUyic=",
+        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
         "usagesDigest": "7FXmzMt45LZCdeJCmHX1Yx5NwpRhNuQktngUfiRN+vQ=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -360,7 +360,7 @@
     },
     "//:extensions.bzl%onnxruntime_ext": {
       "general": {
-        "bzlTransitiveDigest": "+vZdNhudGUrMqNkvft37eyCIahJUoLYvqNRHdCdUyic=",
+        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
         "usagesDigest": "O6hxtfAkLZSNeO3AQ0EfLubLNZbFCRg812uAwc731sg=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -376,7 +376,7 @@
     },
     "//:extensions.bzl%pnnx_ext": {
       "general": {
-        "bzlTransitiveDigest": "+vZdNhudGUrMqNkvft37eyCIahJUoLYvqNRHdCdUyic=",
+        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
         "usagesDigest": "Sfi6G4M1DeRrfXTKujPY38s0GENlMxXWPwOKW9HVcRw=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -399,20 +399,6 @@
             "attributes": {
               "url": "https://github.com/snakers4/silero-vad/raw/v6.2/src/silero_vad/data/silero_vad.jit",
               "sha256": "e1122837f4154c511485fe0b9c64455f7b929c96fbb8d79fbdb336383ebd3720"
-            }
-          },
-          "onnx_denoise_dtln_1": {
-            "repoRuleId": "@@//:extensions.bzl%_onnx_model_repo",
-            "attributes": {
-              "url": "https://github.com/breizhn/DTLN/raw/master/pretrained_model/model_1.onnx",
-              "sha256": "22b91cae3855e5a0620e66a917ca6c82c58db0e842c770f58d86751c5e8d4ae3"
-            }
-          },
-          "onnx_denoise_dtln_2": {
-            "repoRuleId": "@@//:extensions.bzl%_onnx_model_repo",
-            "attributes": {
-              "url": "https://github.com/breizhn/DTLN/raw/master/pretrained_model/model_2.onnx",
-              "sha256": "e20c92f9233fccf29cddf86970d0d0161a03aebccc26d6f4d5639c4d5ec2e639"
             }
           }
         }

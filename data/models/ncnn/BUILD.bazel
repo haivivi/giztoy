@@ -1,13 +1,8 @@
 # Pre-converted ncnn model files (checked in via git lfs).
 #
-# To regenerate from ONNX sources:
-#   bazel run //devops/tools/pnnx:convert
-#
 # Models:
 #   speaker_eres2net  — 3D-Speaker ERes2Net, speaker embedding (512-dim)
 #   vad_silero        — Silero VAD, voice activity detection
-#   denoise_dtln1     — DTLN stage 1, frequency-domain noise mask
-#   denoise_dtln2     — DTLN stage 2, time-domain enhancement
 
 filegroup(
     name = "speaker_eres2net",
@@ -28,30 +23,10 @@ filegroup(
 )
 
 filegroup(
-    name = "denoise_dtln1",
-    srcs = [
-        "denoise_dtln1.ncnn.param",
-        "denoise_dtln1.ncnn.bin",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "denoise_dtln2",
-    srcs = [
-        "denoise_dtln2.ncnn.param",
-        "denoise_dtln2.ncnn.bin",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "all",
     srcs = [
         ":speaker_eres2net",
         ":vad_silero",
-        ":denoise_dtln1",
-        ":denoise_dtln2",
     ],
     visibility = ["//visibility:public"],
 )

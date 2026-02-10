@@ -124,19 +124,6 @@ def _pnnx_impl(_ctx):
         sha256 = "e1122837f4154c511485fe0b9c64455f7b929c96fbb8d79fbdb336383ebd3720",
     )
 
-    # DTLN noise suppression — stage 1
-    _onnx_model_repo(
-        name = "onnx_denoise_dtln_1",
-        url = "https://github.com/breizhn/DTLN/raw/master/pretrained_model/model_1.onnx",
-        sha256 = "22b91cae3855e5a0620e66a917ca6c82c58db0e842c770f58d86751c5e8d4ae3",
-    )
-
-    # DTLN noise suppression — stage 2
-    _onnx_model_repo(
-        name = "onnx_denoise_dtln_2",
-        url = "https://github.com/breizhn/DTLN/raw/master/pretrained_model/model_2.onnx",
-        sha256 = "e20c92f9233fccf29cddf86970d0d0161a03aebccc26d6f4d5639c4d5ec2e639",
-    )
 
 pnnx_ext = module_extension(
     implementation = _pnnx_impl,

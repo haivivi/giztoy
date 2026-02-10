@@ -19,16 +19,6 @@ const (
 	// Input: [batch, sequence] float32 (audio samples)
 	// Output: [batch, 1] float32 (speech probability)
 	ModelVADSilero ModelID = "vad-silero"
-
-	// ModelDenoiseDTLN1 is the first stage of the DTLN noise suppression model.
-	// Input: [1, 1, 257] float32 (STFT magnitude)
-	// Output: [1, 1, 257] float32 (mask)
-	ModelDenoiseDTLN1 ModelID = "denoise-dtln-1"
-
-	// ModelDenoiseDTLN2 is the second stage of the DTLN noise suppression model.
-	// Input: [1, 1, 512] float32 (encoded features)
-	// Output: [1, 1, 512] float32 (enhanced features)
-	ModelDenoiseDTLN2 ModelID = "denoise-dtln-2"
 )
 
 // ModelInfo describes a registered model.
@@ -69,7 +59,7 @@ func LoadModel(id ModelID) (*Net, error) {
 		return nil, fmt.Errorf("ncnn: model %q not registered", id)
 	}
 
-	// Disable FP16 by default — some models (Silero VAD, DTLN) produce
+	// Disable FP16 by default — some models (Silero VAD) produce
 	// intermediate values >65504 which overflow in FP16.
 	opt := NewOption()
 	if opt == nil {

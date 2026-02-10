@@ -149,7 +149,7 @@ func main() {
 	modelFlag := flag.String("model", "", "ONNX model path (required when engine=onnx)")
 	outputFlag := flag.String("output", "", "output embedding to file (binary float32)")
 	batchFlag := flag.Bool("batch", false, "batch mode: analyze directory of OGG files")
-	denoiseFlag := flag.Bool("denoise", false, "apply DTLN denoise before embedding extraction")
+	denoiseFlag := flag.Bool("denoise", false, "apply spectral subtraction denoise before embedding extraction")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
@@ -186,39 +186,27 @@ func main() {
 	// Create fbank extractor
 	fbankExt := fbank.New(fbank.DefaultConfig())
 
-	// Optional DTLN denoise
-	var denoiser *dtlnDenoiser
 	if *denoiseFlag {
-		denoiser, err = newDTLNDenoiser()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "load denoiser: %v\n", err)
-			os.Exit(1)
-		}
-		defer denoiser.Close()
-		fmt.Fprintf(os.Stderr, "denoise: enabled (DTLN)\n")
+		fmt.Fprintf(os.Stderr, "denoise: enabled (spectral subtraction)\n")
 	}
 
 	if *batchFlag {
-		runBatch(eng, fbankExt, denoiser, target)
+		runBatch(eng, fbankExt, *denoiseFlag, target)
 	} else {
-		runSingle(eng, fbankExt, denoiser, target, *outputFlag)
+		runSingle(eng, fbankExt, *denoiseFlag, target, *outputFlag)
 	}
 }
 
 // runSingle processes a single audio file and outputs the embedding.
-func runSingle(eng engine, fbankExt *fbank.Extractor, denoiser *dtlnDenoiser, audioPath, outputPath string) {
+func runSingle(eng engine, fbankExt *fbank.Extractor, denoise bool, audioPath, outputPath string) {
 	pcm16k, err := decodeOGGTo16kMono(audioPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "decode: %v\n", err)
 		os.Exit(1)
 	}
 
-	if denoiser != nil {
-		pcm16k, err = denoiser.Denoise(pcm16k)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "denoise: %v\n", err)
-			os.Exit(1)
-		}
+	if denoise {
+		pcm16k = spectralDenoise(pcm16k)
 	}
 	pcm16k = trimSilence(pcm16k, 300)
 	features := fbankExt.ExtractFromInt16(pcm16k)
@@ -256,7 +244,7 @@ func runSingle(eng engine, fbankExt *fbank.Extractor, denoiser *dtlnDenoiser, au
 }
 
 // runBatch processes a directory of OGG files and outputs a similarity matrix.
-func runBatch(eng engine, fbankExt *fbank.Extractor, denoiser *dtlnDenoiser, dir string) {
+func runBatch(eng engine, fbankExt *fbank.Extractor, denoise bool, dir string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "read dir: %v\n", err)
@@ -288,12 +276,8 @@ func runBatch(eng engine, fbankExt *fbank.Extractor, denoiser *dtlnDenoiser, dir
 			continue
 		}
 
-		if denoiser != nil {
-			pcm16k, err = denoiser.Denoise(pcm16k)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "  skip %s: denoise: %v\n", filepath.Base(path), err)
-				continue
-			}
+		if denoise {
+			pcm16k = spectralDenoise(pcm16k)
 		}
 		pcm16k = trimSilence(pcm16k, 300)
 		features := fbankExt.ExtractFromInt16(pcm16k)

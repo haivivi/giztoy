@@ -15,8 +15,6 @@
 # Output files:
 #   speaker_eres2net.ncnn.{param,bin}   — speaker embedding (19 MB)
 #   vad_silero.ncnn.{param,bin}         — voice activity detection (608 KB)
-#   denoise_dtln1.ncnn.{param,bin}      — noise suppression stage 1 (714 KB)
-#   denoise_dtln2.ncnn.{param,bin}      — noise suppression stage 2 (1.2 MB)
 
 _PYTHON_CHECK = """
 python3 -c "import numpy, onnx, torch" 2>/dev/null || {
@@ -59,40 +57,27 @@ genrule(
     visibility = ["//visibility:public"],
 )
 
-# Silero VAD + DTLN: need Python for manual LSTM decomposition
+# Silero VAD: need Python for manual LSTM decomposition
 genrule(
-    name = "model_vad_denoise",
+    name = "model_vad",
     srcs = [
         "convert_models.py",
         "@model_vad_silero//:model",
-        "@onnx_denoise_dtln_1//:model",
-        "@onnx_denoise_dtln_2//:model",
     ],
     outs = [
         "vad_silero.ncnn.param",
         "vad_silero.ncnn.bin",
-        "denoise_dtln1.ncnn.param",
-        "denoise_dtln1.ncnn.bin",
-        "denoise_dtln2.ncnn.param",
-        "denoise_dtln2.ncnn.bin",
     ],
     cmd = _PYTHON_CHECK + """
         set -e
         PNNX=$$(realpath $(execpath @pnnx//:pnnx))
         SCRIPT=$$(realpath $(location convert_models.py))
         VAD=$$(realpath $(location @model_vad_silero//:model))
-        DTLN1=$$(realpath $(location @onnx_denoise_dtln_1//:model))
-        DTLN2=$$(realpath $(location @onnx_denoise_dtln_2//:model))
         WORK=$$(mktemp -d)
         trap "rm -rf $$WORK" EXIT
-        python3 $$SCRIPT --pnnx $$PNNX --output $$WORK \
-            --silero-vad $$VAD --dtln1 $$DTLN1 --dtln2 $$DTLN2
+        python3 $$SCRIPT --pnnx $$PNNX --output $$WORK --silero-vad $$VAD
         cp $$WORK/vad_silero.ncnn.param $(location vad_silero.ncnn.param)
         cp $$WORK/vad_silero.ncnn.bin $(location vad_silero.ncnn.bin)
-        cp $$WORK/denoise_dtln1.ncnn.param $(location denoise_dtln1.ncnn.param)
-        cp $$WORK/denoise_dtln1.ncnn.bin $(location denoise_dtln1.ncnn.bin)
-        cp $$WORK/denoise_dtln2.ncnn.param $(location denoise_dtln2.ncnn.param)
-        cp $$WORK/denoise_dtln2.ncnn.bin $(location denoise_dtln2.ncnn.bin)
     """,
     tags = ["manual"],
     tools = ["@pnnx//:pnnx"],
@@ -104,7 +89,7 @@ filegroup(
     name = "models",
     srcs = [
         ":model_speaker",
-        ":model_vad_denoise",
+        ":model_vad",
     ],
     tags = ["manual"],
     visibility = ["//visibility:public"],

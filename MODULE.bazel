@@ -155,8 +155,6 @@ use_repo(
     "pnnx",
     "onnx_speaker_eres2net",
     "model_vad_silero",
-    "onnx_denoise_dtln_1",
-    "onnx_denoise_dtln_2",
 )
 
 # Luau scripting language
