@@ -22,7 +22,24 @@ pub const Hardware = struct {
     pub const name = board.name;
     pub const serial_port = board.serial_port;
     pub const adc_channel: idf.adc.AdcChannel = @enumFromInt(board.adc_channel);
+
+    // Audio
+    pub const sample_rate: u32 = board.sample_rate;
+    pub const i2c_sda: u8 = board.i2c_sda;
+    pub const i2c_scl: u8 = board.i2c_scl;
+    pub const i2s_port: u8 = board.i2s_port;
+    pub const i2s_bclk: u8 = board.i2s_bclk;
+    pub const i2s_ws: u8 = board.i2s_ws;
+    pub const i2s_din: u8 = board.i2s_din;
+    pub const i2s_dout: u8 = board.i2s_dout;
+    pub const i2s_mclk: u8 = board.i2s_mclk;
+    pub const es8311_addr: u8 = board.es8311_addr;
+    pub const pa_gpio: u8 = board.pa_gpio;
 };
+
+// Audio drivers
+pub const SpeakerDriver = board.SpeakerDriver;
+pub const PaSwitchDriver = board.PaSwitchDriver;
 
 // ============================================================================
 // Socket Implementation (for MQTT TCP)

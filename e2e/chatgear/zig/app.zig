@@ -21,8 +21,11 @@ const std = @import("std");
 const platform = @import("platform.zig");
 const Board = platform.Board;
 const ButtonId = platform.ButtonId;
+const Audio = platform.Audio;
 const hw = platform.hw;
 const log = Board.log;
+const esp = @import("esp");
+const idf = esp.idf;
 
 const chatgear = @import("chatgear");
 const mqtt0 = @import("mqtt0");
@@ -148,6 +151,22 @@ const AppState = enum {
 
 var volume: i32 = 50;
 
+// Global port pointer (set by connectTls/connectTcp, used by button handler)
+var active_port: ?*TlsPort = null;
+
+// Audio hardware (initialized in run(), used for tone playback)
+var audio_speaker: ?*hw.SpeakerDriver = null;
+
+// Note frequencies for button tones (C4 major scale = do re mi fa so la)
+const button_tones = [6]u32{
+    262, // VOL+ = C4 (do)
+    294, // VOL- = D4 (re)
+    330, // SET  = E4 (mi)
+    349, // PLAY = F4 (fa)
+    392, // MUTE = G4 (so)
+    440, // REC  = A4 (la)
+};
+
 // ============================================================================
 // Entry Point
 // ============================================================================
@@ -176,13 +195,16 @@ pub fn run(env: anytype) void {
     }
     log.info("==========================================", .{});
 
-    // Init board
+    // Init board (WiFi + net + buttons)
     var board: Board = undefined;
     board.init() catch |err| {
         log.err("Board init failed: {}", .{err});
         return;
     };
     defer board.deinit();
+
+    // Init audio (I2C + I2S + ES8311 speaker + PA)
+    initAudio();
 
     // Connect WiFi
     log.info("Connecting to WiFi: {s}", .{config.wifi_ssid});
@@ -198,8 +220,14 @@ pub fn run(env: anytype) void {
                 .wifi => |wifi_event| handleWifiEvent(wifi_event, &app_state),
                 .net => |net_event| handleNetEvent(net_event, &app_state),
                 .button => |btn| {
-                    _ = btn;
-                    // Button handling requires port, done in running state
+                    // Play tone on press (do-re-mi-fa-so-la for 6 buttons)
+                    if (btn.action == .press) {
+                        playButtonTone(@intFromEnum(btn.id));
+                    }
+                    // Forward to chatgear handler if port is active
+                    if (active_port) |p| {
+                        handleButton(p, btn);
+                    }
                 },
                 else => {},
             }
@@ -443,6 +471,7 @@ fn connectTls(app_state: *AppState) void {
         return;
     };
     port.* = TlsPort.init(conn);
+    active_port = port;
 
     initPort(port);
     app_state.* = .running;
@@ -478,6 +507,92 @@ fn initPort(p: anytype) void {
 
     p.setState(.ready);
     log.info("ChatGear ready! Gear ID: {s}", .{config.gear_id});
+}
+
+// ============================================================================
+// Audio Init + Tone Playback
+// ============================================================================
+
+var g_i2c: ?idf.I2c = null;
+var g_i2s: ?idf.I2s = null;
+var g_pa: ?hw.PaSwitchDriver = null;
+var g_spk: ?hw.SpeakerDriver = null;
+
+fn initAudio() void {
+    log.info("Initializing audio...", .{});
+
+    g_i2c = idf.I2c.init(.{
+        .sda = Audio.i2c_sda,
+        .scl = Audio.i2c_scl,
+        .freq_hz = 400_000,
+    }) catch |err| {
+        log.err("I2C init failed: {}", .{err});
+        return;
+    };
+
+    g_i2s = idf.I2s.init(.{
+        .port = Audio.i2s_port,
+        .sample_rate = Audio.sample_rate,
+        .rx_channels = 0, // No mic for now (add later)
+        .bits_per_sample = 16,
+        .bclk_pin = Audio.i2s_bclk,
+        .ws_pin = Audio.i2s_ws,
+        .din_pin = null,
+        .dout_pin = Audio.i2s_dout,
+        .mclk_pin = Audio.i2s_mclk,
+    }) catch |err| {
+        log.err("I2S init failed: {}", .{err});
+        return;
+    };
+
+    g_spk = hw.SpeakerDriver.init() catch |err| {
+        log.err("Speaker init failed: {}", .{err});
+        return;
+    };
+    g_spk.?.initWithShared(&g_i2c.?, &g_i2s.?) catch |err| {
+        log.err("Speaker shared init failed: {}", .{err});
+        return;
+    };
+
+    g_pa = hw.PaSwitchDriver.init(&g_i2c.?) catch |err| {
+        log.err("PA init failed: {}", .{err});
+        return;
+    };
+    g_pa.?.on() catch |err| {
+        log.warn("PA enable failed: {}", .{err});
+    };
+
+    g_spk.?.setVolume(200) catch {};
+    audio_speaker = &g_spk.?;
+    log.info("Audio initialized (ES8311 + PA)", .{});
+}
+
+/// Play a short sine wave tone at given frequency
+fn playTone(freq: u32, duration_ms: u32) void {
+    const spk = &(g_spk orelse return);
+    const sr = Audio.sample_rate;
+    const total_samples = (sr * duration_ms) / 1000;
+    var samples_played: u32 = 0;
+    var phase: f32 = 0;
+    const phase_inc = @as(f32, @floatFromInt(freq)) * 2.0 * std.math.pi / @as(f32, @floatFromInt(sr));
+    var buf: [160]i16 = undefined; // 10ms @ 16kHz
+
+    while (samples_played < total_samples) {
+        for (&buf) |*sample| {
+            sample.* = @intFromFloat(@sin(phase) * 12000.0);
+            phase += phase_inc;
+            if (phase >= 2.0 * std.math.pi) phase -= 2.0 * std.math.pi;
+        }
+        const written = spk.write(&buf) catch break;
+        samples_played += @intCast(written);
+    }
+}
+
+/// Play button-specific tone (do re mi fa so la)
+fn playButtonTone(button_idx: usize) void {
+    if (button_idx < button_tones.len) {
+        playTone(button_tones[button_idx], 150);
+    }
 }
 
 // ============================================================================

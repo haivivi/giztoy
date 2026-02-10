@@ -1,4 +1,7 @@
 //! Platform Configuration — ChatGear E2E Test
+//!
+//! HAL Board for WiFi + net + buttons.
+//! Audio (I2C/I2S/speaker/mic) initialized separately in app.zig.
 
 const hal = @import("hal");
 const build_options = @import("build_options");
@@ -57,3 +60,6 @@ const spec = struct {
 };
 
 pub const Board = hal.Board(spec);
+
+/// Audio hardware constants (used by app.zig for direct I2C/I2S init)
+pub const Audio = hw.Hardware;
