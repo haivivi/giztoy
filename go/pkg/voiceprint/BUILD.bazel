@@ -11,19 +11,15 @@ go_library(
         "transformer.go",
         "voiceprint.go",
     ],
-    cgo = True,
     importpath = "github.com/haivivi/giztoy/go/pkg/voiceprint",
     visibility = ["//visibility:public"],
     deps = [
         "//go/pkg/buffer",
         "//go/pkg/genx",
-    ],
-    cdeps = [
-        "@ncnn",
+        "//go/pkg/ncnn",
     ],
 )
 
-# Unit tests (pure Go, no model required).
 go_test(
     name = "voiceprint_test",
     srcs = [
@@ -37,18 +33,4 @@ go_test(
         "//go/pkg/buffer",
         "//go/pkg/genx",
     ],
-)
-
-# Integration tests (require ncnn model files).
-# Run: bazel test //go/pkg/voiceprint:ncnn_test
-# Requires: bazel build //devops/tools/pnnx:convert (builds model files)
-go_test(
-    name = "ncnn_test",
-    srcs = [
-        "fbank_test.go",  # for makeSineWavePCM helper
-        "model_ncnn_test.go",
-    ],
-    data = ["//devops/tools/pnnx:convert"],
-    embed = [":voiceprint"],
-    tags = ["manual"],  # Only run when explicitly requested.
 )

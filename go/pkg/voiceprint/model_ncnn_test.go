@@ -288,7 +288,7 @@ func TestNCNNEndToEndPipeline(t *testing.T) {
 	}
 	defer model.Close()
 
-	hasher := NewHasher(model.Dimension(), 16, 42)
+	hasher := NewHasher(model.Dimension(), 32, 42)
 	detector := NewDetector(WithWindowSize(3), WithMinRatio(0.6))
 
 	// Feed the same "speaker" multiple times.

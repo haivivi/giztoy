@@ -1,21 +1,16 @@
 package voiceprint
 
-/*
-#include <ncnn/c_api.h>
-#include <stdlib.h>
-#include <string.h>
-*/
-import "C"
-
 import (
 	"fmt"
+	"os"
 	"sync"
-	"unsafe"
+
+	"github.com/haivivi/giztoy/go/pkg/ncnn"
 )
 
-// NCNNModel implements [Model] using ncnn for speaker embedding inference.
-// It loads a pre-converted ncnn model (.param + .bin) and runs inference
-// on mel filterbank features extracted from PCM audio.
+// NCNNModel implements [Model] using the ncnn inference engine for speaker
+// embedding extraction. It wraps a ncnn.Net and handles the full pipeline
+// from PCM audio to embedding vector.
 //
 // # Model Pipeline
 //
@@ -24,22 +19,17 @@ import (
 //
 // # Thread Safety
 //
-// NCNNModel is safe for concurrent use. The ncnn net is loaded once and
-// shared; each Extract call creates its own extractor.
-//
-// # Static Linking
-//
-// ncnn is statically linked (.a) into the Go binary. No external shared
-// libraries are needed at runtime.
+// NCNNModel is safe for concurrent use. The ncnn.Net is loaded once and
+// shared; each Extract call creates its own ncnn.Extractor.
 type NCNNModel struct {
 	mu       sync.Mutex
-	net      C.ncnn_net_t
+	net      *ncnn.Net
 	dim      int
 	fbankCfg FbankConfig
 	closed   bool
 
-	inputName  *C.char
-	outputName *C.char
+	inputName  string
+	outputName string
 }
 
 // NCNNModelOption configures an NCNNModel.
@@ -66,77 +56,73 @@ func WithNCNNEmbeddingDim(dim int) NCNNModelOption {
 // Default: "in0" and "out0" (PNNX-converted models).
 func WithNCNNBlobNames(input, output string) NCNNModelOption {
 	return func(m *NCNNModel) {
-		if m.inputName != nil {
-			C.free(unsafe.Pointer(m.inputName))
-		}
-		if m.outputName != nil {
-			C.free(unsafe.Pointer(m.outputName))
-		}
-		m.inputName = C.CString(input)
-		m.outputName = C.CString(output)
+		m.inputName = input
+		m.outputName = output
 	}
 }
 
 // NewNCNNModel creates a new NCNNModel by loading .param and .bin from files.
 // For embedding the model in the binary, use [NewNCNNModelFromMemory] instead.
+//
+// Note: FP16 is disabled by loading the model data from memory internally.
+// This avoids the ncnn limitation where options must be set before loading.
 func NewNCNNModel(paramPath, binPath string, opts ...NCNNModelOption) (*NCNNModel, error) {
-	m := newNCNNModel(opts)
+	m := newNCNNModelDefaults(opts)
 
-	cParam := C.CString(paramPath)
-	defer C.free(unsafe.Pointer(cParam))
-	if ret := C.ncnn_net_load_param(m.net, cParam); ret != 0 {
-		C.ncnn_net_destroy(m.net)
-		return nil, fmt.Errorf("voiceprint: ncnn_net_load_param failed: %d", ret)
+	// Read files and load via memory path to ensure FP16 is disabled before load.
+	paramData, err := os.ReadFile(paramPath)
+	if err != nil {
+		return nil, fmt.Errorf("voiceprint: read param: %w", err)
+	}
+	binData, err := os.ReadFile(binPath)
+	if err != nil {
+		return nil, fmt.Errorf("voiceprint: read bin: %w", err)
 	}
 
-	cBin := C.CString(binPath)
-	defer C.free(unsafe.Pointer(cBin))
-	if ret := C.ncnn_net_load_model(m.net, cBin); ret != 0 {
-		C.ncnn_net_destroy(m.net)
-		return nil, fmt.Errorf("voiceprint: ncnn_net_load_model failed: %d", ret)
+	opt := ncnn.NewOption()
+	opt.SetFP16(false)
+	net, err := ncnn.NewNetFromMemory(paramData, binData, opt)
+	if err != nil {
+		return nil, fmt.Errorf("voiceprint: %w", err)
 	}
-
+	m.net = net
 	return m, nil
 }
 
 // NewNCNNModelFromMemory creates a new NCNNModel from in-memory .param and .bin data.
 // This is the preferred constructor when the model is embedded in the binary
 // via go:embed, producing a single-file deployment with zero external dependencies.
-//
-// The paramData must be the text content of the .ncnn.param file (null-terminated
-// internally). The binData must be the raw bytes of the .ncnn.bin file.
 func NewNCNNModelFromMemory(paramData, binData []byte, opts ...NCNNModelOption) (*NCNNModel, error) {
-	m := newNCNNModel(opts)
+	m := newNCNNModelDefaults(opts)
 
-	// ncnn_net_load_param_memory expects a null-terminated C string.
-	cParam := C.CString(string(paramData))
-	defer C.free(unsafe.Pointer(cParam))
-	if ret := C.ncnn_net_load_param_memory(m.net, cParam); ret != 0 {
-		C.ncnn_net_destroy(m.net)
-		return nil, fmt.Errorf("voiceprint: ncnn_net_load_param_memory failed: %d", ret)
+	opt := ncnn.NewOption()
+	opt.SetFP16(false)
+	net, err := ncnn.NewNetFromMemory(paramData, binData, opt)
+	if err != nil {
+		return nil, fmt.Errorf("voiceprint: %w", err)
 	}
-
-	// ncnn_net_load_model_memory expects raw bytes.
-	// Returns 0 or bytes consumed on success, negative on error.
-	if ret := C.ncnn_net_load_model_memory(m.net, (*C.uchar)(unsafe.Pointer(&binData[0]))); ret < 0 {
-		C.ncnn_net_destroy(m.net)
-		return nil, fmt.Errorf("voiceprint: ncnn_net_load_model_memory failed: %d", ret)
-	}
-
+	m.net = net
 	return m, nil
 }
 
-func newNCNNModel(opts []NCNNModelOption) *NCNNModel {
+// NewNCNNModelFromNet creates a new NCNNModel from a pre-loaded ncnn.Net.
+// Use this when loading models via [ncnn.LoadModel] from the model registry.
+func NewNCNNModelFromNet(net *ncnn.Net, opts ...NCNNModelOption) *NCNNModel {
+	m := newNCNNModelDefaults(opts)
+	m.net = net
+	return m
+}
+
+func newNCNNModelDefaults(opts []NCNNModelOption) *NCNNModel {
 	m := &NCNNModel{
 		dim:        512,
 		fbankCfg:   DefaultFbankConfig(),
-		inputName:  C.CString("in0"),
-		outputName: C.CString("out0"),
+		inputName:  "in0",
+		outputName: "out0",
 	}
 	for _, opt := range opts {
 		opt(m)
 	}
-	m.net = C.ncnn_net_create()
 	return m
 }
 
@@ -160,48 +146,47 @@ func (m *NCNNModel) Extract(audio []byte) ([]float32, error) {
 	numFrames := len(fbank)
 	numMels := m.fbankCfg.NumMels
 
-	// Step 2: Create ncnn input mat [h=numFrames, w=numMels].
-	// Flatten fbank into contiguous float32 buffer.
+	// Step 2: Flatten fbank into [h=numFrames, w=numMels] tensor.
 	flatData := make([]float32, numFrames*numMels)
 	for t := 0; t < numFrames; t++ {
 		copy(flatData[t*numMels:], fbank[t])
 	}
 
-	inputMat := C.ncnn_mat_create_external_2d(
-		C.int(numMels),    // w
-		C.int(numFrames),  // h
-		unsafe.Pointer(&flatData[0]),
-		nil, // default allocator
-	)
-	defer C.ncnn_mat_destroy(inputMat)
+	// Step 3: Run inference via ncnn package.
+	input, err := ncnn.NewMat2D(numMels, numFrames, flatData)
+	if err != nil {
+		return nil, fmt.Errorf("voiceprint: create input mat: %w", err)
+	}
+	defer input.Close()
 
-	// Step 3: Run inference.
-	ex := C.ncnn_extractor_create(net)
-	defer C.ncnn_extractor_destroy(ex)
+	ex, err := net.NewExtractor()
+	if err != nil {
+		return nil, fmt.Errorf("voiceprint: create extractor: %w", err)
+	}
+	defer ex.Close()
 
-	if ret := C.ncnn_extractor_input(ex, m.inputName, inputMat); ret != 0 {
-		return nil, fmt.Errorf("voiceprint: ncnn_extractor_input failed: %d", ret)
+	if err := ex.SetInput(m.inputName, input); err != nil {
+		return nil, fmt.Errorf("voiceprint: %w", err)
 	}
 
-	var outputMat C.ncnn_mat_t
-	if ret := C.ncnn_extractor_extract(ex, m.outputName, &outputMat); ret != 0 {
-		return nil, fmt.Errorf("voiceprint: ncnn_extractor_extract failed: %d", ret)
+	output, err := ex.Extract(m.outputName)
+	if err != nil {
+		return nil, fmt.Errorf("voiceprint: %w", err)
 	}
-	defer C.ncnn_mat_destroy(outputMat)
+	defer output.Close()
 
 	// Step 4: Copy output embedding.
-	outW := int(C.ncnn_mat_get_w(outputMat))
-	outData := C.ncnn_mat_get_data(outputMat)
-	if outData == nil {
+	data := output.FloatData()
+	if data == nil {
 		return nil, fmt.Errorf("voiceprint: ncnn output data is nil")
 	}
 
-	n := outW
+	n := len(data)
 	if n > m.dim {
 		n = m.dim
 	}
 	embedding := make([]float32, m.dim)
-	C.memcpy(unsafe.Pointer(&embedding[0]), outData, C.size_t(n*4))
+	copy(embedding, data[:n])
 
 	return embedding, nil
 }
@@ -220,16 +205,8 @@ func (m *NCNNModel) Close() error {
 	}
 	m.closed = true
 	if m.net != nil {
-		C.ncnn_net_destroy(m.net)
+		m.net.Close()
 		m.net = nil
-	}
-	if m.inputName != nil {
-		C.free(unsafe.Pointer(m.inputName))
-		m.inputName = nil
-	}
-	if m.outputName != nil {
-		C.free(unsafe.Pointer(m.outputName))
-		m.outputName = nil
 	}
 	return nil
 }
