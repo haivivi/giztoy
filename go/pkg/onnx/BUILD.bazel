@@ -20,6 +20,11 @@ genrule(
     """,
 )
 
+# Bazel places shared libraries in _solib_{platform}/{mangled}/ under the
+# bin directory. Go test binaries are at bin/{pkg}/{test}_/{test}.
+# We add rpath entries to search relative paths from the binary to _solib.
+_SOLIB_SUBDIR = "_U_A_A+onnxruntime_Uext+onnxruntime_S_S_Connxruntime_Ulib___Ulib"
+
 go_library(
     name = "onnx",
     srcs = [
@@ -29,11 +34,26 @@ go_library(
     ],
     cgo = True,
     embedsrcs = [":embed_models"],
-    # rpath so shared library is found in Bazel's _solib directory at runtime.
-    clinkopts = ["-Wl,-rpath,@loader_path/onnx_test.runfiles/_main/_solib_darwin_arm64/_U_A_A+onnxruntime_Uext+onnxruntime_S_S_Connxruntime_Ulib___Ulib"],
     importpath = "github.com/haivivi/giztoy/go/pkg/onnx",
     visibility = ["//visibility:public"],
     cdeps = ["@onnxruntime"],
+    clinkopts = select({
+        "@platforms//os:macos": [
+            # Direct (for native go build / manual deployment)
+            "-Wl,-rpath,@loader_path",
+            # Bazel bin layout: binary at bin/{pkg}/{test}_/test -> solib at bin/_solib_*/
+            "-Wl,-rpath,@loader_path/../../../../_solib_darwin_arm64/" + _SOLIB_SUBDIR,
+            "-Wl,-rpath,@loader_path/../../../../../_solib_darwin_arm64/" + _SOLIB_SUBDIR,
+            "-Wl,-rpath,@loader_path/../../../../../../_solib_darwin_arm64/" + _SOLIB_SUBDIR,
+        ],
+        "@platforms//os:linux": [
+            "-Wl,-rpath,$$ORIGIN",
+            "-Wl,-rpath,$$ORIGIN/../../../../_solib_k8/" + _SOLIB_SUBDIR,
+            "-Wl,-rpath,$$ORIGIN/../../../../../_solib_k8/" + _SOLIB_SUBDIR,
+            "-Wl,-rpath,$$ORIGIN/../../../../../../_solib_k8/" + _SOLIB_SUBDIR,
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 go_test(

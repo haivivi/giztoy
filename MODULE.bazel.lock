@@ -268,7 +268,7 @@
   "moduleExtensions": {
     "//:extensions.bzl%audio_libs": {
       "general": {
-        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
+        "bzlTransitiveDigest": "SyLecv3Jt/FdQQ28Lte9mV55sD93sJQUDzyYVdihChU=",
         "usagesDigest": "Xd+WAzFJEryUCjH03YpiXD7zp5I44G4mzlGyoeX1wGo=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -296,7 +296,7 @@
     },
     "//:extensions.bzl%luau": {
       "general": {
-        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
+        "bzlTransitiveDigest": "SyLecv3Jt/FdQQ28Lte9mV55sD93sJQUDzyYVdihChU=",
         "usagesDigest": "fjbt5lB2jzJkQQzLHOFOgBIrHmMvtmXX51ABnEALqAw=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -312,7 +312,7 @@
     },
     "//:extensions.bzl%mdbook": {
       "general": {
-        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
+        "bzlTransitiveDigest": "SyLecv3Jt/FdQQ28Lte9mV55sD93sJQUDzyYVdihChU=",
         "usagesDigest": "DeUHDVsKK0O3cQSbS7yWpGHUDQK83IBeIMK+iIC6rHg=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -328,7 +328,7 @@
     },
     "//:extensions.bzl%mermaid": {
       "general": {
-        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
+        "bzlTransitiveDigest": "SyLecv3Jt/FdQQ28Lte9mV55sD93sJQUDzyYVdihChU=",
         "usagesDigest": "YY1DRcld3A8Ca0vM2D3WFmnI8IJH0clI/cr5wFzy4jE=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -344,7 +344,7 @@
     },
     "//:extensions.bzl%ncnn_ext": {
       "general": {
-        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
+        "bzlTransitiveDigest": "SyLecv3Jt/FdQQ28Lte9mV55sD93sJQUDzyYVdihChU=",
         "usagesDigest": "7FXmzMt45LZCdeJCmHX1Yx5NwpRhNuQktngUfiRN+vQ=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",
@@ -360,7 +360,7 @@
     },
     "//:extensions.bzl%onnxruntime_ext": {
       "general": {
-        "bzlTransitiveDigest": "jII5dxnTFMMfJuxfI0x5wa2cyVXd6Z1Nbk470++e/mQ=",
+        "bzlTransitiveDigest": "SyLecv3Jt/FdQQ28Lte9mV55sD93sJQUDzyYVdihChU=",
         "usagesDigest": "O6hxtfAkLZSNeO3AQ0EfLubLNZbFCRg812uAwc731sg=",
         "recordedInputs": [
           "REPO_MAPPING:,gazelle gazelle+",

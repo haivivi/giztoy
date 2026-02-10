@@ -14,6 +14,7 @@ _ORT_PLATFORMS = {
         "url": "https://github.com/microsoft/onnxruntime/releases/download/v{v}/onnxruntime-osx-arm64-{v}.tgz",
         "sha256": "c2969315cd9ce0f5fa04f6b53ff72cb92f87f7dcf38e88cacfa40c8f983fbba9",
         "strip_prefix": "onnxruntime-osx-arm64-{v}",
+        "versioned_lib": "lib/libonnxruntime.1.24.1.dylib",
         "lib": "lib/libonnxruntime.dylib",
         "linkopts": ["-lc++"],
     },
@@ -21,6 +22,7 @@ _ORT_PLATFORMS = {
         "url": "https://github.com/microsoft/onnxruntime/releases/download/v{v}/onnxruntime-linux-x64-{v}.tgz",
         "sha256": "9142552248b735920f9390027e4512a2cacf8946a1ffcbe9071a5c210531026f",
         "strip_prefix": "onnxruntime-linux-x64-{v}",
+        "versioned_lib": "lib/libonnxruntime.so.1.24.1",
         "lib": "lib/libonnxruntime.so",
         "linkopts": ["-lstdc++", "-lpthread", "-ldl"],
     },
@@ -28,6 +30,7 @@ _ORT_PLATFORMS = {
         "url": "https://github.com/microsoft/onnxruntime/releases/download/v{v}/onnxruntime-linux-aarch64-{v}.tgz",
         "sha256": "0f56edd68f7602df790b68b874a46b115add037e88385c6c842bb763b39b9f89",
         "strip_prefix": "onnxruntime-linux-aarch64-{v}",
+        "versioned_lib": "lib/libonnxruntime.so.1.24.1",
         "lib": "lib/libonnxruntime.so",
         "linkopts": ["-lstdc++", "-lpthread", "-ldl"],
     },
@@ -64,26 +67,33 @@ def _onnxruntime_repo_impl(ctx):
         stripPrefix = strip_prefix,
     )
 
-    # Determine shared library name for cc_import.
     lib_path = platform["lib"]
-    is_dylib = lib_path.endswith(".dylib")
+    versioned_lib = platform["versioned_lib"]
+    is_macos = lib_path.endswith(".dylib")
 
-    # Fix macOS dylib install_name so it can be found at runtime.
-    # The pre-built dylib has install_name @rpath/libonnxruntime.1.x.x.dylib
-    # which doesn't work with Bazel sandboxed execution.
-    if is_dylib:
+    if is_macos:
+        # Fix macOS dylib install_name for @rpath resolution.
+        # The pre-built dylib has install_name @rpath/libonnxruntime.1.x.x.dylib.
+        # We change it to @rpath/libonnxruntime.dylib so the binary's LC_RPATH
+        # entries can locate it in Bazel's _solib directories.
         ctx.execute([
             "install_name_tool", "-id",
-            "@loader_path/libonnxruntime.dylib",
-            "lib/libonnxruntime.1.24.1.dylib",
+            "@rpath/libonnxruntime.dylib",
+            versioned_lib,
         ])
+        # Ensure the non-versioned dylib is a real file (not just symlink).
+        ctx.execute(["rm", "-f", lib_path])
+        ctx.execute(["cp", versioned_lib, lib_path])
+    else:
+        # Linux: replace symlink with real copy and fix soname.
+        # The versioned lib has soname "libonnxruntime.so.1" but Bazel's
+        # cc_import only copies "libonnxruntime.so". Fix soname to match.
+        ctx.execute(["rm", "-f", lib_path])
+        ctx.execute(["cp", versioned_lib, lib_path])
+        # patchelf --set-soname if available (installed via apt on CI).
+        ctx.execute(["patchelf", "--set-soname", "libonnxruntime.so", lib_path])
 
     linkopts = ", ".join(['"{}"'.format(l) for l in platform["linkopts"]])
-
-    if is_dylib:
-        cc_import_attrs = 'shared_library = "{}",'.format(lib_path)
-    else:
-        cc_import_attrs = 'shared_library = "{}",'.format(lib_path)
 
     ctx.file("BUILD.bazel", """\
 load("@rules_cc//cc:cc_import.bzl", "cc_import")
@@ -94,18 +104,17 @@ package(default_visibility = ["//visibility:public"])
 cc_import(
     name = "onnxruntime_lib",
     hdrs = glob(["include/*.h"]),
-    {cc_import_attrs}
+    shared_library = "{lib_path}",
     includes = ["include"],
 )
 
 cc_library(
     name = "onnxruntime",
-    data = glob(["lib/*"]),
     deps = [":onnxruntime_lib"],
     linkopts = [{linkopts}],
 )
 """.format(
-        cc_import_attrs = cc_import_attrs,
+        lib_path = lib_path,
         linkopts = linkopts,
     ))
 
