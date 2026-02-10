@@ -233,15 +233,17 @@ class DTLNModel2(nn.Module):
         self.dec = nn.Linear(256, 512, bias=False)
 
     def forward(self, x, h1, c1, h2, c2):
-        x = self.enc(x)
-        m = x.mean(-1, keepdim=True)
-        diff = x - m
+        enc_out = self.enc(x)
+        m = enc_out.mean(-1, keepdim=True)
+        diff = enc_out - m
         var = torch.mean(diff * diff, dim=-1, keepdim=True)
-        x = diff / torch.sqrt(var + 1e-7) * self.ln_g + self.ln_b
-        h1n, c1n = self.lstm1(x, h1, c1)
+        ln_out = diff / torch.sqrt(var + 1e-7) * self.ln_g + self.ln_b
+        h1n, c1n = self.lstm1(ln_out, h1, c1)
         h2n, c2n = self.lstm2(h1n, h2, c2)
-        x = self.dense(h2n)
-        return self.dec(x), h1n, c1n, h2n, c2n
+        # Sigmoid mask applied to enc output (not raw dense output).
+        mask = torch.sigmoid(self.dense(h2n))
+        masked = enc_out * mask
+        return self.dec(masked), h1n, c1n, h2n, c2n
 
 
 def convert_dtln2(onnx_path, pnnx_bin, output_dir):
@@ -257,14 +259,19 @@ def convert_dtln2(onnx_path, pnnx_bin, output_dir):
         model.enc.weight.copy_(w['conv1d_2/kernel:0'].squeeze(2))
         model.ln_g.copy_(w['model_2/instant_layer_normalization_1/mul/ReadVariableOp/resource:0'])
         model.ln_b.copy_(w['model_2/instant_layer_normalization_1/add_1/ReadVariableOp/resource:0'])
-        model.lstm1.load_onnx(
+        # DTLN2 LSTM weights are from TF/Keras decomposed MatMul ops.
+        # TF gate order: i, f, c, o — matches load_pytorch (i, f, g, o).
+        # NOT load_onnx (i, o, f, c) which is for ONNX LSTM op format.
+        model.lstm1.load_pytorch(
             w['model_2/lstm_6/MatMul/ReadVariableOp/resource:0'].T.contiguous(),
             w['model_2/lstm_6/MatMul_1/ReadVariableOp/resource:0'].T.contiguous(),
-            torch.cat([w['model_2/lstm_6/BiasAdd/ReadVariableOp/resource:0'], torch.zeros(512)]))
-        model.lstm2.load_onnx(
+            w['model_2/lstm_6/BiasAdd/ReadVariableOp/resource:0'],
+            torch.zeros(512))
+        model.lstm2.load_pytorch(
             w['model_2/lstm_7/MatMul/ReadVariableOp/resource:0'].T.contiguous(),
             w['model_2/lstm_7/MatMul_1/ReadVariableOp/resource:0'].T.contiguous(),
-            torch.cat([w['model_2/lstm_7/BiasAdd/ReadVariableOp/resource:0'], torch.zeros(512)]))
+            w['model_2/lstm_7/BiasAdd/ReadVariableOp/resource:0'],
+            torch.zeros(512))
         model.dense.weight.copy_(w['model_2/dense_3/Tensordot/Reshape_1:0'].T)
         model.dense.bias.copy_(w['model_2/dense_3/BiasAdd/ReadVariableOp/resource:0'])
         model.dec.weight.copy_(w['conv1d_3/kernel:0'].squeeze(2))
