@@ -149,6 +149,7 @@ func main() {
 	modelFlag := flag.String("model", "", "ONNX model path (required when engine=onnx)")
 	outputFlag := flag.String("output", "", "output embedding to file (binary float32)")
 	batchFlag := flag.Bool("batch", false, "batch mode: analyze directory of OGG files")
+	denoiseFlag := flag.Bool("denoise", false, "apply DTLN denoise before embedding extraction")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
@@ -185,21 +186,40 @@ func main() {
 	// Create fbank extractor
 	fbankExt := fbank.New(fbank.DefaultConfig())
 
+	// Optional DTLN denoise
+	var denoiser *dtlnDenoiser
+	if *denoiseFlag {
+		denoiser, err = newDTLNDenoiser()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "load denoiser: %v\n", err)
+			os.Exit(1)
+		}
+		defer denoiser.Close()
+		fmt.Fprintf(os.Stderr, "denoise: enabled (DTLN)\n")
+	}
+
 	if *batchFlag {
-		runBatch(eng, fbankExt, target)
+		runBatch(eng, fbankExt, denoiser, target)
 	} else {
-		runSingle(eng, fbankExt, target, *outputFlag)
+		runSingle(eng, fbankExt, denoiser, target, *outputFlag)
 	}
 }
 
 // runSingle processes a single audio file and outputs the embedding.
-func runSingle(eng engine, fbankExt *fbank.Extractor, audioPath, outputPath string) {
+func runSingle(eng engine, fbankExt *fbank.Extractor, denoiser *dtlnDenoiser, audioPath, outputPath string) {
 	pcm16k, err := decodeOGGTo16kMono(audioPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "decode: %v\n", err)
 		os.Exit(1)
 	}
 
+	if denoiser != nil {
+		pcm16k, err = denoiser.Denoise(pcm16k)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "denoise: %v\n", err)
+			os.Exit(1)
+		}
+	}
 	pcm16k = trimSilence(pcm16k, 300)
 	features := fbankExt.ExtractFromInt16(pcm16k)
 	if len(features) < 30 {
@@ -236,7 +256,7 @@ func runSingle(eng engine, fbankExt *fbank.Extractor, audioPath, outputPath stri
 }
 
 // runBatch processes a directory of OGG files and outputs a similarity matrix.
-func runBatch(eng engine, fbankExt *fbank.Extractor, dir string) {
+func runBatch(eng engine, fbankExt *fbank.Extractor, denoiser *dtlnDenoiser, dir string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "read dir: %v\n", err)
@@ -268,6 +288,13 @@ func runBatch(eng engine, fbankExt *fbank.Extractor, dir string) {
 			continue
 		}
 
+		if denoiser != nil {
+			pcm16k, err = denoiser.Denoise(pcm16k)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "  skip %s: denoise: %v\n", filepath.Base(path), err)
+				continue
+			}
+		}
 		pcm16k = trimSilence(pcm16k, 300)
 		features := fbankExt.ExtractFromInt16(pcm16k)
 		if len(features) < 30 {
