@@ -26,6 +26,18 @@ go_binary(
 
 go_test(
     name = "voiceprint_test",
-    srcs = ["denoise_test.go"],
+    srcs = [
+        "denoise_compare_test.go",
+        "denoise_test.go",
+    ],
+    data = [
+        "@onnx_denoise_dtln_1//:model",
+        "@onnx_denoise_dtln_2//:model",
+    ],
     embed = [":voiceprint_lib"],
+    env = {
+        "ONNX_DTLN1_PATH": "$(rootpath @onnx_denoise_dtln_1//:model)",
+        "ONNX_DTLN2_PATH": "$(rootpath @onnx_denoise_dtln_2//:model)",
+    },
+    deps = ["//go/pkg/onnx"],
 )
