@@ -202,11 +202,16 @@ func setupContext(cli, contextName, subcmd string) {
 	if apiKey != "" {
 		if subcmd != "" {
 			run(cli, subcmd, "config", "add-context", contextName, "--api-key", apiKey)
-			run(cli, subcmd, "config", "use-context", contextName)
 		} else {
 			run(cli, "config", "add-context", contextName, "--api-key", apiKey)
-			run(cli, "config", "use-context", contextName)
 		}
+	}
+
+	// Always select the context (may be pre-configured without API key env var)
+	if subcmd != "" {
+		run(cli, subcmd, "config", "use-context", contextName)
+	} else {
+		run(cli, "config", "use-context", contextName)
 	}
 	logInfo("Context ready: %s", contextName)
 }

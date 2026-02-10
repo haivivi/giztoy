@@ -37,7 +37,17 @@ if [[ ! -d "$MODELS_DIR" ]]; then
     fi
 fi
 
-echo "Running: $RUNNER --dir=$LIBS_DIR --models=$MODELS_DIR --runtime=$RUNTIME -v $SCRIPT"
+# Detect if runner is giztoy (needs "luau run" subcommand) or standalone luau binary
+RUNNER_NAME=$(basename "$RUNNER")
+if [[ "$RUNNER_NAME" == "giztoy" || "$RUNNER_NAME" == "giztoy_" ]]; then
+    SUBCMD="luau run"
+    LIBS_FLAG="--libs"
+else
+    SUBCMD=""
+    LIBS_FLAG="--dir"
+fi
+
+echo "Running: $RUNNER $SUBCMD $LIBS_FLAG=$LIBS_DIR --models=$MODELS_DIR --runtime=$RUNTIME -v $SCRIPT"
 echo "Models dir contents:"
 ls -la "$MODELS_DIR" 2>/dev/null || echo "Cannot list models directory"
 
@@ -45,7 +55,7 @@ if [[ -n "$INPUT_FILE" ]] && [[ -f "$INPUT_FILE" ]]; then
     echo "Input file: $INPUT_FILE"
     cat "$INPUT_FILE"
     echo ""
-    cat "$INPUT_FILE" | "$RUNNER" --dir="$LIBS_DIR" --models="$MODELS_DIR" --runtime="$RUNTIME" -v "$SCRIPT"
+    cat "$INPUT_FILE" | "$RUNNER" $SUBCMD "$LIBS_FLAG=$LIBS_DIR" --models="$MODELS_DIR" --runtime="$RUNTIME" -v "$SCRIPT"
 else
-    "$RUNNER" --dir="$LIBS_DIR" --models="$MODELS_DIR" --runtime="$RUNTIME" -v "$SCRIPT"
+    "$RUNNER" $SUBCMD "$LIBS_FLAG=$LIBS_DIR" --models="$MODELS_DIR" --runtime="$RUNTIME" -v "$SCRIPT"
 fi

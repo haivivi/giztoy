@@ -35,7 +35,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 // ANSI color codes
@@ -380,5 +379,3 @@ Environment variables:
   MINIMAX_API_KEY    API Key for auto-context setup`)
 }
 
-// Suppress unused import warnings.
-var _ = strings.TrimSpace
