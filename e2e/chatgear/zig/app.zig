@@ -223,8 +223,8 @@ pub fn run(env: anytype) void {
                 .wifi => |wifi_event| handleWifiEvent(wifi_event, &app_state),
                 .net => |net_event| handleNetEvent(net_event, &app_state),
                 .button => |btn| {
-                    // Play tone on press (do-re-mi-fa-so-la for 6 buttons)
-                    if (btn.action == .press) {
+                    // Play tone on click (debounced, do-re-mi-fa-so-la)
+                    if (btn.action == .click) {
                         playButtonTone(@intFromEnum(btn.id));
                     }
                     // Forward to chatgear handler if port is active
