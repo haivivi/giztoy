@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "gear",
+    srcs = [
+        "gear.go",
+        "simulator.go",
+        "web.go",
+        "webrtc.go",
+    ],
+    embedsrcs = ["templates/index.html"],
+    importpath = "github.com/haivivi/giztoy/go/cmd/giztoy/commands/gear",
+    visibility = ["//go/cmd/giztoy:__subpackages__"],
+    deps = [
+        "//go/cmd/giztoy/internal/config",
+        "//go/pkg/audio/codec/opus",
+        "//go/pkg/audio/pcm",
+        "//go/pkg/chatgear",
+        "@com_github_pion_rtp//:rtp",
+        "@com_github_pion_webrtc_v3//:webrtc",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)

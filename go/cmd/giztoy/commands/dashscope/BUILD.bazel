@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "dashscope",
+    srcs = ["dashscope.go"],
+    importpath = "github.com/haivivi/giztoy/go/cmd/giztoy/commands/dashscope",
+    visibility = ["//go/cmd/giztoy:__subpackages__"],
+    deps = [
+        "//go/cmd/giztoy/internal/config",
+        "//go/pkg/cli",
+        "//go/pkg/dashscope",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)
