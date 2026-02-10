@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/url"
 	"os"
 	"os/signal"
@@ -66,19 +67,26 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	addr := fmt.Sprintf("%s:%s", host, port)
 	cfg := mqtt0.ClientConfig{
-		Addr:           fmt.Sprintf("tcp://%s:%s", host, port),
-		ClientID:       fmt.Sprintf("monitor-%d", time.Now().UnixNano()%10000),
-		Username:       username,
-		Password:       password,
-		KeepAlive:      60,
-		ConnectTimeout: 30 * time.Second,
-	}
-	if useTLS {
-		cfg.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+		Addr:            "tcp://" + addr, // dialer won't be used
+		ClientID:        fmt.Sprintf("monitor-%d", time.Now().UnixNano()%10000),
+		Username:        username,
+		Password:        password,
+		KeepAlive:       60,
+		ConnectTimeout:  30 * time.Second,
+		ProtocolVersion: mqtt0.ProtocolV5,
 	}
 
-	log.Printf("Connecting to %s:%s (TLS=%v)...", host, port, useTLS)
+	// Custom dialer for TLS with correct ServerName
+	if useTLS {
+		tlsHost := host
+		cfg.Dialer = func(_ context.Context, _ string, _ *tls.Config) (net.Conn, error) {
+			return tls.Dial("tcp", addr, &tls.Config{ServerName: tlsHost})
+		}
+	}
+
+	log.Printf("Connecting to %s (TLS=%v)...", addr, useTLS)
 	client, err := mqtt0.Connect(ctx, cfg)
 	if err != nil {
 		log.Fatalf("connect: %v", err)
