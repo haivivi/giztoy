@@ -214,6 +214,9 @@ pub fn run(env: anytype) void {
 
     // Main event loop
     while (Board.isRunning()) {
+        // Poll ADC buttons (pushes events to board queue)
+        board.buttons.poll();
+
         // Process board events
         while (board.nextEvent()) |event| {
             switch (event) {
