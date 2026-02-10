@@ -48,7 +48,6 @@ var (
 	luauModelsDir   string
 	luauRuntimeMode string
 	luauAsyncMode   bool
-	luauConfigPath  string
 )
 
 func init() {
@@ -56,7 +55,6 @@ func init() {
 	luauRunCmd.Flags().StringVar(&luauModelsDir, "models", "", "models config directory (loads generators and transformers)")
 	luauRunCmd.Flags().StringVar(&luauRuntimeMode, "runtime", "minimal", "runtime mode: minimal, tool, agent")
 	luauRunCmd.Flags().BoolVar(&luauAsyncMode, "async", false, "enable async HTTP mode (experimental)")
-	luauRunCmd.Flags().StringVar(&luauConfigPath, "config", "", "config file path (for tool/agent runtime)")
 
 	luauCmd.AddCommand(luauRunCmd)
 	rootCmd.AddCommand(luauCmd)
