@@ -605,6 +605,18 @@ fn playTone(freq: u32, duration_ms: u32) void {
         }
         played += @intCast(frames);
     }
+
+    // Flush I2S DMA ring buffer with multiple rounds of silence
+    // I2S DMA typically has 6-8 descriptors × 320 samples each
+    @memset(&buf, 0);
+    var flush: u32 = 0;
+    while (flush < 10) : (flush += 1) {
+        var s_off: usize = 0;
+        while (s_off < buf.len) {
+            const written = spk.write(buf[s_off..]) catch break;
+            s_off += written;
+        }
+    }
 }
 
 /// Play button-specific tone (do re mi fa so la)
@@ -683,53 +695,58 @@ fn buildMqttConnect(buf: []u8, client_id: []const u8, username: []const u8, pass
 // ============================================================================
 
 fn handleButton(p: anytype, btn: anytype) void {
-    const btn_name = btn.id.name();
-
     switch (btn.id) {
-        .rec => {
-            // REC: press-and-hold = recording, release = waiting_for_response
+        .vol_up => {
+            // do: click = send state event
+            if (btn.action == .click) {
+                log.info("[do] send state", .{});
+                p.setState(p.getState()); // re-send current state
+            }
+        },
+        .vol_down => {
+            // re: click = send stats event
+            if (btn.action == .click) {
+                log.info("[re] send stats", .{});
+                p.endBatch(); // triggers full stats send
+            }
+        },
+        .set => {
+            // mi: press = recording, release = waiting_for_response
             switch (btn.action) {
                 .press => {
-                    log.info("[{s}] PRESSED -> recording", .{btn_name});
+                    log.info("[mi] recording", .{});
                     p.setState(.recording);
                 },
                 .release => {
-                    log.info("[{s}] RELEASED ({}ms) -> waiting_for_response", .{ btn_name, btn.duration_ms });
+                    log.info("[mi] waiting_for_response ({}ms)", .{btn.duration_ms});
                     p.setState(.waiting_for_response);
                 },
                 else => {},
             }
         },
         .play => {
-            // PLAY: click = toggle calling/ready
+            // fa: click = toggle calling/ready
             if (btn.action == .click) {
                 const current = p.getState();
                 if (current == .calling) {
-                    log.info("[{s}] CLICK -> exit calling", .{btn_name});
+                    log.info("[fa] exit calling -> ready", .{});
                     p.setState(.ready);
                 } else {
-                    log.info("[{s}] CLICK -> enter calling", .{btn_name});
+                    log.info("[fa] enter calling", .{});
                     p.setState(.calling);
                 }
             }
         },
-        .vol_up => {
-            if (btn.action == .click or btn.action == .long_press) {
-                volume = @min(volume + 10, 100);
-                log.info("[{s}] volume -> {}", .{ btn_name, volume });
-                p.setVolume(@floatFromInt(volume));
-            }
-        },
-        .vol_down => {
-            if (btn.action == .click or btn.action == .long_press) {
-                volume = @max(volume - 10, 0);
-                log.info("[{s}] volume -> {}", .{ btn_name, volume });
-                p.setVolume(@floatFromInt(volume));
-            }
-        },
-        else => {
+        .mute => {
+            // so: (reserved)
             if (btn.action == .click) {
-                log.info("[{s}] CLICK", .{btn_name});
+                log.info("[so] (reserved)", .{});
+            }
+        },
+        .rec => {
+            // la: (reserved)
+            if (btn.action == .click) {
+                log.info("[la] (reserved)", .{});
             }
         },
     }
