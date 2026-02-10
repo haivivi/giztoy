@@ -570,24 +570,34 @@ fn initAudio() void {
     log.info("Audio initialized (ES8311 + PA)", .{});
 }
 
-/// Play a short sine wave tone at given frequency
+/// Play a short sine wave tone at given frequency.
+/// Uses 320-sample (20ms) stack buffer, written back-to-back.
 fn playTone(freq: u32, duration_ms: u32) void {
     const spk = &(g_spk orelse return);
     const sr = Audio.sample_rate;
     const total_samples = (sr * duration_ms) / 1000;
-    var samples_played: u32 = 0;
-    var phase: f32 = 0;
     const phase_inc = @as(f32, @floatFromInt(freq)) * 2.0 * std.math.pi / @as(f32, @floatFromInt(sr));
-    var buf: [160]i16 = undefined; // 10ms @ 16kHz
 
-    while (samples_played < total_samples) {
-        for (&buf) |*sample| {
-            sample.* = @intFromFloat(@sin(phase) * 12000.0);
+    var buf: [320]i16 = undefined; // 20ms @ 16kHz
+    var phase: f32 = 0;
+    var played: u32 = 0;
+
+    while (played < total_samples) {
+        const remaining = total_samples - played;
+        const chunk = if (remaining < buf.len) remaining else buf.len;
+
+        for (buf[0..chunk]) |*sample| {
+            sample.* = @intFromFloat(@sin(phase) * 10000.0);
             phase += phase_inc;
             if (phase >= 2.0 * std.math.pi) phase -= 2.0 * std.math.pi;
         }
-        const written = spk.write(&buf) catch break;
-        samples_played += @intCast(written);
+
+        var off: usize = 0;
+        while (off < chunk) {
+            const written = spk.write(buf[off..chunk]) catch return;
+            off += written;
+        }
+        played += @intCast(chunk);
     }
 }
 
