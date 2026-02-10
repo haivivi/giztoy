@@ -571,33 +571,39 @@ fn initAudio() void {
 }
 
 /// Play a short sine wave tone at given frequency.
-/// Uses 320-sample (20ms) stack buffer, written back-to-back.
+/// I2S is stereo — each sample must be written twice (L+R).
 fn playTone(freq: u32, duration_ms: u32) void {
     const spk = &(g_spk orelse return);
     const sr = Audio.sample_rate;
-    const total_samples = (sr * duration_ms) / 1000;
+    const total_frames = (sr * duration_ms) / 1000;
     const phase_inc = @as(f32, @floatFromInt(freq)) * 2.0 * std.math.pi / @as(f32, @floatFromInt(sr));
 
-    var buf: [320]i16 = undefined; // 20ms @ 16kHz
+    // 160 stereo frames = 320 i16 samples (L,R,L,R,...) = 10ms @ 16kHz
+    var buf: [320]i16 = undefined;
     var phase: f32 = 0;
     var played: u32 = 0;
 
-    while (played < total_samples) {
-        const remaining = total_samples - played;
-        const chunk = if (remaining < buf.len) remaining else buf.len;
+    while (played < total_frames) {
+        const remaining = total_frames - played;
+        const frames = if (remaining < 160) remaining else 160;
 
-        for (buf[0..chunk]) |*sample| {
-            sample.* = @intFromFloat(@sin(phase) * 10000.0);
+        // Generate stereo: duplicate mono sample to L and R
+        var i: usize = 0;
+        while (i < frames) : (i += 1) {
+            const val: i16 = @intFromFloat(@sin(phase) * 10000.0);
+            buf[i * 2] = val; // Left
+            buf[i * 2 + 1] = val; // Right
             phase += phase_inc;
             if (phase >= 2.0 * std.math.pi) phase -= 2.0 * std.math.pi;
         }
 
+        const samples = frames * 2;
         var off: usize = 0;
-        while (off < chunk) {
-            const written = spk.write(buf[off..chunk]) catch return;
+        while (off < samples) {
+            const written = spk.write(buf[off..samples]) catch return;
             off += written;
         }
-        played += @intCast(chunk);
+        played += @intCast(frames);
     }
 }
 
