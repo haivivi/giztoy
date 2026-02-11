@@ -117,7 +117,7 @@ Examples:
 			return err
 		}
 
-		console, err := createConsole()
+		console, err := createConsoleWith(svc)
 		if err != nil {
 			return fmt.Errorf("console credentials required for listing voices: %w", err)
 		}

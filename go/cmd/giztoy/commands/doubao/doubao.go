@@ -135,12 +135,17 @@ func createClientWith(svc *ServiceConfig) (*ds.Client, error) {
 	return ds.NewClient(svc.AppID, opts...), nil
 }
 
-// createConsole creates a Doubao Console client for admin operations.
+// createConsole creates a Doubao Console client (loads config internally).
 func createConsole() (*ds.Console, error) {
 	svc, err := loadServiceConfig()
 	if err != nil {
 		return nil, err
 	}
+	return createConsoleWith(svc)
+}
+
+// createConsoleWith creates a Doubao Console client from an already-loaded config.
+func createConsoleWith(svc *ServiceConfig) (*ds.Console, error) {
 	if svc.ConsoleAK == "" || svc.ConsoleSK == "" {
 		return nil, fmt.Errorf("console credentials (console_ak, console_sk) not configured")
 	}
