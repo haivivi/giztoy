@@ -77,7 +77,8 @@ pub fn stampFrame(
 }
 
 /// Unstamp an opus frame, extracting timestamp and frame data.
-/// The frame slice points into the input buffer (zero-copy).
+/// Returns an owned StampedFrame — data is copied into the inline buffer.
+/// Safe to store, pass through channels, and use across task boundaries.
 pub fn unstampFrame(data: []const u8) WireError!StampedFrame {
     if (data.len < HEADER_SIZE) {
         return WireError.InvalidData;
@@ -97,10 +98,7 @@ pub fn unstampFrame(data: []const u8) WireError!StampedFrame {
         (@as(u64, data[6]) << 8) |
         @as(u64, data[7]);
 
-    return StampedFrame{
-        .timestamp_ms = @bitCast(ts_u64),
-        .frame = data[HEADER_SIZE..],
-    };
+    return StampedFrame.init(@bitCast(ts_u64), data[HEADER_SIZE..]);
 }
 
 /// Calculate the required buffer size for stamping a frame.
@@ -451,7 +449,7 @@ pub fn findStringValue(json: []const u8, key: []const u8) ?[]const u8 {
 }
 
 /// Find a boolean value (true/false) after a key in JSON.
-fn findBoolAfter(json: []const u8, key: []const u8) bool {
+pub fn findBoolAfter(json: []const u8, key: []const u8) bool {
     const key_pos = std.mem.indexOf(u8, json, key) orelse return false;
     const after_key = json[key_pos + key.len ..];
 
@@ -557,7 +555,7 @@ test "stampFrame and unstampFrame roundtrip" {
 
     const unstamped = try unstampFrame(buf[0..written]);
     try std.testing.expectEqual(timestamp, unstamped.timestamp_ms);
-    try std.testing.expect(std.mem.eql(u8, unstamped.frame, &opus_data));
+    try std.testing.expect(std.mem.eql(u8, unstamped.frame(), &opus_data));
 }
 
 test "stampFrame buffer too small" {

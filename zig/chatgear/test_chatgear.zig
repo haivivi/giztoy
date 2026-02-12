@@ -327,7 +327,7 @@ test "sendOpusFrame -> broker handler receives and unstamps" {
     const raw = g_cap.audio_buf[0..g_cap.audio_len];
     const unstamped = try chatgear.unstampFrame(raw);
     try std.testing.expectEqual(timestamp, unstamped.timestamp_ms);
-    try std.testing.expect(std.mem.eql(u8, unstamped.frame, &fake_opus));
+    try std.testing.expect(std.mem.eql(u8, unstamped.frame(), &fake_opus));
 
     device_client.deinit();
     device_sock.close();
@@ -359,7 +359,7 @@ test "stamped audio frame roundtrips" {
     const stamped_len = try chatgear.stampFrame(timestamp, &fake_opus, &stamp_buf);
     const unstamped = try chatgear.unstampFrame(stamp_buf[0..stamped_len]);
     try std.testing.expectEqual(timestamp, unstamped.timestamp_ms);
-    try std.testing.expect(std.mem.eql(u8, unstamped.frame, &fake_opus));
+    try std.testing.expect(std.mem.eql(u8, unstamped.frame(), &fake_opus));
 }
 
 // ============================================================================
@@ -605,8 +605,8 @@ fn deviceOnCommand(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
 
 fn deviceOnAudio(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
     if (g_client_port) |cp| {
-        const frame = chatgear.unstampFrame(msg.payload) catch return;
-        cp.pushDownlinkAudio(frame);
+        const f = chatgear.unstampFrame(msg.payload) catch return;
+        cp.pushDownlinkAudio(f);
     }
 }
 

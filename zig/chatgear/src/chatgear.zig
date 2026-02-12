@@ -71,6 +71,7 @@ pub const HaltPayload = types.HaltPayload;
 pub const SetWifiPayload = types.SetWifiPayload;
 
 pub const StampedFrame = types.StampedFrame;
+pub const MAX_FRAME_DATA = types.MAX_FRAME_DATA;
 pub const Message = types.Message;
 pub const MessageType = types.MessageType;
 
@@ -102,6 +103,7 @@ pub const STATE_EVENT_JSON_SIZE = wire.STATE_EVENT_JSON_SIZE;
 pub const STATS_EVENT_JSON_SIZE = wire.STATS_EVENT_JSON_SIZE;
 pub const COMMAND_EVENT_JSON_SIZE = wire.COMMAND_EVENT_JSON_SIZE;
 pub const WireError = wire.WireError;
+pub const findBoolAfter = wire.findBoolAfter;
 
 // Client Connection
 pub const Config = conn.Config;

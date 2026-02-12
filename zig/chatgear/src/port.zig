@@ -190,11 +190,10 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
         // ====================================================================
 
         /// Queue an opus frame for upload.
-        pub fn sendOpusFrame(self: *Self, timestamp_ms: i64, frame: []const u8) void {
-            self.uplink_audio.trySend(.{
-                .timestamp_ms = timestamp_ms,
-                .frame = frame,
-            }) catch {};
+        /// Data is copied into the StampedFrame's inline buffer, so the
+        /// caller's buffer can be reused immediately after this returns.
+        pub fn sendOpusFrame(self: *Self, timestamp_ms: i64, data: []const u8) void {
+            self.uplink_audio.trySend(types.StampedFrame.init(timestamp_ms, data)) catch {};
         }
 
         // ====================================================================
@@ -474,8 +473,8 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
 
         fn txAudioLoopFn(ctx: ?*anyopaque) void {
             const self: *Self = @ptrCast(@alignCast(ctx));
-            while (self.uplink_audio.recv()) |frame| {
-                self.conn.sendOpusFrame(frame.timestamp_ms, frame.frame) catch {};
+            while (self.uplink_audio.recv()) |f| {
+                self.conn.sendOpusFrame(f.timestamp_ms, f.frame()) catch {};
             }
         }
 

@@ -192,11 +192,36 @@ pub const CommandEvent = struct {
 // Stamped Opus Frame
 // ============================================================================
 
+/// Maximum inline frame data size. Sufficient for VoIP opus frames
+/// (typically 40-120 bytes at 24kbps). Increase for music use cases.
+pub const MAX_FRAME_DATA: usize = 256;
+
 /// Stamped opus frame for audio streaming.
 /// Matches go/pkg/chatgear/conn_mqtt.go StampedOpusFrame.
+///
+/// Owns its data via inline buffer — safe to pass through channels
+/// and across task boundaries without lifetime concerns.
+/// In Go, opus.Frame is a heap-allocated []byte so this isn't an issue.
+/// In Zig, we must own the data to avoid dangling pointers when frames
+/// pass through Channel ring buffers between tasks.
 pub const StampedFrame = struct {
-    timestamp_ms: i64,
-    frame: []const u8,
+    timestamp_ms: i64 = 0,
+    buf: [MAX_FRAME_DATA]u8 = undefined,
+    len: usize = 0,
+
+    /// Get the frame data as a slice.
+    pub fn frame(self: *const StampedFrame) []const u8 {
+        return self.buf[0..self.len];
+    }
+
+    /// Create an owned frame by copying data into the inline buffer.
+    pub fn init(timestamp_ms: i64, data: []const u8) StampedFrame {
+        var f = StampedFrame{ .timestamp_ms = timestamp_ms };
+        const n = @min(data.len, MAX_FRAME_DATA);
+        @memcpy(f.buf[0..n], data[0..n]);
+        f.len = n;
+        return f;
+    }
 };
 
 // ============================================================================

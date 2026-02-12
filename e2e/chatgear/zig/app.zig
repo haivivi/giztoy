@@ -2,9 +2,9 @@
 //!
 //! Device simulator that exercises the full chatgear protocol:
 //! - Connects to MQTT broker (mqtt:// or mqtts:// with auth)
-//! - Sends state/stats via ClientPort periodic reporting
+//! - Manages state/stats exclusively through ClientPort
 //! - Handles ADC button events for recording and calling
-//! - Receives commands from server
+//! - Receives and executes commands from server
 //!
 //! MQTT URL format (matches Go DialMQTT):
 //!   mqtt://host:1883              — TCP, no auth
@@ -12,9 +12,12 @@
 //!   mqtts://user:pass@host:8883   — TLS with auth
 //!
 //! Button behavior (Korvo-2 V3 ADC buttons):
-//! - REC: press-and-hold = recording, release = waiting_for_response
-//! - PLAY: press = toggle calling/ready
-//! - VOL+/VOL-: adjust volume
+//!   do  (VOL+): send current state
+//!   re  (VOL-): send stats
+//!   mi  (SET):  press-and-hold = recording, release = waiting_for_response
+//!   fa  (PLAY): press = toggle calling/ready
+//!   so  (MUTE): reserved
+//!   la  (REC):  reserved
 
 const std = @import("std");
 
@@ -75,7 +78,6 @@ const MqttUrl = struct {
             result.port = 1883;
             rest = rest["mqtt://".len..];
         }
-        // else: treat as host:port (no scheme)
 
         // Userinfo: user:pass@
         if (indexOf(rest, '@')) |at_pos| {
@@ -95,7 +97,6 @@ const MqttUrl = struct {
             result.host = rest[0..colon_pos];
             result.port = parseU16(rest[colon_pos + 1 ..]);
         } else {
-            // Strip trailing slash or path if any
             if (indexOf(rest, '/')) |slash_pos| {
                 result.host = rest[0..slash_pos];
             } else {
@@ -142,7 +143,26 @@ var config: struct {
 } = undefined;
 
 // ============================================================================
-// Application State
+// Application Context
+// ============================================================================
+
+/// Application context — the single source of truth for all runtime state.
+/// Heap-allocated, passed to spawned tasks. Eliminates global mutable state.
+const AppCtx = struct {
+    port: *TlsPort,
+    conn: *TlsConn,
+    client: *TlsMqttClient,
+    encoder: *opus.Encoder,
+    decoder: *opus.Decoder,
+    epoch_offset: i64,
+};
+
+/// The single global pointer. Set once during MQTT connect, used by button
+/// handler in the main event loop. All other tasks receive AppCtx directly.
+var g_app: ?*AppCtx = null;
+
+// ============================================================================
+// Application State Machine
 // ============================================================================
 
 const AppState = enum {
@@ -151,17 +171,20 @@ const AppState = enum {
     running,
 };
 
-var volume: i32 = 50;
+// ============================================================================
+// Audio Hardware (initialized once, used across tasks)
+// ============================================================================
+
+var g_i2c: ?idf.I2c = null;
+var g_i2s: ?idf.I2s = null;
+var g_pa: ?hw.PaSwitchDriver = null;
+var g_spk: ?hw.SpeakerDriver = null;
+
+const LedDriver = @import("esp").boards.korvo2_v3.LedDriver;
+var g_led: ?LedDriver = null;
 
 /// Epoch offset: epoch_ms - uptime_ms. Set by NTP sync.
 var g_epoch_offset: i64 = 0;
-
-// Global pointers (set by connectTls/connectTcp, used by button handler)
-var active_port: ?*TlsPort = null;
-var active_conn: ?*TlsConn = null;
-
-// Audio hardware (initialized in run(), used for tone playback)
-var audio_speaker: ?*hw.SpeakerDriver = null;
 
 // Note frequencies for button tones (C4 major scale = do re mi fa so la)
 const button_tones = [6]u32{
@@ -209,7 +232,7 @@ pub fn run(env: anytype) void {
     };
     defer board.deinit();
 
-    // Init audio (I2C + I2S + ES8311 speaker + PA)
+    // Init audio hardware (I2C + I2S + ES8311 speaker + PA + LEDs)
     initAudio();
 
     // Play startup beep (confirms speaker works)
@@ -224,19 +247,10 @@ pub fn run(env: anytype) void {
 
     var app_state: AppState = .connecting_wifi;
 
-    // Debug: log ADC raw value periodically
-    var debug_counter: u32 = 0;
-
     // Main event loop
     while (Board.isRunning()) {
-        // Poll ADC buttons (pushes events to board queue)
+        // Poll ADC buttons
         board.buttons.poll();
-
-        debug_counter += 1;
-        if (debug_counter % 500 == 1) {
-            const raw = board.buttons.getLastRaw();
-            log.info("[ADC] raw={} uptime={}ms", .{ raw, board.uptime() });
-        }
 
         // Process board events
         while (board.nextEvent()) |event| {
@@ -244,7 +258,6 @@ pub fn run(env: anytype) void {
                 .wifi => |wifi_event| handleWifiEvent(wifi_event, &app_state),
                 .net => |net_event| handleNetEvent(net_event, &app_state),
                 .button => |btn| {
-                    // Log button event (no tone — test MQTT only)
                     if (btn.action == .press) {
                         log.info("[BTN] {s} PRESS", .{btn.id.name()});
                     } else if (btn.action == .click) {
@@ -252,9 +265,8 @@ pub fn run(env: anytype) void {
                     } else if (btn.action == .release) {
                         log.info("[BTN] {s} RELEASE", .{btn.id.name()});
                     }
-                    // Forward to chatgear handler if port is active
-                    if (active_port) |p| {
-                        handleButton(p, btn);
+                    if (g_app) |app| {
+                        handleButton(app, btn);
                     }
                 },
                 else => {},
@@ -322,7 +334,7 @@ fn handleNetEvent(net_event: anytype, app_state: *AppState) void {
 }
 
 // ============================================================================
-// MQTT Connection (TCP)
+// DNS Resolution
 // ============================================================================
 
 fn resolveHost(hostname: []const u8) ?[4]u8 {
@@ -336,6 +348,10 @@ fn resolveHost(hostname: []const u8) ?[4]u8 {
         return null;
     };
 }
+
+// ============================================================================
+// MQTT Connection (TCP)
+// ============================================================================
 
 fn connectTcp(app_state: *AppState) void {
     log.info("Connecting MQTT (TCP) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
@@ -385,7 +401,10 @@ fn connectTcp(app_state: *AppState) void {
     initPort(&port);
     app_state.* = .running;
 
-    // MQTT readLoop in background (blocks until disconnect)
+    playReadyBeeps();
+    setLed(false, true);
+
+    // MQTT readLoop in background
     FullRt.spawn("mqtt_rx", struct {
         fn run(ctx: ?*anyopaque) void {
             const c: *TcpMqttClient = @ptrCast(@alignCast(ctx));
@@ -410,8 +429,7 @@ fn connectTls(app_state: *AppState) void {
     const ip = resolveHost(config.mqtt.host) orelse return;
     log.info("Resolved {s} -> {d}.{d}.{d}.{d}", .{ config.mqtt.host, ip[0], ip[1], ip[2], ip[3] });
 
-    // Each component separately heap-allocated in PSRAM.
-    // Avoids Zig value-copy issues with self-referential pointers.
+    // Each component heap-allocated in PSRAM to avoid Zig value-copy issues.
 
     const sock = alloc.create(Socket) catch |err| {
         log.err("alloc socket: {}", .{err});
@@ -430,7 +448,7 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("TCP connected", .{});
 
-    // TLS
+    // TLS handshake
     log.info("TLS handshake...", .{});
     const tls_c = alloc.create(TlsClient) catch |err| {
         log.err("alloc tls: {}", .{err});
@@ -471,8 +489,6 @@ fn connectTls(app_state: *AppState) void {
         log.err("alloc client: {}", .{err});
         return;
     };
-    // Use gear_id as client_id — same as Go chatgear.DialMQTT
-    // Go format: "chatgear-{gearID}-{rand}" but we use just gear_id for now
     client.* = TlsMqttClient.init(tls_c, mux, .{
         .client_id = config.gear_id,
         .username = config.mqtt.username,
@@ -502,14 +518,15 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("MQTT subscribed to downlink topics", .{});
 
-    // ChatGear port (with NTP epoch offset for proper timestamps)
+    // ChatGear port — the single source of truth for device state
     const port = alloc.create(TlsPort) catch |err| {
         log.err("alloc port: {}", .{err});
         return;
     };
     port.* = TlsPort.init(conn, g_epoch_offset);
-    active_port = port;
-    active_conn = conn;
+
+    // Initialize port state (battery, volume, version) and start periodic reporting
+    initPort(port);
 
     // Init opus codec
     log.info("Initializing opus codec...", .{});
@@ -537,20 +554,38 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("Opus decoder ready", .{});
 
-    // Start audio pipeline (mic + speaker tasks)
-    startAudioPipeline(port, enc, dec);
+    // Build application context — single struct shared by all tasks
+    const ctx = alloc.create(AppCtx) catch |err| {
+        log.err("alloc AppCtx: {}", .{err});
+        return;
+    };
+    ctx.* = .{
+        .port = port,
+        .conn = conn,
+        .client = client,
+        .encoder = enc,
+        .decoder = dec,
+        .epoch_offset = g_epoch_offset,
+    };
+    g_app = ctx;
 
-    // Run automated test sequence
-    runAutoTest(conn, enc);
+    // Start audio pipeline (mic capture + speaker playback tasks)
+    startAudioPipeline(ctx);
 
-    // After auto test, enter manual button mode
+    // Run automated test sequence (exercises full protocol)
+    runAutoTest(ctx);
+
+    // Enter manual button mode
     log.info("Auto test done. Manual button mode.", .{});
     app_state.* = .running;
 
+    playReadyBeeps();
+    setLed(false, true);
+
     // MQTT readLoop in background
     FullRt.spawn("mqtt_rx", struct {
-        fn run(ctx: ?*anyopaque) void {
-            const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
+        fn run(arg: ?*anyopaque) void {
+            const c: *TlsMqttClient = @ptrCast(@alignCast(arg));
             c.readLoop() catch |err| {
                 log.err("MQTT read loop error: {}", .{err});
             };
@@ -559,11 +594,10 @@ fn connectTls(app_state: *AppState) void {
         log.err("Failed to spawn MQTT reader: {}", .{err});
     };
 
-    // MQTT keep-alive ping every 10s
+    // MQTT keep-alive ping
     FullRt.spawn("mqtt_ka", struct {
-        fn run(ctx: ?*anyopaque) void {
-            const c: *TlsMqttClient = @ptrCast(@alignCast(ctx));
-            // First ping after 5s, then every 10s
+        fn run(arg: ?*anyopaque) void {
+            const c: *TlsMqttClient = @ptrCast(@alignCast(arg));
             hw.MqttRt.Time.sleepMs(5_000);
             while (true) {
                 c.ping() catch |err| {
@@ -583,9 +617,11 @@ fn connectTls(app_state: *AppState) void {
 // Port Initialization (shared between TCP and TLS)
 // ============================================================================
 
+/// Initialize the ClientPort with device info and start periodic reporting.
+/// Matches Go: BeginBatch + Set* + EndBatch + StartPeriodicReporting + SetState.
 fn initPort(p: anytype) void {
     p.beginBatch();
-    p.setVolume(@floatFromInt(volume));
+    p.setVolume(50);
     p.setBattery(100, false);
     p.setSystemVersion("zig-e2e-0.1.0");
     p.endBatch();
@@ -620,11 +656,6 @@ fn syncNtp() void {
 // Audio Init + Tone Playback
 // ============================================================================
 
-var g_i2c: ?idf.I2c = null;
-var g_i2s: ?idf.I2s = null;
-var g_pa: ?hw.PaSwitchDriver = null;
-var g_spk: ?hw.SpeakerDriver = null;
-
 fn initAudio() void {
     log.info("Initializing audio...", .{});
 
@@ -640,11 +671,11 @@ fn initAudio() void {
     g_i2s = idf.I2s.init(.{
         .port = Audio.i2s_port,
         .sample_rate = Audio.sample_rate,
-        .rx_channels = 1, // Mono mic (ES7210)
+        .rx_channels = 1,
         .bits_per_sample = 16,
         .bclk_pin = Audio.i2s_bclk,
         .ws_pin = Audio.i2s_ws,
-        .din_pin = Audio.i2s_din, // Mic input
+        .din_pin = Audio.i2s_din,
         .dout_pin = Audio.i2s_dout,
         .mclk_pin = Audio.i2s_mclk,
     }) catch |err| {
@@ -670,20 +701,49 @@ fn initAudio() void {
     };
 
     g_spk.?.setVolume(200) catch {};
-    audio_speaker = &g_spk.?;
     log.info("Audio initialized (ES8311 + PA)", .{});
+
+    // Init LED driver (TCA9554 via same I2C bus)
+    g_led = LedDriver.init(&g_i2c.?) catch |err| {
+        log.warn("LED init failed: {} (continuing without LED)", .{err});
+        g_led = null;
+        return;
+    };
+    if (g_led) |*led| {
+        led.setBlue(true);
+        Board.time.sleepMs(200);
+        led.off();
+    }
+    log.info("LED initialized (TCA9554 red+blue)", .{});
+}
+
+/// Play "ready" notification: ascending beeps
+fn playReadyBeeps() void {
+    playTone(523, 100); // C5
+    Board.time.sleepMs(80);
+    playTone(659, 100); // E5
+    Board.time.sleepMs(80);
+    playTone(784, 150); // G5
+    Board.time.sleepMs(50);
+    playTone(1047, 200); // C6
+}
+
+/// Set LED state.
+fn setLed(red: bool, blue: bool) void {
+    if (g_led) |*led| {
+        led.setRed(red);
+        led.setBlue(blue);
+    }
 }
 
 /// Play a short sine wave tone at given frequency.
-/// I2S is stereo — each sample must be written twice (L+R).
 fn playTone(freq: u32, duration_ms: u32) void {
     const spk = &(g_spk orelse return);
     const sr = Audio.sample_rate;
     const total_frames = (sr * duration_ms) / 1000;
     const phase_inc = @as(f32, @floatFromInt(freq)) * 2.0 * std.math.pi / @as(f32, @floatFromInt(sr));
 
-    // 160 stereo frames = 320 i16 samples (L,R,L,R,...) = 10ms @ 16kHz
-    var buf: [320]i16 = undefined;
+    var buf: [320]i16 = undefined; // 160 stereo frames
     var phase: f32 = 0;
     var played: u32 = 0;
 
@@ -691,12 +751,11 @@ fn playTone(freq: u32, duration_ms: u32) void {
         const remaining = total_frames - played;
         const frames = if (remaining < 160) remaining else 160;
 
-        // Generate stereo: duplicate mono sample to L and R
         var i: usize = 0;
         while (i < frames) : (i += 1) {
             const val: i16 = @intFromFloat(@sin(phase) * 10000.0);
-            buf[i * 2] = val; // Left
-            buf[i * 2 + 1] = val; // Right
+            buf[i * 2] = val;
+            buf[i * 2 + 1] = val;
             phase += phase_inc;
             if (phase >= 2.0 * std.math.pi) phase -= 2.0 * std.math.pi;
         }
@@ -710,8 +769,7 @@ fn playTone(freq: u32, duration_ms: u32) void {
         played += @intCast(frames);
     }
 
-    // Flush I2S DMA ring buffer with multiple rounds of silence
-    // I2S DMA typically has 6-8 descriptors × 320 samples each
+    // Flush I2S DMA with silence
     @memset(&buf, 0);
     var flush: u32 = 0;
     while (flush < 10) : (flush += 1) {
@@ -723,55 +781,19 @@ fn playTone(freq: u32, duration_ms: u32) void {
     }
 }
 
-/// Play button-specific tone (do re mi fa so la)
-fn playButtonTone(button_idx: usize) void {
-    if (button_idx < button_tones.len) {
-        playTone(button_tones[button_idx], 150);
-    }
-}
-
 // ============================================================================
 // Automated Test Sequence
 // ============================================================================
 
-fn runAutoTest(conn: *TlsConn, enc: *opus.Encoder) void {
+/// Exercise the full chatgear protocol via the port API.
+/// All state/stats changes go through ClientPort — matching how the
+/// Go client works. No direct conn access.
+fn runAutoTest(ctx: *AppCtx) void {
     log.info("========== AUTO TEST START ==========", .{});
 
+    const port = ctx.port;
     const sleep = Board.time.sleepMs;
     const i2s = &(g_i2s orelse return);
-
-    // Helper: send state
-    const S = struct {
-        fn state(c: *TlsConn, s: chatgear.State) void {
-            const now = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
-            const evt = chatgear.StateEvent{
-                .version = 1,
-                .time = now,
-                .state = s,
-                .update_at = now,
-            };
-            c.sendState(&evt) catch |err| {
-                log.err("[TEST] sendState({s}) failed: {}", .{ s.toString(), err });
-                return;
-            };
-            log.info("[TEST] STATE -> {s}", .{s.toString()});
-        }
-
-        fn stats(c: *TlsConn, bat: f32, vol: f32) void {
-            const now = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
-            const evt = chatgear.StatsEvent{
-                .time = now,
-                .battery = .{ .percentage = bat },
-                .volume = .{ .percentage = vol, .update_at = now },
-                .system_version = .{ .current_version = "zig-e2e-0.1.0" },
-            };
-            c.sendStats(&evt) catch |err| {
-                log.err("[TEST] sendStats failed: {}", .{err});
-                return;
-            };
-            log.info("[TEST] STATS -> bat={d} vol={d}", .{ @as(i32, @intFromFloat(bat)), @as(i32, @intFromFloat(vol)) });
-        }
-    };
 
     // [0s] Startup beep
     playTone(440, 100);
@@ -779,18 +801,21 @@ fn runAutoTest(conn: *TlsConn, enc: *opus.Encoder) void {
     playTone(880, 100);
     log.info("[TEST] Startup beep", .{});
 
-    // [2s] state=ready
+    // [2s] state=ready (already set by initPort, but verify by re-setting)
     sleep(2000);
-    S.state(conn, .ready);
+    port.setState(.ready);
+    log.info("[TEST] STATE -> ready", .{});
 
-    // [4s] stats
+    // [4s] stats update (via port API)
     sleep(2000);
-    S.stats(conn, 100, 50);
+    port.setBattery(100, false);
+    port.setVolume(50);
+    log.info("[TEST] STATS -> bat=100 vol=50", .{});
 
-    // [6s] state=recording + mic 3 seconds
+    // [6s] state=recording + mic 3 seconds (through port)
     sleep(2000);
-    S.state(conn, .recording);
-    log.info("[TEST] Recording 3s of mic audio...", .{});
+    port.setState(.recording);
+    log.info("[TEST] STATE -> recording, mic 3s...", .{});
     {
         var pcm_buf: [FRAME_SAMPLES * 2]u8 = undefined;
         var opus_buf: [MAX_OPUS]u8 = undefined;
@@ -807,53 +832,54 @@ fn runAutoTest(conn: *TlsConn, enc: *opus.Encoder) void {
                 continue;
             }
 
-            // Convert bytes to i16
             const sample_slice = @as([*]const i16, @ptrCast(@alignCast(pcm_buf[0 .. FRAME_SAMPLES * 2].ptr)))[0..FRAME_SAMPLES];
 
-            // Gain
             var gained: [FRAME_SAMPLES]i16 = undefined;
             for (sample_slice, 0..) |s, idx| {
                 const v: i32 = @as(i32, s) * MIC_GAIN;
                 gained[idx] = @intCast(std.math.clamp(v, std.math.minInt(i16), std.math.maxInt(i16)));
             }
 
-            // Encode
-            const encoded = enc.encode(&gained, FRAME_SAMPLES, &opus_buf) catch continue;
+            const encoded = ctx.encoder.encode(&gained, FRAME_SAMPLES, &opus_buf) catch continue;
             if (encoded.len == 0) continue;
 
-            // Send via conn
-            const ts: i64 = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
-            conn.sendOpusFrame(ts, encoded) catch |err| {
-                log.err("[TEST] sendOpusFrame failed: {}", .{err});
-                break;
-            };
+            // Send through port — data is copied into owned StampedFrame
+            const ts: i64 = ctx.epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
+            port.sendOpusFrame(ts, encoded);
             frame_count += 1;
         }
         log.info("[TEST] Recorded {d} opus frames", .{frame_count});
     }
 
     // [9s] state=waiting_for_response
-    S.state(conn, .waiting_for_response);
+    port.setState(.waiting_for_response);
+    log.info("[TEST] STATE -> waiting_for_response", .{});
 
     // [11s] state=calling
     sleep(2000);
-    S.state(conn, .calling);
+    port.setState(.calling);
+    log.info("[TEST] STATE -> calling", .{});
 
     // [13s] state=ready
     sleep(2000);
-    S.state(conn, .ready);
+    port.setState(.ready);
+    log.info("[TEST] STATE -> ready", .{});
 
     // [15s] state=streaming
     sleep(2000);
-    S.state(conn, .streaming);
+    port.setState(.streaming);
+    log.info("[TEST] STATE -> streaming", .{});
 
     // [17s] state=ready
     sleep(2000);
-    S.state(conn, .ready);
+    port.setState(.ready);
+    log.info("[TEST] STATE -> ready", .{});
 
-    // [19s] stats
+    // [19s] stats update
     sleep(2000);
-    S.stats(conn, 85, 70);
+    port.setBattery(85, false);
+    port.setVolume(70);
+    log.info("[TEST] STATS -> bat=85 vol=70", .{});
 
     // [21s] End beep
     sleep(2000);
@@ -868,7 +894,7 @@ fn runAutoTest(conn: *TlsConn, enc: *opus.Encoder) void {
 }
 
 // ============================================================================
-// Audio Pipeline — mic capture + opus encode/decode + speaker playback
+// Audio Pipeline — mic capture + speaker playback
 // ============================================================================
 
 const FRAME_MS: u32 = 20;
@@ -876,42 +902,31 @@ const FRAME_SAMPLES: usize = Audio.sample_rate * FRAME_MS / 1000; // 320 @ 16kHz
 const MAX_OPUS: usize = 512;
 const MIC_GAIN: i32 = 4;
 
-var g_recording: bool = false;
-
-const AudioCtx = struct {
-    port: *TlsPort,
-    encoder: *opus.Encoder,
-    decoder: *opus.Decoder,
-};
-
-var g_audio_ctx: ?*AudioCtx = null;
-
-/// Mic capture task — reads mic, opus encode, sends to chatgear uplink
-fn micTaskFn(_: ?*anyopaque) void {
-    const actx = g_audio_ctx orelse return;
-    const port = actx.port;
-    const encoder = actx.encoder;
+/// Mic capture task — reads I2S, opus-encodes, sends to chatgear uplink.
+/// Recording is gated by port.getState() == .recording — no global flag.
+fn micTaskFn(arg: ?*anyopaque) void {
+    const ctx: *AppCtx = @ptrCast(@alignCast(arg));
+    const port = ctx.port;
+    const encoder = ctx.encoder;
     log.info("[mic] task started", .{});
 
     const i2s = &(g_i2s orelse return);
-    var raw_buf: [FRAME_SAMPLES * 2]u8 = undefined; // 16-bit samples = 2 bytes each
+    var raw_buf: [FRAME_SAMPLES * 2]u8 = undefined;
     var pcm_buf: [FRAME_SAMPLES]i16 = undefined;
     var opus_buf: [MAX_OPUS]u8 = undefined;
 
-    // Enable I2S RX
     i2s.enableRx() catch |err| {
         log.err("[mic] enableRx: {}", .{err});
         return;
     };
 
     while (true) {
-        // Wait until recording
-        if (!g_recording) {
+        // Check port state — only record when state is .recording
+        if (port.getState() != .recording) {
             Board.time.sleepMs(10);
             continue;
         }
 
-        // Read raw bytes from I2S
         const bytes_read = i2s.read(&raw_buf) catch {
             Board.time.sleepMs(5);
             continue;
@@ -921,61 +936,55 @@ fn micTaskFn(_: ?*anyopaque) void {
             continue;
         }
 
-        // Convert bytes to i16 samples (little-endian)
         const sample_count = bytes_read / 2;
         const byte_slice = raw_buf[0..bytes_read];
         const sample_slice = @as([*]const i16, @ptrCast(@alignCast(byte_slice.ptr)))[0..sample_count];
         @memcpy(pcm_buf[0..sample_count], sample_slice);
-        const n = sample_count;
 
-        // Gain
-        for (&pcm_buf) |*s| {
+        // Apply gain
+        for (pcm_buf[0..sample_count]) |*s| {
             const v: i32 = @as(i32, s.*) * MIC_GAIN;
             s.* = @intCast(std.math.clamp(v, std.math.minInt(i16), std.math.maxInt(i16)));
         }
 
-        // Only encode full frames
-        if (n < FRAME_SAMPLES) continue;
+        if (sample_count < FRAME_SAMPLES) continue;
 
-        // Opus encode
         const encoded = encoder.encode(pcm_buf[0..FRAME_SAMPLES], FRAME_SAMPLES, &opus_buf) catch |err| {
             log.err("[mic] encode: {}", .{err});
             continue;
         };
         if (encoded.len == 0) continue;
 
-        // Send opus frame through chatgear port
-        const ts: i64 = @intCast(Board.time.getTimeMs());
+        // Send through port — StampedFrame.init copies data, so opus_buf
+        // can be reused immediately without data races.
+        const ts: i64 = ctx.epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
         port.sendOpusFrame(ts, encoded);
     }
 }
 
-/// Downlink audio task — receives opus from MQTT, decodes, plays on speaker
-fn speakerTaskFn(_: ?*anyopaque) void {
-    const actx = g_audio_ctx orelse return;
-    const port = actx.port;
-    const decoder = actx.decoder;
+/// Downlink audio task — receives opus from server, decodes, plays on speaker.
+fn speakerTaskFn(arg: ?*anyopaque) void {
+    const ctx: *AppCtx = @ptrCast(@alignCast(arg));
+    const port = ctx.port;
+    const decoder = ctx.decoder;
     log.info("[spk] task started", .{});
 
     const spk = &(g_spk orelse return);
-    var pcm_buf: [FRAME_SAMPLES * 2]i16 = undefined; // stereo output
+    var pcm_buf: [FRAME_SAMPLES * 2]i16 = undefined;
 
     while (true) {
-        // Block until we get a downlink audio frame
-        const frame = port.recvDownlinkAudio() orelse return;
+        const sf = port.recvDownlinkAudio() orelse return;
 
-        // Decode opus -> mono PCM
         var mono_buf: [FRAME_SAMPLES]i16 = undefined;
-        const decoded = decoder.decode(frame.frame, &mono_buf, false) catch continue;
+        const decoded = decoder.decode(sf.frame(), &mono_buf, false) catch continue;
         if (decoded.len == 0) continue;
 
-        // Mono -> stereo (I2S is stereo)
+        // Mono -> stereo
         for (decoded, 0..) |sample, i| {
             pcm_buf[i * 2] = sample;
             pcm_buf[i * 2 + 1] = sample;
         }
 
-        // Write to speaker
         const stereo_len = decoded.len * 2;
         var off: usize = 0;
         while (off < stereo_len) {
@@ -985,151 +994,72 @@ fn speakerTaskFn(_: ?*anyopaque) void {
     }
 }
 
-/// Start audio pipeline tasks (called after chatgear port is ready)
-fn startAudioPipeline(port: *TlsPort, enc: *opus.Encoder, dec: *opus.Decoder) void {
-    // Heap-allocate context so it outlives this function
-    const ctx = alloc.create(AudioCtx) catch |err| {
-        log.err("alloc audio ctx: {}", .{err});
-        return;
-    };
-    ctx.* = .{ .port = port, .encoder = enc, .decoder = dec };
-    g_audio_ctx = ctx;
-
-    FullRt.spawn("mic", micTaskFn, null, .{ .stack_size = 32768 }) catch |err| {
+/// Start audio pipeline tasks.
+fn startAudioPipeline(ctx: *AppCtx) void {
+    FullRt.spawn("mic", micTaskFn, @ptrCast(ctx), .{ .stack_size = 32768 }) catch |err| {
         log.err("spawn mic task: {}", .{err});
     };
-    FullRt.spawn("spk", speakerTaskFn, null, .{ .stack_size = 32768 }) catch |err| {
+    FullRt.spawn("spk", speakerTaskFn, @ptrCast(ctx), .{ .stack_size = 32768 }) catch |err| {
         log.err("spawn spk task: {}", .{err});
     };
     log.info("Audio pipeline started (mic + speaker)", .{});
 }
 
 // ============================================================================
-// Raw MQTT CONNECT packet builder (for debug)
-// ============================================================================
-
-fn buildMqttConnect(buf: []u8, client_id: []const u8, username: []const u8, password: []const u8) usize {
-    // MQTT 3.1.1 CONNECT: fixed header + variable header + payload
-    var payload_buf: [200]u8 = undefined;
-    var pos: usize = 0;
-
-    // Variable header: Protocol Name "MQTT"
-    payload_buf[pos] = 0;
-    payload_buf[pos + 1] = 4;
-    pos += 2;
-    @memcpy(payload_buf[pos..][0..4], "MQTT");
-    pos += 4;
-
-    // Protocol Level (4 = MQTT 3.1.1)
-    payload_buf[pos] = 4;
-    pos += 1;
-
-    // Connect Flags: username + password + clean session
-    var flags: u8 = 0x02; // clean session
-    if (username.len > 0) flags |= 0x80; // username flag
-    if (password.len > 0) flags |= 0x40; // password flag
-    payload_buf[pos] = flags;
-    pos += 1;
-
-    // Keep Alive (60s)
-    payload_buf[pos] = 0;
-    payload_buf[pos + 1] = 60;
-    pos += 2;
-
-    // Payload: Client ID
-    payload_buf[pos] = @truncate(client_id.len >> 8);
-    payload_buf[pos + 1] = @truncate(client_id.len);
-    pos += 2;
-    @memcpy(payload_buf[pos..][0..client_id.len], client_id);
-    pos += client_id.len;
-
-    // Payload: Username
-    if (username.len > 0) {
-        payload_buf[pos] = @truncate(username.len >> 8);
-        payload_buf[pos + 1] = @truncate(username.len);
-        pos += 2;
-        @memcpy(payload_buf[pos..][0..username.len], username);
-        pos += username.len;
-    }
-
-    // Payload: Password
-    if (password.len > 0) {
-        payload_buf[pos] = @truncate(password.len >> 8);
-        payload_buf[pos + 1] = @truncate(password.len);
-        pos += 2;
-        @memcpy(payload_buf[pos..][0..password.len], password);
-        pos += password.len;
-    }
-
-    // Fixed header: packet type (CONNECT = 0x10) + remaining length
-    buf[0] = 0x10;
-    buf[1] = @truncate(pos);
-    @memcpy(buf[2..][0..pos], payload_buf[0..pos]);
-    return 2 + pos;
-}
-
-// ============================================================================
 // Button Handling
 // ============================================================================
 
-var current_state: chatgear.State = .ready;
+/// Handle button events through the ClientPort API.
+/// All state transitions go through port.setState() which:
+/// 1. Updates the port's internal state
+/// 2. Queues a StateEvent for the periodic tx loop to send
+/// 3. Mic task sees the new state via port.getState()
+fn handleButton(ctx: *AppCtx, btn: anytype) void {
+    const port = ctx.port;
 
-fn sendState(state: chatgear.State) void {
-    const c = active_conn orelse return;
-    current_state = state;
-    const now = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
-    const evt = chatgear.StateEvent{
-        .version = 1,
-        .time = now,
-        .state = state,
-        .update_at = now,
-    };
-    c.sendState(&evt) catch |err| {
-        log.err("sendState failed: {}", .{err});
-    };
-    log.info("-> STATE: {s}", .{state.toString()});
-}
+    // LED feedback
+    if (btn.action == .press) {
+        setLed(true, false);
+    } else if (btn.action == .release) {
+        setLed(false, true);
+    }
 
-fn sendStats() void {
-    const c = active_conn orelse return;
-    const now = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
-    const evt = chatgear.StatsEvent{
-        .time = now,
-        .battery = .{ .percentage = 100 },
-        .volume = .{ .percentage = @floatFromInt(volume), .update_at = now },
-        .system_version = .{ .current_version = "zig-e2e-0.1.0" },
-    };
-    c.sendStats(&evt) catch |err| {
-        log.err("sendStats failed: {}", .{err});
-    };
-    log.info("-> STATS sent", .{});
-}
+    // Button tone on press/click
+    if (btn.action == .press or btn.action == .click) {
+        const idx: usize = @intFromEnum(btn.id);
+        if (idx < button_tones.len) {
+            playTone(button_tones[idx], 80);
+        }
+    }
 
-fn handleButton(p: anytype, btn: anytype) void {
-    _ = p;
     switch (btn.id) {
         .vol_up => {
-            // do: click = send state event
+            // do: click = force-send current state (for debugging)
             if (btn.action == .click) {
-                sendState(current_state);
+                // Re-setting the same state won't queue because ClientPort
+                // deduplicates. Use a trick: set to a different state then back.
+                // Or just log — the periodic reporting already sends every 5s.
+                log.info("[do] State: {s}", .{port.getState().toString()});
             }
         },
         .vol_down => {
-            // re: click = send stats event
+            // re: click = force full stats report
             if (btn.action == .click) {
-                sendStats();
+                port.beginBatch();
+                port.endBatch(); // sends full stats
+                log.info("[re] STATS sent", .{});
             }
         },
         .set => {
-            // mi: press = recording + mic on, release = waiting_for_response
+            // mi: press = start recording, release = stop recording
             switch (btn.action) {
                 .press => {
-                    g_recording = true;
-                    sendState(.recording);
+                    port.setState(.recording);
+                    log.info("[mi] -> recording", .{});
                 },
                 .release => {
-                    g_recording = false;
-                    sendState(.waiting_for_response);
+                    port.setState(.waiting_for_response);
+                    log.info("[mi] -> waiting_for_response", .{});
                 },
                 else => {},
             }
@@ -1137,10 +1067,12 @@ fn handleButton(p: anytype, btn: anytype) void {
         .play => {
             // fa: click = toggle calling/ready
             if (btn.action == .click) {
-                if (current_state == .calling) {
-                    sendState(.ready);
+                if (port.getState() == .calling) {
+                    port.setState(.ready);
+                    log.info("[fa] -> ready", .{});
                 } else {
-                    sendState(.calling);
+                    port.setState(.calling);
+                    log.info("[fa] -> calling", .{});
                 }
             }
         },
@@ -1154,29 +1086,31 @@ fn handleButton(p: anytype, btn: anytype) void {
 }
 
 // ============================================================================
-// Command Handling
+// Command Handling (from server)
 // ============================================================================
 
-fn handleCommand(p: anytype, cmd: chatgear.CommandEvent) void {
+/// Handle commands received from the server via MQTT.
+/// Called from the command receive task (spawned by startCommandHandler).
+fn handleCommand(ctx: *AppCtx, cmd: chatgear.CommandEvent) void {
+    const port = ctx.port;
     log.info("Command: {s}", .{cmd.cmd_type.toString()});
 
     switch (cmd.payload) {
         .streaming => |enabled| {
-            if (enabled) p.setState(.streaming) else p.setState(.ready);
+            if (enabled) port.setState(.streaming) else port.setState(.ready);
         },
         .set_volume => |vol| {
-            volume = vol;
-            p.setVolume(@floatFromInt(vol));
+            port.setVolume(@floatFromInt(vol));
         },
         .set_brightness => |br| {
-            p.setBrightness(@floatFromInt(br));
+            port.setBrightness(@floatFromInt(br));
         },
         .halt => |h| {
-            if (h.sleep) p.setState(.sleeping) else if (h.shutdown) p.setState(.shutting_down) else if (h.interrupt) p.setState(.interrupted);
+            if (h.sleep) port.setState(.sleeping) else if (h.shutdown) port.setState(.shutting_down) else if (h.interrupt) port.setState(.interrupted);
         },
-        .reset => p.setState(.resetting),
+        .reset => port.setState(.resetting),
         .raise => |r| {
-            if (r.call) p.setState(.calling);
+            if (r.call) port.setState(.calling);
         },
         else => {},
     }
