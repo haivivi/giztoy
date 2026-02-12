@@ -472,27 +472,10 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("MQTT subscribed to downlink topics", .{});
 
-    // Send initial state=ready
-    const init_state = chatgear.StateEvent{
-        .version = 1,
-        .time = @as(i64, @intCast(Board.time.getTimeMs())),
-        .state = .ready,
-        .update_at = @as(i64, @intCast(Board.time.getTimeMs())),
-    };
-    conn.sendState(&init_state) catch |err| {
-        log.err("Initial state send failed: {}", .{err});
-    };
-    log.info("Sent initial state=ready", .{});
+    // Skip initial state for stability test
+    log.info("(no initial state sent — testing subscribe-only)", .{});
 
-    // ChatGear port
-    const port = alloc.create(TlsPort) catch |err| {
-        log.err("alloc port: {}", .{err});
-        return;
-    };
-    port.* = TlsPort.init(conn);
-    active_port = port;
-
-    initPort(port);
+    // Skip port for stability test
 
     // Init opus codec in main task (256KB stack)
     log.info("Initializing opus codec...", .{});
@@ -520,8 +503,7 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("Opus decoder ready", .{});
 
-    // Skip audio pipeline for stability test
-    // startAudioPipeline(port, enc, dec);
+    // Skip everything — only readLoop + ping
     enc.deinit(idf.heap.psram);
     dec.deinit(idf.heap.psram);
     app_state.* = .running;

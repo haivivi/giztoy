@@ -111,7 +111,7 @@ make_env_file(
     ],
     defaults = {
         "MQTT_URL": "mqtt://test.mosquitto.org:1883",
-        "GEAR_ID": "zig-test-001",
+        "GEAR_ID": "693b0fb7839769199432f516",
         "SCOPE": "stage/",
     },
 )
