@@ -412,7 +412,7 @@
     },
     "@@embed_zig+//:extensions.bzl%zig_toolchain": {
       "general": {
-        "bzlTransitiveDigest": "0EST7FhL+03bGhIkr98QPcF09G0mi/IoZ1OCAIhZCNQ=",
+        "bzlTransitiveDigest": "CzTc0jHMkueh8ZQOizCKxBatj7npmXQGqlZkCwBSE1I=",
         "usagesDigest": "G0lqiuNg7W2bJYixQrTW3hOtsVrhWB3zH+0bsZDIv2U=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
