@@ -131,6 +131,13 @@ func (r *Registry) Recluster() int {
 		return 0
 	}
 
+	// Snapshot config under read lock to avoid race with SetThreshold.
+	r.mu.RLock()
+	threshold := r.cfg.Threshold
+	minSamples := r.cfg.MinSamples
+	dim := r.cfg.Dim
+	r.mu.RUnlock()
+
 	// L2-normalize all embeddings for cosine distance.
 	normed := make([][]float32, len(embeddings))
 	for i, emb := range embeddings {
@@ -141,8 +148,8 @@ func (r *Registry) Recluster() int {
 	}
 
 	// DBSCAN: eps = 1 - threshold (cosine distance).
-	eps := 1.0 - r.cfg.Threshold
-	labels := dbscan(normed, float32(eps), r.cfg.MinSamples)
+	eps := 1.0 - threshold
+	labels := dbscan(normed, float32(eps), minSamples)
 
 	// Find max cluster label.
 	maxLabel := 0
@@ -155,7 +162,7 @@ func (r *Registry) Recluster() int {
 	// Compute centroids for each cluster.
 	newBuckets := make([]Bucket, 0, maxLabel)
 	for c := 1; c <= maxLabel; c++ {
-		centroid := make([]float32, r.cfg.Dim)
+		centroid := make([]float32, dim)
 		count := 0
 		for i, l := range labels {
 			if l == c {
@@ -200,7 +207,7 @@ func (r *Registry) Recluster() int {
 				bestOldIdx = j
 			}
 		}
-		if bestOldIdx >= 0 && bestSim > r.cfg.Threshold {
+		if bestOldIdx >= 0 && bestSim >= threshold {
 			// Reuse old ID.
 			newBuckets[i].ID = oldBuckets[bestOldIdx].ID
 			usedOldIDs[oldBuckets[bestOldIdx].ID] = true
