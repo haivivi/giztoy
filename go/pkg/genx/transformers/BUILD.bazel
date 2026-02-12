@@ -14,6 +14,7 @@ go_library(
         "mux.go",
         "mux_asr.go",
         "mux_tts.go",
+        "voiceprint.go",
     ],
     importpath = "github.com/haivivi/giztoy/go/pkg/genx/transformers",
     visibility = ["//visibility:public"],
@@ -27,5 +28,6 @@ go_library(
         "//go/pkg/genx",
         "//go/pkg/minimax",
         "//go/pkg/trie",
+        "//go/pkg/voiceprint",
     ],
 )

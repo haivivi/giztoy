@@ -8,14 +8,11 @@ go_library(
         "hasher.go",
         "model.go",
         "model_ncnn.go",
-        "transformer.go",
         "voiceprint.go",
     ],
     importpath = "github.com/haivivi/giztoy/go/pkg/voiceprint",
     visibility = ["//visibility:public"],
     deps = [
-        "//go/pkg/buffer",
-        "//go/pkg/genx",
         "//go/pkg/ncnn",
     ],
 )
@@ -26,11 +23,6 @@ go_test(
         "detector_test.go",
         "fbank_test.go",
         "hasher_test.go",
-        "transformer_test.go",
     ],
     embed = [":voiceprint"],
-    deps = [
-        "//go/pkg/buffer",
-        "//go/pkg/genx",
-    ],
 )
