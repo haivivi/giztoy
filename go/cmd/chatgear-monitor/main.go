@@ -1,13 +1,15 @@
-// ChatGear MQTT Monitor — subscribes to device uplink topics and prints messages.
+// ChatGear MQTT Monitor — subscribes to ALL device topics via wildcard.
 //
 // Usage:
 //
-//	cd go && go run ../e2e/chatgear/monitor
+//	cd go && go build -o /tmp/chatgear-monitor ./cmd/chatgear-monitor
+//	/tmp/chatgear-monitor --gear-id 693b0fb7839769199432f516
 package main
 
 import (
 	"context"
 	"crypto/tls"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
@@ -24,8 +26,19 @@ import (
 func main() {
 	mqttURL := flag.String("mqtt", "mqtts://admin:isA953Nx56EBfEu@mqtt.stage.haivivi.cn:8883", "MQTT broker URL")
 	scope := flag.String("scope", "RyBFG6", "Topic scope/namespace")
-	gearID := flag.String("gear-id", "zig-test-001", "Gear ID to monitor")
+	gearID := flag.String("gear-id", "693b0fb7839769199432f516", "Gear ID to monitor")
+	logFile := flag.String("log", "", "Log file path (default: stdout)")
 	flag.Parse()
+
+	// Optional log to file
+	if *logFile != "" {
+		f, err := os.OpenFile(*logFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		if err != nil {
+			log.Fatalf("open log: %v", err)
+		}
+		defer f.Close()
+		log.SetOutput(f)
+	}
 
 	s := *scope
 	if s != "" && !strings.HasSuffix(s, "/") {
@@ -33,11 +46,12 @@ func main() {
 	}
 
 	prefix := fmt.Sprintf("%sdevice/%s/", s, *gearID)
+	wildcard := prefix + "#"
 
 	log.Printf("ChatGear Monitor")
 	log.Printf("  Scope:   %s", *scope)
 	log.Printf("  Gear ID: %s", *gearID)
-	log.Printf("  Topics:  %s{state,stats,input_audio_stream}", prefix)
+	log.Printf("  Topic:   %s", wildcard)
 	log.Printf("---")
 
 	// Parse URL
@@ -69,7 +83,7 @@ func main() {
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 	cfg := mqtt0.ClientConfig{
-		Addr:            "tcp://" + addr, // dialer won't be used
+		Addr:            "tcp://" + addr,
 		ClientID:        fmt.Sprintf("monitor-%d", time.Now().UnixNano()%10000),
 		Username:        username,
 		Password:        password,
@@ -78,7 +92,6 @@ func main() {
 		ProtocolVersion: mqtt0.ProtocolV5,
 	}
 
-	// Custom dialer for TLS with correct ServerName
 	if useTLS {
 		tlsHost := host
 		cfg.Dialer = func(_ context.Context, _ string, _ *tls.Config) (net.Conn, error) {
@@ -86,7 +99,7 @@ func main() {
 		}
 	}
 
-	log.Printf("Connecting to %s (TLS=%v)...", addr, useTLS)
+	log.Printf("Connecting to %s (TLS=%v, v5)...", addr, useTLS)
 	client, err := mqtt0.Connect(ctx, cfg)
 	if err != nil {
 		log.Fatalf("connect: %v", err)
@@ -94,16 +107,20 @@ func main() {
 	defer client.Close()
 	log.Printf("Connected!")
 
-	// Subscribe to device uplink topics
-	stateTopic := prefix + "state"
-	statsTopic := prefix + "stats"
-	audioTopic := prefix + "input_audio_stream"
-
-	if err := client.Subscribe(ctx, stateTopic, statsTopic, audioTopic); err != nil {
+	// Subscribe to all 5 device topics explicitly
+	topics := []string{
+		prefix + "state",
+		prefix + "stats",
+		prefix + "input_audio_stream",
+		prefix + "output_audio_stream",
+		prefix + "command",
+	}
+	if err := client.Subscribe(ctx, topics...); err != nil {
 		log.Fatalf("subscribe: %v", err)
 	}
-	log.Printf("Subscribed! Waiting for messages...")
-	log.Printf("---")
+	log.Printf("Subscribed to %d topics under %s", len(topics), prefix)
+	log.Printf("Waiting for messages...")
+	log.Printf("===")
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt)
@@ -112,7 +129,8 @@ func main() {
 		cancel()
 	}()
 
-	audioCount := 0
+	audioUpCount := 0
+	audioDownCount := 0
 	lastAudioLog := time.Now()
 
 	for {
@@ -125,6 +143,18 @@ func main() {
 			return
 		}
 		if msg == nil {
+			// Periodic audio summary
+			if (audioUpCount > 0 || audioDownCount > 0) && time.Since(lastAudioLog) > time.Second {
+				if audioUpCount > 0 {
+					log.Printf("🎤 [AUDIO UP]   %d frames/s", audioUpCount)
+				}
+				if audioDownCount > 0 {
+					log.Printf("🔊 [AUDIO DOWN] %d frames/s", audioDownCount)
+				}
+				audioUpCount = 0
+				audioDownCount = 0
+				lastAudioLog = time.Now()
+			}
 			select {
 			case <-ctx.Done():
 				return
@@ -133,20 +163,34 @@ func main() {
 			}
 		}
 
-		switch msg.Topic {
-		case stateTopic:
-			log.Printf("📡 [STATE]  %s", string(msg.Payload))
-		case statsTopic:
-			log.Printf("📊 [STATS]  %s", string(msg.Payload))
-		case audioTopic:
-			audioCount++
-			if time.Since(lastAudioLog) > time.Second {
-				log.Printf("🎤 [AUDIO]  %d frames/s (%d bytes)", audioCount, len(msg.Payload))
-				audioCount = 0
-				lastAudioLog = time.Now()
-			}
+		// Extract suffix
+		suffix := msg.Topic
+		if strings.HasPrefix(msg.Topic, prefix) {
+			suffix = msg.Topic[len(prefix):]
+		}
+
+		ts := time.Now().Format("15:04:05.000")
+
+		switch suffix {
+		case "state":
+			log.Printf("[%s] 📡 STATE      %s", ts, string(msg.Payload))
+		case "stats":
+			log.Printf("[%s] 📊 STATS      %s", ts, string(msg.Payload))
+		case "input_audio_stream":
+			audioUpCount++
+		case "output_audio_stream":
+			audioDownCount++
+		case "command":
+			log.Printf("[%s] ⚡ COMMAND    %s", ts, string(msg.Payload))
 		default:
-			log.Printf("❓ [%s] %d bytes", msg.Topic, len(msg.Payload))
+			log.Printf("[%s] ❓ %s  %d bytes: %s", ts, suffix, len(msg.Payload), hex.EncodeToString(msg.Payload[:min(32, len(msg.Payload))]))
 		}
 	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

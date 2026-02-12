@@ -212,6 +212,12 @@ pub fn run(env: anytype) void {
     // Init audio (I2C + I2S + ES8311 speaker + PA)
     initAudio();
 
+    // Play startup beep (confirms speaker works)
+    playTone(440, 100);
+    Board.time.sleepMs(50);
+    playTone(880, 100);
+    log.info("Startup beep played", .{});
+
     // Connect WiFi
     log.info("Connecting to WiFi: {s}", .{config.wifi_ssid});
     board.wifi.connect(config.wifi_ssid, config.wifi_password);
@@ -472,6 +478,7 @@ fn connectTls(app_state: *AppState) void {
         .username = config.mqtt.username,
         .password = config.mqtt.password,
         .keep_alive = 30,
+        .protocol_version = .v5,
         .allocator = alloc,
     }) catch |err| {
         log.err("MQTT connect failed: {}", .{err});
@@ -504,11 +511,7 @@ fn connectTls(app_state: *AppState) void {
     active_port = port;
     active_conn = conn;
 
-    // Don't start periodic reporting — manual button test mode
-    // initPort(port);
-    log.info("Manual test mode (no periodic reporting)", .{});
-
-    // Init opus codec in main task (256KB stack)
+    // Init opus codec
     log.info("Initializing opus codec...", .{});
     const opus_alloc = idf.heap.psram;
     const enc = opus_alloc.create(opus.Encoder) catch |err| {
@@ -522,7 +525,7 @@ fn connectTls(app_state: *AppState) void {
     enc.setBitrate(24000) catch {};
     enc.setComplexity(0) catch {};
     enc.setSignal(.voice) catch {};
-    log.info("Opus encoder ready (16kHz mono, 24kbps)", .{});
+    log.info("Opus encoder ready", .{});
 
     const dec = opus_alloc.create(opus.Decoder) catch |err| {
         log.err("alloc decoder: {}", .{err});
@@ -534,7 +537,14 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("Opus decoder ready", .{});
 
+    // Start audio pipeline (mic + speaker tasks)
     startAudioPipeline(port, enc, dec);
+
+    // Run automated test sequence
+    runAutoTest(conn, enc);
+
+    // After auto test, enter manual button mode
+    log.info("Auto test done. Manual button mode.", .{});
     app_state.* = .running;
 
     // MQTT readLoop in background
@@ -718,6 +728,143 @@ fn playButtonTone(button_idx: usize) void {
     if (button_idx < button_tones.len) {
         playTone(button_tones[button_idx], 150);
     }
+}
+
+// ============================================================================
+// Automated Test Sequence
+// ============================================================================
+
+fn runAutoTest(conn: *TlsConn, enc: *opus.Encoder) void {
+    log.info("========== AUTO TEST START ==========", .{});
+
+    const sleep = Board.time.sleepMs;
+    const i2s = &(g_i2s orelse return);
+
+    // Helper: send state
+    const S = struct {
+        fn state(c: *TlsConn, s: chatgear.State) void {
+            const now = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
+            const evt = chatgear.StateEvent{
+                .version = 1,
+                .time = now,
+                .state = s,
+                .update_at = now,
+            };
+            c.sendState(&evt) catch |err| {
+                log.err("[TEST] sendState({s}) failed: {}", .{ s.toString(), err });
+                return;
+            };
+            log.info("[TEST] STATE -> {s}", .{s.toString()});
+        }
+
+        fn stats(c: *TlsConn, bat: f32, vol: f32) void {
+            const now = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
+            const evt = chatgear.StatsEvent{
+                .time = now,
+                .battery = .{ .percentage = bat },
+                .volume = .{ .percentage = vol, .update_at = now },
+                .system_version = .{ .current_version = "zig-e2e-0.1.0" },
+            };
+            c.sendStats(&evt) catch |err| {
+                log.err("[TEST] sendStats failed: {}", .{err});
+                return;
+            };
+            log.info("[TEST] STATS -> bat={d} vol={d}", .{ @as(i32, @intFromFloat(bat)), @as(i32, @intFromFloat(vol)) });
+        }
+    };
+
+    // [0s] Startup beep
+    playTone(440, 100);
+    sleep(50);
+    playTone(880, 100);
+    log.info("[TEST] Startup beep", .{});
+
+    // [2s] state=ready
+    sleep(2000);
+    S.state(conn, .ready);
+
+    // [4s] stats
+    sleep(2000);
+    S.stats(conn, 100, 50);
+
+    // [6s] state=recording + mic 3 seconds
+    sleep(2000);
+    S.state(conn, .recording);
+    log.info("[TEST] Recording 3s of mic audio...", .{});
+    {
+        var pcm_buf: [FRAME_SAMPLES * 2]u8 = undefined;
+        var opus_buf: [MAX_OPUS]u8 = undefined;
+        const start = Board.time.getTimeMs();
+        var frame_count: u32 = 0;
+
+        while (Board.time.getTimeMs() - start < 3000) {
+            const bytes_read = i2s.read(&pcm_buf) catch {
+                sleep(5);
+                continue;
+            };
+            if (bytes_read < FRAME_SAMPLES * 2) {
+                sleep(1);
+                continue;
+            }
+
+            // Convert bytes to i16
+            const sample_slice = @as([*]const i16, @ptrCast(@alignCast(pcm_buf[0 .. FRAME_SAMPLES * 2].ptr)))[0..FRAME_SAMPLES];
+
+            // Gain
+            var gained: [FRAME_SAMPLES]i16 = undefined;
+            for (sample_slice, 0..) |s, idx| {
+                const v: i32 = @as(i32, s) * MIC_GAIN;
+                gained[idx] = @intCast(std.math.clamp(v, std.math.minInt(i16), std.math.maxInt(i16)));
+            }
+
+            // Encode
+            const encoded = enc.encode(&gained, FRAME_SAMPLES, &opus_buf) catch continue;
+            if (encoded.len == 0) continue;
+
+            // Send via conn
+            const ts: i64 = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
+            conn.sendOpusFrame(ts, encoded) catch |err| {
+                log.err("[TEST] sendOpusFrame failed: {}", .{err});
+                break;
+            };
+            frame_count += 1;
+        }
+        log.info("[TEST] Recorded {d} opus frames", .{frame_count});
+    }
+
+    // [9s] state=waiting_for_response
+    S.state(conn, .waiting_for_response);
+
+    // [11s] state=calling
+    sleep(2000);
+    S.state(conn, .calling);
+
+    // [13s] state=ready
+    sleep(2000);
+    S.state(conn, .ready);
+
+    // [15s] state=streaming
+    sleep(2000);
+    S.state(conn, .streaming);
+
+    // [17s] state=ready
+    sleep(2000);
+    S.state(conn, .ready);
+
+    // [19s] stats
+    sleep(2000);
+    S.stats(conn, 85, 70);
+
+    // [21s] End beep
+    sleep(2000);
+    playTone(880, 80);
+    sleep(50);
+    playTone(880, 80);
+    sleep(50);
+    playTone(880, 80);
+    log.info("[TEST] End beep", .{});
+
+    log.info("========== AUTO TEST DONE ==========", .{});
 }
 
 // ============================================================================
