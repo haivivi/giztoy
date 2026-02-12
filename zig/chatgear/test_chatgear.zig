@@ -585,3 +585,83 @@ test "loopback: ServerConn.issueCommand encodes correctly" {
     broker.deinit();
     broker_mux.deinit();
 }
+
+// ============================================================================
+// Continuous audio streaming test
+// ============================================================================
+
+test "loopback: continuous audio — 200 opus frames streamed through broker" {
+    const allocator = std.heap.page_allocator;
+    const FRAME_COUNT = 200;
+
+    var broker_mux = try mqtt0.Mux(TestRt).init(allocator);
+    try broker_mux.handleFn("test/device/zig-stream/state", serverOnState);
+    try broker_mux.handleFn("test/device/zig-stream/stats", serverOnStats);
+    try broker_mux.handleFn("test/device/zig-stream/input_audio_stream", serverOnAudio);
+    var broker = try Broker.init(allocator, broker_mux.handler(), .{});
+    const srv = try TcpSocket.initServer(0);
+
+    var server_conn = ServerConn.init(&broker, .{ .scope = "test/", .gear_id = "zig-stream" });
+    var server_port = SPort.init(&server_conn);
+    g_server_port = &server_port;
+
+    // Device client connects
+    var device_sock = try TcpSocket.connect(srv.port);
+    var device_conn_sock = try TcpSocket.accept(srv.listener);
+    const serve_t = try std.Thread.spawn(.{}, serveOne, .{ &broker, &device_conn_sock });
+
+    var device_mux = try mqtt0.Mux(TestRt).init(allocator);
+    var device_client = try MqttClient.init(&device_sock, &device_mux, .{
+        .client_id = "device-stream",
+        .protocol_version = .v5,
+        .allocator = allocator,
+    });
+
+    std.Thread.sleep(10 * std.time.ns_per_ms);
+
+    var client_conn = Conn.init(&device_client, .{ .scope = "test/", .gear_id = "zig-stream" });
+
+    // Send FRAME_COUNT opus frames (simulating 20ms * 200 = 4 seconds of audio)
+    const base_ts: i64 = 1706745600000;
+    var fake_opus: [80]u8 = undefined; // typical opus voice frame size
+    for (&fake_opus, 0..) |*b, i| b.* = @truncate(i);
+
+    var sent: usize = 0;
+    while (sent < FRAME_COUNT) : (sent += 1) {
+        const ts = base_ts + @as(i64, @intCast(sent)) * 20; // 20ms per frame
+        try client_conn.sendOpusFrame(ts, &fake_opus);
+    }
+
+    // Receive all frames from ServerPort
+    var received: usize = 0;
+    var last_ts: i64 = 0;
+    const deadline = std.time.milliTimestamp() + 5000; // 5s timeout
+    while (received < FRAME_COUNT) {
+        if (std.time.milliTimestamp() > deadline) break;
+        if (server_port.poll()) |data| {
+            switch (std.meta.activeTag(data)) {
+                .audio => {
+                    received += 1;
+                    last_ts = data.audio.timestamp_ms;
+                },
+                else => {},
+            }
+        }
+    }
+
+    // Verify all frames received
+    try std.testing.expectEqual(@as(usize, FRAME_COUNT), received);
+    // Last timestamp should be base + (FRAME_COUNT-1)*20
+    try std.testing.expectEqual(base_ts + (@as(i64, FRAME_COUNT) - 1) * 20, last_ts);
+
+    // Cleanup
+    g_server_port = null;
+    server_port.close();
+    device_client.deinit();
+    device_sock.close();
+    serve_t.join();
+    device_conn_sock.close();
+    posix.close(srv.listener);
+    broker.deinit();
+    broker_mux.deinit();
+}
