@@ -728,7 +728,7 @@ test "CPort: spawn task reads from uplink_state channel" {
     cp.close();
 }
 
-test "CPort: spawn task reads channel + publishes directly to mqtt client" {
+test "CPort: spawn task reads channel + publishes via Conn.sendState" {
     const allocator = std.heap.page_allocator;
     g_cap = Capture{};
 
@@ -753,25 +753,22 @@ test "CPort: spawn task reads channel + publishes directly to mqtt client" {
     var device_conn = Conn.init(&device_client, .{ .scope = "test/", .gear_id = "zig-cp" });
     var cp = CPort.init(&device_conn, 0);
 
-    // Spawn: recv from channel -> publish DIRECTLY via mqtt client (bypass Conn)
+    // Spawn: recv from channel -> publish via Conn.sendState (uses tb_*.slice() now)
     var got_it = std.atomic.Value(bool).init(false);
     const SpawnCtx = struct {
         port: *CPort,
-        client: *MqttClient,
+        cn: *Conn,
         flag: *std.atomic.Value(bool),
         fn run(ctx_ptr: ?*anyopaque) void {
             const self: *@This() = @ptrCast(@alignCast(ctx_ptr));
-            if (self.port.uplink_state.recv()) |_| {
-                // Direct publish, bypass Conn.sendState entirely
-                self.client.publish(
-                    "test/device/zig-cp/state",
-                    "{\"v\":1,\"t\":100,\"s\":\"recording\",\"ut\":100}",
-                ) catch {};
+            if (self.port.uplink_state.recv()) |evt| {
+                var event = evt;
+                self.cn.sendState(&event) catch {};
                 self.flag.store(true, .release);
             }
         }
     };
-    var ctx = SpawnCtx{ .port = &cp, .client = &device_client, .flag = &got_it };
+    var ctx = SpawnCtx{ .port = &cp, .cn = &device_conn, .flag = &got_it };
     try TestRt.spawn("cp_tx", SpawnCtx.run, @ptrCast(&ctx), .{});
 
     std.Thread.sleep(10 * std.time.ns_per_ms);

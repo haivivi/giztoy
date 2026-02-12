@@ -36,19 +36,12 @@ pub fn MqttServerConn(comptime BrokerType: type) type {
 
         broker: *BrokerType,
 
-        // Pre-built topic name buffers (reuses TopicBuilder from conn.zig)
+        // Pre-built topic name buffers (use tb_*.slice() for stable access)
         tb_input_audio: conn_mod.TopicBuilder(MAX_TOPIC_LEN) = .{},
         tb_state: conn_mod.TopicBuilder(MAX_TOPIC_LEN) = .{},
         tb_stats: conn_mod.TopicBuilder(MAX_TOPIC_LEN) = .{},
         tb_output_audio: conn_mod.TopicBuilder(MAX_TOPIC_LEN) = .{},
         tb_command: conn_mod.TopicBuilder(MAX_TOPIC_LEN) = .{},
-
-        // Cached topic slices
-        input_audio_topic: []const u8 = "",
-        state_topic: []const u8 = "",
-        stats_topic: []const u8 = "",
-        output_audio_topic: []const u8 = "",
-        command_topic: []const u8 = "",
 
         // Wire buffers for encoding downlink
         stamp_buf: [wire.HEADER_SIZE + wire.MAX_OPUS_FRAME_SIZE]u8 = undefined,
@@ -68,11 +61,11 @@ pub fn MqttServerConn(comptime BrokerType: type) type {
                 scope = scope_buf[0 .. scope.len + 1];
             }
 
-            self.input_audio_topic = self.tb_input_audio.build(scope, config.gear_id, "input_audio_stream");
-            self.state_topic = self.tb_state.build(scope, config.gear_id, "state");
-            self.stats_topic = self.tb_stats.build(scope, config.gear_id, "stats");
-            self.output_audio_topic = self.tb_output_audio.build(scope, config.gear_id, "output_audio_stream");
-            self.command_topic = self.tb_command.build(scope, config.gear_id, "command");
+            _ = self.tb_input_audio.build(scope, config.gear_id, "input_audio_stream");
+            _ = self.tb_state.build(scope, config.gear_id, "state");
+            _ = self.tb_stats.build(scope, config.gear_id, "stats");
+            _ = self.tb_output_audio.build(scope, config.gear_id, "output_audio_stream");
+            _ = self.tb_command.build(scope, config.gear_id, "command");
 
             return self;
         }
@@ -86,7 +79,7 @@ pub fn MqttServerConn(comptime BrokerType: type) type {
             const stamped_len = wire.stampFrame(timestamp_ms, frame, &self.stamp_buf) catch {
                 return error.BufferTooSmall;
             };
-            self.broker.publish(self.output_audio_topic, self.stamp_buf[0..stamped_len]);
+            self.broker.publish(self.tb_output_audio.slice(), self.stamp_buf[0..stamped_len]);
         }
 
         /// Send a command to the device.
@@ -94,36 +87,36 @@ pub fn MqttServerConn(comptime BrokerType: type) type {
             const json_len = wire.encodeCommandEvent(event, &self.json_buf) catch {
                 return error.BufferTooSmall;
             };
-            self.broker.publish(self.command_topic, self.json_buf[0..json_len]);
+            self.broker.publish(self.tb_command.slice(), self.json_buf[0..json_len]);
         }
 
         // ====================================================================
         // Topic Accessors (for registering mux handlers)
         // ====================================================================
 
-        /// Returns the input audio stream topic (uplink — device sends audio here).
+        /// Returns the input audio stream topic (uplink).
         pub fn inputAudioTopic(self: *const Self) []const u8 {
-            return self.input_audio_topic;
+            return self.tb_input_audio.slice();
         }
 
-        /// Returns the state topic (uplink — device sends state here).
+        /// Returns the state topic (uplink).
         pub fn stateTopic(self: *const Self) []const u8 {
-            return self.state_topic;
+            return self.tb_state.slice();
         }
 
-        /// Returns the stats topic (uplink — device sends stats here).
+        /// Returns the stats topic (uplink).
         pub fn statsTopic(self: *const Self) []const u8 {
-            return self.stats_topic;
+            return self.tb_stats.slice();
         }
 
         /// Returns the output audio stream topic (downlink).
         pub fn outputAudioTopic(self: *const Self) []const u8 {
-            return self.output_audio_topic;
+            return self.tb_output_audio.slice();
         }
 
         /// Returns the command topic (downlink).
         pub fn commandTopic(self: *const Self) []const u8 {
-            return self.command_topic;
+            return self.tb_command.slice();
         }
     };
 }
@@ -140,16 +133,16 @@ test "MqttServerConn builds topics correctly" {
     };
 
     var broker = MockBroker{};
-    const conn = MqttServerConn(MockBroker).init(&broker, .{
+    var conn = MqttServerConn(MockBroker).init(&broker, .{
         .scope = "test/",
         .gear_id = "dev-001",
     });
 
-    try std.testing.expectEqualStrings("test/device/dev-001/input_audio_stream", conn.input_audio_topic);
-    try std.testing.expectEqualStrings("test/device/dev-001/state", conn.state_topic);
-    try std.testing.expectEqualStrings("test/device/dev-001/stats", conn.stats_topic);
-    try std.testing.expectEqualStrings("test/device/dev-001/output_audio_stream", conn.output_audio_topic);
-    try std.testing.expectEqualStrings("test/device/dev-001/command", conn.command_topic);
+    try std.testing.expectEqualStrings("test/device/dev-001/input_audio_stream", conn.tb_input_audio.slice());
+    try std.testing.expectEqualStrings("test/device/dev-001/state", conn.tb_state.slice());
+    try std.testing.expectEqualStrings("test/device/dev-001/stats", conn.tb_stats.slice());
+    try std.testing.expectEqualStrings("test/device/dev-001/output_audio_stream", conn.tb_output_audio.slice());
+    try std.testing.expectEqualStrings("test/device/dev-001/command", conn.tb_command.slice());
 }
 
 test "MqttServerConn auto-appends trailing slash to scope" {
@@ -158,11 +151,11 @@ test "MqttServerConn auto-appends trailing slash to scope" {
     };
 
     var broker = MockBroker{};
-    const conn = MqttServerConn(MockBroker).init(&broker, .{
+    var conn = MqttServerConn(MockBroker).init(&broker, .{
         .scope = "RyBFG6",
         .gear_id = "zig-001",
     });
 
-    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/state", conn.state_topic);
-    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/command", conn.command_topic);
+    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/state", conn.tb_state.slice());
+    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/command", conn.tb_command.slice());
 }

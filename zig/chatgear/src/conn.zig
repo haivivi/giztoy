@@ -38,6 +38,10 @@ pub const Config = struct {
 const MAX_TOPIC_LEN: usize = 128;
 
 /// Builds MQTT topic names: {scope}device/{gear_id}/{suffix}
+///
+/// Stores the built topic in an internal buffer. Use `slice()` to get
+/// the topic string — always returns a slice into `self.buf`, safe
+/// regardless of struct moves/copies.
 pub fn TopicBuilder(comptime max_len: usize) type {
     return struct {
         const Self = @This();
@@ -46,6 +50,9 @@ pub fn TopicBuilder(comptime max_len: usize) type {
         len: usize = 0,
 
         /// Build topic: {scope}device/{gear_id}/{suffix}
+        /// Stores result in buf. Returns slice into buf (caller must not
+        /// store the returned slice if the struct may be copied — use
+        /// slice() instead for stable access).
         pub fn build(self: *Self, scope: []const u8, gear_id: []const u8, suffix: []const u8) []const u8 {
             var pos: usize = 0;
 
@@ -70,6 +77,12 @@ pub fn TopicBuilder(comptime max_len: usize) type {
             self.len = pos;
             return self.buf[0..pos];
         }
+
+        /// Get the stored topic string. Always returns a slice into
+        /// self.buf — safe to call after struct copy/move.
+        pub fn slice(self: *const Self) []const u8 {
+            return self.buf[0..self.len];
+        }
     };
 }
 
@@ -91,19 +104,12 @@ pub fn MqttClientConn(comptime MqttClient: type) type {
 
         mqtt: *MqttClient,
 
-        // Pre-built topic name buffers
+        // Pre-built topic name buffers (use tb_*.slice() for stable access)
         tb_input_audio: TopicBuilder(MAX_TOPIC_LEN) = .{},
         tb_state: TopicBuilder(MAX_TOPIC_LEN) = .{},
         tb_stats: TopicBuilder(MAX_TOPIC_LEN) = .{},
         tb_output_audio: TopicBuilder(MAX_TOPIC_LEN) = .{},
         tb_command: TopicBuilder(MAX_TOPIC_LEN) = .{},
-
-        // Cached topic slices (point into tb_* buffers)
-        input_audio_topic: []const u8 = "",
-        state_topic: []const u8 = "",
-        stats_topic: []const u8 = "",
-        output_audio_topic: []const u8 = "",
-        command_topic: []const u8 = "",
 
         // Wire buffers for encoding
         stamp_buf: [wire.HEADER_SIZE + wire.MAX_OPUS_FRAME_SIZE]u8 = undefined,
@@ -124,11 +130,13 @@ pub fn MqttClientConn(comptime MqttClient: type) type {
                 scope = scope_buf[0 .. scope.len + 1];
             }
 
-            self.input_audio_topic = self.tb_input_audio.build(scope, config.gear_id, "input_audio_stream");
-            self.state_topic = self.tb_state.build(scope, config.gear_id, "state");
-            self.stats_topic = self.tb_stats.build(scope, config.gear_id, "stats");
-            self.output_audio_topic = self.tb_output_audio.build(scope, config.gear_id, "output_audio_stream");
-            self.command_topic = self.tb_command.build(scope, config.gear_id, "command");
+            // Build topics into internal buffers (don't cache returned slices —
+            // they become dangling after struct copy. Use tb_*.slice() instead.)
+            _ = self.tb_input_audio.build(scope, config.gear_id, "input_audio_stream");
+            _ = self.tb_state.build(scope, config.gear_id, "state");
+            _ = self.tb_stats.build(scope, config.gear_id, "stats");
+            _ = self.tb_output_audio.build(scope, config.gear_id, "output_audio_stream");
+            _ = self.tb_command.build(scope, config.gear_id, "command");
 
             return self;
         }
@@ -136,8 +144,8 @@ pub fn MqttClientConn(comptime MqttClient: type) type {
         /// Subscribe to downlink topics (output_audio_stream, command).
         pub fn subscribe(self: *Self) !void {
             const topics = [_][]const u8{
-                self.output_audio_topic,
-                self.command_topic,
+                self.tb_output_audio.slice(),
+                self.tb_command.slice(),
             };
             try self.mqtt.subscribe(&topics);
         }
@@ -151,7 +159,7 @@ pub fn MqttClientConn(comptime MqttClient: type) type {
             const stamped_len = wire.stampFrame(timestamp_ms, frame, &self.stamp_buf) catch {
                 return error.BufferTooSmall;
             };
-            try self.mqtt.publish(self.input_audio_topic, self.stamp_buf[0..stamped_len]);
+            try self.mqtt.publish(self.tb_input_audio.slice(), self.stamp_buf[0..stamped_len]);
         }
 
         /// Send a state event.
@@ -159,7 +167,7 @@ pub fn MqttClientConn(comptime MqttClient: type) type {
             const json_len = wire.encodeStateEvent(event, &self.json_buf) catch {
                 return error.BufferTooSmall;
             };
-            try self.mqtt.publish(self.state_topic, self.json_buf[0..json_len]);
+            try self.mqtt.publish(self.tb_state.slice(), self.json_buf[0..json_len]);
         }
 
         /// Send a stats event.
@@ -167,7 +175,7 @@ pub fn MqttClientConn(comptime MqttClient: type) type {
             const json_len = wire.encodeStatsEvent(event, &self.json_buf) catch {
                 return error.BufferTooSmall;
             };
-            try self.mqtt.publish(self.stats_topic, self.json_buf[0..json_len]);
+            try self.mqtt.publish(self.tb_stats.slice(), self.json_buf[0..json_len]);
         }
 
         // ====================================================================
@@ -176,12 +184,12 @@ pub fn MqttClientConn(comptime MqttClient: type) type {
 
         /// Returns the output audio stream topic (downlink).
         pub fn outputAudioTopic(self: *const Self) []const u8 {
-            return self.output_audio_topic;
+            return self.tb_output_audio.slice();
         }
 
         /// Returns the command topic (downlink).
         pub fn commandTopic(self: *const Self) []const u8 {
-            return self.command_topic;
+            return self.tb_command.slice();
         }
     };
 }
@@ -226,16 +234,16 @@ test "MqttClientConn init builds topics" {
     };
 
     var mqtt = MockMqtt{};
-    const conn = MqttClientConn(MockMqtt).init(&mqtt, .{
+    var conn = MqttClientConn(MockMqtt).init(&mqtt, .{
         .scope = "palr/cn/",
         .gear_id = "test-001",
     });
 
-    try std.testing.expectEqualStrings("palr/cn/device/test-001/input_audio_stream", conn.input_audio_topic);
-    try std.testing.expectEqualStrings("palr/cn/device/test-001/state", conn.state_topic);
-    try std.testing.expectEqualStrings("palr/cn/device/test-001/stats", conn.stats_topic);
-    try std.testing.expectEqualStrings("palr/cn/device/test-001/output_audio_stream", conn.output_audio_topic);
-    try std.testing.expectEqualStrings("palr/cn/device/test-001/command", conn.command_topic);
+    try std.testing.expectEqualStrings("palr/cn/device/test-001/input_audio_stream", conn.tb_input_audio.slice());
+    try std.testing.expectEqualStrings("palr/cn/device/test-001/state", conn.tb_state.slice());
+    try std.testing.expectEqualStrings("palr/cn/device/test-001/stats", conn.tb_stats.slice());
+    try std.testing.expectEqualStrings("palr/cn/device/test-001/output_audio_stream", conn.tb_output_audio.slice());
+    try std.testing.expectEqualStrings("palr/cn/device/test-001/command", conn.tb_command.slice());
 }
 
 test "MqttClientConn auto-appends trailing slash to scope" {
@@ -246,13 +254,13 @@ test "MqttClientConn auto-appends trailing slash to scope" {
 
     var mqtt = MockMqtt{};
     // Scope without trailing slash — should be normalized
-    const conn = MqttClientConn(MockMqtt).init(&mqtt, .{
+    var conn = MqttClientConn(MockMqtt).init(&mqtt, .{
         .scope = "RyBFG6",
         .gear_id = "zig-001",
     });
 
-    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/state", conn.state_topic);
-    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/command", conn.command_topic);
+    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/state", conn.tb_state.slice());
+    try std.testing.expectEqualStrings("RyBFG6/device/zig-001/command", conn.tb_command.slice());
 }
 
 test "MqttClientConn empty scope" {
@@ -262,10 +270,10 @@ test "MqttClientConn empty scope" {
     };
 
     var mqtt = MockMqtt{};
-    const conn = MqttClientConn(MockMqtt).init(&mqtt, .{
+    var conn = MqttClientConn(MockMqtt).init(&mqtt, .{
         .scope = "",
         .gear_id = "dev-001",
     });
 
-    try std.testing.expectEqualStrings("device/dev-001/state", conn.state_topic);
+    try std.testing.expectEqualStrings("device/dev-001/state", conn.tb_state.slice());
 }
