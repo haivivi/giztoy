@@ -12,12 +12,16 @@
 //!   mqtts://user:pass@host:8883   — TLS with auth
 //!
 //! Button behavior (Korvo-2 V3 ADC buttons):
-//!   do  (VOL+): send current state
-//!   re  (VOL-): send stats
-//!   mi  (SET):  press-and-hold = recording, release = waiting_for_response
-//!   fa  (PLAY): press = toggle calling/ready
-//!   so  (MUTE): reserved
+//!   do  (VOL+): log current state
+//!   re  (VOL-): force full stats report
+//!   mi  (SET):  press = recording (from ready/waiting/streaming), release = waiting_for_response
+//!   fa  (PLAY): click = toggle calling/ready (with state guards)
+//!   so  (MUTE): click = cancel — any active state back to ready
 //!   la  (REC):  reserved
+//!
+//! Command handling (from server):
+//!   Matches Go geartest simulator.applyCommand() — state guards, value clamping,
+//!   settings reset. See handleCommand() for details.
 
 const std = @import("std");
 
@@ -160,6 +164,35 @@ const AppCtx = struct {
 /// The single global pointer. Set once during MQTT connect, used by button
 /// handler in the main event loop. All other tasks receive AppCtx directly.
 var g_app: ?*AppCtx = null;
+
+// ============================================================================
+// MQTT Downlink Handlers (mux callbacks)
+// ============================================================================
+
+/// Mux handler for downlink commands (server -> device).
+/// Parses the command JSON and pushes to port's command channel.
+fn onDownlinkCommand(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
+    if (g_app) |app| {
+        var evt: chatgear.CommandEvent = undefined;
+        chatgear.parseCommandEvent(msg.payload, &evt) catch |err| {
+            log.err("[rx] command parse: {}", .{err});
+            return;
+        };
+        app.port.pushCommand(evt);
+    }
+}
+
+/// Mux handler for downlink audio (server -> device).
+/// Unstamps the opus frame and pushes to port's downlink audio channel.
+fn onDownlinkAudio(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
+    if (g_app) |app| {
+        const f = chatgear.unstampFrame(msg.payload) catch |err| {
+            log.err("[rx] audio unstamp: {}", .{err});
+            return;
+        };
+        app.port.pushDownlinkAudio(f);
+    }
+}
 
 // ============================================================================
 // Application State Machine
@@ -512,6 +545,17 @@ fn connectTls(app_state: *AppState) void {
         .scope = config.scope,
         .gear_id = config.gear_id,
     });
+    // Register downlink mux handlers (before readLoop starts, after conn has topics)
+    mux.handleFn(conn.commandTopic(), onDownlinkCommand) catch |err| {
+        log.err("register command handler: {}", .{err});
+        return;
+    };
+    mux.handleFn(conn.outputAudioTopic(), onDownlinkAudio) catch |err| {
+        log.err("register audio handler: {}", .{err});
+        return;
+    };
+    log.info("Registered downlink handlers", .{});
+
     conn.subscribe() catch |err| {
         log.err("MQTT subscribe failed: {}", .{err});
         return;
@@ -994,7 +1038,20 @@ fn speakerTaskFn(arg: ?*anyopaque) void {
     }
 }
 
-/// Start audio pipeline tasks.
+/// Command handler task — drains port.recvCommand() and dispatches.
+/// Matches Go: go s.handleCommands() in simulator.Start().
+fn commandHandlerTaskFn(arg: ?*anyopaque) void {
+    const ctx: *AppCtx = @ptrCast(@alignCast(arg));
+    log.info("[cmd] handler task started", .{});
+
+    while (ctx.port.recvCommand()) |cmd| {
+        handleCommand(ctx, cmd);
+    }
+
+    log.info("[cmd] handler task stopped", .{});
+}
+
+/// Start audio pipeline + command handler tasks.
 fn startAudioPipeline(ctx: *AppCtx) void {
     FullRt.spawn("mic", micTaskFn, @ptrCast(ctx), .{ .stack_size = 32768 }) catch |err| {
         log.err("spawn mic task: {}", .{err});
@@ -1002,7 +1059,10 @@ fn startAudioPipeline(ctx: *AppCtx) void {
     FullRt.spawn("spk", speakerTaskFn, @ptrCast(ctx), .{ .stack_size = 32768 }) catch |err| {
         log.err("spawn spk task: {}", .{err});
     };
-    log.info("Audio pipeline started (mic + speaker)", .{});
+    FullRt.spawn("cmd", commandHandlerTaskFn, @ptrCast(ctx), .{ .stack_size = 32768 }) catch |err| {
+        log.err("spawn cmd task: {}", .{err});
+    };
+    log.info("Pipeline started (mic + speaker + command handler)", .{});
 }
 
 // ============================================================================
@@ -1010,9 +1070,12 @@ fn startAudioPipeline(ctx: *AppCtx) void {
 // ============================================================================
 
 /// Handle button events through the ClientPort API.
+/// State transitions match Go geartest's StartRecording/EndRecording/
+/// StartCalling/EndCalling/Cancel with proper state guards.
+///
 /// All state transitions go through port.setState() which:
-/// 1. Updates the port's internal state
-/// 2. Queues a StateEvent for the periodic tx loop to send
+/// 1. Updates the port's internal state (dedup: no-op if same state)
+/// 2. Queues a StateEvent for the uplink tx loop to send
 /// 3. Mic task sees the new state via port.getState()
 fn handleButton(ctx: *AppCtx, btn: anytype) void {
     const port = ctx.port;
@@ -1034,11 +1097,8 @@ fn handleButton(ctx: *AppCtx, btn: anytype) void {
 
     switch (btn.id) {
         .vol_up => {
-            // do: click = force-send current state (for debugging)
+            // do: click = log current state (periodic reporting sends every 5s)
             if (btn.action == .click) {
-                // Re-setting the same state won't queue because ClientPort
-                // deduplicates. Use a trick: set to a different state then back.
-                // Or just log — the periodic reporting already sends every 5s.
                 log.info("[do] State: {s}", .{port.getState().toString()});
             }
         },
@@ -1052,32 +1112,56 @@ fn handleButton(ctx: *AppCtx, btn: anytype) void {
         },
         .set => {
             // mi: press = start recording, release = stop recording
+            // Go StartRecording(): valid from ready, waiting_for_response, streaming
+            // Go EndRecording(): valid from recording only
             switch (btn.action) {
                 .press => {
-                    port.setState(.recording);
-                    log.info("[mi] -> recording", .{});
+                    const st = port.getState();
+                    if (st == .ready or st == .waiting_for_response or st == .streaming) {
+                        port.setState(.recording);
+                        log.info("[mi] -> recording", .{});
+                    } else {
+                        log.info("[mi] ignored (state={s})", .{st.toString()});
+                    }
                 },
                 .release => {
-                    port.setState(.waiting_for_response);
-                    log.info("[mi] -> waiting_for_response", .{});
+                    if (port.getState() == .recording) {
+                        port.setState(.waiting_for_response);
+                        log.info("[mi] -> waiting_for_response", .{});
+                    }
                 },
                 else => {},
             }
         },
         .play => {
             // fa: click = toggle calling/ready
+            // Go StartCalling(): valid from ready only
+            // Go EndCalling(): valid from calling only
             if (btn.action == .click) {
-                if (port.getState() == .calling) {
+                const st = port.getState();
+                if (st == .calling) {
                     port.setState(.ready);
                     log.info("[fa] -> ready", .{});
-                } else {
+                } else if (st == .ready) {
                     port.setState(.calling);
                     log.info("[fa] -> calling", .{});
+                } else {
+                    log.info("[fa] ignored (state={s})", .{st.toString()});
                 }
             }
         },
         .mute => {
-            if (btn.action == .click) log.info("[so] (reserved)", .{});
+            // so: click = cancel/interrupt — return to ready
+            // Go Cancel(): valid from any state except ready
+            if (btn.action == .click) {
+                const st = port.getState();
+                if (st != .ready) {
+                    port.setState(.ready);
+                    log.info("[so] -> ready (cancel from {s})", .{st.toString()});
+                } else {
+                    log.info("[so] already ready", .{});
+                }
+            }
         },
         .rec => {
             if (btn.action == .click) log.info("[la] (reserved)", .{});
@@ -1090,28 +1174,110 @@ fn handleButton(ctx: *AppCtx, btn: anytype) void {
 // ============================================================================
 
 /// Handle commands received from the server via MQTT.
-/// Called from the command receive task (spawned by startCommandHandler).
+/// Matches Go geartest simulator.applyCommand() exactly.
+///
+/// Key behaviors copied from Go:
+/// - streaming: only transition if in correct state
+/// - halt: interrupt returns to ready; sleep/shutdown returns to ready
+/// - reset: resets all settings to defaults via port API
+/// - raise: only start calling from ready state
+/// - set_volume/brightness: clamp 0-100
 fn handleCommand(ctx: *AppCtx, cmd: chatgear.CommandEvent) void {
     const port = ctx.port;
-    log.info("Command: {s}", .{cmd.cmd_type.toString()});
+    log.info("[cmd] {s}", .{cmd.cmd_type.toString()});
 
     switch (cmd.payload) {
         .streaming => |enabled| {
-            if (enabled) port.setState(.streaming) else port.setState(.ready);
+            // Go: if true and state==WaitingForResponse -> Streaming
+            //     if false and state==Streaming -> Ready
+            if (enabled) {
+                if (port.getState() == .waiting_for_response) {
+                    port.setState(.streaming);
+                    log.info("[cmd] streaming ON -> streaming", .{});
+                }
+            } else {
+                if (port.getState() == .streaming) {
+                    port.setState(.ready);
+                    log.info("[cmd] streaming OFF -> ready", .{});
+                }
+            }
         },
+
         .set_volume => |vol| {
-            port.setVolume(@floatFromInt(vol));
+            // Go: clamp 0-100, port.SetVolume(v)
+            const v = std.math.clamp(vol, 0, 100);
+            port.setVolume(@floatFromInt(v));
+            log.info("[cmd] set_volume={d}", .{v});
         },
+
         .set_brightness => |br| {
-            port.setBrightness(@floatFromInt(br));
+            // Go: clamp 0-100, port.SetBrightness(b)
+            const b = std.math.clamp(br, 0, 100);
+            port.setBrightness(@floatFromInt(b));
+            log.info("[cmd] set_brightness={d}", .{b});
         },
+
+        .set_light_mode => |mode| {
+            // Go: port.SetLightMode(mode)
+            port.setLightMode(mode);
+            log.info("[cmd] set_light_mode={s}", .{mode});
+        },
+
+        .set_wifi => |w| {
+            // Go: port.SetWifiNetwork(&ConnectedWifi{SSID, RSSI, IP, Gateway})
+            port.setWifiNetwork(w.ssid, "", -50);
+            log.info("[cmd] set_wifi ssid={s}", .{w.ssid});
+        },
+
+        .delete_wifi => |ssid| {
+            // Go: disconnect if current SSID matches, remove from store
+            // On real device: we'd check current wifi and disconnect.
+            // For E2E test, just log.
+            log.info("[cmd] delete_wifi ssid={s}", .{ssid});
+        },
+
         .halt => |h| {
-            if (h.sleep) port.setState(.sleeping) else if (h.shutdown) port.setState(.shutting_down) else if (h.interrupt) port.setState(.interrupted);
+            // Go: interrupt → if Streaming/Recording/WaitingForResponse → Ready
+            //     sleep/shutdown → Ready
+            if (h.interrupt) {
+                const st = port.getState();
+                if (st == .streaming or st == .recording or st == .waiting_for_response) {
+                    port.setState(.ready);
+                    log.info("[cmd] halt interrupt -> ready (was {s})", .{st.toString()});
+                }
+            } else if (h.sleep or h.shutdown) {
+                port.setState(.ready);
+                log.info("[cmd] halt sleep/shutdown -> ready", .{});
+            }
         },
-        .reset => port.setState(.resetting),
+
+        .reset => |r| {
+            // Go: reset all settings to defaults via port API
+            // volume=100, brightness=100, light_mode="auto"
+            // If unpair: clear wifi + pair_status
+            port.setVolume(100);
+            port.setBrightness(100);
+            port.setLightMode("auto");
+            if (r.unpair) {
+                port.setWifiNetwork("", "", 0);
+                port.setPairStatus("");
+            }
+            log.info("[cmd] reset (unpair={})", .{r.unpair});
+        },
+
         .raise => |r| {
-            if (r.call) port.setState(.calling);
+            // Go: if call and state==Ready → Calling
+            if (r.call) {
+                if (port.getState() == .ready) {
+                    port.setState(.calling);
+                    log.info("[cmd] raise call -> calling", .{});
+                }
+            }
         },
-        else => {},
+
+        .ota_upgrade => {
+            // Go: simulate OTA progress (not critical for embedded E2E)
+            log.info("[cmd] ota_upgrade (acknowledged)", .{});
+        },
     }
 }

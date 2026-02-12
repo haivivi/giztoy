@@ -65,8 +65,9 @@ pub const State = enum(u8) {
     }
 
     /// Returns true if the device can start recording in this state.
+    /// Matches Go: StartRecording() valid from ready, waiting_for_response, streaming.
     pub fn canRecord(self: State) bool {
-        return self == .ready or self == .streaming;
+        return self == .ready or self == .waiting_for_response or self == .streaming;
     }
 };
 
@@ -347,10 +348,12 @@ test "State.isActive" {
 
 test "State.canRecord" {
     try std.testing.expect(State.ready.canRecord());
+    try std.testing.expect(State.waiting_for_response.canRecord());
     try std.testing.expect(State.streaming.canRecord());
 
     try std.testing.expect(!State.recording.canRecord());
     try std.testing.expect(!State.sleeping.canRecord());
+    try std.testing.expect(!State.calling.canRecord());
     try std.testing.expect(!State.unknown.canRecord());
 }
 

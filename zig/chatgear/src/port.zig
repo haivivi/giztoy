@@ -294,6 +294,23 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
             self.flushPending();
         }
 
+        /// Set light mode and queue a stats diff update.
+        /// Matches Go ClientPort.SetLightMode().
+        pub fn setLightMode(self: *Self, mode: []const u8) void {
+            self.mutex.lock();
+            defer self.mutex.unlock();
+
+            const now = self.epochNow();
+            if (self.stats.light_mode == null) self.stats.light_mode = .{};
+            self.stats.light_mode.?.mode = mode;
+            self.stats.light_mode.?.update_at = now;
+
+            if (self.batch_mode) return;
+            self.ensurePending();
+            self.stats_pending.?.light_mode = .{ .mode = mode, .update_at = now };
+            self.flushPending();
+        }
+
         /// Set WiFi network info and queue a stats diff update.
         pub fn setWifiNetwork(self: *Self, ssid: []const u8, ip: []const u8, rssi: f32) void {
             self.mutex.lock();
