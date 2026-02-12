@@ -218,10 +218,19 @@ pub fn run(env: anytype) void {
 
     var app_state: AppState = .connecting_wifi;
 
+    // Debug: log ADC raw value periodically
+    var debug_counter: u32 = 0;
+
     // Main event loop
     while (Board.isRunning()) {
         // Poll ADC buttons (pushes events to board queue)
         board.buttons.poll();
+
+        debug_counter += 1;
+        if (debug_counter % 500 == 1) {
+            const raw = board.buttons.getLastRaw();
+            log.info("[ADC] raw={} uptime={}ms", .{ raw, board.uptime() });
+        }
 
         // Process board events
         while (board.nextEvent()) |event| {
@@ -229,11 +238,13 @@ pub fn run(env: anytype) void {
                 .wifi => |wifi_event| handleWifiEvent(wifi_event, &app_state),
                 .net => |net_event| handleNetEvent(net_event, &app_state),
                 .button => |btn| {
-                    // Press = short low tone, release/click = normal tone
+                    // Log button event (no tone — test MQTT only)
                     if (btn.action == .press) {
-                        playTone(button_tones[@intFromEnum(btn.id)] / 2, 80); // low octave, short
-                    } else if (btn.action == .click or btn.action == .release) {
-                        playButtonTone(@intFromEnum(btn.id)); // normal tone
+                        log.info("[BTN] {s} PRESS", .{btn.id.name()});
+                    } else if (btn.action == .click) {
+                        log.info("[BTN] {s} CLICK", .{btn.id.name()});
+                    } else if (btn.action == .release) {
+                        log.info("[BTN] {s} RELEASE", .{btn.id.name()});
                     }
                     // Forward to chatgear handler if port is active
                     if (active_port) |p| {
