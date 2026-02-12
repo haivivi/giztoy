@@ -333,6 +333,28 @@ var memRelationAddCmd = &cobra.Command{
 	},
 }
 
+var memDemoCmd = &cobra.Command{
+	Use:   "demo",
+	Short: "Run a demo scenario with realistic data",
+	Long: `Populate a temporary memory database with a realistic family scenario
+and run several recall queries to demonstrate the system.
+
+The demo creates an AI cat companion (小猫咪) that has been living with
+a family for a week:
+
+  小明 (8yo boy)  → likes dinosaurs, Lego, space
+  小红 (6yo girl) → likes drawing, princess stories
+  妈妈            → cooks, tells bedtime stories
+  爸爸            → plays music, builds Lego
+
+It stores 17 memory segments, 12 entity nodes, 14 relations, and then
+runs recall queries from different perspectives.
+
+No DashScope API key needed — uses the real system with keyword + label
+scoring (no vector search in demo mode).`,
+	RunE: runMemoryDemo,
+}
+
 func init() {
 	// Global memory flags.
 	memoryCmd.PersistentFlags().StringVar(&memDataDir, "data-dir", "", "data directory (default: ~/.local/share/giztoy/memory)")
@@ -358,8 +380,218 @@ func init() {
 	// Wire up.
 	memEntityCmd.AddCommand(memEntitySetCmd, memEntityGetCmd)
 	memRelationCmd.AddCommand(memRelationAddCmd)
-	memoryCmd.AddCommand(memAddCmd, memSearchCmd, memRecallCmd, memEntityCmd, memRelationCmd)
+	memoryCmd.AddCommand(memAddCmd, memSearchCmd, memRecallCmd, memEntityCmd, memRelationCmd, memDemoCmd)
 	rootCmd.AddCommand(memoryCmd)
+}
+
+// ---------------------------------------------------------------------------
+// Demo command implementation
+// ---------------------------------------------------------------------------
+
+func runMemoryDemo(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+
+	// Create a temporary directory for the demo database.
+	tmpDir, err := os.MkdirTemp("", "giztoy-memory-demo-*")
+	if err != nil {
+		return fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	fmt.Println("=== giztoy memory demo ===")
+	fmt.Printf("Data dir: %s (temporary, deleted on exit)\n\n", tmpDir)
+
+	// Open badger + memory host. No embedding API — keyword+label only.
+	kvOpts := &kv.Options{Separator: memorySep}
+	store, err := kv.NewBadger(kv.BadgerOptions{
+		Dir: filepath.Join(tmpDir, "data"), Options: kvOpts, Logger: silentLogger{},
+	})
+	if err != nil {
+		return fmt.Errorf("open badger: %w", err)
+	}
+	defer store.Close()
+
+	host := memory.NewHost(memory.HostConfig{Store: store, Separator: memorySep})
+	defer host.Close()
+	m := host.Open("cat_girl")
+	g := m.Graph()
+	lt := m.LongTerm()
+
+	// ---- Step 1: Build entity graph ----
+	fmt.Println("📌 Building entity graph...")
+
+	type entityDef struct {
+		label string
+		attrs map[string]any
+	}
+	entities := []entityDef{
+		{"self", map[string]any{"name": "小猫咪", "personality": "活泼好奇", "species": "虚拟猫猫"}},
+		{"person:小明", map[string]any{"name": "小明", "age": float64(8), "gender": "男", "likes": "恐龙、乐高、太空"}},
+		{"person:小红", map[string]any{"name": "小红", "age": float64(6), "gender": "女", "likes": "画画、公主故事"}},
+		{"person:妈妈", map[string]any{"name": "妈妈", "role": "母亲", "good_at": "做饭、讲故事"}},
+		{"person:爸爸", map[string]any{"name": "爸爸", "role": "父亲", "good_at": "音乐、搭乐高"}},
+		{"topic:恐龙", nil},
+		{"topic:画画", nil},
+		{"topic:做饭", nil},
+		{"topic:音乐", nil},
+		{"topic:太空", nil},
+		{"topic:公主故事", nil},
+		{"topic:乐高", nil},
+	}
+	for _, e := range entities {
+		if err := g.SetEntity(ctx, graph.Entity{Label: e.label, Attrs: e.attrs}); err != nil {
+			return fmt.Errorf("set entity %q: %w", e.label, err)
+		}
+	}
+	fmt.Printf("   %d entities created\n", len(entities))
+
+	type relDef struct{ from, to, relType string }
+	relations := []relDef{
+		{"person:小明", "person:小红", "sibling"},
+		{"person:小红", "person:小明", "sibling"},
+		{"person:妈妈", "person:小明", "parent"},
+		{"person:妈妈", "person:小红", "parent"},
+		{"person:爸爸", "person:小明", "parent"},
+		{"person:爸爸", "person:小红", "parent"},
+		{"person:小明", "topic:恐龙", "likes"},
+		{"person:小明", "topic:太空", "likes"},
+		{"person:小明", "topic:乐高", "likes"},
+		{"person:小红", "topic:画画", "likes"},
+		{"person:小红", "topic:公主故事", "likes"},
+		{"person:妈妈", "topic:做饭", "good_at"},
+		{"person:爸爸", "topic:音乐", "good_at"},
+		{"person:爸爸", "topic:乐高", "good_at"},
+	}
+	for _, r := range relations {
+		if err := g.AddRelation(ctx, graph.Relation{From: r.from, To: r.to, RelType: r.relType}); err != nil {
+			return fmt.Errorf("add relation: %w", err)
+		}
+	}
+	fmt.Printf("   %d relations created\n\n", len(relations))
+
+	// ---- Step 2: Store memory segments ----
+	fmt.Println("📝 Storing memory segments (1 week of interactions)...")
+
+	type segDef struct {
+		summary  string
+		keywords []string
+		labels   []string
+	}
+	segments := []segDef{
+		// Day 1: 小明 dinosaur session
+		{"和小明聊了恐龙，他最喜欢霸王龙", []string{"恐龙", "霸王龙"}, []string{"person:小明", "topic:恐龙"}},
+		{"小明问了很多恐龙的问题，还画了一只三角龙", []string{"恐龙", "三角龙", "画画"}, []string{"person:小明", "topic:恐龙", "topic:画画"}},
+		{"小明说长大想当古生物学家", []string{"恐龙", "古生物学家", "梦想"}, []string{"person:小明", "topic:恐龙"}},
+		{"给小明讲了恐龙灭绝的故事，他有点伤心", []string{"恐龙", "灭绝", "故事"}, []string{"person:小明", "topic:恐龙"}},
+		// Day 2: 小红 drawing session
+		{"小红画了一个公主城堡，涂了粉色和金色", []string{"画画", "公主", "城堡"}, []string{"person:小红", "topic:画画", "topic:公主故事"}},
+		{"和小红一起编了一个公主和小猫的故事", []string{"公主", "小猫", "故事"}, []string{"person:小红", "topic:公主故事", "self"}},
+		{"小红说她的公主会骑恐龙", []string{"公主", "恐龙"}, []string{"person:小红", "topic:公主故事", "topic:恐龙"}},
+		// Day 3: 妈妈 cooking
+		{"妈妈教我们做了蛋炒饭，小明吃了两碗", []string{"做饭", "蛋炒饭"}, []string{"person:妈妈", "person:小明", "topic:做饭"}},
+		{"妈妈说周末要做恐龙形状的饼干", []string{"做饭", "恐龙", "饼干"}, []string{"person:妈妈", "topic:做饭", "topic:恐龙"}},
+		// Day 4: 爸爸 music + Lego
+		{"和爸爸一起听了古典音乐，小明跟着打节拍", []string{"音乐", "古典音乐"}, []string{"person:爸爸", "person:小明", "topic:音乐"}},
+		{"爸爸和小明一起拼了一个恐龙乐高模型", []string{"乐高", "恐龙"}, []string{"person:爸爸", "person:小明", "topic:乐高", "topic:恐龙"}},
+		// Day 5: Museum
+		{"全家去了自然博物馆看恐龙化石，小明超兴奋", []string{"博物馆", "恐龙", "化石"}, []string{"person:小明", "person:小红", "person:妈妈", "person:爸爸", "topic:恐龙"}},
+		{"小红在博物馆里画了好多恐龙素描", []string{"画画", "恐龙", "素描"}, []string{"person:小红", "topic:画画", "topic:恐龙"}},
+		{"小明在天文馆看了星空投影，问了黑洞的问题", []string{"太空", "天文馆", "黑洞"}, []string{"person:小明", "topic:太空"}},
+		// Day 6: Bedtime stories
+		{"给小明讲了宇宙探险的睡前故事", []string{"太空", "故事", "睡前"}, []string{"person:小明", "topic:太空"}},
+		{"给小红讲了小猫公主和恐龙的故事，她听得好开心", []string{"公主", "恐龙", "故事"}, []string{"person:小红", "topic:公主故事", "topic:恐龙", "self"}},
+		// Day 7: Art class
+		{"小红今天美术课画了全家福，画里还有我", []string{"画画", "全家福", "美术课"}, []string{"person:小红", "topic:画画", "self"}},
+	}
+	for _, s := range segments {
+		if err := m.StoreSegment(ctx, memory.SegmentInput{
+			Summary: s.summary, Keywords: s.keywords, Labels: s.labels,
+		}); err != nil {
+			return fmt.Errorf("store segment: %w", err)
+		}
+	}
+	fmt.Printf("   %d segments stored\n\n", len(segments))
+
+	// ---- Step 3: Set long-term summaries ----
+	if err := lt.SetLifeSummary(ctx,
+		"我是小猫咪，一只虚拟猫猫伙伴。和这个家庭在一起已经半年了。小明8岁最喜欢恐龙，小红6岁喜欢画画和公主故事。",
+	); err != nil {
+		return fmt.Errorf("set life summary: %w", err)
+	}
+	fmt.Println("📚 Life summary set.\n")
+
+	// ---- Step 4: Run recall queries ----
+	queries := []struct {
+		name   string
+		labels []string
+		text   string
+	}{
+		{"小明喜欢什么？(从小明出发搜索\"恐龙\")", []string{"person:小明"}, "恐龙"},
+		{"小红的画画回忆(从小红出发搜索\"画画\")", []string{"person:小红"}, "画画"},
+		{"妈妈做了什么饭？(从妈妈出发搜索\"做饭\")", []string{"person:妈妈"}, "做饭"},
+		{"爸爸和孩子玩了什么？(从爸爸出发搜索\"乐高\")", []string{"person:爸爸"}, "乐高"},
+		{"所有恐龙相关的回忆(无标签搜索\"恐龙\")", nil, "恐龙"},
+	}
+
+	for i, q := range queries {
+		fmt.Printf("🔍 Query %d: %s\n", i+1, q.name)
+		fmt.Printf("   labels=%v text=%q\n", q.labels, q.text)
+
+		result, err := m.Recall(ctx, memory.RecallQuery{
+			Labels: q.labels, Text: q.text, Limit: 5, Hops: 2,
+		})
+		if err != nil {
+			return fmt.Errorf("recall: %w", err)
+		}
+
+		if len(result.Entities) > 0 {
+			fmt.Printf("   Entities (%d): ", len(result.Entities))
+			names := make([]string, len(result.Entities))
+			for j, e := range result.Entities {
+				names[j] = e.Label
+			}
+			fmt.Println(strings.Join(names, ", "))
+		}
+
+		if len(result.Segments) > 0 {
+			fmt.Printf("   Segments (%d):\n", len(result.Segments))
+			for j, s := range result.Segments {
+				fmt.Printf("     %d. [%.3f] %s\n", j+1, s.Score, s.Summary)
+			}
+		} else {
+			fmt.Println("   (no segments)")
+		}
+
+		if len(result.Summaries) > 0 {
+			for _, s := range result.Summaries {
+				fmt.Printf("   [%s] %s\n", s.Grain, s.Summary)
+			}
+		}
+		fmt.Println()
+	}
+
+	// ---- Step 5: Show graph expansion ----
+	fmt.Println("🌐 Graph expansion from person:小明 (2 hops):")
+	expanded, err := g.Expand(ctx, []string{"person:小明"}, 2)
+	if err != nil {
+		return fmt.Errorf("expand: %w", err)
+	}
+	fmt.Printf("   %s\n\n", strings.Join(expanded, ", "))
+
+	// ---- Step 6: Show entity details ----
+	fmt.Println("👤 Entity details:")
+	for _, label := range []string{"person:小明", "person:小红", "person:妈妈", "person:爸爸", "self"} {
+		ent, err := g.GetEntity(ctx, label)
+		if err != nil {
+			continue
+		}
+		b, _ := json.Marshal(ent.Attrs)
+		fmt.Printf("   %s → %s\n", ent.Label, string(b))
+	}
+	fmt.Println()
+
+	fmt.Println("=== demo complete ===")
+	return nil
 }
 
 // ---------------------------------------------------------------------------
