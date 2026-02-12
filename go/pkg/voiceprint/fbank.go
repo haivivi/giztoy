@@ -54,6 +54,11 @@ func DefaultFbankConfig() FbankConfig {
 //  5. Apply mel filterbank
 //  6. Take log of energies
 func ComputeFbank(audio []byte, cfg FbankConfig) [][]float32 {
+	// Validate config.
+	if cfg.FrameShift <= 0 || cfg.FrameLength <= 0 || cfg.NumMels <= 0 {
+		return nil
+	}
+
 	// Convert PCM16 to float64 samples.
 	nSamples := len(audio) / 2
 	if nSamples < cfg.FrameLength {

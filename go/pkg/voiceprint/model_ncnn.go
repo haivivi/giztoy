@@ -32,8 +32,10 @@ const (
 //
 // NCNNModel is safe for concurrent use. The ncnn.Net is loaded once and
 // shared; each Extract call creates its own ncnn.Extractor.
+// Extract holds a read lock for the entire inference duration to prevent
+// Close from destroying the net while inference is in progress.
 type NCNNModel struct {
-	mu       sync.Mutex
+	mu       sync.RWMutex
 	net      *ncnn.Net
 	dim      int
 	fbankCfg FbankConfig
@@ -104,6 +106,13 @@ func NewNCNNModel(paramPath, binPath string, opts ...NCNNModelOption) (*NCNNMode
 // This is the preferred constructor when the model is embedded in the binary
 // via go:embed, producing a single-file deployment with zero external dependencies.
 func NewNCNNModelFromMemory(paramData, binData []byte, opts ...NCNNModelOption) (*NCNNModel, error) {
+	if len(paramData) == 0 {
+		return nil, fmt.Errorf("voiceprint: empty param data")
+	}
+	if len(binData) == 0 {
+		return nil, fmt.Errorf("voiceprint: empty bin data")
+	}
+
 	m := newNCNNModelDefaults(opts)
 
 	opt := ncnn.NewOption()
@@ -148,13 +157,12 @@ func newNCNNModelDefaults(opts []NCNNModelOption) *NCNNModel {
 // The returned embedding is an L2-normalized unit vector suitable for
 // cosine similarity comparison via dot product.
 func (m *NCNNModel) Extract(audio []byte) ([]float32, error) {
-	m.mu.Lock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if m.closed {
-		m.mu.Unlock()
 		return nil, fmt.Errorf("voiceprint: model is closed")
 	}
 	net := m.net
-	m.mu.Unlock()
 
 	// Step 1: Compute fbank features.
 	features := ComputeFbank(audio, m.fbankCfg)
