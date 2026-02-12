@@ -27,7 +27,10 @@ import (
 type Voiceprint struct {
 	model    voiceprint.Model
 	hasher   *voiceprint.Hasher
-	detector *voiceprint.Detector
+
+	// detectorOpts are used to create a fresh Detector per Transform call.
+	// Each pipeline gets its own Detector to avoid concurrent write races.
+	detectorOpts []voiceprint.DetectorOption
 
 	segmentDuration int // analysis window in milliseconds (default 400)
 	sampleRate      int // PCM sample rate (default 16000)
@@ -61,12 +64,12 @@ func WithVoiceprintSampleRate(rate int) VoiceprintOption {
 // Parameters:
 //   - model: speaker embedding extractor (e.g., NCNNModel)
 //   - hasher: LSH hasher for embedding → hash
-//   - detector: sliding window speaker status detector
-func NewVoiceprint(model voiceprint.Model, hasher *voiceprint.Hasher, detector *voiceprint.Detector, opts ...VoiceprintOption) *Voiceprint {
+//   - detectorOpts: options for creating per-pipeline Detector instances
+func NewVoiceprint(model voiceprint.Model, hasher *voiceprint.Hasher, detectorOpts []voiceprint.DetectorOption, opts ...VoiceprintOption) *Voiceprint {
 	t := &Voiceprint{
 		model:           model,
 		hasher:          hasher,
-		detector:        detector,
+		detectorOpts:    detectorOpts,
 		segmentDuration: 400,
 		sampleRate:      16000,
 	}
@@ -82,7 +85,10 @@ func NewVoiceprint(model voiceprint.Model, hasher *voiceprint.Hasher, detector *
 func (t *Voiceprint) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	output := newBufferStream(100)
 
-	go t.transformLoop(ctx, input, output)
+	// Create a fresh Detector per pipeline to avoid concurrent write races.
+	detector := voiceprint.NewDetector(t.detectorOpts...)
+
+	go t.transformLoop(ctx, input, output, detector)
 
 	return output, nil
 }
@@ -92,7 +98,7 @@ func (t *Voiceprint) segmentBytes() int {
 	return t.sampleRate * 2 * t.segmentDuration / 1000
 }
 
-func (t *Voiceprint) transformLoop(ctx context.Context, input genx.Stream, output *bufferStream) {
+func (t *Voiceprint) transformLoop(ctx context.Context, input genx.Stream, output *bufferStream, detector *voiceprint.Detector) {
 	defer output.Close()
 
 	var (
@@ -113,8 +119,8 @@ func (t *Voiceprint) transformLoop(ctx context.Context, input genx.Stream, outpu
 		if err != nil {
 			if err == io.EOF {
 				if len(pcmAccum) > 0 {
-					lastLabel = t.processSegment(pcmAccum, lastLabel)
-					_ = lastLabel // processed but stream ends
+			lastLabel = t.processSegment(pcmAccum, lastLabel, detector)
+				_ = lastLabel // processed but stream ends
 				}
 				return
 			}
@@ -130,8 +136,8 @@ func (t *Voiceprint) transformLoop(ctx context.Context, input genx.Stream, outpu
 		if chunk.IsEndOfStream() {
 			if blob, ok := chunk.Part.(*genx.Blob); ok && isPCMMIME(blob.MIMEType) {
 				if len(pcmAccum) > 0 {
-					lastLabel = t.processSegment(pcmAccum, lastLabel)
-					pcmAccum = pcmAccum[:0]
+			lastLabel = t.processSegment(pcmAccum, lastLabel, detector)
+				pcmAccum = pcmAccum[:0]
 				}
 				eos := genx.NewEndOfStream(blob.MIMEType)
 				eos.Role = chunk.Role
@@ -153,7 +159,7 @@ func (t *Voiceprint) transformLoop(ctx context.Context, input genx.Stream, outpu
 			pcmAccum = append(pcmAccum, blob.Data...)
 
 			for len(pcmAccum) >= segBytes {
-				lastLabel = t.processSegment(pcmAccum[:segBytes], lastLabel)
+				lastLabel = t.processSegment(pcmAccum[:segBytes], lastLabel, detector)
 				pcmAccum = pcmAccum[segBytes:]
 			}
 
@@ -169,14 +175,14 @@ func (t *Voiceprint) transformLoop(ctx context.Context, input genx.Stream, outpu
 	}
 }
 
-func (t *Voiceprint) processSegment(pcm []byte, currentLabel string) string {
+func (t *Voiceprint) processSegment(pcm []byte, currentLabel string, detector *voiceprint.Detector) string {
 	embedding, err := t.model.Extract(pcm)
 	if err != nil {
 		return currentLabel
 	}
 
 	hash := t.hasher.Hash(embedding)
-	result := t.detector.Feed(hash)
+	result := detector.Feed(hash)
 	if result == nil {
 		return currentLabel
 	}

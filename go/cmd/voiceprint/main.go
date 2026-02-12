@@ -193,7 +193,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "denoise: enabled (spectral subtraction)\n")
 	}
 
-	hasher := voiceprint.NewHasher(512, *hashBitsFlag, 42)
+	// Hasher dimension is determined by the engine's embedding output.
+	// ncnn ERes2Net = 512, but ONNX models may differ.
+	embDim := 512 // default; overridden after first extraction if needed
+	if *engineFlag == "ncnn" {
+		embDim = 512
+	}
+	hasher := voiceprint.NewHasher(embDim, *hashBitsFlag, 42)
 
 	if *batchFlag {
 		runBatch(eng, fbankExt, hasher, *denoiseFlag, target)
