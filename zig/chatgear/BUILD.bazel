@@ -5,7 +5,7 @@
 #
 # Based on go/pkg/chatgear.
 
-load("@embed_zig//bazel/zig:defs.bzl", "zig_package")
+load("@embed_zig//bazel/zig:defs.bzl", "zig_package", "zig_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -19,4 +19,18 @@ zig_package(
     # port.zig imports channel/cancellation/trait, which need runtime for tests.
     # Types/wire/conn tests work without runtime deps.
     test = False,
+)
+
+# Integration test: mqtt0.Broker + chatgear ClientPort loopback
+zig_test(
+    name = "chatgear_test",
+    main = "test_chatgear.zig",
+    srcs = glob(["src/**/*.zig"]) + ["test_chatgear.zig"],
+    deps = [
+        ":chatgear",
+        "@embed_zig//lib/pkg/mqtt0",
+        "@embed_zig//lib/trait",
+        "@embed_zig//lib/pkg/channel",
+        "@embed_zig//lib/pkg/cancellation",
+    ],
 )
