@@ -31,6 +31,7 @@ const chatgear = @import("chatgear");
 const mqtt0 = @import("mqtt0");
 const tls = @import("tls");
 const dns = @import("dns");
+const ntp = @import("ntp");
 const opus = @import("opus");
 
 const MqttRt = hw.MqttRt;
@@ -152,6 +153,9 @@ const AppState = enum {
 
 var volume: i32 = 50;
 
+/// Epoch offset: epoch_ms - uptime_ms. Set by NTP sync.
+var g_epoch_offset: i64 = 0;
+
 // Global port pointer (set by connectTls/connectTcp, used by button handler)
 var active_port: ?*TlsPort = null;
 
@@ -241,6 +245,11 @@ pub fn run(env: anytype) void {
             .connecting_wifi => {},
             .connecting_mqtt => {
                 Board.time.sleepMs(500);
+
+                // NTP time sync (once, before first MQTT connect)
+                if (g_epoch_offset == 0) {
+                    syncNtp();
+                }
 
                 switch (config.mqtt.scheme) {
                     .tcp => connectTcp(&app_state),
@@ -352,7 +361,7 @@ fn connectTcp(app_state: *AppState) void {
         return;
     };
 
-    var port = TcpPort.init(&conn);
+    var port = TcpPort.init(&conn, g_epoch_offset);
     initPort(&port);
     app_state.* = .running;
 
@@ -472,10 +481,15 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("MQTT subscribed to downlink topics", .{});
 
-    // Skip initial state for stability test
-    log.info("(no initial state sent — testing subscribe-only)", .{});
+    // ChatGear port (with NTP epoch offset for proper timestamps)
+    const port = alloc.create(TlsPort) catch |err| {
+        log.err("alloc port: {}", .{err});
+        return;
+    };
+    port.* = TlsPort.init(conn, g_epoch_offset);
+    active_port = port;
 
-    // Skip port for stability test
+    initPort(port);
 
     // Init opus codec in main task (256KB stack)
     log.info("Initializing opus codec...", .{});
@@ -503,9 +517,7 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("Opus decoder ready", .{});
 
-    // Skip everything — only readLoop + ping
-    enc.deinit(idf.heap.psram);
-    dec.deinit(idf.heap.psram);
+    startAudioPipeline(port, enc, dec);
     app_state.* = .running;
 
     // MQTT readLoop in background
@@ -558,6 +570,23 @@ fn initPort(p: anytype) void {
 
     p.setState(.ready);
     log.info("ChatGear ready! Gear ID: {s}", .{config.gear_id});
+}
+
+// ============================================================================
+// NTP Time Sync
+// ============================================================================
+
+fn syncNtp() void {
+    const NtpClient = ntp.Client(Socket);
+    var client = NtpClient{ .timeout_ms = 5000 };
+    const local_time: i64 = @intCast(Board.time.getTimeMs());
+
+    if (client.getTimeRace(local_time)) |epoch_ms| {
+        g_epoch_offset = epoch_ms - local_time;
+        log.info("NTP sync OK: offset={d}ms", .{g_epoch_offset});
+    } else |err| {
+        log.err("NTP sync failed: {}, using offset=0", .{err});
+    }
 }
 
 // ============================================================================

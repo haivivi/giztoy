@@ -84,8 +84,15 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
         stats_pending: ?types.StatsEvent,
         batch_mode: bool,
 
+        /// Epoch offset: added to Time.getTimeMs() (uptime) to get Unix epoch ms.
+        /// Set to 0 if device has NTP. Otherwise set to approximate epoch base.
+        epoch_offset: i64,
+
         /// Initialize a new ClientPort.
-        pub fn init(connection: *Conn) Self {
+        /// `epoch_offset_ms`: offset added to uptime to produce Unix epoch timestamps.
+        ///   Pass 0 if device has NTP time. Otherwise pass approximate epoch base
+        ///   (e.g., 1770900000000 for ~2026-02-11).
+        pub fn init(connection: *Conn, epoch_offset_ms: i64) Self {
             return Self{
                 .conn = connection,
                 .downlink_audio = AudioCh.init(),
@@ -99,6 +106,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
                 .stats = .{},
                 .stats_pending = null,
                 .batch_mode = false,
+                .epoch_offset = epoch_offset_ms,
             };
         }
 
@@ -110,6 +118,11 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
             self.uplink_state.deinit();
             self.uplink_stats.deinit();
             self.mutex.deinit();
+        }
+
+        /// Get current time as Unix epoch milliseconds.
+        fn epochNow(self: *const Self) i64 {
+            return self.epoch_offset + @as(i64, @intCast(Time.getTimeMs()));
         }
 
         // ====================================================================
@@ -197,7 +210,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
             if (self.state == s) return;
             self.state = s;
 
-            const now = @as(i64, @intCast(Time.getTimeMs()));
+            const now = self.epochNow();
             const evt = types.StateEvent{
                 .version = 1,
                 .time = now,
@@ -240,7 +253,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
             self.mutex.lock();
             defer self.mutex.unlock();
 
-            const now = @as(i64, @intCast(Time.getTimeMs()));
+            const now = self.epochNow();
             if (self.stats.volume == null) self.stats.volume = .{};
             self.stats.volume.?.percentage = volume;
             self.stats.volume.?.update_at = now;
@@ -256,7 +269,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
             self.mutex.lock();
             defer self.mutex.unlock();
 
-            const now = @as(i64, @intCast(Time.getTimeMs()));
+            const now = self.epochNow();
             if (self.stats.brightness == null) self.stats.brightness = .{};
             self.stats.brightness.?.percentage = brightness;
             self.stats.brightness.?.update_at = now;
@@ -314,7 +327,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
             self.mutex.lock();
             defer self.mutex.unlock();
 
-            const now = @as(i64, @intCast(Time.getTimeMs()));
+            const now = self.epochNow();
             if (self.stats.pair_status == null) self.stats.pair_status = .{};
             self.stats.pair_status.?.pair_with = pair_with;
             self.stats.pair_status.?.update_at = now;
@@ -338,7 +351,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
         fn flushPending(self: *Self) void {
             if (self.stats_pending) |pending| {
                 var evt = pending;
-                evt.time = @as(i64, @intCast(Time.getTimeMs()));
+                evt.time = self.epochNow();
                 self.uplink_stats.trySend(evt) catch {};
                 self.stats_pending = null;
             }
@@ -346,7 +359,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
 
         fn queueFullStats(self: *Self) void {
             var evt = self.stats;
-            evt.time = @as(i64, @intCast(Time.getTimeMs()));
+            evt.time = self.epochNow();
             self.uplink_stats.trySend(evt) catch {};
         }
 
@@ -366,7 +379,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
                 const current_state = self.state;
                 self.mutex.unlock();
 
-                const now = @as(i64, @intCast(Time.getTimeMs()));
+                const now = self.epochNow();
                 const evt = types.StateEvent{
                     .version = 1,
                     .time = now,

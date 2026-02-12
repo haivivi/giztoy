@@ -218,6 +218,7 @@ esp_zig_app(
         "@embed_zig//lib/pkg/mqtt0",
         "@embed_zig//lib/pkg/tls",
         "@embed_zig//lib/pkg/dns",
+        "@embed_zig//lib/pkg/ntp",
         "@embed_zig//lib/pkg/channel",
         "@embed_zig//lib/pkg/cancellation",
         "@embed_zig//lib/pkg/drivers",
