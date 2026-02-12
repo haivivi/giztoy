@@ -77,7 +77,11 @@ type Registry struct {
 }
 
 // New creates a Registry. If store is nil, an in-memory store is used.
+// Panics if Dim <= 0.
 func New(cfg Config, store Store) *Registry {
+	if cfg.Dim <= 0 {
+		panic("vecid: Config.Dim must be positive")
+	}
 	cfg.defaults()
 	if store == nil {
 		store = NewMemoryStore()
