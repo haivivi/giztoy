@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "voiceprint",
+    srcs = [
+        "detector.go",
+        "fbank.go",
+        "hasher.go",
+        "model.go",
+        "model_ncnn.go",
+        "voiceprint.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/voiceprint",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/ncnn",
+    ],
+)
+
+go_test(
+    name = "voiceprint_test",
+    srcs = [
+        "detector_test.go",
+        "fbank_test.go",
+        "hasher_test.go",
+    ],
+    embed = [":voiceprint"],
+)

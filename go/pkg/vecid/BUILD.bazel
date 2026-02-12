@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "vecid",
+    srcs = [
+        "dbscan.go",
+        "store.go",
+        "vecid.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/vecid",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "vecid_test",
+    srcs = ["vecid_test.go"],
+    embed = [":vecid"],
+)

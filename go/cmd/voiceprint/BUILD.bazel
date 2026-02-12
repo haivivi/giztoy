@@ -15,6 +15,7 @@ go_library(
         "//go/pkg/audio/resampler",
         "//go/pkg/ncnn",
         "//go/pkg/onnx",
+        "//go/pkg/voiceprint",
     ],
 )
 
