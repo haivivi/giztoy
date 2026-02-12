@@ -937,3 +937,115 @@ func TestConversationRecentSegments(t *testing.T) {
 		t.Errorf("segs[0].ID = %q, want seg-2", segs[0].ID)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Benchmarks
+// ---------------------------------------------------------------------------
+
+func BenchmarkConversationAppend(b *testing.B) {
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+	h := NewHost(HostConfig{Store: store, Separator: testSep})
+	m := h.Open("bench")
+	conv := m.OpenConversation("s1", nil)
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = conv.Append(ctx, Message{
+			Role:      RoleUser,
+			Content:   "benchmark message",
+			Timestamp: int64(i + 1),
+		})
+	}
+}
+
+func BenchmarkConversationRecent(b *testing.B) {
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+	h := NewHost(HostConfig{Store: store, Separator: testSep})
+	m := h.Open("bench")
+	conv := m.OpenConversation("s1", nil)
+	ctx := context.Background()
+
+	// Pre-fill 100 messages.
+	for i := range 100 {
+		_ = conv.Append(ctx, Message{
+			Role:      RoleUser,
+			Content:   fmt.Sprintf("message %d", i),
+			Timestamp: int64((i + 1) * 1000),
+		})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = conv.Recent(ctx, 10)
+	}
+}
+
+func BenchmarkStoreSegment(b *testing.B) {
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+	emb := newMockEmbedder()
+	vec := vecstore.NewMemory()
+	h := NewHost(HostConfig{
+		Store: store, Vec: vec, Embedder: emb, Separator: testSep,
+	})
+	m := h.Open("bench")
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = m.StoreSegment(ctx, SegmentInput{
+			Summary:  "benchmark segment about dinosaurs",
+			Keywords: []string{"dinosaurs", "benchmark"},
+			Labels:   []string{"person:bench"},
+		})
+	}
+}
+
+func BenchmarkRecall(b *testing.B) {
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+	emb := newMockEmbedder()
+	vec := vecstore.NewMemory()
+	h := NewHost(HostConfig{
+		Store: store, Vec: vec, Embedder: emb, Separator: testSep,
+	})
+	m := h.Open("bench")
+	ctx := context.Background()
+	g := m.Graph()
+
+	// Set up graph.
+	_ = g.SetEntity(ctx, graph.Entity{Label: "person:xiaoming", Attrs: map[string]any{"age": float64(8)}})
+	_ = g.SetEntity(ctx, graph.Entity{Label: "topic:dinosaurs"})
+	_ = g.AddRelation(ctx, graph.Relation{From: "person:xiaoming", To: "topic:dinosaurs", RelType: "likes"})
+
+	// Pre-fill 50 segments.
+	for i := range 50 {
+		_ = m.StoreSegment(ctx, SegmentInput{
+			Summary:  fmt.Sprintf("segment %d about dinosaurs", i),
+			Keywords: []string{"dinosaurs"},
+			Labels:   []string{"person:xiaoming", "topic:dinosaurs"},
+		})
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = m.Recall(ctx, RecallQuery{
+			Labels: []string{"person:xiaoming"},
+			Text:   "dinosaurs",
+			Limit:  10,
+		})
+	}
+}
+
+func BenchmarkLongTermSetSummary(b *testing.B) {
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+	h := NewHost(HostConfig{Store: store, Separator: testSep})
+	m := h.Open("bench")
+	ctx := context.Background()
+	lt := m.LongTerm()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		t := time.Date(2026, 1, 1, i%24, 0, 0, 0, time.UTC)
+		_ = lt.SetSummary(ctx, GrainHour, t, "benchmark summary")
+	}
+}
