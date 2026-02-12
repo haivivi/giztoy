@@ -39,6 +39,7 @@ import (
 	"github.com/haivivi/giztoy/go/pkg/audio/resampler"
 	"github.com/haivivi/giztoy/go/pkg/ncnn"
 	ortpkg "github.com/haivivi/giztoy/go/pkg/onnx"
+	"github.com/haivivi/giztoy/go/pkg/voiceprint"
 )
 
 // engine abstracts ncnn and ONNX Runtime inference.
@@ -142,6 +143,7 @@ type sample struct {
 	path    string
 	speaker string
 	emb     []float32
+	hash    string
 }
 
 func main() {
@@ -150,6 +152,7 @@ func main() {
 	outputFlag := flag.String("output", "", "output embedding to file (binary float32)")
 	batchFlag := flag.Bool("batch", false, "batch mode: analyze directory of OGG files")
 	denoiseFlag := flag.Bool("denoise", false, "apply spectral subtraction denoise before embedding extraction")
+	hashBitsFlag := flag.Int("hash-bits", 20, "LSH hash bits (4-64, must be multiple of 4)")
 	flag.Parse()
 
 	if flag.NArg() < 1 {
@@ -190,15 +193,17 @@ func main() {
 		fmt.Fprintf(os.Stderr, "denoise: enabled (spectral subtraction)\n")
 	}
 
+	hasher := voiceprint.NewHasher(512, *hashBitsFlag, 42)
+
 	if *batchFlag {
-		runBatch(eng, fbankExt, *denoiseFlag, target)
+		runBatch(eng, fbankExt, hasher, *denoiseFlag, target)
 	} else {
-		runSingle(eng, fbankExt, *denoiseFlag, target, *outputFlag)
+		runSingle(eng, fbankExt, hasher, *denoiseFlag, target, *outputFlag)
 	}
 }
 
 // runSingle processes a single audio file and outputs the embedding.
-func runSingle(eng engine, fbankExt *fbank.Extractor, denoise bool, audioPath, outputPath string) {
+func runSingle(eng engine, fbankExt *fbank.Extractor, hasher *voiceprint.Hasher, denoise bool, audioPath, outputPath string) {
 	pcm16k, err := decodeOGGTo16kMono(audioPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "decode: %v\n", err)
@@ -221,8 +226,10 @@ func runSingle(eng engine, fbankExt *fbank.Extractor, denoise bool, audioPath, o
 		os.Exit(1)
 	}
 
+	hash := hasher.Hash(emb)
+	fmt.Fprintf(os.Stderr, "hash: %s (%s)\n", hash, voiceprint.VoiceLabel(hash))
+
 	if outputPath != "" {
-		// Write binary float32
 		f, err := os.Create(outputPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "create output: %v\n", err)
@@ -235,16 +242,12 @@ func runSingle(eng engine, fbankExt *fbank.Extractor, denoise bool, audioPath, o
 		}
 		fmt.Fprintf(os.Stderr, "wrote %d-dim embedding to %s\n", len(emb), outputPath)
 	} else {
-		// Print to stdout
-		fmt.Printf("%d\n", len(emb))
-		for _, v := range emb {
-			fmt.Printf("%.6f\n", v)
-		}
+		fmt.Println(hash)
 	}
 }
 
 // runBatch processes a directory of OGG files and outputs a similarity matrix.
-func runBatch(eng engine, fbankExt *fbank.Extractor, denoise bool, dir string) {
+func runBatch(eng engine, fbankExt *fbank.Extractor, hasher *voiceprint.Hasher, denoise bool, dir string) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "read dir: %v\n", err)
@@ -292,12 +295,14 @@ func runBatch(eng engine, fbankExt *fbank.Extractor, denoise bool, dir string) {
 			continue
 		}
 
+		hash := hasher.Hash(emb)
 		samples = append(samples, sample{
 			path:    filepath.Base(path),
 			speaker: speaker,
 			emb:     emb,
+			hash:    hash,
 		})
-		fmt.Printf("  [%s] %s — %d frames, emb dim=%d\n", speaker, filepath.Base(path), len(features), len(emb))
+		fmt.Printf("  [%s] %s — hash=%s\n", speaker, filepath.Base(path), hash)
 	}
 
 	if len(samples) < 2 {
@@ -337,6 +342,8 @@ func runBatch(eng engine, fbankExt *fbank.Extractor, denoise bool, dir string) {
 
 	fmt.Println()
 	printSpeakerAnalysis(samples)
+	fmt.Println()
+	printHashAnalysis(samples, hasher.Bits())
 }
 
 // --------------------------------------------------------------------------
@@ -564,6 +571,93 @@ func trimSilence(pcm []byte, threshold int16) []byte {
 // --------------------------------------------------------------------------
 // Analysis
 // --------------------------------------------------------------------------
+
+func printHashAnalysis(samples []sample, maxBits int) {
+	fmt.Printf("=== Hash Recall Analysis (%d-bit max) ===\n\n", maxBits)
+	speakers := map[string][]sample{}
+	for _, s := range samples {
+		speakers[s.speaker] = append(speakers[s.speaker], s)
+	}
+	speakerNames := make([]string, 0, len(speakers))
+	for name := range speakers {
+		speakerNames = append(speakerNames, name)
+	}
+	sort.Strings(speakerNames)
+
+	fmt.Printf("%-6s %5s %7s %10s %10s %10s\n", "bits", "chars", "unique", "recall", "precision", "f1")
+	for bits := 4; bits <= maxBits; bits += 4 {
+		nc := bits / 4
+		// recall = same-speaker pairs sharing hash / total same-speaker pairs
+		sameTotal, sameMatch := 0, 0
+		for _, samps := range speakers {
+			for i := 0; i < len(samps); i++ {
+				for j := i + 1; j < len(samps); j++ {
+					sameTotal++
+					if samps[i].hash[:nc] == samps[j].hash[:nc] {
+						sameMatch++
+					}
+				}
+			}
+		}
+		// precision = same-speaker pairs in hash group / all pairs in hash group
+		groups := map[string]map[string]int{}
+		for _, s := range samples {
+			h := s.hash[:nc]
+			if groups[h] == nil {
+				groups[h] = map[string]int{}
+			}
+			groups[h][s.speaker]++
+		}
+		correctPairs, totalPairs := 0, 0
+		for _, g := range groups {
+			total := 0
+			for _, c := range g {
+				total += c
+			}
+			if total < 2 {
+				continue
+			}
+			totalPairs += total * (total - 1) / 2
+			for _, c := range g {
+				correctPairs += c * (c - 1) / 2
+			}
+		}
+		unique := len(groups)
+		recall := float64(0)
+		if sameTotal > 0 {
+			recall = float64(sameMatch) / float64(sameTotal)
+		}
+		precision := float64(0)
+		if totalPairs > 0 {
+			precision = float64(correctPairs) / float64(totalPairs)
+		}
+		f1 := float64(0)
+		if precision+recall > 0 {
+			f1 = 2 * precision * recall / (precision + recall)
+		}
+		fmt.Printf("%-6d %5d %7d %9.1f%% %9.1f%% %9.1f%%\n",
+			bits, nc, unique, recall*100, precision*100, f1*100)
+	}
+
+	// Per-speaker hash table
+	fmt.Printf("\n=== Voice Hashes (%d-bit) ===\n\n", maxBits)
+	for _, name := range speakerNames {
+		hashes := map[string]int{}
+		for _, s := range speakers[name] {
+			nc := maxBits / 4
+			hashes[s.hash[:nc]]++
+		}
+		fmt.Printf("  %-8s", name)
+		for h, c := range hashes {
+			if c > 1 {
+				fmt.Printf(" %s(%d)", h, c)
+			} else {
+				fmt.Printf(" %s", h)
+			}
+		}
+		fmt.Println()
+	}
+}
 
 func printSpeakerAnalysis(samples []sample) {
 	speakers := map[string][]int{}
