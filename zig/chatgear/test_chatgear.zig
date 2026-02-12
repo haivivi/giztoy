@@ -669,6 +669,11 @@ test "spawn: mqtt publish from spawned task reaches broker" {
     const json = g_cap.state_buf[0..g_cap.state_len];
     try std.testing.expect(std.mem.indexOf(u8, json, "\"ready\"") != null);
 
+    // Wait for detached spawn thread to fully return before cleanup.
+    // Without this, the detached thread may still be in mqtt.publish()
+    // touching stack/client memory when it gets reused by the next test.
+    std.Thread.sleep(50 * std.time.ns_per_ms);
+
     device_client.deinit();
     device_sock.close();
     serve_t.join();
@@ -678,11 +683,149 @@ test "spawn: mqtt publish from spawned task reaches broker" {
     broker_mux.deinit();
 }
 
-// NOTE: ClientPort with spawned tasks (startPeriodicReporting) hangs in test
-// due to Channel recv blocking after CPort.init() copy. This is likely a
-// std.Thread.Condition interaction issue on macOS. The CPort works correctly
-// on ESP32 (idf.runtime.Condition). Needs investigation — filed as known issue.
-// The Conn-level and ServerPort tests above verify the full protocol works.
+test "CPort: spawn task reads from uplink_state channel" {
+    // Test if a spawned task can recv from CPort's internal channel.
+    const MockMqtt = struct {
+        pub fn publish(_: *@This(), _: []const u8, _: []const u8) !void {}
+        pub fn subscribe(_: *@This(), _: []const []const u8) !void {}
+    };
+    const MockConn = chatgear.MqttClientConn(MockMqtt);
+    const MockPort = chatgear.ClientPort(MockMqtt, TestRt);
+
+    var mock_mqtt = MockMqtt{};
+    var mock_conn = MockConn.init(&mock_mqtt, .{ .scope = "", .gear_id = "m" });
+    var cp = MockPort.init(&mock_conn, 0);
+
+    var got_it = std.atomic.Value(bool).init(false);
+
+    const SpawnCtx = struct {
+        port: *MockPort,
+        flag: *std.atomic.Value(bool),
+        fn run(ctx_ptr: ?*anyopaque) void {
+            const self: *@This() = @ptrCast(@alignCast(ctx_ptr));
+            if (self.port.uplink_state.recv()) |_| {
+                self.flag.store(true, .release);
+            }
+        }
+    };
+    var ctx = SpawnCtx{ .port = &cp, .flag = &got_it };
+    try TestRt.spawn("cp_recv", SpawnCtx.run, @ptrCast(&ctx), .{});
+
+    std.Thread.sleep(10 * std.time.ns_per_ms);
+
+    // Now push data — spawned task should wake up
+    cp.setState(.recording);
+
+    // Wait for spawned task to recv
+    var elapsed: u32 = 0;
+    while (elapsed < 2000) {
+        if (got_it.load(.acquire)) break;
+        std.Thread.sleep(10 * std.time.ns_per_ms);
+        elapsed += 10;
+    }
+    try std.testing.expect(got_it.load(.acquire));
+
+    cp.close();
+}
+
+test "CPort: spawn task reads channel + publishes directly to mqtt client" {
+    const allocator = std.heap.page_allocator;
+    g_cap = Capture{};
+
+    var broker_mux = try mqtt0.Mux(TestRt).init(allocator);
+    try broker_mux.handleFn("test/device/zig-cp/state", onState);
+    var broker = try Broker.init(allocator, broker_mux.handler(), .{});
+    const srv = try TcpSocket.initServer(0);
+
+    var device_sock = try TcpSocket.connect(srv.port);
+    var device_conn_sock = try TcpSocket.accept(srv.listener);
+    const serve_t = try std.Thread.spawn(.{}, serveOne, .{ &broker, &device_conn_sock });
+
+    var device_mux = try mqtt0.Mux(TestRt).init(allocator);
+    var device_client = try MqttClient.init(&device_sock, &device_mux, .{
+        .client_id = "device-cp",
+        .protocol_version = .v5,
+        .allocator = allocator,
+    });
+
+    std.Thread.sleep(10 * std.time.ns_per_ms);
+
+    var device_conn = Conn.init(&device_client, .{ .scope = "test/", .gear_id = "zig-cp" });
+    var cp = CPort.init(&device_conn, 0);
+
+    // Spawn: recv from channel -> publish DIRECTLY via mqtt client (bypass Conn)
+    var got_it = std.atomic.Value(bool).init(false);
+    const SpawnCtx = struct {
+        port: *CPort,
+        client: *MqttClient,
+        flag: *std.atomic.Value(bool),
+        fn run(ctx_ptr: ?*anyopaque) void {
+            const self: *@This() = @ptrCast(@alignCast(ctx_ptr));
+            if (self.port.uplink_state.recv()) |_| {
+                // Direct publish, bypass Conn.sendState entirely
+                self.client.publish(
+                    "test/device/zig-cp/state",
+                    "{\"v\":1,\"t\":100,\"s\":\"recording\",\"ut\":100}",
+                ) catch {};
+                self.flag.store(true, .release);
+            }
+        }
+    };
+    var ctx = SpawnCtx{ .port = &cp, .client = &device_client, .flag = &got_it };
+    try TestRt.spawn("cp_tx", SpawnCtx.run, @ptrCast(&ctx), .{});
+
+    std.Thread.sleep(10 * std.time.ns_per_ms);
+
+    cp.setState(.recording);
+
+    // Wait for flag (confirms channel recv + publish completed)
+    var elapsed: u32 = 0;
+    while (elapsed < 3000) {
+        if (got_it.load(.acquire)) break;
+        std.Thread.sleep(10 * std.time.ns_per_ms);
+        elapsed += 10;
+    }
+    try std.testing.expect(got_it.load(.acquire));
+
+    // Wait for broker handler
+    try waitFlag(&g_cap.state_received, 2000);
+    const json = g_cap.state_buf[0..g_cap.state_len];
+    try std.testing.expect(std.mem.indexOf(u8, json, "\"recording\"") != null);
+
+    cp.close();
+    std.Thread.sleep(50 * std.time.ns_per_ms);
+    device_client.deinit();
+    device_sock.close();
+    serve_t.join();
+    device_conn_sock.close();
+    posix.close(srv.listener);
+    broker.deinit();
+    broker_mux.deinit();
+}
+
+test "CPort: setState + uplink_state.recv works without mqtt" {
+    // Test CPort's internal channel in isolation — no mqtt, no broker.
+    // This isolates whether CPort.init() struct copy breaks the channel.
+    const MockMqtt = struct {
+        pub fn publish(_: *@This(), _: []const u8, _: []const u8) !void {}
+        pub fn subscribe(_: *@This(), _: []const []const u8) !void {}
+    };
+    const MockConn = chatgear.MqttClientConn(MockMqtt);
+    const MockPort = chatgear.ClientPort(MockMqtt, TestRt);
+
+    var mock_mqtt = MockMqtt{};
+    var mock_conn = MockConn.init(&mock_mqtt, .{ .scope = "test/", .gear_id = "mock" });
+    var cp = MockPort.init(&mock_conn, 0);
+    defer cp.close();
+
+    // setState puts a StateEvent into uplink_state channel
+    cp.setState(.recording);
+
+    // recv on the same thread should return immediately (data already in channel)
+    const val = cp.uplink_state.tryRecv();
+    try std.testing.expect(val != null);
+    try std.testing.expectEqual(chatgear.State.recording, val.?.state);
+}
 
 // ============================================================================
 // Continuous audio streaming test
