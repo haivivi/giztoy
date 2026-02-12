@@ -156,8 +156,9 @@ var volume: i32 = 50;
 /// Epoch offset: epoch_ms - uptime_ms. Set by NTP sync.
 var g_epoch_offset: i64 = 0;
 
-// Global port pointer (set by connectTls/connectTcp, used by button handler)
+// Global pointers (set by connectTls/connectTcp, used by button handler)
 var active_port: ?*TlsPort = null;
+var active_conn: ?*TlsConn = null;
 
 // Audio hardware (initialized in run(), used for tone playback)
 var audio_speaker: ?*hw.SpeakerDriver = null;
@@ -488,8 +489,11 @@ fn connectTls(app_state: *AppState) void {
     };
     port.* = TlsPort.init(conn, g_epoch_offset);
     active_port = port;
+    active_conn = conn;
 
-    initPort(port);
+    // Don't start periodic reporting — manual button test mode
+    // initPort(port);
+    log.info("Manual test mode (no periodic reporting)", .{});
 
     // Init opus codec in main task (256KB stack)
     log.info("Initializing opus codec...", .{});
@@ -908,34 +912,64 @@ fn buildMqttConnect(buf: []u8, client_id: []const u8, username: []const u8, pass
 // Button Handling
 // ============================================================================
 
+var current_state: chatgear.State = .ready;
+
+fn sendState(state: chatgear.State) void {
+    const c = active_conn orelse return;
+    current_state = state;
+    const now = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
+    const evt = chatgear.StateEvent{
+        .version = 1,
+        .time = now,
+        .state = state,
+        .update_at = now,
+    };
+    c.sendState(&evt) catch |err| {
+        log.err("sendState failed: {}", .{err});
+    };
+    log.info("-> STATE: {s}", .{state.toString()});
+}
+
+fn sendStats() void {
+    const c = active_conn orelse return;
+    const now = g_epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
+    const evt = chatgear.StatsEvent{
+        .time = now,
+        .battery = .{ .percentage = 100 },
+        .volume = .{ .percentage = @floatFromInt(volume), .update_at = now },
+        .system_version = .{ .current_version = "zig-e2e-0.1.0" },
+    };
+    c.sendStats(&evt) catch |err| {
+        log.err("sendStats failed: {}", .{err});
+    };
+    log.info("-> STATS sent", .{});
+}
+
 fn handleButton(p: anytype, btn: anytype) void {
+    _ = p;
     switch (btn.id) {
         .vol_up => {
             // do: click = send state event
             if (btn.action == .click) {
-                log.info("[do] send state", .{});
-                p.setState(p.getState()); // re-send current state
+                sendState(current_state);
             }
         },
         .vol_down => {
             // re: click = send stats event
             if (btn.action == .click) {
-                log.info("[re] send stats", .{});
-                p.endBatch(); // triggers full stats send
+                sendStats();
             }
         },
         .set => {
-            // mi: press = start recording + mic capture, release = stop
+            // mi: press = recording + mic on, release = waiting_for_response
             switch (btn.action) {
                 .press => {
-                    log.info("[mi] recording (mic on)", .{});
                     g_recording = true;
-                    p.setState(.recording);
+                    sendState(.recording);
                 },
                 .release => {
-                    log.info("[mi] waiting_for_response ({}ms)", .{btn.duration_ms});
                     g_recording = false;
-                    p.setState(.waiting_for_response);
+                    sendState(.waiting_for_response);
                 },
                 else => {},
             }
@@ -943,27 +977,18 @@ fn handleButton(p: anytype, btn: anytype) void {
         .play => {
             // fa: click = toggle calling/ready
             if (btn.action == .click) {
-                const current = p.getState();
-                if (current == .calling) {
-                    log.info("[fa] exit calling -> ready", .{});
-                    p.setState(.ready);
+                if (current_state == .calling) {
+                    sendState(.ready);
                 } else {
-                    log.info("[fa] enter calling", .{});
-                    p.setState(.calling);
+                    sendState(.calling);
                 }
             }
         },
         .mute => {
-            // so: (reserved)
-            if (btn.action == .click) {
-                log.info("[so] (reserved)", .{});
-            }
+            if (btn.action == .click) log.info("[so] (reserved)", .{});
         },
         .rec => {
-            // la: (reserved)
-            if (btn.action == .click) {
-                log.info("[la] (reserved)", .{});
-            }
+            if (btn.action == .click) log.info("[la] (reserved)", .{});
         },
     }
 }
