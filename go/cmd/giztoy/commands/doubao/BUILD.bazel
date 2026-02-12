@@ -1,0 +1,24 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "doubao",
+    srcs = [
+        "asr.go",
+        "doubao.go",
+        "media.go",
+        "meeting.go",
+        "podcast.go",
+        "realtime.go",
+        "translation.go",
+        "tts.go",
+        "voice.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/cmd/giztoy/commands/doubao",
+    visibility = ["//go/cmd/giztoy:__subpackages__"],
+    deps = [
+        "//go/cmd/giztoy/internal/config",
+        "//go/pkg/cli",
+        "//go/pkg/doubaospeech",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)

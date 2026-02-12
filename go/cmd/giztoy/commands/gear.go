@@ -1,12 +1,9 @@
 package commands
 
 import (
-	gearcmd "github.com/haivivi/giztoy/go/cmd/geartest/commands"
+	"github.com/haivivi/giztoy/go/cmd/giztoy/commands/gear"
 )
 
 func init() {
-	cmd := gearcmd.Command()
-	cmd.Use = "gear"
-	cmd.Short = "Chatgear device simulator"
-	rootCmd.AddCommand(cmd)
+	rootCmd.AddCommand(gear.Cmd)
 }

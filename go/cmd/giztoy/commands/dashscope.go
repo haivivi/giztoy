@@ -1,12 +1,9 @@
 package commands
 
 import (
-	dashscopecmd "github.com/haivivi/giztoy/go/cmd/dashscope/commands"
+	"github.com/haivivi/giztoy/go/cmd/giztoy/commands/dashscope"
 )
 
 func init() {
-	cmd := dashscopecmd.Command()
-	cmd.Use = "dashscope"
-	cmd.Short = "DashScope API (omni multimodal chat)"
-	rootCmd.AddCommand(cmd)
+	rootCmd.AddCommand(dashscope.Cmd)
 }
