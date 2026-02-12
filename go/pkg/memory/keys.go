@@ -2,7 +2,6 @@ package memory
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/haivivi/giztoy/go/pkg/kv"
@@ -35,8 +34,11 @@ func memPrefix(mid string) kv.Key {
 
 // convMsgKey builds the KV key for a conversation message.
 // Format: "mem" + {mid} + "conv" + {convID} + "msg" + {ts_ns}
+//
+// The timestamp is zero-padded to 20 digits so that lexicographic KV ordering
+// matches numeric ordering. (Without padding, "10000" sorts before "9000".)
 func convMsgKey(mid, convID string, ts int64) kv.Key {
-	return kv.Key{"mem", mid, "conv", convID, "msg", strconv.FormatInt(ts, 10)}
+	return kv.Key{"mem", mid, "conv", convID, "msg", fmt.Sprintf("%020d", ts)}
 }
 
 // convMsgPrefix returns the prefix for listing all messages in a conversation.

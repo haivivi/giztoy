@@ -49,6 +49,7 @@ package memory
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 )
 
@@ -235,8 +236,24 @@ type RelationInput struct {
 // Time helpers
 // ---------------------------------------------------------------------------
 
-// nowNano returns the current time as Unix nanoseconds.
+// lastNano tracks the most recently returned timestamp to ensure monotonicity.
+// If the wall clock hasn't advanced since the last call, the counter increments
+// by 1 nanosecond. This prevents segment ID / KV key collisions when many
+// segments are stored in rapid succession.
+var lastNano atomic.Int64
+
+// nowNano returns a monotonically increasing Unix nanosecond timestamp.
 // Extracted as a variable to allow test injection.
 var nowNano = func() int64 {
-	return time.Now().UnixNano()
+	now := time.Now().UnixNano()
+	for {
+		old := lastNano.Load()
+		next := now
+		if next <= old {
+			next = old + 1
+		}
+		if lastNano.CompareAndSwap(old, next) {
+			return next
+		}
+	}
 }
