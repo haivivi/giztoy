@@ -37,7 +37,7 @@ const MqttRt = hw.MqttRt;
 const FullRt = hw.FullRt;
 const Socket = Board.socket;
 const Crypto = hw.crypto;
-const TlsClient = tls.Client(Socket, Crypto);
+const TlsClient = tls.Client(Socket, Crypto, MqttRt);
 const TcpMqttClient = mqtt0.Client(Socket, MqttRt);
 const TlsMqttClient = mqtt0.Client(TlsClient, MqttRt);
 const TcpConn = chatgear.MqttClientConn(TcpMqttClient);
@@ -442,10 +442,13 @@ fn connectTls(app_state: *AppState) void {
         log.err("alloc client: {}", .{err});
         return;
     };
+    // Use gear_id as client_id — same as Go chatgear.DialMQTT
+    // Go format: "chatgear-{gearID}-{rand}" but we use just gear_id for now
     client.* = TlsMqttClient.init(tls_c, mux, .{
         .client_id = config.gear_id,
         .username = config.mqtt.username,
         .password = config.mqtt.password,
+        .keep_alive = 30,
         .allocator = alloc,
     }) catch |err| {
         log.err("MQTT connect failed: {}", .{err});
@@ -469,7 +472,7 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("MQTT subscribed to downlink topics", .{});
 
-    // Send initial state=ready immediately (before port tasks start)
+    // Send initial state=ready
     const init_state = chatgear.StateEvent{
         .version = 1,
         .time = @as(i64, @intCast(Board.time.getTimeMs())),
@@ -491,7 +494,7 @@ fn connectTls(app_state: *AppState) void {
 
     initPort(port);
 
-    // Init opus codec in main task (256KB stack) then pass to audio tasks
+    // Init opus codec in main task (256KB stack)
     log.info("Initializing opus codec...", .{});
     const opus_alloc = idf.heap.psram;
     const enc = opus_alloc.create(opus.Encoder) catch |err| {
@@ -517,7 +520,10 @@ fn connectTls(app_state: *AppState) void {
     };
     log.info("Opus decoder ready", .{});
 
-    startAudioPipeline(port, enc, dec);
+    // Skip audio pipeline for stability test
+    // startAudioPipeline(port, enc, dec);
+    enc.deinit(idf.heap.psram);
+    dec.deinit(idf.heap.psram);
     app_state.* = .running;
 
     // MQTT readLoop in background
