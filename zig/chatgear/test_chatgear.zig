@@ -361,3 +361,227 @@ test "stamped audio frame roundtrips" {
     try std.testing.expectEqual(timestamp, unstamped.timestamp_ms);
     try std.testing.expect(std.mem.eql(u8, unstamped.frame, &fake_opus));
 }
+
+// ============================================================================
+// Full loopback: Client Conn -> Broker -> ServerPort
+// ============================================================================
+
+// Server port handler context: wraps a ServerPort pointer for use as a
+// broker mux handler fn (which only gets clientID + Message).
+var g_server_port: ?*chatgear.ServerPort(Broker, TestRt) = null;
+
+fn serverOnState(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
+    if (g_server_port) |sp| sp.handleStatePayload(msg.payload);
+}
+
+fn serverOnStats(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
+    if (g_server_port) |sp| sp.handleStatsPayload(msg.payload);
+}
+
+fn serverOnAudio(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
+    if (g_server_port) |sp| sp.handleAudioPayload(msg.payload);
+}
+
+const ServerConn = chatgear.MqttServerConn(Broker);
+const SPort = chatgear.ServerPort(Broker, TestRt);
+
+test "loopback: client sendState -> ServerPort.poll() receives state" {
+    const allocator = std.heap.page_allocator;
+
+    // Broker with server port handlers
+    var broker_mux = try mqtt0.Mux(TestRt).init(allocator);
+    try broker_mux.handleFn("test/device/zig-001/state", serverOnState);
+    try broker_mux.handleFn("test/device/zig-001/stats", serverOnStats);
+    try broker_mux.handleFn("test/device/zig-001/input_audio_stream", serverOnAudio);
+    var broker = try Broker.init(allocator, broker_mux.handler(), .{});
+    const srv = try TcpSocket.initServer(0);
+
+    // Server conn + port
+    var server_conn = ServerConn.init(&broker, .{ .scope = "test/", .gear_id = "zig-001" });
+    var server_port = SPort.init(&server_conn);
+    g_server_port = &server_port;
+
+    // Device client connects
+    var device_sock = try TcpSocket.connect(srv.port);
+    var device_conn_sock = try TcpSocket.accept(srv.listener);
+    const serve_t = try std.Thread.spawn(.{}, serveOne, .{ &broker, &device_conn_sock });
+
+    var device_mux = try mqtt0.Mux(TestRt).init(allocator);
+    var device_client = try MqttClient.init(&device_sock, &device_mux, .{
+        .client_id = "device-loop-1",
+        .protocol_version = .v5,
+        .allocator = allocator,
+    });
+
+    std.Thread.sleep(10 * std.time.ns_per_ms);
+
+    // Client sends state
+    var conn = Conn.init(&device_client, .{ .scope = "test/", .gear_id = "zig-001" });
+    const now: i64 = @intCast(std.time.milliTimestamp());
+    var evt = chatgear.StateEvent{ .version = 1, .time = now, .state = .recording, .update_at = now };
+    try conn.sendState(&evt);
+
+    // ServerPort should receive it via poll()
+    std.Thread.sleep(50 * std.time.ns_per_ms);
+    const data = server_port.poll();
+    try std.testing.expect(data != null);
+    try std.testing.expectEqual(chatgear.UplinkTag.state, std.meta.activeTag(data.?));
+    try std.testing.expectEqual(chatgear.State.recording, data.?.state.state);
+
+    // Verify cached state
+    const cached = server_port.getState();
+    try std.testing.expect(cached != null);
+    try std.testing.expectEqual(chatgear.State.recording, cached.?.state);
+
+    // Cleanup
+    g_server_port = null;
+    server_port.close();
+    device_client.deinit();
+    device_sock.close();
+    serve_t.join();
+    device_conn_sock.close();
+    posix.close(srv.listener);
+    broker.deinit();
+    broker_mux.deinit();
+}
+
+test "loopback: client sendStats -> ServerPort.poll() receives stats" {
+    const allocator = std.heap.page_allocator;
+
+    var broker_mux = try mqtt0.Mux(TestRt).init(allocator);
+    try broker_mux.handleFn("test/device/zig-002/state", serverOnState);
+    try broker_mux.handleFn("test/device/zig-002/stats", serverOnStats);
+    try broker_mux.handleFn("test/device/zig-002/input_audio_stream", serverOnAudio);
+    var broker = try Broker.init(allocator, broker_mux.handler(), .{});
+    const srv = try TcpSocket.initServer(0);
+
+    var server_conn = ServerConn.init(&broker, .{ .scope = "test/", .gear_id = "zig-002" });
+    var server_port = SPort.init(&server_conn);
+    g_server_port = &server_port;
+
+    var device_sock = try TcpSocket.connect(srv.port);
+    var device_conn_sock = try TcpSocket.accept(srv.listener);
+    const serve_t = try std.Thread.spawn(.{}, serveOne, .{ &broker, &device_conn_sock });
+
+    var device_mux = try mqtt0.Mux(TestRt).init(allocator);
+    var device_client = try MqttClient.init(&device_sock, &device_mux, .{
+        .client_id = "device-loop-2",
+        .protocol_version = .v5,
+        .allocator = allocator,
+    });
+
+    std.Thread.sleep(10 * std.time.ns_per_ms);
+
+    var client_conn = Conn.init(&device_client, .{ .scope = "test/", .gear_id = "zig-002" });
+    const now: i64 = @intCast(std.time.milliTimestamp());
+    var stats_evt = chatgear.StatsEvent{ .time = now, .volume = .{ .percentage = 88, .update_at = now } };
+    try client_conn.sendStats(&stats_evt);
+
+    std.Thread.sleep(50 * std.time.ns_per_ms);
+    const data = server_port.poll();
+    try std.testing.expect(data != null);
+    try std.testing.expectEqual(chatgear.UplinkTag.stats, std.meta.activeTag(data.?));
+    try std.testing.expect(data.?.stats.volume != null);
+    try std.testing.expectEqual(@as(f32, 88), data.?.stats.volume.?.percentage);
+
+    // Verify cached stats
+    const cached = server_port.getStats();
+    try std.testing.expect(cached != null);
+    try std.testing.expect(cached.?.volume != null);
+
+    g_server_port = null;
+    server_port.close();
+    device_client.deinit();
+    device_sock.close();
+    serve_t.join();
+    device_conn_sock.close();
+    posix.close(srv.listener);
+    broker.deinit();
+    broker_mux.deinit();
+}
+
+test "loopback: client sendOpusFrame -> ServerPort.poll() receives audio" {
+    const allocator = std.heap.page_allocator;
+
+    var broker_mux = try mqtt0.Mux(TestRt).init(allocator);
+    try broker_mux.handleFn("test/device/zig-003/state", serverOnState);
+    try broker_mux.handleFn("test/device/zig-003/stats", serverOnStats);
+    try broker_mux.handleFn("test/device/zig-003/input_audio_stream", serverOnAudio);
+    var broker = try Broker.init(allocator, broker_mux.handler(), .{});
+    const srv = try TcpSocket.initServer(0);
+
+    var server_conn = ServerConn.init(&broker, .{ .scope = "test/", .gear_id = "zig-003" });
+    var server_port = SPort.init(&server_conn);
+    g_server_port = &server_port;
+
+    var device_sock = try TcpSocket.connect(srv.port);
+    var device_conn_sock = try TcpSocket.accept(srv.listener);
+    const serve_t = try std.Thread.spawn(.{}, serveOne, .{ &broker, &device_conn_sock });
+
+    var device_mux = try mqtt0.Mux(TestRt).init(allocator);
+    var device_client = try MqttClient.init(&device_sock, &device_mux, .{
+        .client_id = "device-loop-3",
+        .protocol_version = .v5,
+        .allocator = allocator,
+    });
+
+    std.Thread.sleep(10 * std.time.ns_per_ms);
+
+    var client_conn = Conn.init(&device_client, .{ .scope = "test/", .gear_id = "zig-003" });
+    const timestamp: i64 = 1706745600000;
+    const fake_opus = [_]u8{ 0x48, 0x61, 0x69 };
+    try client_conn.sendOpusFrame(timestamp, &fake_opus);
+
+    std.Thread.sleep(50 * std.time.ns_per_ms);
+    const data = server_port.poll();
+    try std.testing.expect(data != null);
+    try std.testing.expectEqual(chatgear.UplinkTag.audio, std.meta.activeTag(data.?));
+    try std.testing.expectEqual(timestamp, data.?.audio.timestamp_ms);
+
+    g_server_port = null;
+    server_port.close();
+    device_client.deinit();
+    device_sock.close();
+    serve_t.join();
+    device_conn_sock.close();
+    posix.close(srv.listener);
+    broker.deinit();
+    broker_mux.deinit();
+}
+
+test "loopback: ServerConn.issueCommand encodes correctly" {
+    // Test that server conn encodes command JSON that the client can parse.
+    // This is a wire-level roundtrip: encodeCommandEvent -> parseCommandEvent.
+    const allocator = std.heap.page_allocator;
+
+    var broker_mux = try mqtt0.Mux(TestRt).init(allocator);
+    var broker = try Broker.init(allocator, broker_mux.handler(), .{});
+
+    var server_conn = ServerConn.init(&broker, .{ .scope = "test/", .gear_id = "zig-004" });
+
+    // Encode a command
+    const now: i64 = @intCast(std.time.milliTimestamp());
+    var cmd_evt = chatgear.CommandEvent{
+        .cmd_type = .set_volume,
+        .time = now,
+        .payload = .{ .set_volume = 42 },
+        .issue_at = now,
+    };
+    var buf: [chatgear.COMMAND_EVENT_JSON_SIZE]u8 = undefined;
+    const written = try chatgear.encodeCommandEvent(&cmd_evt, &buf);
+    const json = buf[0..written];
+
+    // Parse it back (as the device client would)
+    var parsed: chatgear.CommandEvent = undefined;
+    try chatgear.parseCommandEvent(json, &parsed);
+
+    try std.testing.expectEqual(chatgear.CommandType.set_volume, parsed.cmd_type);
+    try std.testing.expectEqual(@as(i32, 42), parsed.payload.set_volume);
+
+    // Also verify the conn can publish without error
+    try server_conn.issueCommand(&cmd_evt);
+
+    _ = &server_conn;
+    broker.deinit();
+    broker_mux.deinit();
+}

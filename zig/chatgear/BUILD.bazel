@@ -13,24 +13,24 @@ zig_package(
     name = "chatgear",
     deps = [
         "@embed_zig//lib/trait",
-        "@embed_zig//lib/pkg/channel",
-        "@embed_zig//lib/pkg/cancellation",
+        "@embed_zig//lib/pkg/async/channel",
+        "@embed_zig//lib/pkg/async/cancellation",
     ],
     # port.zig imports channel/cancellation/trait, which need runtime for tests.
     # Types/wire/conn tests work without runtime deps.
     test = False,
 )
 
-# Integration test: mqtt0.Broker + chatgear ClientPort loopback
+# Integration test: mqtt0.Broker + chatgear loopback (client + server)
 zig_test(
     name = "chatgear_test",
     main = "test_chatgear.zig",
     srcs = glob(["src/**/*.zig"]) + ["test_chatgear.zig"],
     deps = [
         ":chatgear",
-        "@embed_zig//lib/pkg/mqtt0",
+        "@embed_zig//lib/pkg/net/mqtt0",
         "@embed_zig//lib/trait",
-        "@embed_zig//lib/pkg/channel",
-        "@embed_zig//lib/pkg/cancellation",
+        "@embed_zig//lib/pkg/async/channel",
+        "@embed_zig//lib/pkg/async/cancellation",
     ],
 )

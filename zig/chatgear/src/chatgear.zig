@@ -1,14 +1,16 @@
-//! Chatgear Protocol Client Library
+//! Chatgear Protocol Library
 //!
-//! Implements the client-side of the chatgear device-server communication
-//! protocol. Based on go/pkg/chatgear.
+//! Implements both client and server sides of the chatgear device-server
+//! communication protocol. Based on go/pkg/chatgear.
 //!
 //! ## Architecture
 //!
 //! - **types**: Protocol types (State, Command, Stats, StampedFrame)
 //! - **wire**: Binary frame encoding + JSON event encoding/decoding
-//! - **conn**: MQTT connection layer (generic over MqttClient)
+//! - **conn**: Client MQTT connection layer (generic over MqttClient)
 //! - **port**: ClientPort with Go-style async (Channel + Spawner)
+//! - **server_conn**: Server MQTT connection layer (uses broker.publish)
+//! - **server_port**: ServerPort with poll(), issueCommand(), state/stats caching
 //!
 //! ## Usage
 //!
@@ -52,6 +54,8 @@ pub const types = @import("types.zig");
 pub const wire = @import("wire.zig");
 pub const conn = @import("conn.zig");
 pub const port = @import("port.zig");
+pub const server_conn = @import("server_conn.zig");
+pub const server_port = @import("server_port.zig");
 
 // Main types
 pub const State = types.State;
@@ -87,28 +91,41 @@ pub const stampedSize = wire.stampedSize;
 pub const encodeStateEvent = wire.encodeStateEvent;
 pub const encodeStatsEvent = wire.encodeStatsEvent;
 pub const parseCommandEvent = wire.parseCommandEvent;
+pub const encodeCommandEvent = wire.encodeCommandEvent;
+pub const parseStateEvent = wire.parseStateEvent;
+pub const parseStatsEvent = wire.parseStatsEvent;
 
 pub const VERSION = wire.VERSION;
 pub const HEADER_SIZE = wire.HEADER_SIZE;
 pub const MAX_OPUS_FRAME_SIZE = wire.MAX_OPUS_FRAME_SIZE;
 pub const STATE_EVENT_JSON_SIZE = wire.STATE_EVENT_JSON_SIZE;
 pub const STATS_EVENT_JSON_SIZE = wire.STATS_EVENT_JSON_SIZE;
+pub const COMMAND_EVENT_JSON_SIZE = wire.COMMAND_EVENT_JSON_SIZE;
 pub const WireError = wire.WireError;
 
-// Connection
+// Client Connection
 pub const Config = conn.Config;
 pub const MqttClientConn = conn.MqttClientConn;
 pub const TopicBuilder = conn.TopicBuilder;
 
-// Port
+// Client Port
 pub const ClientPort = port.ClientPort;
 pub const STATE_INTERVAL_MS = port.STATE_INTERVAL_MS;
 pub const STATS_BASE_INTERVAL_MS = port.STATS_BASE_INTERVAL_MS;
+
+// Server Connection
+pub const MqttServerConn = server_conn.MqttServerConn;
+
+// Server Port
+pub const ServerPort = server_port.ServerPort;
+pub const UplinkData = server_port.UplinkData;
+pub const UplinkTag = server_port.UplinkTag;
 
 // Run all tests
 test {
     _ = types;
     _ = wire;
     _ = conn;
-    // port tests require runtime (Channel, Spawner) — tested via zig_test with deps
+    _ = server_conn;
+    // port + server_port require runtime (Channel, Spawner) — tested via zig_test with deps
 }
