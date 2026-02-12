@@ -72,7 +72,7 @@ func (mc *mockCompressor) CompressMessages(_ context.Context, msgs []Message) (*
 		Segments: []SegmentInput{{
 			Summary:  summary,
 			Keywords: []string{"test"},
-			Labels:   []string{"person/test"},
+			Labels:   []string{"person:test"},
 		}},
 		Summary: "compressed: " + summary,
 	}, nil
@@ -81,31 +81,37 @@ func (mc *mockCompressor) CompressMessages(_ context.Context, msgs []Message) (*
 func (mc *mockCompressor) ExtractEntities(_ context.Context, _ []Message) (*EntityUpdate, error) {
 	return &EntityUpdate{
 		Entities: []EntityInput{{
-			Label: "person/test",
+			Label: "person:test",
 			Attrs: map[string]any{"compressed": true},
 		}},
 	}, nil
 }
 
+// testSep is the KV separator used in tests. ASCII Unit Separator (0x1F)
+// allows natural colon-namespaced labels like "person:小明".
+const testSep byte = 0x1F
+
 // newTestHost creates a Host with all components for testing.
+// Uses null byte separator so labels can contain ':'.
 func newTestHost(t *testing.T) *Host {
 	t.Helper()
-	store := kv.NewMemory(nil)
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
 	emb := newMockEmbedder()
 	vec := vecstore.NewMemory()
 
 	return NewHost(HostConfig{
-		Store:    store,
-		Vec:      vec,
-		Embedder: emb,
+		Store:     store,
+		Vec:       vec,
+		Embedder:  emb,
+		Separator: testSep,
 	})
 }
 
 // newTestHostNoVec creates a Host without vector search.
 func newTestHostNoVec(t *testing.T) *Host {
 	t.Helper()
-	store := kv.NewMemory(nil)
-	return NewHost(HostConfig{Store: store})
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+	return NewHost(HostConfig{Store: store, Separator: testSep})
 }
 
 // ---------------------------------------------------------------------------
@@ -153,7 +159,7 @@ func TestConversationAppendAndRecent(t *testing.T) {
 	m := h.Open("test")
 	ctx := context.Background()
 
-	conv := m.OpenConversation("device-001", []string{"person/alice"})
+	conv := m.OpenConversation("device-001", []string{"person:alice"})
 	if conv.ID() != "device-001" {
 		t.Fatalf("ID() = %q, want %q", conv.ID(), "device-001")
 	}
@@ -473,14 +479,14 @@ func TestMemoryGraph(t *testing.T) {
 
 	// Create entities.
 	if err := g.SetEntity(ctx, graph.Entity{
-		Label: "person/xiaoming",
+		Label: "person:xiaoming",
 		Attrs: map[string]any{"age": float64(8), "likes": "dinosaurs"},
 	}); err != nil {
 		t.Fatalf("SetEntity: %v", err)
 	}
 
 	if err := g.SetEntity(ctx, graph.Entity{
-		Label: "person/xiaohong",
+		Label: "person:xiaohong",
 		Attrs: map[string]any{"age": float64(6)},
 	}); err != nil {
 		t.Fatalf("SetEntity: %v", err)
@@ -488,18 +494,18 @@ func TestMemoryGraph(t *testing.T) {
 
 	// Add relation.
 	if err := g.AddRelation(ctx, graph.Relation{
-		From: "person/xiaoming", To: "person/xiaohong", RelType: "sibling",
+		From: "person:xiaoming", To: "person:xiaohong", RelType: "sibling",
 	}); err != nil {
 		t.Fatalf("AddRelation: %v", err)
 	}
 
 	// Verify graph traversal.
-	neighbors, err := g.Neighbors(ctx, "person/xiaoming")
+	neighbors, err := g.Neighbors(ctx, "person:xiaoming")
 	if err != nil {
 		t.Fatalf("Neighbors: %v", err)
 	}
-	if len(neighbors) != 1 || neighbors[0] != "person/xiaohong" {
-		t.Fatalf("Neighbors = %v, want [person/xiaohong]", neighbors)
+	if len(neighbors) != 1 || neighbors[0] != "person:xiaohong" {
+		t.Fatalf("Neighbors = %v, want [person:xiaohong]", neighbors)
 	}
 }
 
@@ -516,27 +522,27 @@ func TestMemoryStoreAndRecall(t *testing.T) {
 	// Set up graph.
 	g := m.Graph()
 	if err := g.SetEntity(ctx, graph.Entity{
-		Label: "person/xiaoming",
+		Label: "person:xiaoming",
 		Attrs: map[string]any{"age": float64(8)},
 	}); err != nil {
 		t.Fatalf("SetEntity: %v", err)
 	}
 	if err := g.SetEntity(ctx, graph.Entity{
-		Label: "topic/dinosaurs",
+		Label: "topic:dinosaurs",
 	}); err != nil {
 		t.Fatalf("SetEntity: %v", err)
 	}
 	if err := g.AddRelation(ctx, graph.Relation{
-		From: "person/xiaoming", To: "topic/dinosaurs", RelType: "likes",
+		From: "person:xiaoming", To: "topic:dinosaurs", RelType: "likes",
 	}); err != nil {
 		t.Fatalf("AddRelation: %v", err)
 	}
 
 	// Store segments.
 	segments := []SegmentInput{
-		{Summary: "和小明聊了恐龙", Keywords: []string{"dinosaurs"}, Labels: []string{"person/xiaoming", "topic/dinosaurs"}},
-		{Summary: "学到了太空知识", Keywords: []string{"space"}, Labels: []string{"self", "topic/space"}},
-		{Summary: "一起做了饭", Keywords: []string{"cooking"}, Labels: []string{"person/xiaoming"}},
+		{Summary: "和小明聊了恐龙", Keywords: []string{"dinosaurs"}, Labels: []string{"person:xiaoming", "topic:dinosaurs"}},
+		{Summary: "学到了太空知识", Keywords: []string{"space"}, Labels: []string{"self", "topic:space"}},
+		{Summary: "一起做了饭", Keywords: []string{"cooking"}, Labels: []string{"person:xiaoming"}},
 	}
 	for _, seg := range segments {
 		if err := m.StoreSegment(ctx, seg); err != nil {
@@ -544,9 +550,9 @@ func TestMemoryStoreAndRecall(t *testing.T) {
 		}
 	}
 
-	// Recall with label expansion from person/xiaoming.
+	// Recall with label expansion from person:xiaoming.
 	result, err := m.Recall(ctx, RecallQuery{
-		Labels: []string{"person/xiaoming"},
+		Labels: []string{"person:xiaoming"},
 		Text:   "dinosaurs",
 		Limit:  10,
 	})
@@ -564,19 +570,19 @@ func TestMemoryStoreAndRecall(t *testing.T) {
 		t.Errorf("top segment = %q, want %q", top.Summary, "和小明聊了恐龙")
 	}
 
-	// Entities should include person/xiaoming and topic/dinosaurs.
+	// Entities should include person:xiaoming and topic:dinosaurs.
 	if len(result.Entities) == 0 {
 		t.Fatal("expected entities in recall result")
 	}
 
 	foundXiaoming := false
 	for _, e := range result.Entities {
-		if e.Label == "person/xiaoming" {
+		if e.Label == "person:xiaoming" {
 			foundXiaoming = true
 		}
 	}
 	if !foundXiaoming {
-		t.Error("expected person/xiaoming in recall entities")
+		t.Error("expected person:xiaoming in recall entities")
 	}
 }
 
@@ -657,7 +663,7 @@ func TestMemoryCompress(t *testing.T) {
 	m := h.Open("test")
 	ctx := context.Background()
 
-	conv := m.OpenConversation("s1", []string{"person/test"})
+	conv := m.OpenConversation("s1", []string{"person:test"})
 
 	// Add messages.
 	if err := conv.Append(ctx, Message{Role: RoleUser, Content: "hello", Timestamp: 1000}); err != nil {
@@ -692,7 +698,7 @@ func TestMemoryCompress(t *testing.T) {
 	}
 
 	// The entity should have been created.
-	ent, err := m.Graph().GetEntity(ctx, "person/test")
+	ent, err := m.Graph().GetEntity(ctx, "person:test")
 	if err != nil {
 		t.Fatalf("GetEntity: %v", err)
 	}
@@ -741,7 +747,7 @@ func TestApplyEntityUpdate(t *testing.T) {
 
 	// Create an existing entity.
 	if err := g.SetEntity(ctx, graph.Entity{
-		Label: "person/alice",
+		Label: "person:alice",
 		Attrs: map[string]any{"age": float64(25)},
 	}); err != nil {
 		t.Fatalf("SetEntity: %v", err)
@@ -750,11 +756,11 @@ func TestApplyEntityUpdate(t *testing.T) {
 	// Apply update: merge into existing + create new entity + add relation.
 	update := &EntityUpdate{
 		Entities: []EntityInput{
-			{Label: "person/alice", Attrs: map[string]any{"mood": "happy"}},
-			{Label: "person/bob", Attrs: map[string]any{"age": float64(30)}},
+			{Label: "person:alice", Attrs: map[string]any{"mood": "happy"}},
+			{Label: "person:bob", Attrs: map[string]any{"age": float64(30)}},
 		},
 		Relations: []RelationInput{
-			{From: "person/alice", To: "person/bob", RelType: "knows"},
+			{From: "person:alice", To: "person:bob", RelType: "knows"},
 		},
 	}
 
@@ -763,7 +769,7 @@ func TestApplyEntityUpdate(t *testing.T) {
 	}
 
 	// Alice should have merged attrs.
-	alice, err := g.GetEntity(ctx, "person/alice")
+	alice, err := g.GetEntity(ctx, "person:alice")
 	if err != nil {
 		t.Fatalf("GetEntity alice: %v", err)
 	}
@@ -775,7 +781,7 @@ func TestApplyEntityUpdate(t *testing.T) {
 	}
 
 	// Bob should exist.
-	bob, err := g.GetEntity(ctx, "person/bob")
+	bob, err := g.GetEntity(ctx, "person:bob")
 	if err != nil {
 		t.Fatalf("GetEntity bob: %v", err)
 	}
@@ -784,12 +790,12 @@ func TestApplyEntityUpdate(t *testing.T) {
 	}
 
 	// Relation should exist.
-	neighbors, err := g.Neighbors(ctx, "person/alice")
+	neighbors, err := g.Neighbors(ctx, "person:alice")
 	if err != nil {
 		t.Fatalf("Neighbors: %v", err)
 	}
-	if len(neighbors) != 1 || neighbors[0] != "person/bob" {
-		t.Errorf("Neighbors = %v, want [person/bob]", neighbors)
+	if len(neighbors) != 1 || neighbors[0] != "person:bob" {
+		t.Errorf("Neighbors = %v, want [person:bob]", neighbors)
 	}
 }
 

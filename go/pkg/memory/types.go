@@ -25,19 +25,26 @@
 //	memory → recall → kv, embed, graph, vecstore
 //
 // memory does not depend on genx or voiceprint. It consumes voice labels
-// as plain strings (e.g., "voice/A3F8") through the graph.
+// as plain strings (e.g., "voice:A3F8") through the graph.
 //
-// # Label Convention
+// # Separator and Labels
 //
-// Entity labels and segment labels are used as KV key segments. The KV
-// store encodes keys by joining segments with ':' (the default separator).
-// Therefore, labels must NOT contain ':'. Use '/' as the namespace
-// delimiter instead:
+// Entity labels and segment labels are used as KV key segments. Labels
+// must NOT contain the KV separator character. The default separator is
+// ':' (kv.DefaultSeparator), which conflicts with natural labels like
+// "person:小明".
 //
-//	"person/xiaoming"   (not "person:xiaoming")
-//	"topic/dinosaurs"   (not "topic:dinosaurs")
-//	"voice/A3F8"        (not "voice:A3F8")
-//	"self"              (no namespace is fine)
+// To use colon-namespaced labels, configure [HostConfig.Separator] to a
+// non-printable byte such as 0x1F (ASCII Unit Separator) and create the
+// KV store with the same separator:
+//
+//	store := kv.NewBadger(dir, &kv.Options{Separator: 0x1F})
+//	host := memory.NewHost(memory.HostConfig{
+//	    Store:     store,
+//	    Separator: 0x1F,
+//	})
+//
+// Then labels like "person:小明", "voice:A3F8" work naturally.
 package memory
 
 import (

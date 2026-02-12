@@ -12,7 +12,8 @@ import (
 // HostConfig configures a [Host].
 type HostConfig struct {
 	// Store is the shared KV store. Required.
-	// Each persona's data is isolated under "mem:{id}:..." prefixes.
+	// The store must be created with the same Separator as configured here.
+	// Each persona's data is isolated under "mem{sep}{id}{sep}..." prefixes.
 	Store kv.Store
 
 	// Vec is the shared vector index. Optional.
@@ -22,6 +23,15 @@ type HostConfig struct {
 	// Embedder converts text to vectors. Optional.
 	// If nil, semantic vector search is disabled.
 	Embedder embed.Embedder
+
+	// Separator is the KV key separator byte. It must match the Store's
+	// configured separator. Labels (entity labels, segment labels) must not
+	// contain this character.
+	//
+	// Zero means [kv.DefaultSeparator] (':'), which forbids ':' in labels.
+	// For natural labels like "person:小明", use a non-printable separator
+	// (e.g., '\x00') and create the KV store with the same separator.
+	Separator byte
 }
 
 // Host is the process-level entry point for the memory system.
@@ -64,10 +74,11 @@ func (h *Host) Open(id string) *Memory {
 	}
 
 	idx := recall.NewIndex(recall.IndexConfig{
-		Store:    h.cfg.Store,
-		Embedder: h.cfg.Embedder,
-		Vec:      h.cfg.Vec,
-		Prefix:   memPrefix(id),
+		Store:     h.cfg.Store,
+		Embedder:  h.cfg.Embedder,
+		Vec:       h.cfg.Vec,
+		Prefix:    memPrefix(id),
+		Separator: h.cfg.Separator,
 	})
 
 	m := newMemory(id, h.cfg.Store, idx)
