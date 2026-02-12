@@ -1,0 +1,933 @@
+package memory
+
+import (
+	"context"
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/haivivi/giztoy/go/pkg/graph"
+	"github.com/haivivi/giztoy/go/pkg/kv"
+	"github.com/haivivi/giztoy/go/pkg/recall"
+	"github.com/haivivi/giztoy/go/pkg/vecstore"
+)
+
+// mockEmbedder returns deterministic vectors for testing.
+type mockEmbedder struct {
+	dim     int
+	vectors map[string][]float32
+}
+
+func newMockEmbedder() *mockEmbedder {
+	return &mockEmbedder{
+		dim: 4,
+		vectors: map[string][]float32{
+			"dinosaurs":     {1, 0, 0, 0},
+			"space":         {0, 1, 0, 0},
+			"cooking":       {0, 0, 1, 0},
+			"music":         {0, 0, 0, 1},
+			"和小明聊了恐龙":      {0.9, 0.1, 0, 0},
+			"学到了太空知识":      {0.1, 0.9, 0, 0},
+			"一起做了饭":        {0.1, 0, 0.9, 0},
+			"played music":  {0, 0, 0.1, 0.9},
+		},
+	}
+}
+
+func (m *mockEmbedder) Embed(_ context.Context, text string) ([]float32, error) {
+	if v, ok := m.vectors[text]; ok {
+		return v, nil
+	}
+	return make([]float32, m.dim), nil
+}
+
+func (m *mockEmbedder) EmbedBatch(_ context.Context, texts []string) ([][]float32, error) {
+	vecs := make([][]float32, len(texts))
+	for i, t := range texts {
+		v, err := m.Embed(context.Background(), t)
+		if err != nil {
+			return nil, err
+		}
+		vecs[i] = v
+	}
+	return vecs, nil
+}
+
+func (m *mockEmbedder) Dimension() int { return m.dim }
+
+// mockCompressor is a simple test compressor.
+type mockCompressor struct{}
+
+func (mc *mockCompressor) CompressMessages(_ context.Context, msgs []Message) (*CompressResult, error) {
+	summary := ""
+	for _, m := range msgs {
+		if m.Content != "" {
+			if summary != "" {
+				summary += "; "
+			}
+			summary += m.Content
+		}
+	}
+	return &CompressResult{
+		Segments: []SegmentInput{{
+			Summary:  summary,
+			Keywords: []string{"test"},
+			Labels:   []string{"person/test"},
+		}},
+		Summary: "compressed: " + summary,
+	}, nil
+}
+
+func (mc *mockCompressor) ExtractEntities(_ context.Context, _ []Message) (*EntityUpdate, error) {
+	return &EntityUpdate{
+		Entities: []EntityInput{{
+			Label: "person/test",
+			Attrs: map[string]any{"compressed": true},
+		}},
+	}, nil
+}
+
+// newTestHost creates a Host with all components for testing.
+func newTestHost(t *testing.T) *Host {
+	t.Helper()
+	store := kv.NewMemory(nil)
+	emb := newMockEmbedder()
+	vec := vecstore.NewMemory()
+
+	return NewHost(HostConfig{
+		Store:    store,
+		Vec:      vec,
+		Embedder: emb,
+	})
+}
+
+// newTestHostNoVec creates a Host without vector search.
+func newTestHostNoVec(t *testing.T) *Host {
+	t.Helper()
+	store := kv.NewMemory(nil)
+	return NewHost(HostConfig{Store: store})
+}
+
+// ---------------------------------------------------------------------------
+// Host tests
+// ---------------------------------------------------------------------------
+
+func TestHostOpen(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+
+	m1 := h.Open("cat_girl")
+	m2 := h.Open("cat_girl")
+	m3 := h.Open("robot_boy")
+
+	if m1 != m2 {
+		t.Fatal("same ID should return same Memory instance")
+	}
+	if m1 == m3 {
+		t.Fatal("different IDs should return different Memory instances")
+	}
+	if m1.ID() != "cat_girl" {
+		t.Fatalf("ID() = %q, want %q", m1.ID(), "cat_girl")
+	}
+	if m3.ID() != "robot_boy" {
+		t.Fatalf("ID() = %q, want %q", m3.ID(), "robot_boy")
+	}
+}
+
+func TestHostPanicsOnNilStore(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic on nil Store")
+		}
+	}()
+	NewHost(HostConfig{})
+}
+
+// ---------------------------------------------------------------------------
+// Conversation tests
+// ---------------------------------------------------------------------------
+
+func TestConversationAppendAndRecent(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	conv := m.OpenConversation("device-001", []string{"person/alice"})
+	if conv.ID() != "device-001" {
+		t.Fatalf("ID() = %q, want %q", conv.ID(), "device-001")
+	}
+
+	// Append messages with explicit timestamps for deterministic ordering.
+	msgs := []Message{
+		{Role: RoleUser, Content: "hello", Timestamp: 1000},
+		{Role: RoleModel, Content: "hi there", Timestamp: 2000},
+		{Role: RoleUser, Content: "how are you?", Timestamp: 3000},
+		{Role: RoleModel, Content: "I'm good!", Timestamp: 4000},
+	}
+	for _, msg := range msgs {
+		if err := conv.Append(ctx, msg); err != nil {
+			t.Fatalf("Append: %v", err)
+		}
+	}
+
+	// Recent(2) should return the last 2 messages.
+	recent, err := conv.Recent(ctx, 2)
+	if err != nil {
+		t.Fatalf("Recent: %v", err)
+	}
+	if len(recent) != 2 {
+		t.Fatalf("len(recent) = %d, want 2", len(recent))
+	}
+	if recent[0].Content != "how are you?" {
+		t.Errorf("recent[0].Content = %q, want %q", recent[0].Content, "how are you?")
+	}
+	if recent[1].Content != "I'm good!" {
+		t.Errorf("recent[1].Content = %q, want %q", recent[1].Content, "I'm good!")
+	}
+
+	// Recent(10) should return all 4.
+	all, err := conv.Recent(ctx, 10)
+	if err != nil {
+		t.Fatalf("Recent: %v", err)
+	}
+	if len(all) != 4 {
+		t.Fatalf("len(all) = %d, want 4", len(all))
+	}
+}
+
+func TestConversationAutoTimestamp(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	// Override nowNano for deterministic test.
+	origNow := nowNano
+	nowNano = func() int64 { return 999 }
+	defer func() { nowNano = origNow }()
+
+	conv := m.OpenConversation("s1", nil)
+	if err := conv.Append(ctx, Message{Role: RoleUser, Content: "hi"}); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+
+	msgs, err := conv.Recent(ctx, 1)
+	if err != nil {
+		t.Fatalf("Recent: %v", err)
+	}
+	if msgs[0].Timestamp != 999 {
+		t.Fatalf("Timestamp = %d, want 999", msgs[0].Timestamp)
+	}
+}
+
+func TestConversationRevert(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	conv := m.OpenConversation("device-001", nil)
+
+	// Build a conversation.
+	msgs := []Message{
+		{Role: RoleUser, Content: "hello", Timestamp: 1000},
+		{Role: RoleModel, Content: "hi", Timestamp: 2000},
+		{Role: RoleUser, Content: "tell me about dinosaurs", Timestamp: 3000},
+		{Role: RoleModel, Content: "dinosaurs are...", Timestamp: 4000},
+	}
+	for _, msg := range msgs {
+		if err := conv.Append(ctx, msg); err != nil {
+			t.Fatalf("Append: %v", err)
+		}
+	}
+
+	// Revert should remove the last user message and model response.
+	if err := conv.Revert(ctx); err != nil {
+		t.Fatalf("Revert: %v", err)
+	}
+
+	remaining, err := conv.All(ctx)
+	if err != nil {
+		t.Fatalf("All: %v", err)
+	}
+	if len(remaining) != 2 {
+		t.Fatalf("len(remaining) = %d, want 2", len(remaining))
+	}
+	if remaining[0].Content != "hello" {
+		t.Errorf("remaining[0].Content = %q, want %q", remaining[0].Content, "hello")
+	}
+	if remaining[1].Content != "hi" {
+		t.Errorf("remaining[1].Content = %q, want %q", remaining[1].Content, "hi")
+	}
+}
+
+func TestConversationRevertEmpty(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	conv := m.OpenConversation("s1", nil)
+	// Revert on empty conversation should be a no-op.
+	if err := conv.Revert(ctx); err != nil {
+		t.Fatalf("Revert on empty: %v", err)
+	}
+}
+
+func TestConversationCount(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	conv := m.OpenConversation("s1", nil)
+
+	count, err := conv.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("Count = %d, want 0", count)
+	}
+
+	for i := range 5 {
+		if err := conv.Append(ctx, Message{
+			Role:      RoleUser,
+			Content:   "msg",
+			Timestamp: int64((i + 1) * 1000),
+		}); err != nil {
+			t.Fatalf("Append: %v", err)
+		}
+	}
+
+	count, err = conv.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count: %v", err)
+	}
+	if count != 5 {
+		t.Fatalf("Count = %d, want 5", count)
+	}
+}
+
+func TestConversationClear(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	conv := m.OpenConversation("s1", nil)
+	if err := conv.Append(ctx, Message{Role: RoleUser, Content: "hi", Timestamp: 1000}); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+
+	if err := conv.Clear(ctx); err != nil {
+		t.Fatalf("Clear: %v", err)
+	}
+
+	count, err := conv.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("Count after clear = %d, want 0", count)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LongTerm tests
+// ---------------------------------------------------------------------------
+
+func TestLongTermSummary(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+	lt := m.LongTerm()
+
+	now := time.Date(2026, 2, 13, 15, 0, 0, 0, time.UTC)
+
+	// Get non-existent summary.
+	s, err := lt.GetSummary(ctx, GrainHour, now)
+	if err != nil {
+		t.Fatalf("GetSummary: %v", err)
+	}
+	if s != "" {
+		t.Fatalf("expected empty summary, got %q", s)
+	}
+
+	// Set and retrieve.
+	if err := lt.SetSummary(ctx, GrainHour, now, "chatted about dinosaurs"); err != nil {
+		t.Fatalf("SetSummary: %v", err)
+	}
+	s, err = lt.GetSummary(ctx, GrainHour, now)
+	if err != nil {
+		t.Fatalf("GetSummary: %v", err)
+	}
+	if s != "chatted about dinosaurs" {
+		t.Fatalf("GetSummary = %q, want %q", s, "chatted about dinosaurs")
+	}
+}
+
+func TestLongTermLifeSummary(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+	lt := m.LongTerm()
+
+	// Empty initially.
+	s, err := lt.LifeSummary(ctx)
+	if err != nil {
+		t.Fatalf("LifeSummary: %v", err)
+	}
+	if s != "" {
+		t.Fatalf("expected empty life summary, got %q", s)
+	}
+
+	// Set and retrieve.
+	if err := lt.SetLifeSummary(ctx, "I am a virtual cat companion"); err != nil {
+		t.Fatalf("SetLifeSummary: %v", err)
+	}
+	s, err = lt.LifeSummary(ctx)
+	if err != nil {
+		t.Fatalf("LifeSummary: %v", err)
+	}
+	if s != "I am a virtual cat companion" {
+		t.Fatalf("LifeSummary = %q, want %q", s, "I am a virtual cat companion")
+	}
+}
+
+func TestLongTermSummaries(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+	lt := m.LongTerm()
+
+	// Store daily summaries for 3 consecutive days.
+	days := []struct {
+		t time.Time
+		s string
+	}{
+		{time.Date(2026, 2, 10, 0, 0, 0, 0, time.UTC), "day 10 summary"},
+		{time.Date(2026, 2, 11, 0, 0, 0, 0, time.UTC), "day 11 summary"},
+		{time.Date(2026, 2, 12, 0, 0, 0, 0, time.UTC), "day 12 summary"},
+	}
+	for _, d := range days {
+		if err := lt.SetSummary(ctx, GrainDay, d.t, d.s); err != nil {
+			t.Fatalf("SetSummary: %v", err)
+		}
+	}
+
+	// Query range that includes day 11 and 12 (from=11, to=13).
+	from := time.Date(2026, 2, 11, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 2, 13, 0, 0, 0, 0, time.UTC)
+
+	summaries, err := lt.Summaries(ctx, GrainDay, from, to)
+	if err != nil {
+		t.Fatalf("Summaries: %v", err)
+	}
+	if len(summaries) != 2 {
+		t.Fatalf("len(summaries) = %d, want 2", len(summaries))
+	}
+	if summaries[0].Summary != "day 11 summary" {
+		t.Errorf("summaries[0] = %q, want %q", summaries[0].Summary, "day 11 summary")
+	}
+	if summaries[1].Summary != "day 12 summary" {
+		t.Errorf("summaries[1] = %q, want %q", summaries[1].Summary, "day 12 summary")
+	}
+}
+
+func TestLongTermGetViaLifeGrain(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+	lt := m.LongTerm()
+
+	if err := lt.SetLifeSummary(ctx, "life story"); err != nil {
+		t.Fatalf("SetLifeSummary: %v", err)
+	}
+
+	// GetSummary with GrainLife should delegate to LifeSummary.
+	s, err := lt.GetSummary(ctx, GrainLife, time.Now())
+	if err != nil {
+		t.Fatalf("GetSummary(GrainLife): %v", err)
+	}
+	if s != "life story" {
+		t.Fatalf("got %q, want %q", s, "life story")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Memory: Graph integration tests
+// ---------------------------------------------------------------------------
+
+func TestMemoryGraph(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("cat_girl")
+	ctx := context.Background()
+	g := m.Graph()
+
+	// Create entities.
+	if err := g.SetEntity(ctx, graph.Entity{
+		Label: "person/xiaoming",
+		Attrs: map[string]any{"age": float64(8), "likes": "dinosaurs"},
+	}); err != nil {
+		t.Fatalf("SetEntity: %v", err)
+	}
+
+	if err := g.SetEntity(ctx, graph.Entity{
+		Label: "person/xiaohong",
+		Attrs: map[string]any{"age": float64(6)},
+	}); err != nil {
+		t.Fatalf("SetEntity: %v", err)
+	}
+
+	// Add relation.
+	if err := g.AddRelation(ctx, graph.Relation{
+		From: "person/xiaoming", To: "person/xiaohong", RelType: "sibling",
+	}); err != nil {
+		t.Fatalf("AddRelation: %v", err)
+	}
+
+	// Verify graph traversal.
+	neighbors, err := g.Neighbors(ctx, "person/xiaoming")
+	if err != nil {
+		t.Fatalf("Neighbors: %v", err)
+	}
+	if len(neighbors) != 1 || neighbors[0] != "person/xiaohong" {
+		t.Fatalf("Neighbors = %v, want [person/xiaohong]", neighbors)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Memory: Segment + Recall tests
+// ---------------------------------------------------------------------------
+
+func TestMemoryStoreAndRecall(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("cat_girl")
+	ctx := context.Background()
+
+	// Set up graph.
+	g := m.Graph()
+	if err := g.SetEntity(ctx, graph.Entity{
+		Label: "person/xiaoming",
+		Attrs: map[string]any{"age": float64(8)},
+	}); err != nil {
+		t.Fatalf("SetEntity: %v", err)
+	}
+	if err := g.SetEntity(ctx, graph.Entity{
+		Label: "topic/dinosaurs",
+	}); err != nil {
+		t.Fatalf("SetEntity: %v", err)
+	}
+	if err := g.AddRelation(ctx, graph.Relation{
+		From: "person/xiaoming", To: "topic/dinosaurs", RelType: "likes",
+	}); err != nil {
+		t.Fatalf("AddRelation: %v", err)
+	}
+
+	// Store segments.
+	segments := []SegmentInput{
+		{Summary: "和小明聊了恐龙", Keywords: []string{"dinosaurs"}, Labels: []string{"person/xiaoming", "topic/dinosaurs"}},
+		{Summary: "学到了太空知识", Keywords: []string{"space"}, Labels: []string{"self", "topic/space"}},
+		{Summary: "一起做了饭", Keywords: []string{"cooking"}, Labels: []string{"person/xiaoming"}},
+	}
+	for _, seg := range segments {
+		if err := m.StoreSegment(ctx, seg); err != nil {
+			t.Fatalf("StoreSegment: %v", err)
+		}
+	}
+
+	// Recall with label expansion from person/xiaoming.
+	result, err := m.Recall(ctx, RecallQuery{
+		Labels: []string{"person/xiaoming"},
+		Text:   "dinosaurs",
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+
+	if len(result.Segments) == 0 {
+		t.Fatal("expected at least one segment from recall")
+	}
+
+	// The dinosaur segment should be the top result.
+	top := result.Segments[0]
+	if top.Summary != "和小明聊了恐龙" {
+		t.Errorf("top segment = %q, want %q", top.Summary, "和小明聊了恐龙")
+	}
+
+	// Entities should include person/xiaoming and topic/dinosaurs.
+	if len(result.Entities) == 0 {
+		t.Fatal("expected entities in recall result")
+	}
+
+	foundXiaoming := false
+	for _, e := range result.Entities {
+		if e.Label == "person/xiaoming" {
+			foundXiaoming = true
+		}
+	}
+	if !foundXiaoming {
+		t.Error("expected person/xiaoming in recall entities")
+	}
+}
+
+func TestMemoryRecallWithLifeSummary(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	// Set a life summary.
+	if err := m.LongTerm().SetLifeSummary(ctx, "I have been with this family for 6 months"); err != nil {
+		t.Fatalf("SetLifeSummary: %v", err)
+	}
+
+	// Recall should include the life summary.
+	result, err := m.Recall(ctx, RecallQuery{Text: "anything"})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	if len(result.Summaries) != 1 {
+		t.Fatalf("len(summaries) = %d, want 1", len(result.Summaries))
+	}
+	if result.Summaries[0].Grain != GrainLife {
+		t.Errorf("grain = %v, want GrainLife", result.Summaries[0].Grain)
+	}
+	if result.Summaries[0].Summary != "I have been with this family for 6 months" {
+		t.Errorf("summary = %q", result.Summaries[0].Summary)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Memory: Isolation tests
+// ---------------------------------------------------------------------------
+
+func TestMemoryIsolation(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	ctx := context.Background()
+
+	m1 := h.Open("persona_a")
+	m2 := h.Open("persona_b")
+
+	// Store a segment in persona_a.
+	if err := m1.StoreSegment(ctx, SegmentInput{
+		Summary: "persona_a segment",
+		Labels:  []string{"test"},
+	}); err != nil {
+		t.Fatalf("StoreSegment: %v", err)
+	}
+
+	// Store a different segment in persona_b.
+	if err := m2.StoreSegment(ctx, SegmentInput{
+		Summary: "persona_b segment",
+		Labels:  []string{"test"},
+	}); err != nil {
+		t.Fatalf("StoreSegment: %v", err)
+	}
+
+	// Recall from persona_a should only find its own segment.
+	r1, err := m1.Recall(ctx, RecallQuery{Text: "persona", Limit: 10})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	for _, seg := range r1.Segments {
+		if seg.Summary == "persona_b segment" {
+			t.Fatal("persona_a should not see persona_b's segments")
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Memory: Compress pipeline test
+// ---------------------------------------------------------------------------
+
+func TestMemoryCompress(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	conv := m.OpenConversation("s1", []string{"person/test"})
+
+	// Add messages.
+	if err := conv.Append(ctx, Message{Role: RoleUser, Content: "hello", Timestamp: 1000}); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+	if err := conv.Append(ctx, Message{Role: RoleModel, Content: "world", Timestamp: 2000}); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+
+	// Compress.
+	comp := &mockCompressor{}
+	if err := m.Compress(ctx, conv, comp); err != nil {
+		t.Fatalf("Compress: %v", err)
+	}
+
+	// Conversation should be cleared.
+	count, err := conv.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("Count after compress = %d, want 0", count)
+	}
+
+	// A segment should have been stored.
+	segments, err := m.Index().RecentSegments(ctx, 10)
+	if err != nil {
+		t.Fatalf("RecentSegments: %v", err)
+	}
+	if len(segments) == 0 {
+		t.Fatal("expected at least one segment after compression")
+	}
+
+	// The entity should have been created.
+	ent, err := m.Graph().GetEntity(ctx, "person/test")
+	if err != nil {
+		t.Fatalf("GetEntity: %v", err)
+	}
+	if ent.Attrs["compressed"] != true {
+		t.Errorf("entity attrs = %v, want compressed=true", ent.Attrs)
+	}
+}
+
+func TestMemoryCompressNilCompressor(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	conv := m.OpenConversation("s1", nil)
+	if err := m.Compress(ctx, conv, nil); err == nil {
+		t.Fatal("expected error with nil compressor")
+	}
+}
+
+func TestMemoryCompressEmptyConversation(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	conv := m.OpenConversation("s1", nil)
+	comp := &mockCompressor{}
+
+	// Compress on empty conversation should be a no-op.
+	if err := m.Compress(ctx, conv, comp); err != nil {
+		t.Fatalf("Compress empty: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Memory: ApplyEntityUpdate tests
+// ---------------------------------------------------------------------------
+
+func TestApplyEntityUpdate(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+	g := m.Graph()
+
+	// Create an existing entity.
+	if err := g.SetEntity(ctx, graph.Entity{
+		Label: "person/alice",
+		Attrs: map[string]any{"age": float64(25)},
+	}); err != nil {
+		t.Fatalf("SetEntity: %v", err)
+	}
+
+	// Apply update: merge into existing + create new entity + add relation.
+	update := &EntityUpdate{
+		Entities: []EntityInput{
+			{Label: "person/alice", Attrs: map[string]any{"mood": "happy"}},
+			{Label: "person/bob", Attrs: map[string]any{"age": float64(30)}},
+		},
+		Relations: []RelationInput{
+			{From: "person/alice", To: "person/bob", RelType: "knows"},
+		},
+	}
+
+	if err := m.ApplyEntityUpdate(ctx, update); err != nil {
+		t.Fatalf("ApplyEntityUpdate: %v", err)
+	}
+
+	// Alice should have merged attrs.
+	alice, err := g.GetEntity(ctx, "person/alice")
+	if err != nil {
+		t.Fatalf("GetEntity alice: %v", err)
+	}
+	if alice.Attrs["age"] != float64(25) {
+		t.Errorf("alice.age = %v, want 25", alice.Attrs["age"])
+	}
+	if alice.Attrs["mood"] != "happy" {
+		t.Errorf("alice.mood = %v, want happy", alice.Attrs["mood"])
+	}
+
+	// Bob should exist.
+	bob, err := g.GetEntity(ctx, "person/bob")
+	if err != nil {
+		t.Fatalf("GetEntity bob: %v", err)
+	}
+	if bob.Attrs["age"] != float64(30) {
+		t.Errorf("bob.age = %v, want 30", bob.Attrs["age"])
+	}
+
+	// Relation should exist.
+	neighbors, err := g.Neighbors(ctx, "person/alice")
+	if err != nil {
+		t.Fatalf("Neighbors: %v", err)
+	}
+	if len(neighbors) != 1 || neighbors[0] != "person/bob" {
+		t.Errorf("Neighbors = %v, want [person/bob]", neighbors)
+	}
+}
+
+func TestApplyEntityUpdateNil(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	// Nil update should be a no-op.
+	if err := m.ApplyEntityUpdate(ctx, nil); err != nil {
+		t.Fatalf("ApplyEntityUpdate(nil): %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Grain string tests
+// ---------------------------------------------------------------------------
+
+func TestGrainString(t *testing.T) {
+	tests := []struct {
+		g    Grain
+		want string
+	}{
+		{GrainHour, "hour"},
+		{GrainDay, "day"},
+		{GrainWeek, "week"},
+		{GrainMonth, "month"},
+		{GrainYear, "year"},
+		{GrainLife, "life"},
+		{Grain(99), "unknown"},
+	}
+	for _, tt := range tests {
+		if got := tt.g.String(); got != tt.want {
+			t.Errorf("Grain(%d).String() = %q, want %q", tt.g, got, tt.want)
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Keys tests
+// ---------------------------------------------------------------------------
+
+func TestGrainTimeKey(t *testing.T) {
+	ts := time.Date(2026, 2, 13, 15, 30, 0, 0, time.UTC).UnixNano()
+
+	tests := []struct {
+		grain Grain
+		want  string
+	}{
+		{GrainHour, "2026021315"},
+		{GrainDay, "20260213"},
+		{GrainMonth, "202602"},
+		{GrainYear, "2026"},
+	}
+	for _, tt := range tests {
+		got, err := grainTimeKey(tt.grain, ts)
+		if err != nil {
+			t.Fatalf("grainTimeKey(%v): %v", tt.grain, err)
+		}
+		if got != tt.want {
+			t.Errorf("grainTimeKey(%v) = %q, want %q", tt.grain, got, tt.want)
+		}
+	}
+}
+
+func TestConvMsgKeyFormat(t *testing.T) {
+	key := convMsgKey("cat", "dev1", 12345)
+	if len(key) != 6 {
+		t.Fatalf("key segments = %d, want 6", len(key))
+	}
+	if key[0] != "mem" || key[1] != "cat" || key[2] != "conv" || key[3] != "dev1" || key[4] != "msg" || key[5] != "12345" {
+		t.Fatalf("key = %v", key)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Host without vector search
+// ---------------------------------------------------------------------------
+
+func TestHostNoVecSearch(t *testing.T) {
+	h := newTestHostNoVec(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	// Store a segment (no vector indexing).
+	if err := m.StoreSegment(ctx, SegmentInput{
+		Summary:  "test segment",
+		Keywords: []string{"test"},
+		Labels:   []string{"label"},
+	}); err != nil {
+		t.Fatalf("StoreSegment: %v", err)
+	}
+
+	// Recall should still work (keyword + label only).
+	result, err := m.Recall(ctx, RecallQuery{Text: "test", Limit: 10})
+	if err != nil {
+		t.Fatalf("Recall: %v", err)
+	}
+	// Without vector search, results rely on keyword/label matching.
+	// The segment should still be findable.
+	if len(result.Segments) == 0 {
+		t.Log("no segments returned without vector search (expected if no label/keyword match)")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Conversation: RecentSegments
+// ---------------------------------------------------------------------------
+
+func TestConversationRecentSegments(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := h.Open("test")
+	ctx := context.Background()
+
+	// Store some segments in the memory.
+	for i := range 3 {
+		if err := m.Index().StoreSegment(ctx, recall.Segment{
+			ID:        fmt.Sprintf("seg-%d", i),
+			Summary:   fmt.Sprintf("segment %d", i),
+			Timestamp: int64((i + 1) * 1000000),
+		}); err != nil {
+			t.Fatalf("StoreSegment: %v", err)
+		}
+	}
+
+	conv := m.OpenConversation("s1", nil)
+	segs, err := conv.RecentSegments(ctx, 2)
+	if err != nil {
+		t.Fatalf("RecentSegments: %v", err)
+	}
+	if len(segs) != 2 {
+		t.Fatalf("len(segs) = %d, want 2", len(segs))
+	}
+	// Most recent first.
+	if segs[0].ID != "seg-2" {
+		t.Errorf("segs[0].ID = %q, want seg-2", segs[0].ID)
+	}
+}

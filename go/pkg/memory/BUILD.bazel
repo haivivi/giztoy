@@ -1,0 +1,35 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "memory",
+    srcs = [
+        "conversation.go",
+        "host.go",
+        "keys.go",
+        "longterm.go",
+        "memory.go",
+        "types.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/memory",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/embed",
+        "//go/pkg/graph",
+        "//go/pkg/kv",
+        "//go/pkg/recall",
+        "//go/pkg/vecstore",
+        "@com_github_vmihailenco_msgpack_v5//:msgpack",
+    ],
+)
+
+go_test(
+    name = "memory_test",
+    srcs = ["memory_test.go"],
+    embed = [":memory"],
+    deps = [
+        "//go/pkg/graph",
+        "//go/pkg/kv",
+        "//go/pkg/recall",
+        "//go/pkg/vecstore",
+    ],
+)
