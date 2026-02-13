@@ -417,7 +417,10 @@ func runMemoryDemo(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("create host: %w", err)
 	}
 	defer host.Close()
-	m := host.Open("cat_girl")
+	m, err := host.Open("cat_girl")
+	if err != nil {
+		return fmt.Errorf("open persona: %w", err)
+	}
 	g := m.Graph()
 	lt := m.LongTerm()
 
@@ -698,7 +701,11 @@ func openMemory() (*memoryEnv, error) {
 			store.Close()
 			return nil, fmt.Errorf("create host: %w", err)
 		}
-		mem := host.Open(memPersona)
+		mem, err := host.Open(memPersona)
+		if err != nil {
+			store.Close()
+			return nil, fmt.Errorf("open persona: %w", err)
+		}
 		return &memoryEnv{
 			mem: mem, host: host, store: store, hnsw: hnsw, dataDir: dir,
 		}, nil
@@ -715,7 +722,11 @@ func openMemory() (*memoryEnv, error) {
 		store.Close()
 		return nil, fmt.Errorf("create host: %w", err)
 	}
-	mem := host.Open(memPersona)
+	mem, err := host.Open(memPersona)
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("open persona: %w", err)
+	}
 	return &memoryEnv{
 		mem: mem, host: host, store: store, dataDir: dir,
 	}, nil

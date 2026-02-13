@@ -27,16 +27,18 @@ type Memory struct {
 	store      kv.Store
 	index      *recall.Index
 	longterm   *LongTerm
-	compressor Compressor // default compressor from Host, may be nil
+	compressor Compressor     // default compressor from Host, may be nil
+	policy     CompressPolicy // auto-compression thresholds
 }
 
-func newMemory(id string, store kv.Store, index *recall.Index, compressor Compressor) *Memory {
+func newMemory(id string, store kv.Store, index *recall.Index, compressor Compressor, policy CompressPolicy) *Memory {
 	return &Memory{
 		id:         id,
 		store:      store,
 		index:      index,
 		longterm:   newLongTerm(store, id),
 		compressor: compressor,
+		policy:     policy,
 	}
 }
 
@@ -59,8 +61,12 @@ func (m *Memory) LongTerm() *LongTerm { return m.longterm }
 // convID is typically a device ID or session ID. labels mark which entities
 // are involved (e.g., ["person:Alice"]). Multiple calls with the same convID
 // return independent handles to the same underlying data.
+//
+// If a [CompressPolicy] and [Compressor] are configured (via [HostConfig] or
+// per-persona [OpenOption]), messages appended to the conversation are
+// automatically compressed when thresholds are reached.
 func (m *Memory) OpenConversation(convID string, labels []string) *Conversation {
-	return newConversation(m.store, m.index, m.id, convID, labels)
+	return newConversation(m, convID, labels)
 }
 
 // Recall performs combined retrieval: graph expansion + multi-signal segment

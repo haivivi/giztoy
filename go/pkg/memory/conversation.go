@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/haivivi/giztoy/go/pkg/kv"
@@ -17,19 +18,23 @@ import (
 // Messages are keyed by nanosecond timestamp for chronological ordering.
 // Revert removes the most recent model response and the user message that
 // triggered it, enabling a "regenerate" flow.
+//
+// If a [CompressPolicy] is configured on the parent [Memory], appending
+// messages automatically triggers compression when the accumulated message
+// count or character count reaches the configured thresholds.
 type Conversation struct {
-	store  kv.Store
-	index  *recall.Index
-	mid    string // memory ID
+	mem    *Memory // parent memory (for store, index, compressor, policy)
 	convID string
 	labels []string
+
+	// Auto-compression state: tracks uncompressed messages.
+	pendingChars int
+	pendingMsgs  int
 }
 
-func newConversation(store kv.Store, index *recall.Index, mid, convID string, labels []string) *Conversation {
+func newConversation(mem *Memory, convID string, labels []string) *Conversation {
 	return &Conversation{
-		store:  store,
-		index:  index,
-		mid:    mid,
+		mem:    mem,
 		convID: convID,
 		labels: labels,
 	}
@@ -47,6 +52,11 @@ func (c *Conversation) Labels() []string { return c.labels }
 //
 // For user messages, a revert point is saved so that [Revert] can undo
 // back to this point.
+//
+// If auto-compression is enabled (a [Compressor] and [CompressPolicy] are
+// configured), Append checks whether the accumulated message count or
+// character count has reached the policy thresholds. When triggered,
+// compression runs synchronously before Append returns.
 func (c *Conversation) Append(ctx context.Context, msg Message) error {
 	if msg.Timestamp == 0 {
 		msg.Timestamp = nowNano()
@@ -57,18 +67,34 @@ func (c *Conversation) Append(ctx context.Context, msg Message) error {
 		return err
 	}
 
-	key := convMsgKey(c.mid, c.convID, msg.Timestamp)
-	if err := c.store.Set(ctx, key, data); err != nil {
+	store := c.mem.store
+	mid := c.mem.id
+
+	key := convMsgKey(mid, c.convID, msg.Timestamp)
+	if err := store.Set(ctx, key, data); err != nil {
 		return err
 	}
 
 	// Save revert point on user messages.
 	if msg.Role == RoleUser {
-		rk := convRevertKey(c.mid, c.convID)
+		rk := convRevertKey(mid, c.convID)
 		ts := strconv.FormatInt(msg.Timestamp, 10)
-		if err := c.store.Set(ctx, rk, []byte(ts)); err != nil {
+		if err := store.Set(ctx, rk, []byte(ts)); err != nil {
 			return err
 		}
+	}
+
+	// Track pending content for auto-compression.
+	c.pendingChars += len(msg.Content)
+	c.pendingMsgs++
+
+	// Auto-compress if policy thresholds are reached.
+	if c.mem.compressor != nil && c.mem.policy.shouldCompress(c.pendingChars, c.pendingMsgs) {
+		if err := c.mem.Compress(ctx, c, nil); err != nil {
+			return fmt.Errorf("auto-compress: %w", err)
+		}
+		c.pendingChars = 0
+		c.pendingMsgs = 0
 	}
 
 	return nil
@@ -81,10 +107,10 @@ func (c *Conversation) Recent(ctx context.Context, n int) ([]Message, error) {
 		return nil, nil
 	}
 
-	prefix := convMsgPrefix(c.mid, c.convID)
+	prefix := convMsgPrefix(c.mem.id, c.convID)
 	var all []Message
 
-	for entry, err := range c.store.List(ctx, prefix) {
+	for entry, err := range c.mem.store.List(ctx, prefix) {
 		if err != nil {
 			return nil, err
 		}
@@ -104,9 +130,9 @@ func (c *Conversation) Recent(ctx context.Context, n int) ([]Message, error) {
 
 // Count returns the total number of messages in the conversation.
 func (c *Conversation) Count(ctx context.Context) (int, error) {
-	prefix := convMsgPrefix(c.mid, c.convID)
+	prefix := convMsgPrefix(c.mem.id, c.convID)
 	count := 0
-	for _, err := range c.store.List(ctx, prefix) {
+	for _, err := range c.mem.store.List(ctx, prefix) {
 		if err != nil {
 			return 0, err
 		}
@@ -122,8 +148,11 @@ func (c *Conversation) Count(ctx context.Context) (int, error) {
 // at or after this timestamp are deleted. Returns nil if no revert point
 // exists (no user messages have been sent).
 func (c *Conversation) Revert(ctx context.Context) error {
-	rk := convRevertKey(c.mid, c.convID)
-	data, err := c.store.Get(ctx, rk)
+	store := c.mem.store
+	mid := c.mem.id
+
+	rk := convRevertKey(mid, c.convID)
+	data, err := store.Get(ctx, rk)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
 			return nil // nothing to revert
@@ -137,10 +166,10 @@ func (c *Conversation) Revert(ctx context.Context) error {
 	}
 
 	// Collect keys to delete: all messages with timestamp >= revertTS.
-	prefix := convMsgPrefix(c.mid, c.convID)
+	prefix := convMsgPrefix(mid, c.convID)
 	var toDelete []kv.Key
 
-	for entry, err := range c.store.List(ctx, prefix) {
+	for entry, err := range store.List(ctx, prefix) {
 		if err != nil {
 			return err
 		}
@@ -160,14 +189,14 @@ func (c *Conversation) Revert(ctx context.Context) error {
 	}
 
 	// Delete the messages.
-	if err := c.store.BatchDelete(ctx, toDelete); err != nil {
+	if err := store.BatchDelete(ctx, toDelete); err != nil {
 		return err
 	}
 
 	// Update the revert point to the previous user message.
 	// Scan remaining messages to find the latest user message.
 	var latestUserTS int64
-	for entry, err := range c.store.List(ctx, prefix) {
+	for entry, err := range store.List(ctx, prefix) {
 		if err != nil {
 			return err
 		}
@@ -182,27 +211,27 @@ func (c *Conversation) Revert(ctx context.Context) error {
 
 	if latestUserTS > 0 {
 		ts := strconv.FormatInt(latestUserTS, 10)
-		return c.store.Set(ctx, rk, []byte(ts))
+		return store.Set(ctx, rk, []byte(ts))
 	}
 	// No user messages remain; delete the revert key.
-	return c.store.Delete(ctx, rk)
+	return store.Delete(ctx, rk)
 }
 
 // RecentSegments returns the n most recent memory segments from the
 // underlying recall index. These complement [Recent] messages to give
 // the LLM additional historical context beyond the conversation window.
 func (c *Conversation) RecentSegments(ctx context.Context, n int) ([]recall.Segment, error) {
-	return c.index.RecentSegments(ctx, n)
+	return c.mem.index.RecentSegments(ctx, n)
 }
 
 // All returns all messages in chronological order. This is used by the
 // compression pipeline to read all messages before compressing them
 // into segments.
 func (c *Conversation) All(ctx context.Context) ([]Message, error) {
-	prefix := convMsgPrefix(c.mid, c.convID)
+	prefix := convMsgPrefix(c.mem.id, c.convID)
 	var msgs []Message
 
-	for entry, err := range c.store.List(ctx, prefix) {
+	for entry, err := range c.mem.store.List(ctx, prefix) {
 		if err != nil {
 			return nil, err
 		}
@@ -216,11 +245,13 @@ func (c *Conversation) All(ctx context.Context) ([]Message, error) {
 }
 
 // Clear removes all messages and the revert point for this conversation.
+// It also resets the auto-compression counters.
 func (c *Conversation) Clear(ctx context.Context) error {
-	prefix := convMsgPrefix(c.mid, c.convID)
+	mid := c.mem.id
+	prefix := convMsgPrefix(mid, c.convID)
 	var keys []kv.Key
 
-	for entry, err := range c.store.List(ctx, prefix) {
+	for entry, err := range c.mem.store.List(ctx, prefix) {
 		if err != nil {
 			return err
 		}
@@ -228,10 +259,15 @@ func (c *Conversation) Clear(ctx context.Context) error {
 	}
 
 	// Also delete the revert key.
-	keys = append(keys, convRevertKey(c.mid, c.convID))
+	keys = append(keys, convRevertKey(mid, c.convID))
 
 	if len(keys) > 0 {
-		return c.store.BatchDelete(ctx, keys)
+		if err := c.mem.store.BatchDelete(ctx, keys); err != nil {
+			return err
+		}
 	}
+
+	c.pendingChars = 0
+	c.pendingMsgs = 0
 	return nil
 }

@@ -179,10 +179,16 @@ func runOneCase(ctx context.Context, segModel, profModel string, tc testCase) er
 	if persona == "" {
 		persona = "test"
 	}
-	mem := host.Open(persona)
+	mem, err := host.Open(persona)
+	if err != nil {
+		return fmt.Errorf("open persona %q: %w", persona, err)
+	}
 
-	// Process each conversation file in order.
+	// Process conversation files. Auto-compression is handled by
+	// memory.Conversation.Append based on CompressPolicy thresholds.
 	totalMsgs := 0
+	conv := mem.OpenConversation("main", nil)
+
 	for i, convPath := range tc.convFiles {
 		data, err := os.ReadFile(convPath)
 		if err != nil {
@@ -193,13 +199,7 @@ func runOneCase(ctx context.Context, segModel, profModel string, tc testCase) er
 			return fmt.Errorf("parse %s: %w", convPath, err)
 		}
 
-		convID := cf.ConvID
-		if convID == "" {
-			convID = fmt.Sprintf("conv-%03d", i+1)
-		}
-		conv := mem.OpenConversation(convID, cf.Labels)
-
-		// Append messages.
+		// Append messages — auto-compression fires when thresholds are hit.
 		for j, msg := range cf.Messages {
 			ts := int64((i*10000 + j + 1) * 1000)
 			role := memory.RoleUser
@@ -217,18 +217,19 @@ func runOneCase(ctx context.Context, segModel, profModel string, tc testCase) er
 		}
 		totalMsgs += len(cf.Messages)
 
-		// Compress this conversation.
-		if err := mem.Compress(ctx, conv, nil); err != nil {
-			return fmt.Errorf("compress conv %d (%s): %w", i+1, filepath.Base(convPath), err)
-		}
-
 		// Progress for large cases.
 		if len(tc.convFiles) > 10 && (i+1)%10 == 0 {
-			fmt.Printf("  ... processed %d/%d conversations (%d msgs)\n", i+1, len(tc.convFiles), totalMsgs)
+			fmt.Printf("  ... processed %d/%d files (%d msgs)\n",
+				i+1, len(tc.convFiles), totalMsgs)
 		}
 	}
 
-	fmt.Printf("  Processed %d conversations, %d messages total\n", len(tc.convFiles), totalMsgs)
+	// Flush any remaining uncompressed messages.
+	if err := mem.Compress(ctx, conv, nil); err != nil {
+		return fmt.Errorf("compress final batch: %w", err)
+	}
+
+	fmt.Printf("  Processed %d files, %d messages\n", len(tc.convFiles), totalMsgs)
 
 	// Verify expectations.
 	return verifyExpect(ctx, mem, tc.meta.Expect)

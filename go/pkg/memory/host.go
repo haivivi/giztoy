@@ -42,6 +42,11 @@ type HostConfig struct {
 	// delegates to registered segmentors and profilers.
 	Compressor Compressor
 
+	// CompressPolicy controls when auto-compression is triggered during
+	// [Conversation.Append]. If zero, [DefaultCompressPolicy] is used.
+	// Set both MaxChars and MaxMessages to 0 to disable auto-compression.
+	CompressPolicy CompressPolicy
+
 	// Separator is the KV key separator byte. It must match the Store's
 	// configured separator. Labels (entity labels, segment labels) must not
 	// contain this character.
@@ -97,31 +102,97 @@ func NewHost(ctx context.Context, cfg HostConfig) (*Host, error) {
 	}, nil
 }
 
+// OpenOption configures per-persona overrides when opening a [Memory].
+type OpenOption func(*openConfig)
+
+type openConfig struct {
+	compressor     Compressor
+	compressPolicy *CompressPolicy
+	embedder       embed.Embedder
+}
+
+// WithCompressor overrides the host-level [Compressor] for this persona.
+func WithCompressor(c Compressor) OpenOption {
+	return func(o *openConfig) { o.compressor = c }
+}
+
+// WithCompressPolicy overrides the host-level [CompressPolicy] for this persona.
+func WithCompressPolicy(p CompressPolicy) OpenOption {
+	return func(o *openConfig) { o.compressPolicy = &p }
+}
+
+// WithEmbedder overrides the host-level [embed.Embedder] for this persona.
+// The embedder's Dimension must match the host's configured embedder (if any)
+// to ensure vector compatibility; Open returns an error on mismatch.
+func WithEmbedder(e embed.Embedder) OpenOption {
+	return func(o *openConfig) { o.embedder = e }
+}
+
 // Open returns a Memory for a persona. Creates the underlying recall.Index
 // if this is the first call for the given ID. Subsequent calls with the
-// same ID return the same Memory instance.
+// same ID return the same Memory instance (options are ignored for already
+// opened personas).
 //
 // The id should be a stable, unique identifier for the persona (e.g.,
 // "cat_girl", "robot_boy"). It is used as the KV key prefix.
-func (h *Host) Open(id string) *Memory {
+//
+// Options override host-level defaults for this persona only. Use
+// [WithCompressor], [WithCompressPolicy], or [WithEmbedder] to customize.
+func (h *Host) Open(id string, opts ...OpenOption) (*Memory, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	if m, ok := h.memories[id]; ok {
-		return m
+		return m, nil
+	}
+
+	// Apply options.
+	var oc openConfig
+	for _, opt := range opts {
+		opt(&oc)
+	}
+
+	// Resolve embedder.
+	emb := h.cfg.Embedder
+	if oc.embedder != nil {
+		// Validate dimension compatibility.
+		if emb != nil && oc.embedder.Dimension() != emb.Dimension() {
+			return nil, fmt.Errorf(
+				"memory: Open %q: embedder dimension mismatch: host=%d, per-persona=%d",
+				id, emb.Dimension(), oc.embedder.Dimension(),
+			)
+		}
+		emb = oc.embedder
+	}
+
+	// Resolve compressor.
+	compressor := h.cfg.Compressor
+	if oc.compressor != nil {
+		compressor = oc.compressor
+	}
+
+	// Resolve compress policy.
+	policy := h.cfg.CompressPolicy
+	if oc.compressPolicy != nil {
+		policy = *oc.compressPolicy
+	}
+	if policy.MaxChars == 0 && policy.MaxMessages == 0 && compressor != nil {
+		// Apply default policy when a compressor is configured but no
+		// explicit policy was set (zero value).
+		policy = DefaultCompressPolicy()
 	}
 
 	idx := recall.NewIndex(recall.IndexConfig{
 		Store:     h.cfg.Store,
-		Embedder:  h.cfg.Embedder,
+		Embedder:  emb,
 		Vec:       h.cfg.Vec,
 		Prefix:    memPrefix(id),
 		Separator: h.cfg.Separator,
 	})
 
-	m := newMemory(id, h.cfg.Store, idx, h.cfg.Compressor)
+	m := newMemory(id, h.cfg.Store, idx, compressor, policy)
 	h.memories[id] = m
-	return m
+	return m, nil
 }
 
 // Close releases all resources. After Close, the Host should not be used.

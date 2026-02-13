@@ -135,7 +135,7 @@ func buildScenarios() []scenario {
 			Topics: []string{"恐龙", "画画", "做饭", "音乐", "乐高", "故事"}, Places: []string{"博物馆", "学校", "家"},
 			Purpose: "accumulation",
 			Expect: MetaExpect{
-				MinEntities: 4, EntitiesContain: []string{"person:小明", "person:小红"}, MinRelations: 2, MinSegments: 3,
+				MinEntities: 4, EntitiesContain: []string{"person:小明", "person:小红"}, MinRelations: 2, MinSegments: 2,
 				Recall: []RecallExpect{{Text: "恐龙", Labels: []string{"person:小明"}, MinResults: 1}},
 			},
 		},
@@ -147,7 +147,7 @@ func buildScenarios() []scenario {
 			},
 			Topics: []string{"旅行", "美食", "电影", "运动", "摄影", "读书"}, Places: []string{"上海", "成都", "广州", "东京"},
 			Purpose: "topic_drift",
-			Expect: MetaExpect{MinEntities: 1, EntitiesContain: []string{"person:小王"}, MinSegments: 3},
+			Expect: MetaExpect{MinEntities: 1, EntitiesContain: []string{"person:小王"}, MinSegments: 2},
 		},
 		{
 			Name: "m07_corrections", Desc: "Facts get corrected and updated across 5 sessions", Persona: "assistant",
@@ -158,7 +158,7 @@ func buildScenarios() []scenario {
 			},
 			Topics: []string{"工作", "跳槽", "面试", "项目"}, Places: []string{"北京", "上海", "深圳"},
 			Purpose: "info_correction",
-			Expect: MetaExpect{MinEntities: 2, MinSegments: 3},
+			Expect: MetaExpect{MinEntities: 2, MinSegments: 2},
 		},
 
 		// 2 x 1000 messages
@@ -177,7 +177,7 @@ func buildScenarios() []scenario {
 			Places: []string{"老家", "北京", "学校", "医院"},
 			Purpose: "relation_accumulation",
 			Expect: MetaExpect{
-				MinEntities: 5, MinRelations: 4, MinSegments: 20,
+				MinEntities: 5, MinRelations: 4, MinSegments: 8,
 				Recall: []RecallExpect{
 					{Text: "家庭", MinResults: 2},
 					{Text: "学校", Labels: []string{"person:哥哥"}, MinResults: 1},
@@ -196,7 +196,7 @@ func buildScenarios() []scenario {
 			Places:  []string{"杭州", "苏州", "南京", "西湖"},
 			Purpose: "topic_interleaving",
 			Expect: MetaExpect{
-				MinEntities: 3, MinSegments: 20,
+				MinEntities: 3, MinSegments: 8,
 				Recall: []RecallExpect{{Text: "工作", MinResults: 1}},
 			},
 		},
@@ -219,7 +219,7 @@ func buildScenarios() []scenario {
 			Places:  []string{"学校", "博物馆", "公园", "奶奶家", "游乐场", "图书馆"},
 			Purpose: "comprehensive",
 			Expect: MetaExpect{
-				MinEntities: 6, MinRelations: 5, MinSegments: 100,
+				MinEntities: 6, MinRelations: 5, MinSegments: 50,
 				Recall: []RecallExpect{
 					{Text: "恐龙", Labels: []string{"person:小明"}, MinResults: 2},
 					{Text: "画画", Labels: []string{"person:小红"}, MinResults: 1},

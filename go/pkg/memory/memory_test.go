@@ -191,6 +191,16 @@ func newTestHostNoVec(t *testing.T) *Host {
 	return h
 }
 
+// mustOpen is a test helper that calls h.Open and fails the test on error.
+func mustOpen(t testing.TB, h *Host, id string, opts ...OpenOption) *Memory {
+	t.Helper()
+	m, err := h.Open(id, opts...)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", id, err)
+	}
+	return m
+}
+
 // ---------------------------------------------------------------------------
 // Host tests
 // ---------------------------------------------------------------------------
@@ -199,9 +209,9 @@ func TestHostOpen(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
 
-	m1 := h.Open("cat_girl")
-	m2 := h.Open("cat_girl")
-	m3 := h.Open("robot_boy")
+	m1 := mustOpen(t, h, "cat_girl")
+	m2 := mustOpen(t, h, "cat_girl")
+	m3 := mustOpen(t, h, "robot_boy")
 
 	if m1 != m2 {
 		t.Fatal("same ID should return same Memory instance")
@@ -303,7 +313,7 @@ func TestHostNoEmbedderSkipsCheck(t *testing.T) {
 func TestConversationAppendAndRecent(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	conv := m.OpenConversation("device-001", []string{"person:alice"})
@@ -352,7 +362,7 @@ func TestConversationAppendAndRecent(t *testing.T) {
 func TestConversationAutoTimestamp(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	// Override nowNano for deterministic test.
@@ -377,7 +387,7 @@ func TestConversationAutoTimestamp(t *testing.T) {
 func TestConversationRevert(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	conv := m.OpenConversation("device-001", nil)
@@ -418,7 +428,7 @@ func TestConversationRevert(t *testing.T) {
 func TestConversationRevertEmpty(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	conv := m.OpenConversation("s1", nil)
@@ -431,7 +441,7 @@ func TestConversationRevertEmpty(t *testing.T) {
 func TestConversationCount(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	conv := m.OpenConversation("s1", nil)
@@ -466,7 +476,7 @@ func TestConversationCount(t *testing.T) {
 func TestConversationClear(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	conv := m.OpenConversation("s1", nil)
@@ -494,7 +504,7 @@ func TestConversationClear(t *testing.T) {
 func TestLongTermSummary(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 	lt := m.LongTerm()
 
@@ -525,7 +535,7 @@ func TestLongTermSummary(t *testing.T) {
 func TestLongTermLifeSummary(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 	lt := m.LongTerm()
 
@@ -554,7 +564,7 @@ func TestLongTermLifeSummary(t *testing.T) {
 func TestLongTermSummaries(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 	lt := m.LongTerm()
 
@@ -595,7 +605,7 @@ func TestLongTermSummaries(t *testing.T) {
 func TestLongTermGetViaLifeGrain(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 	lt := m.LongTerm()
 
@@ -620,7 +630,7 @@ func TestLongTermGetViaLifeGrain(t *testing.T) {
 func TestMemoryGraph(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("cat_girl")
+	m := mustOpen(t, h, "cat_girl")
 	ctx := context.Background()
 	g := m.Graph()
 
@@ -663,7 +673,7 @@ func TestMemoryGraph(t *testing.T) {
 func TestMemoryStoreAndRecall(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("cat_girl")
+	m := mustOpen(t, h, "cat_girl")
 	ctx := context.Background()
 
 	// Set up graph.
@@ -736,7 +746,7 @@ func TestMemoryStoreAndRecall(t *testing.T) {
 func TestMemoryRecallWithLifeSummary(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	// Set a life summary.
@@ -769,8 +779,8 @@ func TestMemoryIsolation(t *testing.T) {
 	defer h.Close()
 	ctx := context.Background()
 
-	m1 := h.Open("persona_a")
-	m2 := h.Open("persona_b")
+	m1 := mustOpen(t, h, "persona_a")
+	m2 := mustOpen(t, h, "persona_b")
 
 	// Store a segment in persona_a.
 	if err := m1.StoreSegment(ctx, SegmentInput{
@@ -807,7 +817,7 @@ func TestMemoryIsolation(t *testing.T) {
 func TestMemoryCompress(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	conv := m.OpenConversation("s1", []string{"person:test"})
@@ -857,7 +867,7 @@ func TestMemoryCompress(t *testing.T) {
 func TestMemoryCompressNilCompressor(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	conv := m.OpenConversation("s1", nil)
@@ -869,7 +879,7 @@ func TestMemoryCompressNilCompressor(t *testing.T) {
 func TestMemoryCompressEmptyConversation(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	conv := m.OpenConversation("s1", nil)
@@ -888,7 +898,7 @@ func TestMemoryCompressEmptyConversation(t *testing.T) {
 func TestApplyEntityUpdate(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 	g := m.Graph()
 
@@ -949,7 +959,7 @@ func TestApplyEntityUpdate(t *testing.T) {
 func TestApplyEntityUpdateNil(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	// Nil update should be a no-op.
@@ -1035,7 +1045,7 @@ func TestConvMsgKeyLexOrder(t *testing.T) {
 func TestHostNoVecSearch(t *testing.T) {
 	h := newTestHostNoVec(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	// Store a segment (no vector indexing).
@@ -1066,7 +1076,7 @@ func TestHostNoVecSearch(t *testing.T) {
 func TestConversationRecentSegments(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("test")
+	m := mustOpen(t, h, "test")
 	ctx := context.Background()
 
 	// Store some segments in the memory.
@@ -1118,7 +1128,7 @@ func TestRealisticScenario(t *testing.T) {
 
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("cat_girl")
+	m := mustOpen(t, h, "cat_girl")
 	ctx := context.Background()
 	g := m.Graph()
 	lt := m.LongTerm()
@@ -1441,7 +1451,7 @@ func TestRealisticScenario(t *testing.T) {
 	})
 
 	t.Run("persona isolation", func(t *testing.T) {
-		other := h.Open("robot_boy")
+		other := mustOpen(t, h, "robot_boy")
 		result, err := other.Recall(ctx, RecallQuery{Text: "dinosaurs", Limit: 10})
 		if err != nil {
 			t.Fatalf("Recall: %v", err)
@@ -1459,7 +1469,7 @@ func TestRealisticScenario(t *testing.T) {
 func TestRealisticCompressPipeline(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
-	m := h.Open("cat_girl")
+	m := mustOpen(t, h, "cat_girl")
 	ctx := context.Background()
 
 	// Pre-populate some background.
@@ -1590,7 +1600,7 @@ func BenchmarkConversationAppend(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	m := h.Open("bench")
+	m := mustOpen(b, h, "bench")
 	conv := m.OpenConversation("s1", nil)
 	ctx := context.Background()
 
@@ -1610,7 +1620,7 @@ func BenchmarkConversationRecent(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	m := h.Open("bench")
+	m := mustOpen(b, h, "bench")
 	conv := m.OpenConversation("s1", nil)
 	ctx := context.Background()
 
@@ -1639,7 +1649,7 @@ func BenchmarkStoreSegment(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	m := h.Open("bench")
+	m := mustOpen(b, h, "bench")
 	ctx := context.Background()
 
 	b.ResetTimer()
@@ -1662,7 +1672,7 @@ func BenchmarkRecall(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	m := h.Open("bench")
+	m := mustOpen(b, h, "bench")
 	ctx := context.Background()
 	g := m.Graph()
 
@@ -1696,7 +1706,7 @@ func BenchmarkLongTermSetSummary(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	m := h.Open("bench")
+	m := mustOpen(b, h, "bench")
 	ctx := context.Background()
 	lt := m.LongTerm()
 

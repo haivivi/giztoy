@@ -178,6 +178,44 @@ type ScoredSegment struct {
 }
 
 // ---------------------------------------------------------------------------
+// CompressPolicy: when to trigger auto-compression
+// ---------------------------------------------------------------------------
+
+// CompressPolicy controls when [Conversation.Append] triggers automatic
+// compression. Compression fires when either threshold is reached.
+//
+// Zero values for both fields disables auto-compression — the caller must
+// invoke [Memory.Compress] manually.
+type CompressPolicy struct {
+	// MaxChars triggers compression when the total character count of
+	// pending (uncompressed) messages reaches this value. Default 2000.
+	MaxChars int
+
+	// MaxMessages triggers compression when the number of pending
+	// (uncompressed) messages reaches this value. Default 50.
+	MaxMessages int
+}
+
+// DefaultCompressPolicy returns the default compression policy.
+func DefaultCompressPolicy() CompressPolicy {
+	return CompressPolicy{MaxChars: 2000, MaxMessages: 50}
+}
+
+// shouldCompress reports whether the policy thresholds have been reached.
+func (p CompressPolicy) shouldCompress(chars, msgs int) bool {
+	if p.MaxChars <= 0 && p.MaxMessages <= 0 {
+		return false // auto-compression disabled
+	}
+	if p.MaxChars > 0 && chars >= p.MaxChars {
+		return true
+	}
+	if p.MaxMessages > 0 && msgs >= p.MaxMessages {
+		return true
+	}
+	return false
+}
+
+// ---------------------------------------------------------------------------
 // Compressor: upper-layer compression interface
 // ---------------------------------------------------------------------------
 

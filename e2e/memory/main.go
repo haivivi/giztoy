@@ -135,7 +135,10 @@ func run(ctx context.Context, segModel, profModel string) error {
 	defer host.Close()
 
 	// Open a memory for persona "小猫咪".
-	mem := host.Open("cat_girl")
+	mem, err := host.Open("cat_girl")
+	if err != nil {
+		return fmt.Errorf("open persona: %w", err)
+	}
 
 	fmt.Printf("=== Memory E2E Test ===\n")
 	fmt.Printf("Segmentor: %s\n", segModel)
