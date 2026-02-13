@@ -23,18 +23,20 @@ import (
 // Each Memory is fully isolated — it owns a [recall.Index] scoped under
 // a unique KV prefix "mem:{id}".
 type Memory struct {
-	id       string
-	store    kv.Store
-	index    *recall.Index
-	longterm *LongTerm
+	id         string
+	store      kv.Store
+	index      *recall.Index
+	longterm   *LongTerm
+	compressor Compressor // default compressor from Host, may be nil
 }
 
-func newMemory(id string, store kv.Store, index *recall.Index) *Memory {
+func newMemory(id string, store kv.Store, index *recall.Index, compressor Compressor) *Memory {
 	return &Memory{
-		id:       id,
-		store:    store,
-		index:    index,
-		longterm: newLongTerm(store, id),
+		id:         id,
+		store:      store,
+		index:      index,
+		longterm:   newLongTerm(store, id),
+		compressor: compressor,
 	}
 }
 
@@ -199,11 +201,15 @@ func (m *Memory) ApplyEntityUpdate(ctx context.Context, update *EntityUpdate) er
 //  3. CompressMessages → store segments + update long-term summary.
 //  4. Clear the conversation.
 //
-// The compressor is provided by the upper layer (agent runtime).
-// If compressor is nil, this method returns an error.
+// If compressor is non-nil, it is used for this call. Otherwise, the
+// host's default compressor is used (see [HostConfig.Compressor]).
+// If both are nil, Compress returns an error.
 func (m *Memory) Compress(ctx context.Context, conv *Conversation, compressor Compressor) error {
 	if compressor == nil {
-		return fmt.Errorf("memory: compressor is nil")
+		compressor = m.compressor
+	}
+	if compressor == nil {
+		return fmt.Errorf("memory: compressor is nil (no per-call compressor and no default set in HostConfig)")
 	}
 
 	msgs, err := conv.All(ctx)

@@ -31,6 +31,17 @@ type HostConfig struct {
 	// return an error to prevent mixing incompatible vector spaces.
 	Embedder embed.Embedder
 
+	// Compressor is the shared [Compressor] for LLM-based conversation
+	// compression. Optional. If set, all personas opened from this host
+	// use it as the default compressor in [Memory.Compress].
+	//
+	// Callers may still pass a per-call compressor to [Memory.Compress],
+	// which takes precedence over this default.
+	//
+	// Use [NewLLMCompressor] to create an LLM-backed compressor that
+	// delegates to registered segmentors and profilers.
+	Compressor Compressor
+
 	// Separator is the KV key separator byte. It must match the Store's
 	// configured separator. Labels (entity labels, segment labels) must not
 	// contain this character.
@@ -108,7 +119,7 @@ func (h *Host) Open(id string) *Memory {
 		Separator: h.cfg.Separator,
 	})
 
-	m := newMemory(id, h.cfg.Store, idx)
+	m := newMemory(id, h.cfg.Store, idx, h.cfg.Compressor)
 	h.memories[id] = m
 	return m
 }
