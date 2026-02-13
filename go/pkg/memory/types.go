@@ -39,7 +39,7 @@
 // KV store with the same separator:
 //
 //	store := kv.NewBadger(dir, &kv.Options{Separator: 0x1F})
-//	host := memory.NewHost(memory.HostConfig{
+//	host, err := memory.NewHost(ctx, memory.HostConfig{
 //	    Store:     store,
 //	    Separator: 0x1F,
 //	})

@@ -37,6 +37,12 @@ type Embedder interface {
 
 	// Dimension returns the dimensionality of the output vectors.
 	Dimension() int
+
+	// Model returns the model identifier used by this embedder.
+	// The value must be stable across restarts — it is persisted by the
+	// memory system to ensure that vectors stored with one model are never
+	// searched with another. Examples: "text-embedding-v4", "text-embedding-3-small".
+	Model() string
 }
 
 // Common errors.

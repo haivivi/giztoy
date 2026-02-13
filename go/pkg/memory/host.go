@@ -1,6 +1,9 @@
 package memory
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/haivivi/giztoy/go/pkg/embed"
@@ -22,6 +25,10 @@ type HostConfig struct {
 
 	// Embedder converts text to vectors. Optional.
 	// If nil, semantic vector search is disabled.
+	//
+	// The embedder's Model() and Dimension() are persisted on first use.
+	// Subsequent calls to NewHost with a different model or dimension will
+	// return an error to prevent mixing incompatible vector spaces.
 	Embedder embed.Embedder
 
 	// Separator is the KV key separator byte. It must match the Store's
@@ -30,8 +37,15 @@ type HostConfig struct {
 	//
 	// Zero means [kv.DefaultSeparator] (':'), which forbids ':' in labels.
 	// For natural labels like "person:小明", use a non-printable separator
-	// (e.g., '\x00') and create the KV store with the same separator.
+	// (e.g., '\x1F') and create the KV store with the same separator.
 	Separator byte
+}
+
+// embedMeta is persisted in KV to track which embedding model was used.
+// On subsequent opens, the host verifies that the current Embedder matches.
+type embedMeta struct {
+	Model     string `json:"model"`
+	Dimension int    `json:"dim"`
 }
 
 // Host is the process-level entry point for the memory system.
@@ -47,16 +61,29 @@ type Host struct {
 	memories map[string]*Memory
 }
 
-// NewHost creates a new Host. The KV store is required; vec and embedder
-// are optional (nil disables vector search).
-func NewHost(cfg HostConfig) *Host {
+// NewHost creates a new Host and validates the embedding model consistency.
+//
+// If an Embedder is provided, NewHost checks the KV store for previously
+// persisted model metadata. If found and the model name or dimension differs,
+// NewHost returns an error. If not found, it persists the current model info.
+//
+// This ensures that vectors stored with one model are never searched with
+// another, which would produce meaningless similarity scores.
+func NewHost(ctx context.Context, cfg HostConfig) (*Host, error) {
 	if cfg.Store == nil {
-		panic("memory: HostConfig.Store is required")
+		return nil, fmt.Errorf("memory: HostConfig.Store is required")
 	}
+
+	if cfg.Embedder != nil {
+		if err := checkEmbedMeta(ctx, cfg.Store, cfg.Embedder); err != nil {
+			return nil, err
+		}
+	}
+
 	return &Host{
 		cfg:      cfg,
 		memories: make(map[string]*Memory),
-	}
+	}, nil
 }
 
 // Open returns a Memory for a persona. Creates the underlying recall.Index
@@ -91,5 +118,62 @@ func (h *Host) Close() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.memories = nil
+	return nil
+}
+
+// checkEmbedMeta verifies embedding model consistency. On first call it
+// persists the current model; on subsequent calls it validates the stored
+// model matches.
+func checkEmbedMeta(ctx context.Context, store kv.Store, emb embed.Embedder) error {
+	key := hostMetaKey("embed")
+
+	current := embedMeta{
+		Model:     emb.Model(),
+		Dimension: emb.Dimension(),
+	}
+
+	data, err := store.Get(ctx, key)
+	if err != nil {
+		if err == kv.ErrNotFound {
+			// First time — persist the metadata.
+			return writeEmbedMeta(ctx, store, key, current)
+		}
+		return fmt.Errorf("memory: read embed metadata: %w", err)
+	}
+
+	// Existing metadata found — verify it matches.
+	var stored embedMeta
+	if err := json.Unmarshal(data, &stored); err != nil {
+		return fmt.Errorf("memory: decode embed metadata: %w", err)
+	}
+
+	if stored.Model != current.Model {
+		return fmt.Errorf(
+			"memory: embed model mismatch: stored %q (dim=%d), current %q (dim=%d); "+
+				"vectors from different models are incompatible — "+
+				"either use the same model or rebuild the index",
+			stored.Model, stored.Dimension, current.Model, current.Dimension,
+		)
+	}
+
+	if stored.Dimension != current.Dimension {
+		return fmt.Errorf(
+			"memory: embed dimension mismatch for model %q: stored dim=%d, current dim=%d; "+
+				"changing dimension requires rebuilding the index",
+			current.Model, stored.Dimension, current.Dimension,
+		)
+	}
+
+	return nil
+}
+
+func writeEmbedMeta(ctx context.Context, store kv.Store, key kv.Key, meta embedMeta) error {
+	data, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("memory: encode embed metadata: %w", err)
+	}
+	if err := store.Set(ctx, key, data); err != nil {
+		return fmt.Errorf("memory: write embed metadata: %w", err)
+	}
 	return nil
 }

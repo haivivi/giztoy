@@ -54,6 +54,7 @@ func (m *mockEmbedder) EmbedBatch(_ context.Context, texts []string) ([][]float3
 }
 
 func (m *mockEmbedder) Dimension() int { return m.dim }
+func (m *mockEmbedder) Model() string  { return "mock-embed" }
 
 // helper to create a test index with all components.
 func newTestIndex(t *testing.T) (*Index, *mockEmbedder) {

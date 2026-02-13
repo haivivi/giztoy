@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -411,7 +412,10 @@ func runMemoryDemo(cmd *cobra.Command, _ []string) error {
 	}
 	defer store.Close()
 
-	host := memory.NewHost(memory.HostConfig{Store: store, Separator: memorySep})
+	host, err := memory.NewHost(ctx, memory.HostConfig{Store: store, Separator: memorySep})
+	if err != nil {
+		return fmt.Errorf("create host: %w", err)
+	}
 	defer host.Close()
 	m := host.Open("cat_girl")
 	g := m.Graph()
@@ -683,12 +687,17 @@ func openMemory() (*memoryEnv, error) {
 		if hnsw == nil {
 			hnsw = vecstore.NewHNSW(vecstore.HNSWConfig{Dim: dim})
 		}
-		host := memory.NewHost(memory.HostConfig{
+		ctx := context.Background()
+		host, err := memory.NewHost(ctx, memory.HostConfig{
 			Store:     store,
 			Vec:       hnsw,
 			Embedder:  emb,
 			Separator: memorySep,
 		})
+		if err != nil {
+			store.Close()
+			return nil, fmt.Errorf("create host: %w", err)
+		}
 		mem := host.Open(memPersona)
 		return &memoryEnv{
 			mem: mem, host: host, store: store, hnsw: hnsw, dataDir: dir,
@@ -697,10 +706,15 @@ func openMemory() (*memoryEnv, error) {
 
 	// No API key — run without vector search.
 	fmt.Fprintln(os.Stderr, "Warning: DASHSCOPE_API_KEY not set, vector search disabled (keyword + label only)")
-	host := memory.NewHost(memory.HostConfig{
+	ctx := context.Background()
+	host, err := memory.NewHost(ctx, memory.HostConfig{
 		Store:     store,
 		Separator: memorySep,
 	})
+	if err != nil {
+		store.Close()
+		return nil, fmt.Errorf("create host: %w", err)
+	}
 	mem := host.Open(memPersona)
 	return &memoryEnv{
 		mem: mem, host: host, store: store, dataDir: dir,

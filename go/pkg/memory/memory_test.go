@@ -32,6 +32,7 @@ import (
 
 type mockEmbedder struct {
 	dim     int
+	model   string
 	vectors map[string][]float32
 }
 
@@ -116,6 +117,13 @@ func (m *mockEmbedder) EmbedBatch(_ context.Context, texts []string) ([][]float3
 
 func (m *mockEmbedder) Dimension() int { return m.dim }
 
+func (m *mockEmbedder) Model() string {
+	if m.model != "" {
+		return m.model
+	}
+	return "mock-embed"
+}
+
 // mockCompressor is a simple test compressor.
 type mockCompressor struct{}
 
@@ -160,19 +168,27 @@ func newTestHost(t *testing.T) *Host {
 	emb := newMockEmbedder()
 	vec := vecstore.NewMemory()
 
-	return NewHost(HostConfig{
+	h, err := NewHost(context.Background(), HostConfig{
 		Store:     store,
 		Vec:       vec,
 		Embedder:  emb,
 		Separator: testSep,
 	})
+	if err != nil {
+		t.Fatalf("NewHost: %v", err)
+	}
+	return h
 }
 
 // newTestHostNoVec creates a Host without vector search.
 func newTestHostNoVec(t *testing.T) *Host {
 	t.Helper()
 	store := kv.NewMemory(&kv.Options{Separator: testSep})
-	return NewHost(HostConfig{Store: store, Separator: testSep})
+	h, err := NewHost(context.Background(), HostConfig{Store: store, Separator: testSep})
+	if err != nil {
+		t.Fatalf("NewHost: %v", err)
+	}
+	return h
 }
 
 // ---------------------------------------------------------------------------
@@ -201,13 +217,83 @@ func TestHostOpen(t *testing.T) {
 	}
 }
 
-func TestHostPanicsOnNilStore(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("expected panic on nil Store")
-		}
-	}()
-	NewHost(HostConfig{})
+func TestHostNilStoreReturnsError(t *testing.T) {
+	_, err := NewHost(context.Background(), HostConfig{})
+	if err == nil {
+		t.Fatal("expected error on nil Store")
+	}
+}
+
+func TestHostEmbedModelPersistence(t *testing.T) {
+	ctx := context.Background()
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+
+	// First NewHost: should persist mock-embed model metadata.
+	emb := newMockEmbedder()
+	h1, err := NewHost(ctx, HostConfig{
+		Store: store, Embedder: emb, Separator: testSep,
+	})
+	if err != nil {
+		t.Fatalf("first NewHost: %v", err)
+	}
+	h1.Close()
+
+	// Second NewHost with same embedder: should succeed.
+	h2, err := NewHost(ctx, HostConfig{
+		Store: store, Embedder: emb, Separator: testSep,
+	})
+	if err != nil {
+		t.Fatalf("second NewHost (same model): %v", err)
+	}
+	h2.Close()
+
+	// Third NewHost with different model: should fail.
+	differentEmb := &mockEmbedder{dim: 8, vectors: map[string][]float32{}}
+	differentEmb.model = "different-model"
+	_, err = NewHost(ctx, HostConfig{
+		Store: store, Embedder: differentEmb, Separator: testSep,
+	})
+	if err == nil {
+		t.Fatal("expected error on model mismatch, got nil")
+	}
+	t.Logf("got expected error: %v", err)
+}
+
+func TestHostEmbedDimensionMismatch(t *testing.T) {
+	ctx := context.Background()
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+
+	// First NewHost with dim=8.
+	emb8 := newMockEmbedder() // dim=8
+	h1, err := NewHost(ctx, HostConfig{
+		Store: store, Embedder: emb8, Separator: testSep,
+	})
+	if err != nil {
+		t.Fatalf("first NewHost: %v", err)
+	}
+	h1.Close()
+
+	// Second NewHost with same model but dim=4: should fail.
+	emb4 := &mockEmbedder{dim: 4, vectors: map[string][]float32{}}
+	_, err = NewHost(ctx, HostConfig{
+		Store: store, Embedder: emb4, Separator: testSep,
+	})
+	if err == nil {
+		t.Fatal("expected error on dimension mismatch, got nil")
+	}
+	t.Logf("got expected error: %v", err)
+}
+
+func TestHostNoEmbedderSkipsCheck(t *testing.T) {
+	ctx := context.Background()
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+
+	// NewHost without embedder: should succeed, no metadata written.
+	h, err := NewHost(ctx, HostConfig{Store: store, Separator: testSep})
+	if err != nil {
+		t.Fatalf("NewHost without embedder: %v", err)
+	}
+	h.Close()
 }
 
 // ---------------------------------------------------------------------------
@@ -1500,7 +1586,10 @@ func (fc *familyCompressor) ExtractEntities(_ context.Context, _ []Message) (*En
 
 func BenchmarkConversationAppend(b *testing.B) {
 	store := kv.NewMemory(&kv.Options{Separator: testSep})
-	h := NewHost(HostConfig{Store: store, Separator: testSep})
+	h, err := NewHost(context.Background(), HostConfig{Store: store, Separator: testSep})
+	if err != nil {
+		b.Fatal(err)
+	}
 	m := h.Open("bench")
 	conv := m.OpenConversation("s1", nil)
 	ctx := context.Background()
@@ -1517,7 +1606,10 @@ func BenchmarkConversationAppend(b *testing.B) {
 
 func BenchmarkConversationRecent(b *testing.B) {
 	store := kv.NewMemory(&kv.Options{Separator: testSep})
-	h := NewHost(HostConfig{Store: store, Separator: testSep})
+	h, err := NewHost(context.Background(), HostConfig{Store: store, Separator: testSep})
+	if err != nil {
+		b.Fatal(err)
+	}
 	m := h.Open("bench")
 	conv := m.OpenConversation("s1", nil)
 	ctx := context.Background()
@@ -1541,9 +1633,12 @@ func BenchmarkStoreSegment(b *testing.B) {
 	store := kv.NewMemory(&kv.Options{Separator: testSep})
 	emb := newMockEmbedder()
 	vec := vecstore.NewMemory()
-	h := NewHost(HostConfig{
+	h, err := NewHost(context.Background(), HostConfig{
 		Store: store, Vec: vec, Embedder: emb, Separator: testSep,
 	})
+	if err != nil {
+		b.Fatal(err)
+	}
 	m := h.Open("bench")
 	ctx := context.Background()
 
@@ -1561,9 +1656,12 @@ func BenchmarkRecall(b *testing.B) {
 	store := kv.NewMemory(&kv.Options{Separator: testSep})
 	emb := newMockEmbedder()
 	vec := vecstore.NewMemory()
-	h := NewHost(HostConfig{
+	h, err := NewHost(context.Background(), HostConfig{
 		Store: store, Vec: vec, Embedder: emb, Separator: testSep,
 	})
+	if err != nil {
+		b.Fatal(err)
+	}
 	m := h.Open("bench")
 	ctx := context.Background()
 	g := m.Graph()
@@ -1594,7 +1692,10 @@ func BenchmarkRecall(b *testing.B) {
 
 func BenchmarkLongTermSetSummary(b *testing.B) {
 	store := kv.NewMemory(&kv.Options{Separator: testSep})
-	h := NewHost(HostConfig{Store: store, Separator: testSep})
+	h, err := NewHost(context.Background(), HostConfig{Store: store, Separator: testSep})
+	if err != nil {
+		b.Fatal(err)
+	}
 	m := h.Open("bench")
 	ctx := context.Background()
 	lt := m.LongTerm()

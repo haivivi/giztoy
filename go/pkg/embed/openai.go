@@ -107,6 +107,11 @@ func (o *OpenAI) Dimension() int {
 	return o.dim
 }
 
+// Model returns the OpenAI model identifier (e.g., "text-embedding-3-small").
+func (o *OpenAI) Model() string {
+	return o.model
+}
+
 func (o *OpenAI) callAPI(ctx context.Context, texts []string) ([][]float32, error) {
 	params := openai.EmbeddingNewParams{
 		Model:          o.model,

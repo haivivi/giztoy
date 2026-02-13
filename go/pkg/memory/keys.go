@@ -32,6 +32,12 @@ func memPrefix(mid string) kv.Key {
 	return kv.Key{"mem", mid}
 }
 
+// hostMetaKey returns the KV key for host-level metadata.
+// Format: "mem" + "__meta" + {name}
+func hostMetaKey(name string) kv.Key {
+	return kv.Key{"mem", "__meta", name}
+}
+
 // convMsgKey builds the KV key for a conversation message.
 // Format: "mem" + {mid} + "conv" + {convID} + "msg" + {ts_ns}
 //

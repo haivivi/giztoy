@@ -108,6 +108,11 @@ func (d *DashScope) Dimension() int {
 	return d.dim
 }
 
+// Model returns the DashScope model identifier (e.g., "text-embedding-v4").
+func (d *DashScope) Model() string {
+	return d.model
+}
+
 func (d *DashScope) callAPI(ctx context.Context, texts []string) ([][]float32, error) {
 	params := openai.EmbeddingNewParams{
 		Model:          d.model,
