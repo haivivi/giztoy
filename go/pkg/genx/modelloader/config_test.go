@@ -260,3 +260,150 @@ func TestEntry(t *testing.T) {
 		t.Error("SupportToolCalls should be true")
 	}
 }
+
+func TestRegisterSegmentorBySchema(t *testing.T) {
+	cfg := ConfigFile{
+		Schema: "genx/segmentor/v1",
+		Type:   "segmentor",
+		Models: []Entry{
+			{Name: "seg/test-model", Model: "test/gen"},
+		},
+	}
+
+	names, err := registerSegmentorBySchema(cfg)
+	if err != nil {
+		t.Fatalf("registerSegmentorBySchema() error = %v", err)
+	}
+	if len(names) != 1 || names[0] != "seg/test-model" {
+		t.Errorf("names = %v, want [seg/test-model]", names)
+	}
+}
+
+func TestRegisterProfilerBySchema(t *testing.T) {
+	cfg := ConfigFile{
+		Schema: "genx/profiler/v1",
+		Type:   "profiler",
+		Models: []Entry{
+			{Name: "prof/test-model", Model: "test/gen"},
+		},
+	}
+
+	names, err := registerProfilerBySchema(cfg)
+	if err != nil {
+		t.Fatalf("registerProfilerBySchema() error = %v", err)
+	}
+	if len(names) != 1 || names[0] != "prof/test-model" {
+		t.Errorf("names = %v, want [prof/test-model]", names)
+	}
+}
+
+func TestRegisterSegmentorBySchema_MissingModel(t *testing.T) {
+	cfg := ConfigFile{
+		Schema: "genx/segmentor/v1",
+		Type:   "segmentor",
+		Models: []Entry{
+			{Name: "seg/bad"},
+		},
+	}
+
+	_, err := registerSegmentorBySchema(cfg)
+	if err == nil {
+		t.Error("expected error for missing model (generator pattern)")
+	}
+}
+
+func TestRegisterProfilerBySchema_MissingName(t *testing.T) {
+	cfg := ConfigFile{
+		Schema: "genx/profiler/v1",
+		Type:   "profiler",
+		Models: []Entry{
+			{Model: "test/gen"},
+		},
+	}
+
+	_, err := registerProfilerBySchema(cfg)
+	if err == nil {
+		t.Error("expected error for missing name")
+	}
+}
+
+func TestParseConfig_SegmentorYAML(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	yamlContent := `
+schema: "genx/segmentor/v1"
+type: "segmentor"
+models:
+  - name: "seg/qwen-turbo"
+    model: "qwen/turbo"
+`
+	yamlPath := filepath.Join(tmpDir, "segmentor.yaml")
+	if err := os.WriteFile(yamlPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := parseConfig(yamlPath)
+	if err != nil {
+		t.Fatalf("parseConfig() error = %v", err)
+	}
+	if cfg.Type != "segmentor" {
+		t.Errorf("Type = %q, want %q", cfg.Type, "segmentor")
+	}
+	if len(cfg.Models) != 1 {
+		t.Fatalf("len(Models) = %d, want 1", len(cfg.Models))
+	}
+	if cfg.Models[0].Name != "seg/qwen-turbo" {
+		t.Errorf("Models[0].Name = %q, want %q", cfg.Models[0].Name, "seg/qwen-turbo")
+	}
+	if cfg.Models[0].Model != "qwen/turbo" {
+		t.Errorf("Models[0].Model = %q, want %q", cfg.Models[0].Model, "qwen/turbo")
+	}
+}
+
+func TestLoadFromDir_SegmentorAndProfiler(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Write a segmentor config
+	segYAML := `
+schema: "genx/segmentor/v1"
+type: "segmentor"
+models:
+  - name: "seg/loader-test"
+    model: "some/gen"
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "segmentor.yaml"), []byte(segYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Write a profiler config
+	profYAML := `
+schema: "genx/profiler/v1"
+type: "profiler"
+models:
+  - name: "prof/loader-test"
+    model: "some/gen"
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "profiler.yaml"), []byte(profYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	names, err := LoadFromDir(tmpDir)
+	if err != nil {
+		t.Fatalf("LoadFromDir() error = %v", err)
+	}
+	if len(names) != 2 {
+		t.Errorf("len(names) = %d, want 2; names = %v", len(names), names)
+	}
+
+	// Verify both names are registered.
+	found := map[string]bool{}
+	for _, n := range names {
+		found[n] = true
+	}
+	if !found["seg/loader-test"] {
+		t.Error("seg/loader-test not registered")
+	}
+	if !found["prof/loader-test"] {
+		t.Error("prof/loader-test not registered")
+	}
+}
