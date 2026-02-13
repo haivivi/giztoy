@@ -7,6 +7,7 @@
         {
             "name": "omg/gpt-4o-mini",
             "model": "gpt-4o-mini",
+            "support_json_output": true,
             "support_tool_calls": true,
             "support_text_only": true,
             "use_system_role": true,
@@ -24,6 +25,7 @@
         {
             "name": "omg/gpt-4o",
             "model": "gpt-4o",
+            "support_json_output": true,
             "support_tool_calls": true,
             "support_text_only": true,
             "use_system_role": true,

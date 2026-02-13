@@ -81,6 +81,9 @@ func (g *OpenAIGenerator) invokeJSONOutput(ctx context.Context, mctx ModelContex
 	if err != nil {
 		return Usage{}, nil, err
 	}
+	// When using json_schema response format, tools must not be sent
+	// alongside it — they would conflict and cause validation errors.
+	params.Tools = nil
 	params.ResponseFormat = openai.ChatCompletionNewParamsResponseFormatUnion{
 		OfJSONSchema: &openai.ResponseFormatJSONSchemaParam{
 			JSONSchema: openai.ResponseFormatJSONSchemaJSONSchemaParam{
@@ -510,7 +513,7 @@ func (g *OpenAIGenerator) convSchemaForFunc(s *jsonschema.Schema) openai.Functio
 	if s == nil {
 		return nil
 	}
-	b, err := json.Marshal(s)
+	b, err := json.Marshal(g.patchSchema(s))
 	if err != nil {
 		return nil
 	}
@@ -522,14 +525,43 @@ func (g *OpenAIGenerator) convSchemaForFunc(s *jsonschema.Schema) openai.Functio
 }
 
 // FormatOpenAISchema formats a schema for OpenAI structured outputs.
+//
+// OpenAI strict mode requires:
+//   - All objects must have additionalProperties: false
+//   - All properties must be listed in required
+//
+// See https://platform.openai.com/docs/guides/structured-outputs
 func FormatOpenAISchema(m *jsonschema.Schema) *jsonschema.Schema {
-	switch m.Type {
+	if m == nil {
+		return nil
+	}
+
+	// Merge Type into Types if both are set (jsonschema library may set
+	// Types: ["null", "array"] with Type: "" for nullable fields). We need
+	// to consolidate into a single representation for OpenAI.
+	if m.Type != "" && len(m.Types) > 0 {
+		m.Types = append(m.Types, m.Type)
+		m.Type = ""
+	}
+
+	typ := m.Type
+	if typ == "" && len(m.Types) > 0 {
+		// Determine effective type for switch dispatch.
+		for _, t := range m.Types {
+			if t != "null" && t != "" {
+				typ = t
+				break
+			}
+		}
+	}
+
+	switch typ {
 	case "array":
 		m.Items = FormatOpenAISchema(m.Items)
 	case "object":
 		// additionalProperties: false must always be set in objects
-		// https://platform.openai.com/docs/guides/structured-outputs/structured-outputs#additionalproperties-false-must-always-be-set-in-objects
-		m.AdditionalProperties = nil
+		// https://platform.openai.com/docs/guides/structured-outputs#additionalproperties-false-must-always-be-set-in-objects
+		m.AdditionalProperties = &jsonschema.Schema{Not: &jsonschema.Schema{}} // false schema
 
 		requires := make(map[string]struct{})
 		for _, v := range m.Required {
@@ -538,18 +570,17 @@ func FormatOpenAISchema(m *jsonschema.Schema) *jsonschema.Schema {
 		for k, v := range m.Properties {
 			if _, ok := requires[k]; !ok {
 				requires[k] = struct{}{}
-				v.Types = append(v.Types, "null")
+				// Add "null" only if not already present.
+				if !slices.Contains(v.Types, "null") {
+					v.Types = append(v.Types, "null")
+				}
 			}
 			m.Properties[k] = FormatOpenAISchema(v)
 		}
 
 		// All fields must be required
-		// https://platform.openai.com/docs/guides/structured-outputs/structured-outputs#all-fields-must-be-required
+		// https://platform.openai.com/docs/guides/structured-outputs#all-fields-must-be-required
 		m.Required = slices.Collect(maps.Keys(requires))
-	}
-	if len(m.Types) > 0 {
-		m.Types = append(m.Types, m.Type)
-		m.Type = ""
 	}
 	return m
 }
@@ -558,10 +589,11 @@ func (g *OpenAIGenerator) patchSchema(m *jsonschema.Schema) *jsonschema.Schema {
 	if m == nil {
 		return nil
 	}
+	s := m.CloneSchemas()
 	if g.SchemaFormatter != nil {
-		return g.SchemaFormatter(m.CloneSchemas())
+		return g.SchemaFormatter(s)
 	}
-	return m
+	return FormatOpenAISchema(s)
 }
 
 func oaiConvUsage(usage *openai.CompletionUsage) Usage {
