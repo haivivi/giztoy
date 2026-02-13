@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "memory_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/e2e/memory",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//go/pkg/genx/modelloader",
+        "//go/pkg/graph",
+        "//go/pkg/kv",
+        "//go/pkg/memory",
+    ],
+)
+
+go_binary(
+    name = "memory",
+    embed = [":memory_lib"],
+    visibility = ["//visibility:public"],
+)
