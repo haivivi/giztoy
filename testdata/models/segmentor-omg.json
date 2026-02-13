@@ -11,6 +11,22 @@
             "model": "omg/gpt-4o"
         },
         {
+            "name": "seg/omg-gpt4.1-mini",
+            "model": "omg/gpt-4.1-mini"
+        },
+        {
+            "name": "seg/omg-gpt5.1-nano",
+            "model": "omg/gpt-5.1-nano"
+        },
+        {
+            "name": "seg/omg-gpt5.1-mini",
+            "model": "omg/gpt-5.1-mini"
+        },
+        {
+            "name": "seg/omg-gpt5.1",
+            "model": "omg/gpt-5.1"
+        },
+        {
             "name": "seg/omg-claude-sonnet",
             "model": "omg/claude-3.5-sonnet"
         },

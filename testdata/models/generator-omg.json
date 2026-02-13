@@ -41,6 +41,76 @@
             }
         },
         {
+            "name": "omg/gpt-4.1-mini",
+            "model": "gpt-4.1-mini",
+            "support_json_output": true,
+            "support_tool_calls": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "omg/gpt-5.1-nano",
+            "model": "gpt-5.1-nano",
+            "support_json_output": true,
+            "support_tool_calls": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "omg/gpt-5.1-mini",
+            "model": "gpt-5.1-mini",
+            "support_json_output": true,
+            "support_tool_calls": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096,
+                "temperature": 1,
+                "top_p": 1
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
+            "name": "omg/gpt-5.1",
+            "model": "gpt-5.1",
+            "support_json_output": true,
+            "support_tool_calls": true,
+            "support_text_only": true,
+            "use_system_role": true,
+            "generate_params": {
+                "max_tokens": 4096
+            },
+            "invoke_params": {
+                "max_tokens": 4096,
+                "temperature": 0.1,
+                "top_p": 1
+            }
+        },
+        {
             "name": "omg/claude-3.5-sonnet",
             "model": "claude-3-5-sonnet-20241022",
             "support_tool_calls": true,

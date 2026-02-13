@@ -203,7 +203,7 @@ func scoreRelations(expect Expect, result *segmentors.Result) float64 {
 }
 
 // relationsMatch checks if an actual relation matches an expected one.
-// Allows fuzzy rel_type matching (e.g., "parent" matches "parent_of", "mother" etc.).
+// Allows fuzzy rel_type matching with synonym groups for semantic equivalence.
 func relationsMatch(expected ExpectedRelation, actual segmentors.RelationOutput) bool {
 	if actual.From != expected.From || actual.To != expected.To {
 		// Also try reversed direction for symmetric relations like "sibling".
@@ -212,9 +212,54 @@ func relationsMatch(expected ExpectedRelation, actual segmentors.RelationOutput)
 			return false
 		}
 	}
-	// Fuzzy rel_type: contains check.
-	return strings.Contains(strings.ToLower(actual.RelType), strings.ToLower(expected.RelType)) ||
-		strings.Contains(strings.ToLower(expected.RelType), strings.ToLower(actual.RelType))
+	return relTypeMatch(expected.RelType, actual.RelType)
+}
+
+// relTypeSynonyms maps a canonical relation type to semantically equivalent
+// terms. When matching, if any synonym of the expected type appears in the
+// actual type (or vice versa), we consider it a match.
+var relTypeSynonyms = map[string][]string{
+	"sibling":  {"sibling", "brother", "sister", "兄妹", "兄弟", "姐妹", "哥哥", "妹妹", "姐姐", "弟弟"},
+	"parent":   {"parent", "father", "mother", "dad", "mom", "parent_of", "child_of", "父", "母", "爸", "妈"},
+	"child":    {"child", "son", "daughter", "child_of", "parent_of", "儿子", "女儿", "孩子"},
+	"spouse":   {"spouse", "husband", "wife", "married", "couple", "丈夫", "妻子", "夫妻", "配偶"},
+	"friend":   {"friend", "friendship", "朋友", "好友"},
+	"likes":    {"likes", "like", "love", "enjoy", "fond", "favorite", "interest", "喜欢", "爱好", "热爱"},
+	"owns":     {"owns", "own", "has", "have", "possess", "owner", "pet", "养", "拥有", "宠物"},
+	"lives_in": {"lives_in", "live", "reside", "located", "from", "hometown", "住", "居住", "来自", "家乡"},
+	"works_at": {"works_at", "work", "employ", "job", "工作", "任职", "就职"},
+	"studies":  {"studies", "study", "learn", "student", "学习", "研究", "就读"},
+}
+
+func relTypeMatch(expected, actual string) bool {
+	e := strings.ToLower(expected)
+	a := strings.ToLower(actual)
+
+	// Direct contains match.
+	if strings.Contains(a, e) || strings.Contains(e, a) {
+		return true
+	}
+
+	// Synonym group match: find the group for the expected type, then check
+	// if the actual type matches any synonym in that group.
+	for _, synonyms := range relTypeSynonyms {
+		eInGroup := false
+		for _, syn := range synonyms {
+			if strings.Contains(e, syn) || strings.Contains(syn, e) {
+				eInGroup = true
+				break
+			}
+		}
+		if !eInGroup {
+			continue
+		}
+		for _, syn := range synonyms {
+			if strings.Contains(a, syn) || strings.Contains(syn, a) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // scoreSummary: fraction of expected keywords found in summary.
