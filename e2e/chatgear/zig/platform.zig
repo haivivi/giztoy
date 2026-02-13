@@ -1,7 +1,9 @@
 //! Platform Configuration — ChatGear E2E Test
 //!
 //! HAL Board for WiFi + net + buttons.
-//! Audio (I2C/I2S/speaker/mic) initialized separately in app.zig.
+//! Audio system (mic + speaker + AEC) via AudioSystem.
+//! All platform-specific details are encapsulated here — app.zig
+//! must not import esp/idf directly.
 
 const hal = @import("hal");
 const build_options = @import("build_options");
@@ -61,5 +63,26 @@ const spec = struct {
 
 pub const Board = hal.Board(spec);
 
-/// Audio hardware constants (used by app.zig for direct I2C/I2S init)
-pub const Audio = hw.Hardware;
+// ============================================================================
+// Audio System (mic + speaker + AEC)
+// ============================================================================
+
+/// Audio system type — ES7210 ADC (mic) + ES8311 DAC (speaker) + I2S + AEC.
+/// Use readMic() for mic input, writeSpeaker() for speaker output.
+pub const AudioSystem = hw.AudioSystem;
+
+/// I2C bus type (needed to init AudioSystem, LedDriver, PaSwitchDriver)
+pub const I2c = hw.I2c;
+
+/// Audio sample rate (Hz) — for opus encoder configuration
+pub const sample_rate: u32 = hw.Hardware.sample_rate;
+
+// ============================================================================
+// Peripherals
+// ============================================================================
+
+/// LED driver (red + blue LEDs via GPIO expander)
+pub const LedDriver = hw.LedDriver;
+
+/// PA switch driver (speaker power amplifier enable/disable)
+pub const PaSwitchDriver = hw.PaSwitchDriver;

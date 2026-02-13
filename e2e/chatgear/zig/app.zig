@@ -1,9 +1,11 @@
 //! ChatGear E2E Test Application — Platform Independent
 //!
-//! Device simulator that exercises the full chatgear protocol:
+//! Device application that exercises the full chatgear protocol:
 //! - Connects to MQTT broker (mqtt:// or mqtts:// with auth)
 //! - Manages state/stats exclusively through ClientPort
 //! - Handles ADC button events for recording and calling
+//! - Captures mic audio via AudioSystem (ES7210 + AEC), opus-encodes, sends uplink
+//! - Receives downlink audio, opus-decodes, plays via AudioSystem (ES8311)
 //! - Receives and executes commands from server
 //!
 //! MQTT URL format (matches Go DialMQTT):
@@ -11,7 +13,7 @@
 //!   mqtt://user:pass@host:1883    — TCP with auth
 //!   mqtts://user:pass@host:8883   — TLS with auth
 //!
-//! Button behavior (Korvo-2 V3 ADC buttons):
+//! Button behavior (ADC buttons):
 //!   do  (VOL+): log current state
 //!   re  (VOL-): force full stats report
 //!   mi  (SET):  press = recording (from ready/waiting/streaming), release = waiting_for_response
@@ -22,17 +24,18 @@
 //! Command handling (from server):
 //!   Matches Go geartest simulator.applyCommand() — state guards, value clamping,
 //!   settings reset. See handleCommand() for details.
+//!
+//! Platform independence:
+//!   This file does NOT import esp/idf. All hardware access goes through
+//!   platform.zig which abstracts Board, AudioSystem, LedDriver, etc.
 
 const std = @import("std");
 
 const platform = @import("platform.zig");
 const Board = platform.Board;
 const ButtonId = platform.ButtonId;
-const Audio = platform.Audio;
 const hw = platform.hw;
 const log = Board.log;
-const esp = @import("esp");
-const idf = esp.idf;
 
 const chatgear = @import("chatgear");
 const mqtt0 = @import("mqtt0");
@@ -52,6 +55,8 @@ const TcpConn = chatgear.MqttClientConn(TcpMqttClient);
 const TlsConn = chatgear.MqttClientConn(TlsMqttClient);
 const TcpPort = chatgear.ClientPort(TcpMqttClient, FullRt);
 const TlsPort = chatgear.ClientPort(TlsMqttClient, FullRt);
+
+const alloc = hw.allocator;
 
 // ============================================================================
 // MQTT URL Parser
@@ -151,11 +156,13 @@ var config: struct {
 // ============================================================================
 
 /// Application context — the single source of truth for all runtime state.
-/// Heap-allocated, passed to spawned tasks. Eliminates global mutable state.
+/// Heap-allocated, passed to spawned tasks. No global mutable hardware state.
 const AppCtx = struct {
     port: *TlsPort,
     conn: *TlsConn,
     client: *TlsMqttClient,
+    audio: *platform.AudioSystem,
+    led: ?*platform.LedDriver,
     encoder: *opus.Encoder,
     decoder: *opus.Decoder,
     epoch_offset: i64,
@@ -203,18 +210,6 @@ const AppState = enum {
     connecting_mqtt,
     running,
 };
-
-// ============================================================================
-// Audio Hardware (initialized once, used across tasks)
-// ============================================================================
-
-var g_i2c: ?idf.I2c = null;
-var g_i2s: ?idf.I2s = null;
-var g_pa: ?hw.PaSwitchDriver = null;
-var g_spk: ?hw.SpeakerDriver = null;
-
-const LedDriver = @import("esp").boards.korvo2_v3.LedDriver;
-var g_led: ?LedDriver = null;
 
 /// Epoch offset: epoch_ms - uptime_ms. Set by NTP sync.
 var g_epoch_offset: i64 = 0;
@@ -264,15 +259,6 @@ pub fn run(env: anytype) void {
         return;
     };
     defer board.deinit();
-
-    // Init audio hardware (I2C + I2S + ES8311 speaker + PA + LEDs)
-    initAudio();
-
-    // Play startup beep (confirms speaker works)
-    playTone(440, 100);
-    Board.time.sleepMs(50);
-    playTone(880, 100);
-    log.info("Startup beep played", .{});
 
     // Connect WiFi
     log.info("Connecting to WiFi: {s}", .{config.wifi_ssid});
@@ -383,6 +369,141 @@ fn resolveHost(hostname: []const u8) ?[4]u8 {
 }
 
 // ============================================================================
+// NTP Time Sync
+// ============================================================================
+
+fn syncNtp() void {
+    const NtpClient = ntp.Client(Socket);
+    var client = NtpClient{ .timeout_ms = 5000 };
+    const local_time: i64 = @intCast(Board.time.getTimeMs());
+
+    if (client.getTimeRace(local_time)) |epoch_ms| {
+        g_epoch_offset = epoch_ms - local_time;
+        log.info("NTP sync OK: offset={d}ms", .{g_epoch_offset});
+    } else |err| {
+        log.err("NTP sync failed: {}, using offset=0", .{err});
+    }
+}
+
+// ============================================================================
+// Audio System Initialization
+// ============================================================================
+
+/// Shared I2C bus — initialized once, used by AudioSystem + LedDriver + PA.
+/// Must outlive all users (heap-allocated).
+var g_i2c: ?*platform.I2c = null;
+
+/// Initialize shared I2C bus, AudioSystem, LED, and PA.
+/// Returns the AudioSystem and LedDriver instances (heap-allocated).
+fn initAudioSystem() ?struct { audio: *platform.AudioSystem, led: ?*platform.LedDriver } {
+    // I2C bus (shared)
+    if (g_i2c == null) {
+        const i2c = alloc.create(platform.I2c) catch |err| {
+            log.err("alloc I2C: {}", .{err});
+            return null;
+        };
+        i2c.* = platform.I2c.init(.{
+            .sda = hw.Hardware.i2c_sda,
+            .scl = hw.Hardware.i2c_scl,
+            .freq_hz = 400_000,
+        }) catch |err| {
+            log.err("I2C init failed: {}", .{err});
+            return null;
+        };
+        g_i2c = i2c;
+    }
+    const i2c = g_i2c.?;
+
+    // AudioSystem (ES7210 ADC + ES8311 DAC + I2S duplex + AEC)
+    log.info("Initializing AudioSystem...", .{});
+    const audio = alloc.create(platform.AudioSystem) catch |err| {
+        log.err("alloc AudioSystem: {}", .{err});
+        return null;
+    };
+    audio.* = platform.AudioSystem.init(i2c) catch |err| {
+        log.err("AudioSystem init failed: {}", .{err});
+        return null;
+    };
+    log.info("AudioSystem ready (ES7210+ES8311+AEC)", .{});
+
+    // PA (power amplifier for speaker)
+    var pa = platform.PaSwitchDriver.init(i2c) catch |err| {
+        log.warn("PA init failed: {}", .{err});
+        return .{ .audio = audio, .led = null };
+    };
+    pa.on() catch |err| {
+        log.warn("PA enable failed: {}", .{err});
+    };
+
+    // LED driver (optional, non-fatal)
+    const led = alloc.create(platform.LedDriver) catch {
+        return .{ .audio = audio, .led = null };
+    };
+    led.* = platform.LedDriver.init(i2c) catch |err| {
+        log.warn("LED init failed: {} (continuing without LED)", .{err});
+        return .{ .audio = audio, .led = null };
+    };
+    led.setBlue(true);
+    Board.time.sleepMs(200);
+    led.off();
+    log.info("LED initialized", .{});
+
+    return .{ .audio = audio, .led = led };
+}
+
+// ============================================================================
+// Tone Playback (via AudioSystem)
+// ============================================================================
+
+/// Play a short sine wave tone at given frequency via AudioSystem.
+fn playTone(audio: *platform.AudioSystem, freq: u32, duration_ms: u32) void {
+    const sr = platform.sample_rate;
+    const total_frames = (sr * duration_ms) / 1000;
+    const phase_inc = @as(f32, @floatFromInt(freq)) * 2.0 * std.math.pi / @as(f32, @floatFromInt(sr));
+
+    var buf: [256]i16 = undefined;
+    var phase: f32 = 0;
+    var played: u32 = 0;
+
+    while (played < total_frames) {
+        const remaining = total_frames - played;
+        const chunk = if (remaining < 256) remaining else 256;
+
+        var i: usize = 0;
+        while (i < chunk) : (i += 1) {
+            buf[i] = @intFromFloat(@sin(phase) * 10000.0);
+            phase += phase_inc;
+            if (phase >= 2.0 * std.math.pi) phase -= 2.0 * std.math.pi;
+        }
+
+        // writeSpeaker takes mono i16, converts to stereo i32 internally
+        _ = audio.writeSpeaker(buf[0..chunk]) catch return;
+        played += @intCast(chunk);
+    }
+}
+
+/// Play "ready" notification: ascending beeps
+fn playReadyBeeps(audio: *platform.AudioSystem) void {
+    playTone(audio, 523, 100); // C5
+    Board.time.sleepMs(80);
+    playTone(audio, 659, 100); // E5
+    Board.time.sleepMs(80);
+    playTone(audio, 784, 150); // G5
+    Board.time.sleepMs(50);
+    playTone(audio, 1047, 200); // C6
+}
+
+/// Set LED state.
+fn setLed(red: bool, blue: bool) void {
+    if (g_app) |app| {
+        if (app.led) |led| {
+            led.setRed(red);
+            led.setBlue(blue);
+        }
+    }
+}
+
+// ============================================================================
 // MQTT Connection (TCP)
 // ============================================================================
 
@@ -403,7 +524,7 @@ fn connectTcp(app_state: *AppState) void {
         return;
     };
 
-    var mux = mqtt0.Mux(MqttRt).init(hw.allocator) catch |err| {
+    var mux = mqtt0.Mux(MqttRt).init(alloc) catch |err| {
         log.err("Mux init failed: {}", .{err});
         socket.close();
         return;
@@ -413,7 +534,7 @@ fn connectTcp(app_state: *AppState) void {
         .client_id = config.gear_id,
         .username = config.mqtt.username,
         .password = config.mqtt.password,
-        .allocator = hw.allocator,
+        .allocator = alloc,
     }) catch |err| {
         log.err("MQTT connect failed: {}", .{err});
         socket.close();
@@ -434,9 +555,6 @@ fn connectTcp(app_state: *AppState) void {
     initPort(&port);
     app_state.* = .running;
 
-    playReadyBeeps();
-    setLed(false, true);
-
     // MQTT readLoop in background
     FullRt.spawn("mqtt_rx", struct {
         fn run(ctx: ?*anyopaque) void {
@@ -453,8 +571,6 @@ fn connectTcp(app_state: *AppState) void {
 // ============================================================================
 // MQTT Connection (TLS)
 // ============================================================================
-
-const alloc = hw.allocator;
 
 fn connectTls(app_state: *AppState) void {
     log.info("Connecting MQTT (TLS) to {s}:{d}...", .{ config.mqtt.host, config.mqtt.port });
@@ -572,14 +688,34 @@ fn connectTls(app_state: *AppState) void {
     // Initialize port state (battery, volume, version) and start periodic reporting
     initPort(port);
 
+    // Initialize audio system (ES7210 + ES8311 + I2S + AEC + PA + LED)
+    const hw_init = initAudioSystem() orelse {
+        log.err("Audio system init failed — continuing without audio", .{});
+        // Still allow state/stats/command, just no audio
+        const ctx = alloc.create(AppCtx) catch return;
+        ctx.* = .{
+            .port = port,
+            .conn = conn,
+            .client = client,
+            .audio = undefined,
+            .led = null,
+            .encoder = undefined,
+            .decoder = undefined,
+            .epoch_offset = g_epoch_offset,
+        };
+        g_app = ctx;
+        app_state.* = .running;
+        spawnMqttTasks(client);
+        return;
+    };
+
     // Init opus codec
     log.info("Initializing opus codec...", .{});
-    const opus_alloc = idf.heap.psram;
-    const enc = opus_alloc.create(opus.Encoder) catch |err| {
+    const enc = alloc.create(opus.Encoder) catch |err| {
         log.err("alloc encoder: {}", .{err});
         return;
     };
-    enc.* = opus.Encoder.init(opus_alloc, Audio.sample_rate, 1, .voip) catch |err| {
+    enc.* = opus.Encoder.init(alloc, platform.sample_rate, 1, .voip) catch |err| {
         log.err("opus encoder init: {}", .{err});
         return;
     };
@@ -588,11 +724,11 @@ fn connectTls(app_state: *AppState) void {
     enc.setSignal(.voice) catch {};
     log.info("Opus encoder ready", .{});
 
-    const dec = opus_alloc.create(opus.Decoder) catch |err| {
+    const dec = alloc.create(opus.Decoder) catch |err| {
         log.err("alloc decoder: {}", .{err});
         return;
     };
-    dec.* = opus.Decoder.init(opus_alloc, Audio.sample_rate, 1) catch |err| {
+    dec.* = opus.Decoder.init(alloc, platform.sample_rate, 1) catch |err| {
         log.err("opus decoder init: {}", .{err});
         return;
     };
@@ -607,13 +743,21 @@ fn connectTls(app_state: *AppState) void {
         .port = port,
         .conn = conn,
         .client = client,
+        .audio = hw_init.audio,
+        .led = hw_init.led,
         .encoder = enc,
         .decoder = dec,
         .epoch_offset = g_epoch_offset,
     };
     g_app = ctx;
 
-    // Start audio pipeline (mic capture + speaker playback tasks)
+    // Startup tone (confirms speaker works)
+    playTone(hw_init.audio, 440, 100);
+    Board.time.sleepMs(50);
+    playTone(hw_init.audio, 880, 100);
+    log.info("Startup tone played", .{});
+
+    // Start audio pipeline (mic capture + speaker playback + command handler)
     startAudioPipeline(ctx);
 
     // Run automated test sequence (exercises full protocol)
@@ -623,10 +767,15 @@ fn connectTls(app_state: *AppState) void {
     log.info("Auto test done. Manual button mode.", .{});
     app_state.* = .running;
 
-    playReadyBeeps();
+    playReadyBeeps(hw_init.audio);
     setLed(false, true);
 
-    // MQTT readLoop in background
+    // MQTT readLoop + keepalive in background
+    spawnMqttTasks(client);
+}
+
+/// Spawn MQTT background tasks (readLoop + keepalive).
+fn spawnMqttTasks(client: *TlsMqttClient) void {
     FullRt.spawn("mqtt_rx", struct {
         fn run(arg: ?*anyopaque) void {
             const c: *TlsMqttClient = @ptrCast(@alignCast(arg));
@@ -638,7 +787,6 @@ fn connectTls(app_state: *AppState) void {
         log.err("Failed to spawn MQTT reader: {}", .{err});
     };
 
-    // MQTT keep-alive ping
     FullRt.spawn("mqtt_ka", struct {
         fn run(arg: ?*anyopaque) void {
             const c: *TlsMqttClient = @ptrCast(@alignCast(arg));
@@ -680,152 +828,6 @@ fn initPort(p: anytype) void {
 }
 
 // ============================================================================
-// NTP Time Sync
-// ============================================================================
-
-fn syncNtp() void {
-    const NtpClient = ntp.Client(Socket);
-    var client = NtpClient{ .timeout_ms = 5000 };
-    const local_time: i64 = @intCast(Board.time.getTimeMs());
-
-    if (client.getTimeRace(local_time)) |epoch_ms| {
-        g_epoch_offset = epoch_ms - local_time;
-        log.info("NTP sync OK: offset={d}ms", .{g_epoch_offset});
-    } else |err| {
-        log.err("NTP sync failed: {}, using offset=0", .{err});
-    }
-}
-
-// ============================================================================
-// Audio Init + Tone Playback
-// ============================================================================
-
-fn initAudio() void {
-    log.info("Initializing audio...", .{});
-
-    g_i2c = idf.I2c.init(.{
-        .sda = Audio.i2c_sda,
-        .scl = Audio.i2c_scl,
-        .freq_hz = 400_000,
-    }) catch |err| {
-        log.err("I2C init failed: {}", .{err});
-        return;
-    };
-
-    g_i2s = idf.I2s.init(.{
-        .port = Audio.i2s_port,
-        .sample_rate = Audio.sample_rate,
-        .rx_channels = 1,
-        .bits_per_sample = 16,
-        .bclk_pin = Audio.i2s_bclk,
-        .ws_pin = Audio.i2s_ws,
-        .din_pin = Audio.i2s_din,
-        .dout_pin = Audio.i2s_dout,
-        .mclk_pin = Audio.i2s_mclk,
-    }) catch |err| {
-        log.err("I2S init failed: {}", .{err});
-        return;
-    };
-
-    g_spk = hw.SpeakerDriver.init() catch |err| {
-        log.err("Speaker init failed: {}", .{err});
-        return;
-    };
-    g_spk.?.initWithShared(&g_i2c.?, &g_i2s.?) catch |err| {
-        log.err("Speaker shared init failed: {}", .{err});
-        return;
-    };
-
-    g_pa = hw.PaSwitchDriver.init(&g_i2c.?) catch |err| {
-        log.err("PA init failed: {}", .{err});
-        return;
-    };
-    g_pa.?.on() catch |err| {
-        log.warn("PA enable failed: {}", .{err});
-    };
-
-    g_spk.?.setVolume(200) catch {};
-    log.info("Audio initialized (ES8311 + PA)", .{});
-
-    // Init LED driver (TCA9554 via same I2C bus)
-    g_led = LedDriver.init(&g_i2c.?) catch |err| {
-        log.warn("LED init failed: {} (continuing without LED)", .{err});
-        g_led = null;
-        return;
-    };
-    if (g_led) |*led| {
-        led.setBlue(true);
-        Board.time.sleepMs(200);
-        led.off();
-    }
-    log.info("LED initialized (TCA9554 red+blue)", .{});
-}
-
-/// Play "ready" notification: ascending beeps
-fn playReadyBeeps() void {
-    playTone(523, 100); // C5
-    Board.time.sleepMs(80);
-    playTone(659, 100); // E5
-    Board.time.sleepMs(80);
-    playTone(784, 150); // G5
-    Board.time.sleepMs(50);
-    playTone(1047, 200); // C6
-}
-
-/// Set LED state.
-fn setLed(red: bool, blue: bool) void {
-    if (g_led) |*led| {
-        led.setRed(red);
-        led.setBlue(blue);
-    }
-}
-
-/// Play a short sine wave tone at given frequency.
-fn playTone(freq: u32, duration_ms: u32) void {
-    const spk = &(g_spk orelse return);
-    const sr = Audio.sample_rate;
-    const total_frames = (sr * duration_ms) / 1000;
-    const phase_inc = @as(f32, @floatFromInt(freq)) * 2.0 * std.math.pi / @as(f32, @floatFromInt(sr));
-
-    var buf: [320]i16 = undefined; // 160 stereo frames
-    var phase: f32 = 0;
-    var played: u32 = 0;
-
-    while (played < total_frames) {
-        const remaining = total_frames - played;
-        const frames = if (remaining < 160) remaining else 160;
-
-        var i: usize = 0;
-        while (i < frames) : (i += 1) {
-            const val: i16 = @intFromFloat(@sin(phase) * 10000.0);
-            buf[i * 2] = val;
-            buf[i * 2 + 1] = val;
-            phase += phase_inc;
-            if (phase >= 2.0 * std.math.pi) phase -= 2.0 * std.math.pi;
-        }
-
-        const samples = frames * 2;
-        var off: usize = 0;
-        while (off < samples) {
-            const written = spk.write(buf[off..samples]) catch return;
-            off += written;
-        }
-        played += @intCast(frames);
-    }
-
-    // Flush I2S DMA with silence
-    @memset(&buf, 0);
-    var flush: u32 = 0;
-    while (flush < 10) : (flush += 1) {
-        var s_off: usize = 0;
-        while (s_off < buf.len) {
-            const written = spk.write(buf[s_off..]) catch break;
-            s_off += written;
-        }
-    }
-}
-
-// ============================================================================
 // Automated Test Sequence
 // ============================================================================
 
@@ -836,13 +838,13 @@ fn runAutoTest(ctx: *AppCtx) void {
     log.info("========== AUTO TEST START ==========", .{});
 
     const port = ctx.port;
+    const audio = ctx.audio;
     const sleep = Board.time.sleepMs;
-    const i2s = &(g_i2s orelse return);
 
     // [0s] Startup beep
-    playTone(440, 100);
+    playTone(audio, 440, 100);
     sleep(50);
-    playTone(880, 100);
+    playTone(audio, 880, 100);
     log.info("[TEST] Startup beep", .{});
 
     // [2s] state=ready (already set by initPort, but verify by re-setting)
@@ -856,35 +858,28 @@ fn runAutoTest(ctx: *AppCtx) void {
     port.setVolume(50);
     log.info("[TEST] STATS -> bat=100 vol=50", .{});
 
-    // [6s] state=recording + mic 3 seconds (through port)
+    // [6s] state=recording + mic 3 seconds (through AudioSystem)
     sleep(2000);
     port.setState(.recording);
     log.info("[TEST] STATE -> recording, mic 3s...", .{});
     {
-        var pcm_buf: [FRAME_SAMPLES * 2]u8 = undefined;
+        const frame_size = audio.getFrameSize();
+        var pcm_buf: [512]i16 = undefined;
         var opus_buf: [MAX_OPUS]u8 = undefined;
         const start = Board.time.getTimeMs();
         var frame_count: u32 = 0;
 
         while (Board.time.getTimeMs() - start < 3000) {
-            const bytes_read = i2s.read(&pcm_buf) catch {
+            const samples = audio.readMic(pcm_buf[0..frame_size]) catch {
                 sleep(5);
                 continue;
             };
-            if (bytes_read < FRAME_SAMPLES * 2) {
+            if (samples < frame_size) {
                 sleep(1);
                 continue;
             }
 
-            const sample_slice = @as([*]const i16, @ptrCast(@alignCast(pcm_buf[0 .. FRAME_SAMPLES * 2].ptr)))[0..FRAME_SAMPLES];
-
-            var gained: [FRAME_SAMPLES]i16 = undefined;
-            for (sample_slice, 0..) |s, idx| {
-                const v: i32 = @as(i32, s) * MIC_GAIN;
-                gained[idx] = @intCast(std.math.clamp(v, std.math.minInt(i16), std.math.maxInt(i16)));
-            }
-
-            const encoded = ctx.encoder.encode(&gained, FRAME_SAMPLES, &opus_buf) catch continue;
+            const encoded = ctx.encoder.encode(pcm_buf[0..samples], @intCast(samples), &opus_buf) catch continue;
             if (encoded.len == 0) continue;
 
             // Send through port — data is copied into owned StampedFrame
@@ -927,11 +922,11 @@ fn runAutoTest(ctx: *AppCtx) void {
 
     // [21s] End beep
     sleep(2000);
-    playTone(880, 80);
+    playTone(audio, 880, 80);
     sleep(50);
-    playTone(880, 80);
+    playTone(audio, 880, 80);
     sleep(50);
-    playTone(880, 80);
+    playTone(audio, 880, 80);
     log.info("[TEST] End beep", .{});
 
     log.info("========== AUTO TEST DONE ==========", .{});
@@ -942,99 +937,82 @@ fn runAutoTest(ctx: *AppCtx) void {
 // ============================================================================
 
 const FRAME_MS: u32 = 20;
-const FRAME_SAMPLES: usize = Audio.sample_rate * FRAME_MS / 1000; // 320 @ 16kHz
 const MAX_OPUS: usize = 512;
-const MIC_GAIN: i32 = 4;
 
-/// Mic capture task — reads I2S, opus-encodes, sends to chatgear uplink.
-/// Recording is gated by port.getState() == .recording — no global flag.
+/// Mic capture task — reads mic via AudioSystem (ES7210 + AEC), opus-encodes,
+/// sends to chatgear uplink. Recording is gated by port.getState() == .recording.
 fn micTaskFn(arg: ?*anyopaque) void {
     const ctx: *AppCtx = @ptrCast(@alignCast(arg));
     const port = ctx.port;
+    const audio = ctx.audio;
     const encoder = ctx.encoder;
-    log.info("[mic] task started", .{});
+    const frame_size = audio.getFrameSize(); // AEC frame size (~256 samples)
+    log.info("[mic] task started (frame_size={d})", .{frame_size});
 
-    const i2s = &(g_i2s orelse return);
-    var raw_buf: [FRAME_SAMPLES * 2]u8 = undefined;
-    var pcm_buf: [FRAME_SAMPLES]i16 = undefined;
+    var pcm_buf: [512]i16 = undefined;
     var opus_buf: [MAX_OPUS]u8 = undefined;
-
-    i2s.enableRx() catch |err| {
-        log.err("[mic] enableRx: {}", .{err});
-        return;
-    };
+    var frame_count: u32 = 0;
+    var last_log_ms: u64 = 0;
 
     while (true) {
-        // Check port state — only record when state is .recording
+        // Only capture when state is .recording
         if (port.getState() != .recording) {
+            // Log summary when recording stops
+            if (frame_count > 0) {
+                log.info("[mic] sent {d} frames", .{frame_count});
+                frame_count = 0;
+            }
             Board.time.sleepMs(10);
             continue;
         }
 
-        const bytes_read = i2s.read(&raw_buf) catch {
+        // readMic: I2S read + ES7210 decode + AEC echo cancellation
+        // Returns clean mono i16 PCM, no manual gain needed
+        const samples = audio.readMic(pcm_buf[0..frame_size]) catch |err| {
+            log.err("[mic] readMic: {}", .{err});
             Board.time.sleepMs(5);
             continue;
         };
-        if (bytes_read < 2) {
-            Board.time.sleepMs(1);
-            continue;
-        }
+        if (samples == 0) continue;
 
-        const sample_count = bytes_read / 2;
-        const byte_slice = raw_buf[0..bytes_read];
-        const sample_slice = @as([*]const i16, @ptrCast(@alignCast(byte_slice.ptr)))[0..sample_count];
-        @memcpy(pcm_buf[0..sample_count], sample_slice);
-
-        // Apply gain
-        for (pcm_buf[0..sample_count]) |*s| {
-            const v: i32 = @as(i32, s.*) * MIC_GAIN;
-            s.* = @intCast(std.math.clamp(v, std.math.minInt(i16), std.math.maxInt(i16)));
-        }
-
-        if (sample_count < FRAME_SAMPLES) continue;
-
-        const encoded = encoder.encode(pcm_buf[0..FRAME_SAMPLES], FRAME_SAMPLES, &opus_buf) catch |err| {
+        const encoded = encoder.encode(pcm_buf[0..samples], @intCast(samples), &opus_buf) catch |err| {
             log.err("[mic] encode: {}", .{err});
             continue;
         };
         if (encoded.len == 0) continue;
 
-        // Send through port — StampedFrame.init copies data, so opus_buf
-        // can be reused immediately without data races.
+        // Send through port — StampedFrame.init copies data
         const ts: i64 = ctx.epoch_offset + @as(i64, @intCast(Board.time.getTimeMs()));
         port.sendOpusFrame(ts, encoded);
+        frame_count += 1;
+
+        // Periodic log (every 5 seconds)
+        const now = Board.time.getTimeMs();
+        if (now - last_log_ms >= 5000) {
+            log.info("[mic] {d} frames sent", .{frame_count});
+            last_log_ms = now;
+        }
     }
 }
 
-/// Downlink audio task — receives opus from server, decodes, plays on speaker.
+/// Downlink audio task — receives opus from server, decodes, plays via AudioSystem.
 fn speakerTaskFn(arg: ?*anyopaque) void {
     const ctx: *AppCtx = @ptrCast(@alignCast(arg));
     const port = ctx.port;
+    const audio = ctx.audio;
     const decoder = ctx.decoder;
     log.info("[spk] task started", .{});
 
-    const spk = &(g_spk orelse return);
-    var pcm_buf: [FRAME_SAMPLES * 2]i16 = undefined;
+    var mono_buf: [512]i16 = undefined;
 
     while (true) {
         const sf = port.recvDownlinkAudio() orelse return;
 
-        var mono_buf: [FRAME_SAMPLES]i16 = undefined;
         const decoded = decoder.decode(sf.frame(), &mono_buf, false) catch continue;
         if (decoded.len == 0) continue;
 
-        // Mono -> stereo
-        for (decoded, 0..) |sample, i| {
-            pcm_buf[i * 2] = sample;
-            pcm_buf[i * 2 + 1] = sample;
-        }
-
-        const stereo_len = decoded.len * 2;
-        var off: usize = 0;
-        while (off < stereo_len) {
-            const written = spk.write(pcm_buf[off..stereo_len]) catch break;
-            off += written;
-        }
+        // writeSpeaker takes mono i16, converts to stereo i32 internally
+        _ = audio.writeSpeaker(decoded) catch continue;
     }
 }
 
@@ -1091,7 +1069,7 @@ fn handleButton(ctx: *AppCtx, btn: anytype) void {
     if (btn.action == .press or btn.action == .click) {
         const idx: usize = @intFromEnum(btn.id);
         if (idx < button_tones.len) {
-            playTone(button_tones[idx], 80);
+            playTone(ctx.audio, button_tones[idx], 80);
         }
     }
 
@@ -1119,7 +1097,7 @@ fn handleButton(ctx: *AppCtx, btn: anytype) void {
                     const st = port.getState();
                     if (st == .ready or st == .waiting_for_response or st == .streaming) {
                         port.setState(.recording);
-                        log.info("[mi] -> recording", .{});
+                        log.info("-> STATE: recording", .{});
                     } else {
                         log.info("[mi] ignored (state={s})", .{st.toString()});
                     }
@@ -1127,7 +1105,7 @@ fn handleButton(ctx: *AppCtx, btn: anytype) void {
                 .release => {
                     if (port.getState() == .recording) {
                         port.setState(.waiting_for_response);
-                        log.info("[mi] -> waiting_for_response", .{});
+                        log.info("-> STATE: waiting_for_response", .{});
                     }
                 },
                 else => {},
@@ -1141,10 +1119,10 @@ fn handleButton(ctx: *AppCtx, btn: anytype) void {
                 const st = port.getState();
                 if (st == .calling) {
                     port.setState(.ready);
-                    log.info("[fa] -> ready", .{});
+                    log.info("-> STATE: ready", .{});
                 } else if (st == .ready) {
                     port.setState(.calling);
-                    log.info("[fa] -> calling", .{});
+                    log.info("-> STATE: calling", .{});
                 } else {
                     log.info("[fa] ignored (state={s})", .{st.toString()});
                 }
@@ -1157,7 +1135,7 @@ fn handleButton(ctx: *AppCtx, btn: anytype) void {
                 const st = port.getState();
                 if (st != .ready) {
                     port.setState(.ready);
-                    log.info("[so] -> ready (cancel from {s})", .{st.toString()});
+                    log.info("-> STATE: ready (cancel from {s})", .{st.toString()});
                 } else {
                     log.info("[so] already ready", .{});
                 }
@@ -1231,14 +1209,12 @@ fn handleCommand(ctx: *AppCtx, cmd: chatgear.CommandEvent) void {
 
         .delete_wifi => |ssid| {
             // Go: disconnect if current SSID matches, remove from store
-            // On real device: we'd check current wifi and disconnect.
-            // For E2E test, just log.
             log.info("[cmd] delete_wifi ssid={s}", .{ssid});
         },
 
         .halt => |h| {
-            // Go: interrupt → if Streaming/Recording/WaitingForResponse → Ready
-            //     sleep/shutdown → Ready
+            // Go: interrupt -> if Streaming/Recording/WaitingForResponse -> Ready
+            //     sleep/shutdown -> Ready
             if (h.interrupt) {
                 const st = port.getState();
                 if (st == .streaming or st == .recording or st == .waiting_for_response) {
@@ -1253,8 +1229,6 @@ fn handleCommand(ctx: *AppCtx, cmd: chatgear.CommandEvent) void {
 
         .reset => |r| {
             // Go: reset all settings to defaults via port API
-            // volume=100, brightness=100, light_mode="auto"
-            // If unpair: clear wifi + pair_status
             port.setVolume(100);
             port.setBrightness(100);
             port.setLightMode("auto");
@@ -1266,7 +1240,7 @@ fn handleCommand(ctx: *AppCtx, cmd: chatgear.CommandEvent) void {
         },
 
         .raise => |r| {
-            // Go: if call and state==Ready → Calling
+            // Go: if call and state==Ready -> Calling
             if (r.call) {
                 if (port.getState() == .ready) {
                     port.setState(.calling);
@@ -1276,7 +1250,6 @@ fn handleCommand(ctx: *AppCtx, cmd: chatgear.CommandEvent) void {
         },
 
         .ota_upgrade => {
-            // Go: simulate OTA progress (not critical for embedded E2E)
             log.info("[cmd] ota_upgrade (acknowledged)", .{});
         },
     }

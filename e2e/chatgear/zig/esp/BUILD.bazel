@@ -199,6 +199,7 @@ esp_zig_app(
         "verify_with_esp_bundle",
         "${I2S_FORCE_LINK}",
         "${I2C_FORCE_LINK}",
+        "${SR_FORCE_LINK}",
     ],
     extra_cmake = [
         "include(${_ESP_LIB}/platform/esp/idf/src/event/event.cmake)",
@@ -208,8 +209,9 @@ esp_zig_app(
         "include(${_ESP_LIB}/platform/esp/idf/src/runtime/runtime.cmake)",
         "include(${_ESP_LIB}/platform/esp/idf/src/i2s/i2s.cmake)",
         "include(${_ESP_LIB}/platform/esp/idf/src/i2c/i2c.cmake)",
+        "include(${_ESP_LIB}/platform/esp/idf/src/sr/sr.cmake)",
     ],
-    extra_c_sources = ["EVENT_SRCS", "WIFI_C_SOURCES", "NET_C_SOURCES", "MBED_TLS_C_SOURCES", "RUNTIME_C_SOURCES", "I2S_C_SOURCES", "I2C_C_SOURCES"],
+    extra_c_sources = ["EVENT_SRCS", "WIFI_C_SOURCES", "NET_C_SOURCES", "MBED_TLS_C_SOURCES", "RUNTIME_C_SOURCES", "I2S_C_SOURCES", "I2C_C_SOURCES", "SR_C_SOURCES"],
     deps = [
         ":idf",
         ":esp",
@@ -230,6 +232,9 @@ esp_zig_app(
     ],
     static_libs = [
         ":opus_xtensa",
+    ],
+    idf_deps = [
+        "espressif/esp-sr:^2.1.1",
     ],
     sdkconfig = ":sdkconfig",
     partition_table = ":partitions",

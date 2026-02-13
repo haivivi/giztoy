@@ -37,9 +37,17 @@ pub const Hardware = struct {
     pub const pa_gpio: u8 = board.pa_gpio;
 };
 
-// Audio drivers
-pub const SpeakerDriver = board.SpeakerDriver;
+// Audio system (ES7210 ADC + ES8311 DAC + I2S duplex + AEC)
+pub const AudioSystem = board.AudioSystem;
+
+// LED driver (TCA9554 GPIO expander)
+pub const LedDriver = board.LedDriver;
+
+// PA switch driver (speaker power amplifier)
 pub const PaSwitchDriver = board.PaSwitchDriver;
+
+// I2C type (shared by AudioSystem, LedDriver, PaSwitchDriver)
+pub const I2c = idf.I2c;
 
 // ============================================================================
 // Socket Implementation (for MQTT TCP)
