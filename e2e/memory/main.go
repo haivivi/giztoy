@@ -30,16 +30,28 @@ import (
 )
 
 var (
-	flagModelsDir = flag.String("models", "", "Models config directory (required)")
+	flagModelsDir = flag.String("models", "", "Models config directory (required for run)")
 	flagSeg       = flag.String("seg", "", "Segmentor model pattern (e.g., seg/qwen-flash)")
 	flagProf      = flag.String("prof", "", "Profiler model pattern (optional)")
 	flagList      = flag.Bool("list", false, "List all available models")
 	flagVerbose   = flag.Bool("verbose", false, "Verbose output (print HTTP request body)")
+	flagGenerate  = flag.String("generate", "", "Generate test cases to directory (creates dir + tar.gz)")
+	flagCases     = flag.String("cases", "", "Test cases tar.gz or directory to run")
+	flagCase      = flag.String("case", "", "Run a specific case (name or prefix, default: all)")
 )
 
 func main() {
 	flag.Parse()
 
+	// Generate mode.
+	if *flagGenerate != "" {
+		if err := generateMemoryCases(*flagGenerate); err != nil {
+			log.Fatalf("generate: %v", err)
+		}
+		return
+	}
+
+	// From here on we need -models.
 	if *flagModelsDir == "" {
 		printUsage()
 		os.Exit(1)
@@ -81,6 +93,16 @@ func main() {
 	}
 
 	ctx := context.Background()
+
+	// Data-driven mode: load cases from tar.gz or directory.
+	if *flagCases != "" {
+		if err := runCases(ctx, segModel, *flagProf, *flagCases, *flagCase); err != nil {
+			log.Fatalf("FAIL: %v", err)
+		}
+		return
+	}
+
+	// Default: run built-in tests.
 	if err := run(ctx, segModel, *flagProf); err != nil {
 		log.Fatalf("FAIL: %v", err)
 	}
@@ -361,19 +383,25 @@ func printUsage() {
 	fmt.Println(`Memory E2E — Full memory compression pipeline test with real LLMs
 
 Usage:
-  memory-e2e -models <dir> -seg <model>           Run E2E test
-  memory-e2e -models <dir> -seg <model> -verbose   With HTTP debug
-  memory-e2e -models <dir> -list                   List models
+  memory-e2e -models <dir> -seg <model>                         Built-in tests
+  memory-e2e -models <dir> -seg <model> -cases <tar.gz|dir>     Data-driven tests
+  memory-e2e -models <dir> -seg <model> -cases <tar> -case m05  Run one case
+  memory-e2e -models <dir> -list                                List models
+  memory-e2e -generate <dir>                                    Generate test data
 
 Options:
-  -models <dir>      Models config directory (required)
+  -models <dir>      Models config directory (required for run)
   -seg <model>       Segmentor model pattern (e.g., seg/qwen-flash)
   -prof <model>      Profiler model pattern (optional)
+  -cases <path>      Test cases tar.gz or directory
+  -case <name>       Run specific case (name or prefix, default: all)
   -list              List all available models
   -verbose           Print HTTP request body
+  -generate <dir>    Generate test cases to directory
 
 Examples:
+  memory-e2e -generate ./testdata/memory
   memory-e2e -models ./testdata/models -seg seg/qwen-flash
-  memory-e2e -models ./testdata/models -seg seg/qwen-flash -prof prof/qwen-flash
-  memory-e2e -models ./testdata/models -list`)
+  memory-e2e -models ./testdata/models -seg seg/qwen-flash -cases ./testdata/memory.tar.gz
+  memory-e2e -models ./testdata/models -seg seg/qwen-flash -cases ./testdata/memory.tar.gz -case m01`)
 }

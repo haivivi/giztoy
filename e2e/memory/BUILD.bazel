@@ -2,7 +2,11 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_library(
     name = "memory_lib",
-    srcs = ["main.go"],
+    srcs = [
+        "generate.go",
+        "main.go",
+        "runner.go",
+    ],
     importpath = "github.com/haivivi/giztoy/e2e/memory",
     visibility = ["//visibility:private"],
     deps = [
@@ -10,6 +14,7 @@ go_library(
         "//go/pkg/graph",
         "//go/pkg/kv",
         "//go/pkg/memory",
+        "@com_github_goccy_go_yaml//:go-yaml",
     ],
 )
 
