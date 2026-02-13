@@ -1,0 +1,11 @@
+name: s10_animal_entity
+desc: "Extract non-person entity type (animal)"
+messages:
+  - "user: 我家的金毛犬叫大黄，今年3岁了"
+  - "assistant: 大黄是公的还是母的？"
+  - "user: 公的，特别温顺，最喜欢去公园玩球"
+  - "assistant: 金毛犬确实很温顺"
+expect:
+  min_entities: 1
+  summary_contains: ["大黄"]
+  min_keywords: 1

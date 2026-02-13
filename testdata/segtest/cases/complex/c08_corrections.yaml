@@ -1,0 +1,20 @@
+name: c08_corrections
+desc: "Conversation with corrections — corrected values should be used"
+messages:
+  - "user: 我弟弟叫张磊，在清华读书"
+  - "assistant: 清华大学？厉害"
+  - "user: 不对，不是清华，是北航，北京航空航天大学"
+  - "assistant: 北航也很好"
+  - "user: 他学的是计算机专业，哦不是，是自动化专业"
+  - "assistant: 自动化也不错"
+  - "user: 他今年大三，不对大四了，明年就毕业了"
+  - "assistant: 那快找工作了？"
+  - "user: 他准备读研，已经保研到本校了"
+  - "assistant: 恭喜"
+  - "user: 他女朋友叫小李，在北航隔壁北理工读书"
+  - "assistant: 两个人离得很近"
+expect:
+  min_entities: 2
+  entities_contain: ["person:张磊"]
+  summary_contains: ["张磊"]
+  labels_contain: ["person:张磊"]

@@ -1,0 +1,15 @@
+name: s06_name_gender
+desc: "Extract name and gender attributes"
+messages:
+  - "user: 我女儿叫小雨，她特别喜欢跳舞"
+  - "assistant: 小雨几岁了？"
+  - "user: 她今年5岁，在幼儿园中班"
+  - "assistant: 5岁跳舞正好呢"
+expect:
+  min_entities: 1
+  entities_contain: ["person:小雨"]
+  entity_attrs:
+    person:小雨:
+      age: 5
+  summary_contains: ["小雨"]
+  labels_contain: ["person:小雨"]

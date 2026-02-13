@@ -1,0 +1,19 @@
+name: c06_code_switching
+desc: "Mixed Chinese/English code-switching"
+messages:
+  - "user: 我最近在学Python，感觉还不错"
+  - "assistant: Python是很好的入门语言"
+  - "user: 对，我在Coursera上了一门machine learning的课"
+  - "assistant: 是Andrew Ng的那门吗？"
+  - "user: 对！就是Andrew Ng教的，他讲的特别清楚"
+  - "assistant: 他是这个领域的大牛"
+  - "user: 我打算学完之后去apply一些junior data scientist的position"
+  - "assistant: 加油！"
+  - "user: 我之前在一家startup工作，做的是frontend development"
+  - "assistant: 从前端转AI是个不错的方向"
+  - "user: 是的，现在AI的job market比较好，salary也高一些"
+  - "assistant: 确实如此"
+expect:
+  min_entities: 1
+  summary_contains: ["Python"]
+  min_keywords: 1

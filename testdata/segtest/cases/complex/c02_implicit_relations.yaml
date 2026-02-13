@@ -1,0 +1,28 @@
+name: c02_implicit_relations
+desc: "Inferred relations from context, not explicitly stated"
+messages:
+  - "user: 小明的妈妈叫李丽"
+  - "assistant: 好的"
+  - "user: 李丽最近在辅导小明写作业，因为小明数学不太好"
+  - "assistant: 妈妈辅导功课很正常"
+  - "user: 李丽的丈夫张伟在外地出差，要下周才回来"
+  - "assistant: 那李丽一个人挺辛苦的"
+  - "user: 还好有外婆帮忙，外婆叫王秀英，住在隔壁"
+  - "assistant: 有老人帮忙就好多了"
+  - "user: 小明和他弟弟小亮都是外婆在带"
+  - "assistant: 外婆真辛苦"
+expect:
+  min_entities: 3
+  entities_contain:
+    - "person:小明"
+    - "person:李丽"
+    - "person:张伟"
+  relations_contain:
+    - from: "person:李丽"
+      to: "person:小明"
+      rel_type: "parent"
+    - from: "person:张伟"
+      to: "person:李丽"
+      rel_type: "spouse"
+  summary_contains: ["小明", "李丽"]
+  labels_contain: ["person:小明", "person:李丽"]

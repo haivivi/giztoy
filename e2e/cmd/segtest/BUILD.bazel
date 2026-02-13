@@ -1,0 +1,58 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "segtest_lib",
+    srcs = [
+        "benchmark.go",
+        "generate.go",
+        "main.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/e2e/cmd/segtest",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//go/pkg/genx/modelloader",
+        "//go/pkg/genx/segmentors",
+        "@com_github_goccy_go_yaml//:go-yaml",
+    ],
+)
+
+go_binary(
+    name = "segtest",
+    embed = [":segtest_lib"],
+    visibility = ["//visibility:public"],
+)
+
+# Run benchmark, output report.json
+# tags = ["manual"] prevents automatic build by //... (requires network/API keys)
+genrule(
+    name = "run",
+    srcs = [
+        ":cases",
+        ":models",
+    ],
+    outs = ["report.json"],
+    cmd = """
+        CASES_DIR=$$(dirname $$(echo "$(locations :cases)" | cut -d' ' -f1))
+        MODELS_DIR=$$(dirname $$(echo "$(locations :models)" | cut -d' ' -f1))
+        $(location :segtest) \
+            -models $$MODELS_DIR \
+            -model qwen/turbo-latest \
+            -cases $$CASES_DIR \
+            -o $@
+    """,
+    tools = [":segtest"],
+    local = True,
+    tags = ["manual", "requires-network"],
+)
+
+# Test cases - shared from testdata
+filegroup(
+    name = "cases",
+    srcs = ["//testdata/segtest:cases"],
+)
+
+# Model configs - shared from testdata
+filegroup(
+    name = "models",
+    srcs = ["//testdata/models"],
+)
