@@ -172,6 +172,9 @@ const AppCtx = struct {
 /// handler in the main event loop. All other tasks receive AppCtx directly.
 var g_app: ?*AppCtx = null;
 
+/// Global LED — initialized early (before MQTT), so buttons always have LED feedback.
+var g_led: ?*platform.LedDriver = null;
+
 // ============================================================================
 // MQTT Downlink Handlers (mux callbacks)
 // ============================================================================
@@ -260,6 +263,10 @@ pub fn run(env: anytype) void {
     };
     defer board.deinit();
 
+    // Early LED init — so buttons have feedback before MQTT connects.
+    // Needs I2C, which is shared with AudioSystem later.
+    initEarlyLed();
+
     // Connect WiFi
     log.info("Connecting to WiFi: {s}", .{config.wifi_ssid});
     board.wifi.connect(config.wifi_ssid, config.wifi_password);
@@ -279,10 +286,13 @@ pub fn run(env: anytype) void {
                 .button => |btn| {
                     if (btn.action == .press) {
                         log.info("[BTN] {s} PRESS", .{btn.id.name()});
+                        setLed(true, false); // red on press
                     } else if (btn.action == .click) {
                         log.info("[BTN] {s} CLICK", .{btn.id.name()});
+                        setLed(false, true); // blue on click
                     } else if (btn.action == .release) {
                         log.info("[BTN] {s} RELEASE", .{btn.id.name()});
+                        setLed(false, true); // blue on release
                     }
                     if (g_app) |app| {
                         handleButton(app, btn);
@@ -393,6 +403,37 @@ fn syncNtp() void {
 /// Must outlive all users (heap-allocated).
 var g_i2c: ?*platform.I2c = null;
 
+/// Initialize I2C + LED early so buttons have visual feedback before MQTT connects.
+fn initEarlyLed() void {
+    if (g_i2c == null) {
+        const i2c = alloc.create(platform.I2c) catch return;
+        i2c.* = platform.I2c.init(.{
+            .sda = hw.Hardware.i2c_sda,
+            .scl = hw.Hardware.i2c_scl,
+            .freq_hz = 400_000,
+        }) catch |err| {
+            log.warn("Early I2C init failed: {}", .{err});
+            alloc.destroy(i2c);
+            return;
+        };
+        g_i2c = i2c;
+    }
+
+    if (g_led != null) return;
+    const led = alloc.create(platform.LedDriver) catch return;
+    led.* = platform.LedDriver.init(g_i2c.?) catch |err| {
+        log.warn("Early LED init failed: {}", .{err});
+        alloc.destroy(led);
+        return;
+    };
+    g_led = led;
+    // Blue blink = board alive
+    led.setBlue(true);
+    Board.time.sleepMs(200);
+    led.off();
+    log.info("LED ready (early init)", .{});
+}
+
 /// Initialize shared I2C bus, AudioSystem, LED, and PA.
 /// Returns the AudioSystem and LedDriver instances (heap-allocated).
 fn initAudioSystem() ?struct { audio: *platform.AudioSystem, led: ?*platform.LedDriver } {
@@ -429,26 +470,14 @@ fn initAudioSystem() ?struct { audio: *platform.AudioSystem, led: ?*platform.Led
     // PA (power amplifier for speaker)
     var pa = platform.PaSwitchDriver.init(i2c) catch |err| {
         log.warn("PA init failed: {}", .{err});
-        return .{ .audio = audio, .led = null };
+        return .{ .audio = audio, .led = g_led };
     };
     pa.on() catch |err| {
         log.warn("PA enable failed: {}", .{err});
     };
 
-    // LED driver (optional, non-fatal)
-    const led = alloc.create(platform.LedDriver) catch {
-        return .{ .audio = audio, .led = null };
-    };
-    led.* = platform.LedDriver.init(i2c) catch |err| {
-        log.warn("LED init failed: {} (continuing without LED)", .{err});
-        return .{ .audio = audio, .led = null };
-    };
-    led.setBlue(true);
-    Board.time.sleepMs(200);
-    led.off();
-    log.info("LED initialized", .{});
-
-    return .{ .audio = audio, .led = led };
+    // LED was already initialized early (initEarlyLed), reuse g_led
+    return .{ .audio = audio, .led = g_led };
 }
 
 // ============================================================================
@@ -493,13 +522,11 @@ fn playReadyBeeps(audio: *platform.AudioSystem) void {
     playTone(audio, 1047, 200); // C6
 }
 
-/// Set LED state.
+/// Set LED state. Works even before MQTT connects (uses g_led directly).
 fn setLed(red: bool, blue: bool) void {
-    if (g_app) |app| {
-        if (app.led) |led| {
-            led.setRed(red);
-            led.setBlue(blue);
-        }
+    if (g_led) |led| {
+        led.setRed(red);
+        led.setBlue(blue);
     }
 }
 
