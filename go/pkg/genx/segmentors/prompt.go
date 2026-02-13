@@ -82,7 +82,10 @@ Call the provided function with the extraction result. The argument must be a JS
   "entities": [
     {
       "label": "person:小明",
-      "attrs": {"age": 5, "favorite_dinosaur": "霸王龙"}
+      "attrs": [
+        {"key": "age", "value": "5"},
+        {"key": "favorite_dinosaur", "value": "霸王龙"}
+      ]
     }
   ],
   "relations": [
@@ -92,4 +95,6 @@ Call the provided function with the extraction result. The argument must be a JS
       "rel_type": "likes"
     }
   ]
-}`
+}
+
+Note: attrs is an array of key-value pairs. Values must be strings (numbers should be stringified, e.g. "5" not 5).`

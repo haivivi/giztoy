@@ -12,11 +12,32 @@ import (
 var _ Segmentor = (*GenX)(nil)
 
 // extractArg is the typed argument for the FuncTool, matching the expected
-// JSON output from the LLM. The json tags must match [Result] field names.
+// JSON output from the LLM.
+//
+// NOTE: Attrs uses []extractAttr (key-value pairs) instead of map[string]any
+// because OpenAI strict mode requires additionalProperties:false on all objects,
+// which is incompatible with dynamic-key maps. The pairs are converted to
+// map[string]any in parseResult.
 type extractArg struct {
-	Segment   SegmentOutput  `json:"segment"`
-	Entities  []EntityOutput `json:"entities"`
+	Segment   extractSegment   `json:"segment"`
+	Entities  []extractEntity  `json:"entities"`
 	Relations []RelationOutput `json:"relations"`
+}
+
+type extractSegment struct {
+	Summary  string   `json:"summary"`
+	Keywords []string `json:"keywords"`
+	Labels   []string `json:"labels"`
+}
+
+type extractEntity struct {
+	Label string        `json:"label"`
+	Attrs []extractAttr `json:"attrs"`
+}
+
+type extractAttr struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // extractTool is the FuncTool that defines the JSON schema for the LLM output.
@@ -102,9 +123,40 @@ func (g *GenX) parseResult(call *genx.FuncCall) (*Result, error) {
 		return nil, fmt.Errorf("segmentors: failed to parse extraction result: %w", err)
 	}
 
+	// Convert extractArg to Result, converting []extractAttr to map[string]any.
+	entities := make([]EntityOutput, len(arg.Entities))
+	for i, e := range arg.Entities {
+		attrs := make(map[string]any, len(e.Attrs))
+		for _, a := range e.Attrs {
+			attrs[a.Key] = parseAttrValue(a.Value)
+		}
+		entities[i] = EntityOutput{
+			Label: e.Label,
+			Attrs: attrs,
+		}
+	}
+
 	return &Result{
-		Segment:   arg.Segment,
-		Entities:  arg.Entities,
+		Segment: SegmentOutput{
+			Summary:  arg.Segment.Summary,
+			Keywords: arg.Segment.Keywords,
+			Labels:   arg.Segment.Labels,
+		},
+		Entities:  entities,
 		Relations: arg.Relations,
 	}, nil
+}
+
+// parseAttrValue attempts to parse a string value into a typed value.
+// Numbers are returned as float64/int, booleans as bool, otherwise string.
+func parseAttrValue(s string) any {
+	// Try JSON number/bool first.
+	var v any
+	if err := json.Unmarshal([]byte(s), &v); err == nil {
+		switch v.(type) {
+		case float64, bool:
+			return v
+		}
+	}
+	return s
 }

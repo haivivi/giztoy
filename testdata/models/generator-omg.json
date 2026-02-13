@@ -2,12 +2,12 @@
     "schema": "openai/chat/v1",
     "type": "generator",
     "api_key": "$OMG_API_KEY",
-    "base_url": "https://api.ohmygpt.com/v1",
+    "base_url": "https://cn2us02.opapi.win/v1",
     "models": [
         {
             "name": "omg/gpt-4o-mini",
             "model": "gpt-4o-mini",
-            "support_json_output": true,
+            "support_tool_calls": true,
             "support_text_only": true,
             "use_system_role": true,
             "generate_params": {
@@ -24,7 +24,7 @@
         {
             "name": "omg/gpt-4o",
             "model": "gpt-4o",
-            "support_json_output": true,
+            "support_tool_calls": true,
             "support_text_only": true,
             "use_system_role": true,
             "generate_params": {
@@ -41,7 +41,7 @@
         {
             "name": "omg/claude-3.5-sonnet",
             "model": "claude-3-5-sonnet-20241022",
-            "support_json_output": true,
+            "support_tool_calls": true,
             "support_text_only": true,
             "use_system_role": true,
             "generate_params": {
@@ -58,7 +58,7 @@
         {
             "name": "omg/claude-3.5-haiku",
             "model": "claude-3-5-haiku-20241022",
-            "support_json_output": true,
+            "support_tool_calls": true,
             "support_text_only": true,
             "use_system_role": true,
             "generate_params": {
