@@ -135,19 +135,13 @@ func (s *bufferStream) Push(chunk *genx.MessageChunk) error {
 
 // streamToReader converts a genx.Stream of Text chunks to an io.Reader.
 // It starts a goroutine to read from the stream and write to a pipe.
-func streamToReader(ctx context.Context, stream genx.Stream) io.Reader {
+// The goroutine lifetime is governed by the stream (exits on EOF/error).
+func streamToReader(stream genx.Stream) io.Reader {
 	pr, pw := io.Pipe()
 
 	go func() {
 		defer pw.Close()
 		for {
-			select {
-			case <-ctx.Done():
-				pw.CloseWithError(ctx.Err())
-				return
-			default:
-			}
-
 			chunk, err := stream.Next()
 			if err != nil {
 				if err != io.EOF {

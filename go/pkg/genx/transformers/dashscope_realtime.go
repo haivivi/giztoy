@@ -328,12 +328,12 @@ func (t *DashScopeRealtime) Transform(ctx context.Context, _ string, input genx.
 	}
 
 	// Start background processing
-	go t.processLoop(ctx, input, output, session)
+	go t.processLoop(input, output, session)
 
 	return stream, nil
 }
 
-func (t *DashScopeRealtime) processLoop(ctx context.Context, input genx.Stream, output *bufferStream, session *dashscope.RealtimeSession) {
+func (t *DashScopeRealtime) processLoop(input genx.Stream, output *bufferStream, session *dashscope.RealtimeSession) {
 	defer output.Close()
 	defer session.Close()
 
@@ -544,9 +544,6 @@ func (t *DashScopeRealtime) processLoop(ctx context.Context, input genx.Stream, 
 	// Send audio to realtime service
 	for {
 		select {
-		case <-ctx.Done():
-			output.CloseWithError(ctx.Err())
-			return
 		case <-eventsDone:
 			return
 		default:

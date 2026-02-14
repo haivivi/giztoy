@@ -134,15 +134,17 @@ func WithDoubaoTTSSeedV2CtxOptions(ctx context.Context, opts DoubaoTTSSeedV2CtxO
 
 // Transform converts Text chunks to audio Blob chunks.
 // DoubaoTTSSeedV2 does not require connection setup, so it returns immediately.
-func (t *DoubaoTTSSeedV2) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+// The ctx is unused (no initialization needed); the goroutine lifetime
+// is governed by the input Stream.
+func (t *DoubaoTTSSeedV2) Transform(_ context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	output := newBufferStream(100)
 
-	go t.transformLoop(ctx, input, output)
+	go t.transformLoop(input, output)
 
 	return output, nil
 }
 
-func (t *DoubaoTTSSeedV2) transformLoop(ctx context.Context, input genx.Stream, output *bufferStream) {
+func (t *DoubaoTTSSeedV2) transformLoop(input genx.Stream, output *bufferStream) {
 	defer output.Close()
 
 	mimeType := t.mimeType()
@@ -150,13 +152,6 @@ func (t *DoubaoTTSSeedV2) transformLoop(ctx context.Context, input genx.Stream, 
 	var lastChunk *genx.MessageChunk
 
 	for {
-		select {
-		case <-ctx.Done():
-			output.CloseWithError(ctx.Err())
-			return
-		default:
-		}
-
 		chunk, err := input.Next()
 		if err != nil {
 			if err != io.EOF {
@@ -165,7 +160,7 @@ func (t *DoubaoTTSSeedV2) transformLoop(ctx context.Context, input genx.Stream, 
 			}
 			// EOF: synthesize any remaining text
 			if textBuilder.Len() > 0 {
-				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, mimeType, output); err != nil {
+				if err := t.synthesize(textBuilder.String(), lastChunk, mimeType, output); err != nil {
 					output.CloseWithError(err)
 					return
 				}
@@ -183,13 +178,13 @@ func (t *DoubaoTTSSeedV2) transformLoop(ctx context.Context, input genx.Stream, 
 		if chunk.IsEndOfStream() {
 			if _, ok := chunk.Part.(genx.Text); ok {
 				// Text EoS: synthesize accumulated text, emit audio, then emit audio EoS
-				if textBuilder.Len() > 0 {
-					if err := t.synthesize(ctx, textBuilder.String(), lastChunk, mimeType, output); err != nil {
-						output.CloseWithError(err)
-						return
-					}
-					textBuilder.Reset()
+			if textBuilder.Len() > 0 {
+				if err := t.synthesize(textBuilder.String(), lastChunk, mimeType, output); err != nil {
+					output.CloseWithError(err)
+					return
 				}
+				textBuilder.Reset()
+			}
 				// Emit audio EoS
 				eosChunk := genx.NewEndOfStream(mimeType)
 				if lastChunk != nil {
@@ -220,7 +215,7 @@ func (t *DoubaoTTSSeedV2) transformLoop(ctx context.Context, input genx.Stream, 
 	}
 }
 
-func (t *DoubaoTTSSeedV2) synthesize(ctx context.Context, text string, lastChunk *genx.MessageChunk, mimeType string, output *bufferStream) error {
+func (t *DoubaoTTSSeedV2) synthesize(text string, lastChunk *genx.MessageChunk, mimeType string, output *bufferStream) error {
 	req := &doubaospeech.TTSV2Request{
 		Text:        text,
 		Speaker:     t.speaker,
@@ -235,7 +230,7 @@ func (t *DoubaoTTSSeedV2) synthesize(ctx context.Context, text string, lastChunk
 		Language:    t.language,
 	}
 
-	for chunk, err := range t.client.TTSV2.Stream(ctx, req) {
+	for chunk, err := range t.client.TTSV2.Stream(context.Background(), req) {
 		if err != nil {
 			return err
 		}
