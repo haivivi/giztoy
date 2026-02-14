@@ -54,7 +54,10 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
     const Conn = conn_mod.MqttClientConn(MqttClient);
 
     // Channel types
-    const AudioCh = channel.Channel(types.StampedFrame, 256, Rt);
+    // Audio channel capacity: 32 frames × ~272B = ~8.5KB per channel.
+    // At 20ms/frame this is 640ms of buffer — plenty for real-time VoIP.
+    // (Was 256, but that made ClientPort ~140KB — too large for embedded stacks.)
+    const AudioCh = channel.Channel(types.StampedFrame, 32, Rt);
     const CommandCh = channel.Channel(types.CommandEvent, 32, Rt);
     const StateCh = channel.Channel(types.StateEvent, 32, Rt);
     const StatsCh = channel.Channel(types.StatsEvent, 32, Rt);

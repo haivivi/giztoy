@@ -35,8 +35,11 @@ esp_psram(
     chip = "esp32s3",
     mode = "oct",
     speed = "80m",
-    # XIP disabled — opus xtensa code can't execute from PSRAM
-    # TLS also needs to run from internal flash
+    # XIP disabled: PSRAM heap allocator overlaps XIP vaddr range, causing
+    # stack corruption when task stacks are > ~135KB. TLS+MQTT needs ~140KB.
+    # Without XIP, code runs from flash cache (fine for network workloads)
+    # and full 8MB PSRAM is available for heap + large task stacks.
+    xip_from_psram = False,
 )
 
 esp_freertos(
@@ -62,8 +65,22 @@ esp_wifi(
 )
 
 esp_crypto(
-    name = "mbedtls_full",
+    name = "mbedtls_base",
     disable_mbedtls = False,
+)
+
+# Custom crypto config: base mbedTLS + disable hardware MPI (DMA conflicts with XIP PSRAM)
+genrule(
+    name = "mbedtls_full",
+    srcs = [":mbedtls_base"],
+    outs = ["mbedtls_full.sdkconfig"],
+    cmd = "cat $(location :mbedtls_base) > $@ && echo '' >> $@ && echo '# Use heap instead of static memp pools — workaround for memp_pools corruption with XIP' >> $@ && echo 'CONFIG_LWIP_MEMP_MEM_MALLOC=y' >> $@",
+)
+
+# Pure Zig crypto — no mbedTLS hardware acceleration, no DMA conflicts with XIP
+esp_crypto(
+    name = "no_mbedtls",
+    disable_mbedtls = True,
 )
 
 esp_lwip(
@@ -73,7 +90,7 @@ esp_lwip(
     tcp_recvmbox_size = 64,
     tcp_snd_buf_default = 65535,
     tcp_wnd_default = 65535,
-    tcpip_task_stack_size = 8192,
+    tcpip_task_stack_size = 16384,  # 16KB (was 8KB) — XIP + esp-sr may need more stack
 )
 
 esp_sdkconfig(
@@ -93,7 +110,7 @@ esp_sdkconfig(
 
 esp_app(
     name = "app_config",
-    run_in_psram = 262144,  # 256KB stack in PSRAM (TLS handshake needs large stack)
+    run_in_psram = 262144,  # 256KB — TLS+MQTT+ChatGear init needs ~140KB; safe without XIP
 )
 
 # =============================================================================
@@ -186,20 +203,19 @@ esp_zig_app(
     app_config = ":app_config",
     boards = ["korvo2_v3"],
     env = ":env",
-    requires = ["esp_wifi", "esp_event", "esp_netif", "nvs_flash", "lwip", "mbedtls", "driver", "esp_adc", "freertos", "esp_driver_i2s", "esp_driver_gpio", "esp_driver_i2c"],
+    requires = ["esp_wifi", "esp_event", "esp_netif", "nvs_flash", "lwip", "mbedtls", "driver", "esp_adc", "freertos", "esp_driver_gpio", "esp_driver_i2c"],  # no i2s
     force_link = [
         "${EVENT_FORCE_LINK}",
         "${WIFI_FORCE_LINK}",
         "${NET_FORCE_LINK}",
         "${RUNTIME_FORCE_LINK}",
+        "verify_with_esp_bundle",
         "adc_oneshot_new_unit",
         "adc_oneshot_config_channel",
         "adc_oneshot_read",
         "adc_oneshot_del_unit",
-        "verify_with_esp_bundle",
-        "${I2S_FORCE_LINK}",
         "${I2C_FORCE_LINK}",
-        "${SR_FORCE_LINK}",
+        # DEBUG: stripped I2S, SR — testing minimal TLS
     ],
     extra_cmake = [
         "include(${_ESP_LIB}/platform/esp/idf/src/event/event.cmake)",
@@ -207,11 +223,11 @@ esp_zig_app(
         "include(${_ESP_LIB}/platform/esp/idf/src/net/net.cmake)",
         "include(${_ESP_LIB}/platform/esp/idf/src/mbed_tls/mbed_tls.cmake)",
         "include(${_ESP_LIB}/platform/esp/idf/src/runtime/runtime.cmake)",
-        "include(${_ESP_LIB}/platform/esp/idf/src/i2s/i2s.cmake)",
         "include(${_ESP_LIB}/platform/esp/idf/src/i2c/i2c.cmake)",
-        "include(${_ESP_LIB}/platform/esp/idf/src/sr/sr.cmake)",
+        # DEBUG: stripped I2S, SR
+        # "include(${_ESP_LIB}/platform/esp/idf/src/i2s/i2s.cmake)",
     ],
-    extra_c_sources = ["EVENT_SRCS", "WIFI_C_SOURCES", "NET_C_SOURCES", "MBED_TLS_C_SOURCES", "RUNTIME_C_SOURCES", "I2S_C_SOURCES", "I2C_C_SOURCES", "SR_C_SOURCES"],
+    extra_c_sources = ["EVENT_SRCS", "WIFI_C_SOURCES", "NET_C_SOURCES", "MBED_TLS_C_SOURCES", "RUNTIME_C_SOURCES", "I2C_C_SOURCES"],
     deps = [
         ":idf",
         ":esp",
@@ -233,9 +249,9 @@ esp_zig_app(
     static_libs = [
         ":opus_xtensa",
     ],
-    idf_deps = [
-        "espressif/esp-sr:^2.1.1",
-    ],
+    # idf_deps = [
+    #     "espressif/esp-sr:^2.1.1",  # DEBUG: removed to test TLS crash
+    # ],
     sdkconfig = ":sdkconfig",
     partition_table = ":partitions",
 )

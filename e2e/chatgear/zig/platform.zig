@@ -67,9 +67,28 @@ pub const Board = hal.Board(spec);
 // Audio System (mic + speaker + AEC)
 // ============================================================================
 
-/// Audio system type — ES7210 ADC (mic) + ES8311 DAC (speaker) + I2S + AEC.
-/// Use readMic() for mic input, writeSpeaker() for speaker output.
-pub const AudioSystem = hw.AudioSystem;
+/// Audio system type — STUB (esp-sr disabled for TLS debugging)
+/// Provides no-op methods so app.zig compiles without changes.
+pub const AudioSystem = struct {
+    pub fn init(_: anytype) !AudioSystem {
+        return .{};
+    }
+
+    pub fn getFrameSize(_: *const AudioSystem) usize {
+        return 256;
+    }
+
+    pub fn readMic(_: *AudioSystem, buf: []i16) !usize {
+        _ = buf;
+        // Simulate silence — sleep a bit to avoid busy loop
+        hw.time.sleepMs(20);
+        return 0;
+    }
+
+    pub fn writeSpeaker(_: *AudioSystem, buf: []const i16) !usize {
+        return buf.len;
+    }
+};
 
 /// I2C bus type (needed to init AudioSystem, LedDriver, PaSwitchDriver)
 pub const I2c = hw.I2c;
@@ -86,3 +105,8 @@ pub const LedDriver = hw.LedDriver;
 
 /// PA switch driver (speaker power amplifier enable/disable)
 pub const PaSwitchDriver = hw.PaSwitchDriver;
+
+/// Initialize NVS flash — must be called before WiFi to avoid phy calibration flash writes.
+pub fn initNvs() !void {
+    return hw.initNvs();
+}

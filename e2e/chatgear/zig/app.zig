@@ -255,6 +255,13 @@ pub fn run(env: anytype) void {
     }
     log.info("==========================================", .{});
 
+    // Init NVS flash on IRAM stack (must be before WiFi).
+    // NVS init writes to flash, which disables flash cache. Our task stack is in
+    // PSRAM (shares SPI bus with flash), so NVS init runs on an IRAM stack task.
+    platform.initNvs() catch {
+        log.warn("NVS init failed — WiFi phy calibration may cause flash writes", .{});
+    };
+
     // Init board (WiFi + net + buttons)
     var board: Board = undefined;
     board.init() catch |err| {

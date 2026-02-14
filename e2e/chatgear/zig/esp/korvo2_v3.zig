@@ -38,7 +38,9 @@ pub const Hardware = struct {
 };
 
 // Audio system (ES7210 ADC + ES8311 DAC + I2S duplex + AEC)
-pub const AudioSystem = board.AudioSystem;
+// DEBUG: Disabled to test TLS without esp-sr
+// pub const AudioSystem = board.AudioSystem;
+pub const AudioSystem = void;
 
 // LED driver (TCA9554 GPIO expander)
 pub const LedDriver = board.LedDriver;
@@ -89,6 +91,57 @@ pub const FullRt = struct {
         return idf.time.nowMs();
     }
 };
+
+// ============================================================================
+// NVS Flash (must be initialized before WiFi)
+// ============================================================================
+
+/// Initialize NVS flash on an IRAM stack task.
+/// NVS init may write to SPI flash, which disables the flash cache.
+/// Our main task stack is in PSRAM (shares SPI bus with flash on ESP32-S3),
+/// so we must run NVS init on an IRAM stack — same approach as WiFi driver.
+pub fn initNvs() !void {
+    const NvsCtx = struct {
+        result: i32 = 0,
+        done: bool = false,
+    };
+
+    var ctx = NvsCtx{};
+
+    // Spawn on IRAM stack (internal RAM, safe for flash operations)
+    idf.runtime.spawn("nvs_init", struct {
+        fn run(arg: ?*anyopaque) void {
+            const c: *NvsCtx = @ptrCast(@alignCast(arg));
+            idf.nvs.init() catch {
+                c.result = -1;
+                c.done = true;
+                return;
+            };
+            c.result = 0;
+            c.done = true;
+        }
+    }.run, @ptrCast(&ctx), .{
+        .stack_size = 4096,
+        .allocator = idf.heap.iram,
+    }) catch {
+        // If we can't spawn, try direct init (might crash on PSRAM task)
+        log.warn("Can't spawn IRAM task for NVS, trying direct init", .{});
+        idf.nvs.init() catch return error.NvsInitFailed;
+        log.info("NVS initialized (direct)", .{});
+        return;
+    };
+
+    // Busy-wait for completion (NVS init is fast)
+    while (!ctx.done) {
+        idf.time.sleepMs(1);
+    }
+
+    if (ctx.result != 0) {
+        log.err("NVS init failed on IRAM task", .{});
+        return error.NvsInitFailed;
+    }
+    log.info("NVS initialized (IRAM)", .{});
+}
 
 // ============================================================================
 // Heap Allocator (PSRAM)
