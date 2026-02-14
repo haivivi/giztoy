@@ -153,8 +153,9 @@ type CompressPolicy struct {
 }
 
 // DefaultCompressPolicy returns the default compression policy.
+// 32000 chars ≈ 16k tokens (Chinese ~2 bytes/char UTF-8).
 func DefaultCompressPolicy() CompressPolicy {
-	return CompressPolicy{MaxChars: 2000, MaxMessages: 50}
+	return CompressPolicy{MaxChars: 32000, MaxMessages: 30}
 }
 
 // shouldCompress reports whether the policy thresholds have been reached.

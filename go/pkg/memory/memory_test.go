@@ -614,6 +614,298 @@ func TestBucketForSpan(t *testing.T) {
 	}
 }
 
+func TestEnsureCoarser(t *testing.T) {
+	// When BucketForSpan returns the same bucket as source, ensureCoarser
+	// should bump to the next coarser level.
+	got := ensureCoarser(recall.Bucket1H, recall.Bucket1H)
+	if got != recall.Bucket1D {
+		t.Errorf("ensureCoarser(1h, 1h) = %s, want 1d", got)
+	}
+	// When target is already coarser, it passes through.
+	got = ensureCoarser(recall.Bucket1H, recall.Bucket1W)
+	if got != recall.Bucket1W {
+		t.Errorf("ensureCoarser(1h, 1w) = %s, want 1w", got)
+	}
+	// 1y → lt for the terminal case.
+	got = ensureCoarser(recall.Bucket1Y, recall.Bucket1Y)
+	if got != recall.BucketLT {
+		t.Errorf("ensureCoarser(1y, 1y) = %s, want lt", got)
+	}
+}
+
+// newTestHostWithCompactor creates a Host with a mock compressor and a
+// custom CompressPolicy. Useful for testing compaction behavior.
+func newTestHostWithCompactor(t *testing.T, policy CompressPolicy) *Host {
+	t.Helper()
+	store := kv.NewMemory(&kv.Options{Separator: testSep})
+	emb := newMockEmbedder()
+	vec := vecstore.NewMemory()
+
+	h, err := NewHost(context.Background(), HostConfig{
+		Store:          store,
+		Vec:            vec,
+		Embedder:       emb,
+		Separator:      testSep,
+		Compressor:     &mockCompressor{},
+		CompressPolicy: policy,
+	})
+	if err != nil {
+		t.Fatalf("NewHost: %v", err)
+	}
+	return h
+}
+
+func TestCompactBucketMovesSegments(t *testing.T) {
+	policy := CompressPolicy{MaxMessages: 5, MaxChars: 100000}
+	h := newTestHostWithCompactor(t, policy)
+	defer h.Close()
+	m := mustOpen(t, h, "test")
+	ctx := context.Background()
+
+	// Store 8 segments in the 1h bucket (exceeds threshold of 5).
+	for i := range 8 {
+		if err := m.StoreSegment(ctx, SegmentInput{
+			Summary:  fmt.Sprintf("hourly event %d", i),
+			Keywords: []string{"test"},
+			Labels:   []string{"person:test"},
+		}, recall.Bucket1H); err != nil {
+			t.Fatalf("StoreSegment: %v", err)
+		}
+	}
+
+	// Verify 1h bucket has 8 segments.
+	count, _, err := m.Index().BucketStats(ctx, recall.Bucket1H)
+	if err != nil {
+		t.Fatalf("BucketStats: %v", err)
+	}
+	if count != 8 {
+		t.Fatalf("1h count = %d, want 8", count)
+	}
+
+	// Compact.
+	if err := m.Compact(ctx); err != nil {
+		t.Fatalf("Compact: %v", err)
+	}
+
+	// 1h bucket should have fewer segments.
+	count1h, _, err := m.Index().BucketStats(ctx, recall.Bucket1H)
+	if err != nil {
+		t.Fatalf("BucketStats 1h: %v", err)
+	}
+	if count1h >= 8 {
+		t.Errorf("1h count after compact = %d, expected < 8", count1h)
+	}
+
+	// A coarser bucket should have received the compacted segment.
+	// The mock compressor's CompactSegments returns 1 segment, and all
+	// source segments have close timestamps → BucketForSpan returns 1h
+	// → ensureCoarser bumps to 1d.
+	count1d, _, err := m.Index().BucketStats(ctx, recall.Bucket1D)
+	if err != nil {
+		t.Fatalf("BucketStats 1d: %v", err)
+	}
+	if count1d == 0 {
+		t.Error("expected at least 1 segment in 1d bucket after compaction")
+	}
+
+	// Total segments should be: remaining in 1h + new in 1d.
+	total := count1h + count1d
+	t.Logf("After compact: 1h=%d, 1d=%d, total=%d", count1h, count1d, total)
+}
+
+func TestCompactCascade(t *testing.T) {
+	policy := CompressPolicy{MaxMessages: 3, MaxChars: 100000}
+	h := newTestHostWithCompactor(t, policy)
+	defer h.Close()
+	m := mustOpen(t, h, "test")
+	ctx := context.Background()
+
+	// Fill 1h bucket with 6 segments (2x threshold).
+	for i := range 6 {
+		if err := m.StoreSegment(ctx, SegmentInput{
+			Summary:  fmt.Sprintf("hour %d", i),
+			Keywords: []string{"test"},
+			Labels:   []string{"person:test"},
+		}, recall.Bucket1H); err != nil {
+			t.Fatalf("StoreSegment 1h: %v", err)
+		}
+	}
+
+	// First compact: 1h → 1d.
+	if err := m.Compact(ctx); err != nil {
+		t.Fatalf("Compact 1: %v", err)
+	}
+
+	count1d, _, _ := m.Index().BucketStats(ctx, recall.Bucket1D)
+	t.Logf("After first compact: 1d=%d", count1d)
+
+	// Now fill 1d bucket past threshold by adding more 1h segments
+	// and compacting them to 1d repeatedly.
+	for round := range 5 {
+		for i := range 6 {
+			if err := m.StoreSegment(ctx, SegmentInput{
+				Summary:  fmt.Sprintf("hour round%d-%d", round, i),
+				Keywords: []string{"test"},
+				Labels:   []string{"person:test"},
+			}, recall.Bucket1H); err != nil {
+				t.Fatalf("StoreSegment: %v", err)
+			}
+		}
+		if err := m.Compact(ctx); err != nil {
+			t.Fatalf("Compact round %d: %v", round, err)
+		}
+	}
+
+	// After many compactions, 1d should have been compacted further.
+	count1d, _, _ = m.Index().BucketStats(ctx, recall.Bucket1D)
+	count1w, _, _ := m.Index().BucketStats(ctx, recall.Bucket1W)
+	t.Logf("After cascade: 1d=%d, 1w=%d", count1d, count1w)
+
+	// At least one coarser bucket beyond 1d should have segments.
+	hasCoarser := false
+	for _, b := range []recall.Bucket{recall.Bucket1W, recall.Bucket1M, recall.Bucket3M, recall.Bucket6M, recall.Bucket1Y, recall.BucketLT} {
+		c, _, _ := m.Index().BucketStats(ctx, b)
+		if c > 0 {
+			hasCoarser = true
+			t.Logf("  bucket %s: %d segments", b, c)
+		}
+	}
+	if !hasCoarser {
+		t.Error("expected compaction cascade to produce segments in buckets coarser than 1d")
+	}
+}
+
+func TestCompactBucketUnderThreshold(t *testing.T) {
+	policy := CompressPolicy{MaxMessages: 5, MaxChars: 100000}
+	h := newTestHostWithCompactor(t, policy)
+	defer h.Close()
+	m := mustOpen(t, h, "test")
+	ctx := context.Background()
+
+	// Store 3 segments in 1h (under threshold of 5).
+	for i := range 3 {
+		if err := m.StoreSegment(ctx, SegmentInput{
+			Summary:  fmt.Sprintf("event %d", i),
+			Keywords: []string{"test"},
+			Labels:   []string{"person:test"},
+		}, recall.Bucket1H); err != nil {
+			t.Fatalf("StoreSegment: %v", err)
+		}
+	}
+
+	// Compact — should be a no-op.
+	if err := m.Compact(ctx); err != nil {
+		t.Fatalf("Compact: %v", err)
+	}
+
+	// 1h bucket should still have 3 segments.
+	count, _, err := m.Index().BucketStats(ctx, recall.Bucket1H)
+	if err != nil {
+		t.Fatalf("BucketStats: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("1h count = %d, want 3 (no compaction expected)", count)
+	}
+
+	// No other bucket should have segments.
+	for _, b := range []recall.Bucket{recall.Bucket1D, recall.Bucket1W, recall.Bucket1M, recall.Bucket3M, recall.Bucket6M, recall.Bucket1Y, recall.BucketLT} {
+		c, _, _ := m.Index().BucketStats(ctx, b)
+		if c != 0 {
+			t.Errorf("bucket %s has %d segments, expected 0", b, c)
+		}
+	}
+}
+
+func TestCompactLtNeverCompacted(t *testing.T) {
+	policy := CompressPolicy{MaxMessages: 3, MaxChars: 100000}
+	h := newTestHostWithCompactor(t, policy)
+	defer h.Close()
+	m := mustOpen(t, h, "test")
+	ctx := context.Background()
+
+	// Store 10 segments directly in lt bucket (past threshold).
+	for i := range 10 {
+		if err := m.StoreSegment(ctx, SegmentInput{
+			Summary:  fmt.Sprintf("lifetime event %d", i),
+			Keywords: []string{"test"},
+			Labels:   []string{"person:test"},
+		}, recall.BucketLT); err != nil {
+			t.Fatalf("StoreSegment: %v", err)
+		}
+	}
+
+	// Compact — lt should be untouched.
+	if err := m.Compact(ctx); err != nil {
+		t.Fatalf("Compact: %v", err)
+	}
+
+	count, _, err := m.Index().BucketStats(ctx, recall.BucketLT)
+	if err != nil {
+		t.Fatalf("BucketStats: %v", err)
+	}
+	if count != 10 {
+		t.Errorf("lt count = %d, want 10 (should never be compacted)", count)
+	}
+}
+
+func TestAutoCompressTriggersCompact(t *testing.T) {
+	// Low policy: conversation compresses at 3 messages, bucket compacts at 3 segments.
+	policy := CompressPolicy{MaxMessages: 3, MaxChars: 100000}
+	h := newTestHostWithCompactor(t, policy)
+	defer h.Close()
+	m := mustOpen(t, h, "test")
+	ctx := context.Background()
+	conv := m.OpenConversation("dev1", []string{"person:test"})
+
+	// Append 3 messages → triggers auto-compress → 1 segment in 1h bucket.
+	for i := range 3 {
+		if err := conv.Append(ctx, Message{
+			Role:    RoleUser,
+			Content: fmt.Sprintf("message %d about dinosaurs", i),
+		}); err != nil {
+			t.Fatalf("Append %d: %v", i, err)
+		}
+	}
+
+	count1h, _, _ := m.Index().BucketStats(ctx, recall.Bucket1H)
+	t.Logf("After 3 messages: 1h=%d", count1h)
+	if count1h == 0 {
+		t.Fatal("expected at least 1 segment in 1h after auto-compress")
+	}
+
+	// Append many more messages to trigger multiple auto-compress cycles.
+	// Each 3 messages → 1 auto-compress → 1 new segment in 1h.
+	// When 1h reaches 3 segments → compact cascades to 1d.
+	for i := range 12 {
+		if err := conv.Append(ctx, Message{
+			Role:    RoleUser,
+			Content: fmt.Sprintf("more message %d about space exploration", i),
+		}); err != nil {
+			t.Fatalf("Append extra %d: %v", i, err)
+		}
+	}
+
+	count1h, _, _ = m.Index().BucketStats(ctx, recall.Bucket1H)
+	count1d, _, _ := m.Index().BucketStats(ctx, recall.Bucket1D)
+	t.Logf("After 15 total messages: 1h=%d, 1d=%d", count1h, count1d)
+
+	// With 15 messages and threshold=3: ~5 compress cycles → 5 segments in 1h.
+	// Compact should have moved some to 1d.
+	if count1d == 0 {
+		t.Error("expected compaction cascade to produce segments in 1d bucket")
+	}
+
+	// Verify all segments are searchable.
+	segs, err := m.Index().RecentSegments(ctx, 100)
+	if err != nil {
+		t.Fatalf("RecentSegments: %v", err)
+	}
+	if len(segs) == 0 {
+		t.Fatal("expected segments after auto-compress + compact")
+	}
+	t.Logf("Total segments across all buckets: %d", len(segs))
+}
+
 // ---------------------------------------------------------------------------
 // Memory: Graph integration tests
 // ---------------------------------------------------------------------------
