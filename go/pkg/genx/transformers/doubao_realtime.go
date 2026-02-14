@@ -182,12 +182,12 @@ func (t *DoubaoRealtime) Transform(ctx context.Context, _ string, input genx.Str
 	}
 
 	output := newBufferStream(100)
-	go t.processLoop(ctx, input, output, session)
+	go t.processLoop(input, output, session)
 
 	return output, nil
 }
 
-func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, output *bufferStream, session *doubaospeech.RealtimeSession) {
+func (t *DoubaoRealtime) processLoop(input genx.Stream, output *bufferStream, session *doubaospeech.RealtimeSession) {
 	defer output.Close()
 	defer session.Close()
 
@@ -353,10 +353,6 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 	audioSent := 0
 	for {
 		select {
-		case <-ctx.Done():
-			slog.Info("doubao: context cancelled")
-			output.CloseWithError(ctx.Err())
-			return
 		case <-eventsDone:
 			slog.Info("doubao: events done")
 			return
@@ -392,7 +388,7 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 			slog.Info("doubao: received EOS, sending silence for VAD", "audioSent", audioSent)
 			// Send 500ms of silence (16kHz, 16-bit mono = 16000 bytes for 500ms)
 			silence := make([]byte, 16000)
-			if err := session.SendAudio(ctx, silence); err != nil {
+			if err := session.SendAudio(context.Background(), silence); err != nil {
 				slog.Error("doubao: send silence error", "error", err)
 			}
 			// Don't return - wait for Doubao to process and respond
@@ -408,7 +404,7 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 				if audioSent%50 == 1 { // Log every 50 chunks (1 second at 20ms chunks)
 					slog.Debug("doubao: sending audio chunk", "len", len(p.Data), "totalSent", audioSent)
 				}
-				if err := session.SendAudio(ctx, p.Data); err != nil {
+				if err := session.SendAudio(context.Background(), p.Data); err != nil {
 					slog.Error("doubao: send audio error", "error", err)
 					output.CloseWithError(err)
 					return
@@ -418,7 +414,7 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 			// Send text query
 			if len(p) > 0 {
 				slog.Info("doubao: sending text", "text", string(p))
-				if err := session.SendText(ctx, string(p)); err != nil {
+				if err := session.SendText(context.Background(), string(p)); err != nil {
 					slog.Error("doubao: send text error", "error", err)
 					output.CloseWithError(err)
 					return
