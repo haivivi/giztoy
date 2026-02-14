@@ -238,8 +238,8 @@ func relationsMatch(expected ExpectedRelation, actual segmentors.RelationOutput)
 // actual type (or vice versa), we consider it a match.
 var relTypeSynonyms = map[string][]string{
 	"sibling":  {"sibling", "brother", "sister", "兄妹", "兄弟", "姐妹", "哥哥", "妹妹", "姐姐", "弟弟"},
-	"parent":   {"parent", "father", "mother", "dad", "mom", "parent_of", "child_of", "父", "母", "爸", "妈"},
-	"child":    {"child", "son", "daughter", "child_of", "parent_of", "儿子", "女儿", "孩子"},
+	"parent":   {"parent", "father", "mother", "dad", "mom", "parent_of", "父", "母", "爸", "妈"},
+	"child":    {"child", "son", "daughter", "child_of", "儿子", "女儿", "孩子"},
 	"spouse":   {"spouse", "husband", "wife", "married", "couple", "丈夫", "妻子", "夫妻", "配偶"},
 	"friend":   {"friend", "friendship", "朋友", "好友"},
 	"likes":    {"likes", "like", "love", "enjoy", "fond", "favorite", "interest", "喜欢", "爱好", "热爱"},

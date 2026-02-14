@@ -249,17 +249,27 @@ Examples:
 		g := env.mem.Graph()
 		ctx := cmd.Context()
 
-		// Try merge first; create if not found.
 		if attrs != nil {
+			// Has attributes — merge into existing or create new.
 			mergeErr := g.MergeAttrs(ctx, label, attrs)
 			if mergeErr == nil {
 				fmt.Printf("Updated entity %q\n", label)
 				return nil
 			}
-			// Fall through to create.
+			// Entity doesn't exist — create with attrs.
+			if err := g.SetEntity(ctx, graph.Entity{Label: label, Attrs: attrs}); err != nil {
+				return fmt.Errorf("set entity: %w", err)
+			}
+			fmt.Printf("Created entity %q\n", label)
+			return nil
 		}
 
-		if err := g.SetEntity(ctx, graph.Entity{Label: label, Attrs: attrs}); err != nil {
+		// No attributes — create only if not exists, never overwrite.
+		if _, err := g.GetEntity(ctx, label); err == nil {
+			fmt.Printf("Entity %q already exists (use attrs JSON to update, or 'delete' to remove)\n", label)
+			return nil
+		}
+		if err := g.SetEntity(ctx, graph.Entity{Label: label}); err != nil {
 			return fmt.Errorf("set entity: %w", err)
 		}
 		fmt.Printf("Created entity %q\n", label)
