@@ -134,15 +134,17 @@ func WithMinimaxTTSCtxOptions(ctx context.Context, opts MinimaxTTSCtxOptions) co
 
 // Transform converts Text chunks to audio Blob chunks.
 // MinimaxTTS does not require connection setup, so it returns immediately.
-func (t *MinimaxTTS) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+// The ctx is unused (no initialization needed); the goroutine lifetime
+// is governed by the input Stream.
+func (t *MinimaxTTS) Transform(_ context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	output := newBufferStream(100)
 
-	go t.transformLoop(ctx, input, output)
+	go t.transformLoop(input, output)
 
 	return output, nil
 }
 
-func (t *MinimaxTTS) transformLoop(ctx context.Context, input genx.Stream, output *bufferStream) {
+func (t *MinimaxTTS) transformLoop(input genx.Stream, output *bufferStream) {
 	defer output.Close()
 
 	mimeType := t.mimeType()
@@ -151,13 +153,6 @@ func (t *MinimaxTTS) transformLoop(ctx context.Context, input genx.Stream, outpu
 	var currentStreamID string
 
 	for {
-		select {
-		case <-ctx.Done():
-			output.CloseWithError(ctx.Err())
-			return
-		default:
-		}
-
 		chunk, err := input.Next()
 		if err != nil {
 			if err != io.EOF {
@@ -166,7 +161,7 @@ func (t *MinimaxTTS) transformLoop(ctx context.Context, input genx.Stream, outpu
 			}
 			// EOF: synthesize any remaining text
 			if textBuilder.Len() > 0 {
-				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
+				if err := t.synthesize(textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
 					output.CloseWithError(err)
 					return
 				}
@@ -193,7 +188,7 @@ func (t *MinimaxTTS) transformLoop(ctx context.Context, input genx.Stream, outpu
 			if _, ok := chunk.Part.(genx.Text); ok {
 				// Text EoS: synthesize accumulated text, emit audio, then emit audio EoS
 				if textBuilder.Len() > 0 {
-					if err := t.synthesize(ctx, textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
+					if err := t.synthesize(textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
 						output.CloseWithError(err)
 						return
 					}
@@ -242,7 +237,7 @@ func (t *MinimaxTTS) transformLoop(ctx context.Context, input genx.Stream, outpu
 	}
 }
 
-func (t *MinimaxTTS) synthesize(ctx context.Context, text string, lastChunk *genx.MessageChunk, streamID, mimeType string, output *bufferStream) error {
+func (t *MinimaxTTS) synthesize(text string, lastChunk *genx.MessageChunk, streamID, mimeType string, output *bufferStream) error {
 	// Emit BOS at the start of synthesis
 	bosChunk := &genx.MessageChunk{
 		Ctrl: &genx.StreamCtrl{StreamID: streamID, BeginOfStream: true},
@@ -272,7 +267,7 @@ func (t *MinimaxTTS) synthesize(ctx context.Context, text string, lastChunk *gen
 		},
 	}
 
-	for chunk, err := range t.client.Speech.SynthesizeStream(ctx, req) {
+	for chunk, err := range t.client.Speech.SynthesizeStream(context.Background(), req) {
 		if err != nil {
 			return err
 		}
