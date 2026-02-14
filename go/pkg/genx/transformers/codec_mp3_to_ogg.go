@@ -67,29 +67,24 @@ func NewMP3ToOgg(opts ...MP3ToOggOption) *MP3ToOgg {
 // Transform converts audio/mp3 Blob chunks to audio/ogg Blob chunks.
 // Non-audio chunks and non-mp3 audio chunks are passed through unchanged.
 // MP3ToOgg does not require connection setup, so it returns immediately.
-func (c *MP3ToOgg) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+// The ctx is unused (no initialization needed); the goroutine lifetime
+// is governed by the input Stream.
+func (c *MP3ToOgg) Transform(_ context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	outBuf := buffer.N[*genx.MessageChunk](100)
 	out := &mp3ToOggStream{buf: outBuf}
 
-	go c.transformLoop(ctx, input, outBuf)
+	go c.transformLoop(input, outBuf)
 
 	return out, nil
 }
 
-func (c *MP3ToOgg) transformLoop(ctx context.Context, input genx.Stream, out *buffer.Buffer[*genx.MessageChunk]) {
+func (c *MP3ToOgg) transformLoop(input genx.Stream, out *buffer.Buffer[*genx.MessageChunk]) {
 	defer out.CloseWrite()
 
 	var mp3Data bytes.Buffer
 	var lastChunk *genx.MessageChunk
 
 	for {
-		select {
-		case <-ctx.Done():
-			out.CloseWithError(ctx.Err())
-			return
-		default:
-		}
-
 		chunk, err := input.Next()
 		if err != nil {
 			if err == io.EOF {
