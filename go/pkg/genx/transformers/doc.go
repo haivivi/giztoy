@@ -21,6 +21,33 @@
 // MiniMax:
 //   - MinimaxTTS: MiniMax text-to-speech
 //
+// # Lifecycle
+//
+// All transformers in this package follow the genx.Transformer lifecycle contract:
+//
+//   - Transform(ctx) uses ctx ONLY for initialization (dial, handshake, session).
+//   - Background goroutines do NOT hold ctx. They exit when input.Next()
+//     returns io.EOF or error.
+//   - To cancel a running transformer, close the input Stream.
+//
+// See genx.Transformer documentation for the full contract.
+//
+// # EOF vs EoS Convention
+//
+// Transformers handle two kinds of "end" signals differently:
+//
+// io.EOF (from input.Next()):
+//   - The input Stream is physically done. No more chunks will arrive.
+//   - Transformer flushes buffered data, emits results, and returns.
+//   - The output Stream is closed by defer. Downstream sees io.EOF.
+//   - Transformer does NOT fabricate an EoS marker.
+//
+// EoS marker (MessageChunk.Ctrl.EndOfStream=true):
+//   - A logical sub-stream boundary sent by the CALLER.
+//   - Transformer flushes buffered data, emits results.
+//   - Transformer emits a TRANSLATED EoS marker (e.g., Text EoS → Audio EoS).
+//   - Transformer continues the loop — more sub-streams may follow.
+//
 // # Usage
 //
 // Register transformers with patterns:
