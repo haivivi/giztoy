@@ -1,0 +1,22 @@
+name: c07_emotional_context
+desc: "Emotional context should not be hallucinated as factual attributes"
+messages:
+  - "user: 今天心情特别差"
+  - "assistant: 怎么了？"
+  - "user: 小王跟我吵架了，他说我做的方案不行"
+  - "assistant: 发生什么了？"
+  - "user: 我花了两周做的市场分析报告，他说数据有问题"
+  - "assistant: 那数据确实有问题吗？"
+  - "user: 有一些小错误，但他也不用那么凶啊。不过他人其实还不错，平时挺照顾我的"
+  - "assistant: 同事之间偶尔有摩擦是正常的"
+  - "user: 也是，他可能最近压力也大，他们组的项目deadline快到了"
+  - "assistant: 互相理解就好"
+  - "user: 对，我和小王认识三年了，是同一批进公司的"
+  - "assistant: 老同事了"
+  - "user: 明天我请他喝杯咖啡和好吧"
+  - "assistant: 好主意"
+expect:
+  min_entities: 1
+  entities_contain: ["person:小王"]
+  summary_contains: ["小王"]
+  labels_contain: ["person:小王"]

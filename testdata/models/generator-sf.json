@@ -7,6 +7,7 @@
         {
             "name": "sf/qwen2.5-32b-instruct",
             "model": "Qwen/Qwen2.5-32B-Instruct/cm1myq61q0077djzipno9bq1n",
+            "support_json_output": true,
             "support_tool_calls": true,
             "support_text_only": true,
             "use_system_role": true,

@@ -19,11 +19,77 @@
 // then searches segments using the expanded label set.
 package recall
 
-import "time"
+import (
+	"time"
+)
+
+// Bucket identifies a time-granularity bucket for segment storage.
+// Segments are organized into buckets based on the time span they cover.
+// When a bucket exceeds its capacity (count or token threshold), the
+// oldest segments are compacted into a coarser bucket.
+//
+// The bucket hierarchy:
+//
+//	1h → 1d → 1w → 1m → 3m → 6m → 1y → lt
+//
+// The "lt" (lifetime) bucket is terminal — it only grows, never compacted.
+type Bucket string
+
+const (
+	Bucket1H Bucket = "1h" // 1 hour
+	Bucket1D Bucket = "1d" // 1 day
+	Bucket1W Bucket = "1w" // 1 week
+	Bucket1M Bucket = "1m" // 1 month
+	Bucket3M Bucket = "3m" // 3 months
+	Bucket6M Bucket = "6m" // 6 months
+	Bucket1Y Bucket = "1y" // 1 year
+	BucketLT Bucket = "lt" // lifetime (terminal)
+)
+
+// AllBuckets lists all buckets in order from finest to coarsest.
+var AllBuckets = []Bucket{Bucket1H, Bucket1D, Bucket1W, Bucket1M, Bucket3M, Bucket6M, Bucket1Y, BucketLT}
+
+// CompactableBuckets lists all buckets that can be compacted (excludes lt).
+var CompactableBuckets = []Bucket{Bucket1H, Bucket1D, Bucket1W, Bucket1M, Bucket3M, Bucket6M, Bucket1Y}
+
+// BucketDuration returns the maximum time span a segment in this bucket
+// should cover. BucketLT returns 0 (no upper bound).
+func BucketDuration(b Bucket) time.Duration {
+	switch b {
+	case Bucket1H:
+		return time.Hour
+	case Bucket1D:
+		return 24 * time.Hour
+	case Bucket1W:
+		return 7 * 24 * time.Hour
+	case Bucket1M:
+		return 30 * 24 * time.Hour
+	case Bucket3M:
+		return 90 * 24 * time.Hour
+	case Bucket6M:
+		return 180 * 24 * time.Hour
+	case Bucket1Y:
+		return 365 * 24 * time.Hour
+	default:
+		return 0
+	}
+}
+
+// BucketForSpan returns the smallest bucket whose duration covers the
+// given time span. If span exceeds 1 year, BucketLT is returned.
+func BucketForSpan(span time.Duration) Bucket {
+	for _, b := range AllBuckets {
+		d := BucketDuration(b)
+		if d == 0 || span <= d {
+			return b
+		}
+	}
+	return BucketLT
+}
 
 // Segment is a memory fragment stored in the index.
 // Each segment carries a text summary, optional keywords and labels for
-// filtering, and a timestamp for time-range queries.
+// filtering, a timestamp, and a bucket indicating its time granularity.
 type Segment struct {
 	// ID is the unique identifier for this segment.
 	ID string `json:"id" msgpack:"id"`
@@ -38,9 +104,14 @@ type Segment struct {
 	// "topic:dinosaurs"). Used for label-based filtering during search.
 	Labels []string `json:"labels,omitempty" msgpack:"labels,omitempty"`
 
-	// Timestamp is the Unix timestamp in nanoseconds when this segment
-	// was created.
+	// Timestamp is the Unix timestamp in nanoseconds of the latest event
+	// covered by this segment. Used for ordering and time-range queries.
 	Timestamp int64 `json:"ts" msgpack:"ts"`
+
+	// Bucket identifies which time-granularity bucket this segment
+	// belongs to. Set when the segment is stored. Defaults to Bucket1H
+	// for segments produced by realtime conversation compression.
+	Bucket Bucket `json:"bucket,omitempty" msgpack:"bucket,omitempty"`
 }
 
 // SearchQuery specifies parameters for [Index.SearchSegments].

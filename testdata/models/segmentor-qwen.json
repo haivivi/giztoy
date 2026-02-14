@@ -1,0 +1,10 @@
+{
+    "schema": "genx/segmentor/v1",
+    "type": "segmentor",
+    "models": [
+        {
+            "name": "seg/qwen-flash",
+            "model": "qwen/flash"
+        }
+    ]
+}

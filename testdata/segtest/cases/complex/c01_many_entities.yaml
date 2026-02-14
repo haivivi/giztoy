@@ -1,0 +1,32 @@
+name: c01_many_entities
+desc: "5+ entities overlapping in a family discussion"
+messages:
+  - "user: 今天家庭聚会，爷爷奶奶爸爸妈妈还有我姐姐都来了"
+  - "assistant: 一大家子人呢"
+  - "user: 爷爷叫王建国，今年78岁了，身体还很硬朗"
+  - "assistant: 老人家身体好就是福气"
+  - "user: 奶奶叫张秀兰，75岁，最喜欢打太极拳"
+  - "assistant: 太极拳很养生呢"
+  - "user: 爸爸叫王明，45岁，是医生。妈妈叫李芳，43岁，是老师"
+  - "assistant: 你们家都是很厉害的人呢"
+  - "user: 姐姐叫王悦，20岁，在北京大学读书"
+  - "assistant: 北大很棒！"
+  - "user: 我叫王乐，15岁，还在读高中"
+  - "assistant: 一家人都很优秀"
+expect:
+  min_entities: 5
+  entities_contain:
+    - "person:王建国"
+    - "person:张秀兰"
+    - "person:王明"
+    - "person:李芳"
+    - "person:王悦"
+  entity_attrs:
+    person:王建国:
+      age: 78
+    person:王明:
+      age: 45
+    person:王悦:
+      age: 20
+  summary_contains: ["家庭", "聚会"]
+  labels_contain: ["person:王建国", "person:王明"]

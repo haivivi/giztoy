@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/haivivi/giztoy/go/pkg/kv"
@@ -21,39 +20,44 @@ const (
 
 // StoreSegment persists a segment in the index.
 //
-// It stores the segment data in KV (msgpack-encoded, keyed by timestamp),
-// writes a reverse index entry (sid:{id} → timestamp) for O(1) ID lookups,
+// The segment's Bucket field determines which bucket it is stored in.
+// If Bucket is empty, it defaults to [Bucket1H].
+//
+// It stores the segment data in KV (msgpack-encoded, keyed by bucket+timestamp),
+// writes a reverse index entry (sid:{id} → "bucket:timestamp") for O(1) ID lookups,
 // and if an embedder and vector index are configured, embeds the summary
 // text and inserts the resulting vector.
 func (idx *Index) StoreSegment(ctx context.Context, seg Segment) error {
+	if seg.Bucket == "" {
+		seg.Bucket = Bucket1H
+	}
+
 	data, err := msgpack.Marshal(seg)
 	if err != nil {
 		return err
 	}
 
-	segK := segmentKey(idx.prefix, seg.Timestamp)
+	segK := segmentKey(idx.prefix, seg.Bucket, seg.Timestamp)
 	sidK := sidKey(idx.prefix, seg.ID)
-	tsBytes := []byte(strconv.FormatInt(seg.Timestamp, 10))
+	sidV := sidValue(seg.Bucket, seg.Timestamp)
 
-	// Check if this ID already exists with a different timestamp.
-	oldTs, oldExists := int64(0), false
-	if ts, err := idx.lookupSegmentTS(ctx, seg.ID); err == nil && ts != seg.Timestamp {
-		oldTs, oldExists = ts, true
+	// Check if this ID already exists with a different timestamp or bucket.
+	oldBucket, oldTs, oldExists := Bucket(""), int64(0), false
+	if b, ts, err := idx.lookupSid(ctx, seg.ID); err == nil && (ts != seg.Timestamp || b != seg.Bucket) {
+		oldBucket, oldTs, oldExists = b, ts, true
 	}
 
 	// Write new segment data + reverse index atomically first.
-	// This ensures the new data is persisted before we remove the old key.
 	if err := idx.store.BatchSet(ctx, []kv.Entry{
 		{Key: segK, Value: data},
-		{Key: sidK, Value: tsBytes},
+		{Key: sidK, Value: sidV},
 	}); err != nil {
 		return err
 	}
 
 	// Delete the old segment key after the new data is safely written.
-	// If this fails, we only have an orphaned old key — no data loss.
 	if oldExists {
-		_ = idx.store.Delete(ctx, segmentKey(idx.prefix, oldTs))
+		_ = idx.store.Delete(ctx, segmentKey(idx.prefix, oldBucket, oldTs))
 	}
 
 	// Index the vector if both embedder and vector index are available.
@@ -74,8 +78,7 @@ func (idx *Index) StoreSegment(ctx context.Context, seg Segment) error {
 //
 // Uses the sid reverse index for O(1) lookup instead of scanning.
 func (idx *Index) DeleteSegment(ctx context.Context, id string) error {
-	// Look up timestamp via reverse index.
-	ts, err := idx.lookupSegmentTS(ctx, id)
+	bucket, ts, err := idx.lookupSid(ctx, id)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
 			return nil // not found is not an error
@@ -83,10 +86,9 @@ func (idx *Index) DeleteSegment(ctx context.Context, id string) error {
 		return err
 	}
 
-	segK := segmentKey(idx.prefix, ts)
+	segK := segmentKey(idx.prefix, bucket, ts)
 	sidK := sidKey(idx.prefix, id)
 
-	// Delete segment data + reverse index atomically.
 	if err := idx.store.BatchDelete(ctx, []kv.Key{segK, sidK}); err != nil {
 		return err
 	}
@@ -103,8 +105,7 @@ func (idx *Index) DeleteSegment(ctx context.Context, id string) error {
 // Uses the sid reverse index for O(1) lookup instead of scanning.
 // Returns nil if the segment does not exist.
 func (idx *Index) GetSegment(ctx context.Context, id string) (*Segment, error) {
-	// Look up timestamp via reverse index.
-	ts, err := idx.lookupSegmentTS(ctx, id)
+	bucket, ts, err := idx.lookupSid(ctx, id)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
 			return nil, nil // not found
@@ -112,7 +113,7 @@ func (idx *Index) GetSegment(ctx context.Context, id string) (*Segment, error) {
 		return nil, err
 	}
 
-	data, err := idx.store.Get(ctx, segmentKey(idx.prefix, ts))
+	data, err := idx.store.Get(ctx, segmentKey(idx.prefix, bucket, ts))
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
 			return nil, nil // data key missing (orphan sid)
@@ -127,10 +128,8 @@ func (idx *Index) GetSegment(ctx context.Context, id string) (*Segment, error) {
 	return &seg, nil
 }
 
-// RecentSegments returns the n most recent segments, ordered newest first.
-//
-// KV keys are lexicographically ordered by date+timestamp, so we scan
-// all segments and take the last n.
+// RecentSegments returns the n most recent segments across all buckets,
+// ordered newest first.
 func (idx *Index) RecentSegments(ctx context.Context, n int) ([]Segment, error) {
 	if n <= 0 {
 		return nil, nil
@@ -150,10 +149,10 @@ func (idx *Index) RecentSegments(ctx context.Context, n int) ([]Segment, error) 
 		all = append(all, seg)
 	}
 
-	// KV list is ascending; reverse to get newest first.
-	for i, j := 0, len(all)-1; i < j; i, j = i+1, j-1 {
-		all[i], all[j] = all[j], all[i]
-	}
+	// Sort by timestamp descending (newest first).
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].Timestamp > all[j].Timestamp
+	})
 
 	if len(all) > n {
 		all = all[:n]
@@ -161,10 +160,48 @@ func (idx *Index) RecentSegments(ctx context.Context, n int) ([]Segment, error) 
 	return all, nil
 }
 
+// BucketSegments returns all segments in a specific bucket, ordered by
+// timestamp ascending (oldest first).
+func (idx *Index) BucketSegments(ctx context.Context, bucket Bucket) ([]Segment, error) {
+	prefix := bucketPrefix(idx.prefix, bucket)
+	var segments []Segment
+
+	for entry, err := range idx.store.List(ctx, prefix) {
+		if err != nil {
+			return nil, err
+		}
+		var seg Segment
+		if err := msgpack.Unmarshal(entry.Value, &seg); err != nil {
+			continue
+		}
+		segments = append(segments, seg)
+	}
+	return segments, nil
+}
+
+// BucketStats returns the count of segments and total character count of
+// summaries in a specific bucket. Used to check compaction thresholds.
+func (idx *Index) BucketStats(ctx context.Context, bucket Bucket) (count int, chars int, err error) {
+	prefix := bucketPrefix(idx.prefix, bucket)
+
+	for entry, e := range idx.store.List(ctx, prefix) {
+		if e != nil {
+			return 0, 0, e
+		}
+		var seg Segment
+		if err := msgpack.Unmarshal(entry.Value, &seg); err != nil {
+			continue
+		}
+		count++
+		chars += len(seg.Summary)
+	}
+	return count, chars, nil
+}
+
 // SearchSegments searches for segments matching the query using multi-signal
 // scoring: vector similarity, keyword overlap, and label overlap.
 //
-// The scoring pipeline:
+// Searches across all buckets. The scoring pipeline:
 //  1. Collect all segments (with optional time filtering)
 //  2. If embedder + vec are available: embed query text → vector search → distance scores
 //  3. Keyword score: fraction of query terms found in segment keywords
@@ -263,7 +300,8 @@ func (idx *Index) SearchSegments(ctx context.Context, q SearchQuery) ([]ScoredSe
 	return scored, nil
 }
 
-// loadSegments scans all segments from KV, applying time and label filters.
+// loadSegments scans all segments from KV across all buckets, applying
+// time and label filters.
 func (idx *Index) loadSegments(ctx context.Context, q SearchQuery) ([]Segment, error) {
 	prefix := segmentPrefix(idx.prefix)
 	afterNs := int64(0)
@@ -303,18 +341,14 @@ func (idx *Index) loadSegments(ctx context.Context, q SearchQuery) ([]Segment, e
 	return segments, nil
 }
 
-// lookupSegmentTS looks up the timestamp for a segment ID via the sid reverse index.
-// Returns kv.ErrNotFound if the ID does not exist.
-func (idx *Index) lookupSegmentTS(ctx context.Context, id string) (int64, error) {
+// lookupSid looks up the bucket and timestamp for a segment ID via the
+// sid reverse index. Returns kv.ErrNotFound if the ID does not exist.
+func (idx *Index) lookupSid(ctx context.Context, id string) (Bucket, int64, error) {
 	data, err := idx.store.Get(ctx, sidKey(idx.prefix, id))
 	if err != nil {
-		return 0, err
+		return "", 0, err
 	}
-	ts, err := strconv.ParseInt(string(data), 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return ts, nil
+	return parseSidValue(data)
 }
 
 // keywordScore computes the fraction of query terms found in the segment's
@@ -390,4 +424,3 @@ func hasOverlap(items []string, set map[string]struct{}) bool {
 	}
 	return false
 }
-

@@ -1,0 +1,23 @@
+name: c10_abstract_concepts
+desc: "Abstract concepts like dreams and hobbies as topic entities"
+messages:
+  - "user: 我的梦想是环游世界"
+  - "assistant: 很棒的梦想！想去哪些地方？"
+  - "user: 首先想去日本看樱花，然后去冰岛看极光"
+  - "assistant: 都是很美的地方"
+  - "user: 还想去非洲看野生动物大迁徙"
+  - "assistant: 那是很壮观的景象"
+  - "user: 我已经去过泰国、韩国和新加坡了"
+  - "assistant: 都在亚洲"
+  - "user: 对，我还没去过欧美，明年计划先去法国"
+  - "assistant: 巴黎？"
+  - "user: 不只是巴黎，还想去普罗旺斯看薰衣草"
+  - "assistant: 薰衣草田很浪漫"
+  - "user: 我每年的旅行预算大概3万块"
+  - "assistant: 计划得不错"
+  - "user: 我的另一个爱好是摄影，旅行的时候拍照"
+  - "assistant: 摄影和旅行是绝配"
+expect:
+  min_entities: 1
+  summary_contains: ["旅"]
+  min_keywords: 1

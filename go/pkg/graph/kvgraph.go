@@ -24,20 +24,29 @@ import (
 type KVGraph struct {
 	store  kv.Store
 	prefix kv.Key
+	sep    byte // key separator for label validation
 }
 
 // NewKVGraph creates a new KVGraph using the given store and key prefix.
 // The prefix is prepended to all keys, e.g. prefix = {"mem", "123", "g"}
 // results in entity keys like "mem:123:g:e:Alice".
-func NewKVGraph(store kv.Store, prefix kv.Key) *KVGraph {
-	return &KVGraph{store: store, prefix: prefix}
+//
+// An optional separator byte can be provided to match the kv.Store's
+// configured separator. If omitted, [kv.DefaultSeparator] (':') is used.
+// Labels and relation types must not contain the separator character.
+func NewKVGraph(store kv.Store, prefix kv.Key, sep ...byte) *KVGraph {
+	s := kv.DefaultSeparator
+	if len(sep) > 0 {
+		s = sep[0]
+	}
+	return &KVGraph{store: store, prefix: prefix, sep: s}
 }
 
 // validateSegments checks that none of the given strings contain the KV
 // separator character. Labels and relation types are used as kv.Key segments;
 // if they contain the separator the encoded key would be corrupted.
 func (g *KVGraph) validateSegments(segs ...string) error {
-	sep := string(kv.DefaultSeparator)
+	sep := string(g.sep)
 	for _, s := range segs {
 		if strings.Contains(s, sep) {
 			return fmt.Errorf("%w: %q contains %q", ErrInvalidLabel, s, sep)

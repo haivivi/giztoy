@@ -54,6 +54,7 @@ func (m *mockEmbedder) EmbedBatch(_ context.Context, texts []string) ([][]float3
 }
 
 func (m *mockEmbedder) Dimension() int { return m.dim }
+func (m *mockEmbedder) Model() string  { return "mock-embed" }
 
 // helper to create a test index with all components.
 func newTestIndex(t *testing.T) (*Index, *mockEmbedder) {
@@ -497,25 +498,22 @@ func TestKeyHelpers(t *testing.T) {
 	prefix := kv.Key{"mem", "cat"}
 	ts := time.Date(2025, 6, 15, 12, 30, 0, 0, time.UTC).UnixNano()
 
-	key := segmentKey(prefix, ts)
+	key := segmentKey(prefix, Bucket1H, ts)
 	if len(key) != 5 {
 		t.Fatalf("key len = %d, want 5", len(key))
 	}
-	if key[0] != "mem" || key[1] != "cat" || key[2] != "seg" || key[3] != "20250615" {
+	if key[0] != "mem" || key[1] != "cat" || key[2] != "seg" || key[3] != "1h" {
 		t.Errorf("key = %v", key)
-	}
-
-	gotTs, err := ParseSegmentKey(key, 2)
-	if err != nil {
-		t.Fatalf("ParseSegmentKey: %v", err)
-	}
-	if gotTs != ts {
-		t.Errorf("parsed ts = %d, want %d", gotTs, ts)
 	}
 
 	sp := segmentPrefix(prefix)
 	if len(sp) != 3 || sp[2] != "seg" {
 		t.Errorf("segmentPrefix = %v", sp)
+	}
+
+	bp := bucketPrefix(prefix, Bucket1D)
+	if len(bp) != 4 || bp[2] != "seg" || bp[3] != "1d" {
+		t.Errorf("bucketPrefix = %v", bp)
 	}
 
 	gp := graphPrefix(prefix)
@@ -529,35 +527,31 @@ func TestKeyHelpers(t *testing.T) {
 	}
 }
 
-func TestSegmentDatePrefix(t *testing.T) {
-	prefix := kv.Key{"mem", "cat"}
-	d := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
-	dp := SegmentDatePrefix(prefix, d)
-	if len(dp) != 4 {
-		t.Fatalf("len = %d, want 4", len(dp))
+func TestSidValueRoundTrip(t *testing.T) {
+	val := sidValue(Bucket1W, 1234567890)
+	bucket, ts, err := parseSidValue(val)
+	if err != nil {
+		t.Fatalf("parseSidValue: %v", err)
 	}
-	if dp[2] != "seg" || dp[3] != "20250615" {
-		t.Errorf("SegmentDatePrefix = %v", dp)
+	if bucket != Bucket1W {
+		t.Errorf("bucket = %s, want 1w", bucket)
+	}
+	if ts != 1234567890 {
+		t.Errorf("ts = %d, want 1234567890", ts)
 	}
 }
 
-func TestParseSegmentKeyErrors(t *testing.T) {
-	// Too short.
-	_, err := ParseSegmentKey(kv.Key{"a", "b"}, 2)
-	if err == nil {
-		t.Error("expected error for short key")
+func TestSidValueLegacy(t *testing.T) {
+	// Legacy format: just the timestamp.
+	bucket, ts, err := parseSidValue([]byte("1234567890"))
+	if err != nil {
+		t.Fatalf("parseSidValue: %v", err)
 	}
-
-	// Wrong segment marker.
-	_, err = ParseSegmentKey(kv.Key{"a", "b", "notSeg", "20250615", "123"}, 2)
-	if err == nil {
-		t.Error("expected error for wrong segment marker")
+	if bucket != Bucket1H {
+		t.Errorf("bucket = %s, want 1h (default)", bucket)
 	}
-
-	// Invalid timestamp.
-	_, err = ParseSegmentKey(kv.Key{"a", "b", "seg", "20250615", "notanumber"}, 2)
-	if err == nil {
-		t.Error("expected error for invalid timestamp")
+	if ts != 1234567890 {
+		t.Errorf("ts = %d, want 1234567890", ts)
 	}
 }
 

@@ -1,0 +1,12 @@
+name: s03_single_topic
+desc: "Extract a topic entity from conversation"
+messages:
+  - "user: 我最近在学钢琴"
+  - "assistant: 学了多久了？"
+  - "user: 大概三个月了，每天练一个小时"
+  - "assistant: 坚持得不错呢"
+expect:
+  min_entities: 1
+  entities_contain: ["topic:钢琴"]
+  summary_contains: ["钢琴"]
+  labels_contain: ["topic:钢琴"]

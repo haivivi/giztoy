@@ -1,0 +1,10 @@
+{
+    "schema": "genx/segmentor/v1",
+    "type": "segmentor",
+    "models": [
+        {
+            "name": "seg/sf-qwen2.5-32b",
+            "model": "sf/qwen2.5-32b-instruct"
+        }
+    ]
+}

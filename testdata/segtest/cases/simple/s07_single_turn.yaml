@@ -1,0 +1,12 @@
+name: s07_single_turn
+desc: "Handle single-turn input"
+messages:
+  - "user: 李华今年15岁，在北京四中读初三，最喜欢数学和篮球"
+expect:
+  min_entities: 1
+  entities_contain: ["person:李华"]
+  entity_attrs:
+    person:李华:
+      age: 15
+  summary_contains: ["李华"]
+  labels_contain: ["person:李华"]

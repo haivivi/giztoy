@@ -1,0 +1,9 @@
+{
+  "person:小明": {
+    "age": 5,
+    "gender": "男"
+  },
+  "person:小红": {
+    "gender": "女"
+  }
+}

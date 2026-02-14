@@ -1,0 +1,15 @@
+name: s08_english
+desc: "English conversation with English output"
+messages:
+  - "user: My friend Alice is 25 years old and works as a software engineer at Google"
+  - "assistant: That's great! Does she enjoy her work?"
+  - "user: Yes, she loves it. She specializes in machine learning"
+  - "assistant: Machine learning is a fascinating field"
+expect:
+  min_entities: 1
+  entities_contain: ["person:Alice"]
+  entity_attrs:
+    person:Alice:
+      age: 25
+  summary_contains: ["Alice"]
+  labels_contain: ["person:Alice"]

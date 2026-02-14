@@ -1,0 +1,12 @@
+name: s04_place_extraction
+desc: "Extract a place entity"
+messages:
+  - "user: 我们上周去了北京故宫"
+  - "assistant: 故宫很漂亮吧"
+  - "user: 是啊，特别壮观，人也很多"
+  - "assistant: 故宫确实是必去的景点"
+expect:
+  min_entities: 1
+  entities_contain: ["place:故宫"]
+  summary_contains: ["故宫"]
+  labels_contain: ["place:故宫"]

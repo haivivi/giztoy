@@ -1,0 +1,13 @@
+name: s01_single_person_age
+desc: "Extract one person entity with age attribute"
+messages:
+  - "user: 小明今年8岁了"
+  - "assistant: 好的，我记住了，小明8岁"
+expect:
+  min_entities: 1
+  entities_contain: ["person:小明"]
+  entity_attrs:
+    person:小明:
+      age: 8
+  summary_contains: ["小明"]
+  labels_contain: ["person:小明"]

@@ -40,8 +40,8 @@
             }
         },
         {
-            "name": "openai/gpt-4.1-nano",
-            "model": "gpt-4.1-nano",
+            "name": "openai/gpt-5.1-nano",
+            "model": "gpt-5.1-nano",
             "support_json_output": true,
             "support_text_only": true,
             "use_system_role": true,
@@ -57,8 +57,8 @@
             }
         },
         {
-            "name": "openai/gpt-5-nano",
-            "model": "gpt-5-nano",
+            "name": "openai/gpt-5.1-mini",
+            "model": "gpt-5.1-mini",
             "support_json_output": true,
             "support_text_only": true,
             "use_system_role": true,
@@ -72,8 +72,8 @@
             }
         },
         {
-            "name": "openai/gpt-5-mini",
-            "model": "gpt-5-mini",
+            "name": "openai/gpt-5.1",
+            "model": "gpt-5.1",
             "support_json_output": true,
             "support_text_only": true,
             "use_system_role": true,
