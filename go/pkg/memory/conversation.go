@@ -3,7 +3,6 @@ package memory
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 
 	"github.com/haivivi/giztoy/go/pkg/kv"
@@ -28,8 +27,9 @@ type Conversation struct {
 	labels []string
 
 	// Auto-compression state: tracks uncompressed messages.
-	pendingChars int
-	pendingMsgs  int
+	pendingChars    int
+	pendingMsgs     int
+	lastCompressErr error // last auto-compression error, if any
 }
 
 func newConversation(mem *Memory, convID string, labels []string) *Conversation {
@@ -46,6 +46,11 @@ func (c *Conversation) ID() string { return c.convID }
 // Labels returns the entity labels associated with this conversation
 // (e.g., ["person:Alice"]).
 func (c *Conversation) Labels() []string { return c.labels }
+
+// LastCompressErr returns the error from the most recent auto-compression
+// attempt, or nil if the last attempt succeeded (or no attempt was made).
+// This is informational — auto-compression failures do not block [Append].
+func (c *Conversation) LastCompressErr() error { return c.lastCompressErr }
 
 // Append stores a message in the conversation.
 // If msg.Timestamp is zero, it is set to the current time.
@@ -89,12 +94,16 @@ func (c *Conversation) Append(ctx context.Context, msg Message) error {
 	c.pendingMsgs++
 
 	// Auto-compress if policy thresholds are reached.
+	// On failure, log and continue — messages are safely stored in KV and
+	// will be included in the next compression attempt.
 	if c.mem.compressor != nil && c.mem.policy.shouldCompress(c.pendingChars, c.pendingMsgs) {
 		if err := c.mem.Compress(ctx, c, nil); err != nil {
-			return fmt.Errorf("auto-compress: %w", err)
+			c.lastCompressErr = err
+		} else {
+			c.pendingChars = 0
+			c.pendingMsgs = 0
+			c.lastCompressErr = nil
 		}
-		c.pendingChars = 0
-		c.pendingMsgs = 0
 	}
 
 	return nil
