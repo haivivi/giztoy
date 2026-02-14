@@ -456,8 +456,9 @@ func unpackTarGz(tarPath, destDir string) error {
 
 		target := filepath.Join(destDir, hdr.Name)
 
-		// Prevent path traversal.
-		if !strings.HasPrefix(filepath.Clean(target), filepath.Clean(destDir)) {
+		// Prevent path traversal (add separator to prevent sibling prefix matches).
+		cleanDest := filepath.Clean(destDir) + string(filepath.Separator)
+		if !strings.HasPrefix(filepath.Clean(target)+string(filepath.Separator), cleanDest) {
 			return fmt.Errorf("tar entry %q tries to escape dest dir", hdr.Name)
 		}
 

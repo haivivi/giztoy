@@ -202,17 +202,35 @@ func scoreRelations(expect Expect, result *segmentors.Result) float64 {
 	return float64(found) / float64(len(expect.RelationsContain))
 }
 
+// symmetricRelTypes lists relation types that are inherently bidirectional.
+// For these types, reversed from/to is considered a match.
+var symmetricRelTypes = map[string]bool{
+	"sibling": true, "friend": true, "neighbor": true, "classmate": true,
+	"colleague": true, "spouse": true, "partner": true,
+	"兄妹": true, "兄弟": true, "姐妹": true, "朋友": true, "同学": true,
+	"同事": true, "邻居": true,
+}
+
 // relationsMatch checks if an actual relation matches an expected one.
 // Allows fuzzy rel_type matching with synonym groups for semantic equivalence.
+// Only symmetric relation types (sibling, friend, etc.) accept reversed from/to.
 func relationsMatch(expected ExpectedRelation, actual segmentors.RelationOutput) bool {
-	if actual.From != expected.From || actual.To != expected.To {
-		// Also try reversed direction for symmetric relations like "sibling".
-		reversed := actual.From == expected.To && actual.To == expected.From
-		if !reversed {
-			return false
+	if actual.From == expected.From && actual.To == expected.To {
+		return relTypeMatch(expected.RelType, actual.RelType)
+	}
+	// Try reversed direction only for symmetric relation types.
+	if actual.From == expected.To && actual.To == expected.From {
+		if symmetricRelTypes[expected.RelType] || symmetricRelTypes[actual.RelType] {
+			return relTypeMatch(expected.RelType, actual.RelType)
+		}
+		// Also check if any synonym of expected or actual is symmetric.
+		for sym := range symmetricRelTypes {
+			if relTypeMatch(expected.RelType, sym) || relTypeMatch(actual.RelType, sym) {
+				return relTypeMatch(expected.RelType, actual.RelType)
+			}
 		}
 	}
-	return relTypeMatch(expected.RelType, actual.RelType)
+	return false
 }
 
 // relTypeSynonyms maps a canonical relation type to semantically equivalent

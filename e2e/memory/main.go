@@ -92,18 +92,36 @@ func main() {
 		log.Fatalf("segmentor model %q not found in registered models: %v", *flagSeg, allModels)
 	}
 
+	// Verify the profiler model is registered (if specified).
+	profModel := *flagProf
+	if profModel != "" {
+		profFound := false
+		for _, m := range allModels {
+			if m == profModel || strings.HasPrefix(m, profModel) {
+				if m != profModel {
+					profModel = m
+				}
+				profFound = true
+				break
+			}
+		}
+		if !profFound {
+			log.Fatalf("profiler model %q not found in registered models: %v", *flagProf, allModels)
+		}
+	}
+
 	ctx := context.Background()
 
 	// Data-driven mode: load cases from tar.gz or directory.
 	if *flagCases != "" {
-		if err := runCases(ctx, segModel, *flagProf, *flagCases, *flagCase); err != nil {
+		if err := runCases(ctx, segModel, profModel, *flagCases, *flagCase); err != nil {
 			log.Fatalf("FAIL: %v", err)
 		}
 		return
 	}
 
 	// Default: run built-in tests.
-	if err := run(ctx, segModel, *flagProf); err != nil {
+	if err := run(ctx, segModel, profModel); err != nil {
 		log.Fatalf("FAIL: %v", err)
 	}
 	fmt.Println("\nAll checks passed.")

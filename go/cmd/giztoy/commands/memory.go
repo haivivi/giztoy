@@ -665,6 +665,13 @@ func openMemory() (*memoryEnv, error) {
 				// Corrupted index — start fresh.
 				fmt.Fprintf(os.Stderr, "Warning: corrupted HNSW index, starting fresh: %v\n", err)
 				hnsw = nil
+			} else if hnsw.Len() > 0 {
+				// Validate dimension by attempting a probe search.
+				probe := make([]float32, dim)
+				if _, err := hnsw.Search(probe, 1); err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: HNSW dimension mismatch with embedder, rebuilding index: %v\n", err)
+					hnsw = nil
+				}
 			}
 		}
 		if hnsw == nil {
