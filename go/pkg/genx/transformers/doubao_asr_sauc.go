@@ -139,15 +139,17 @@ func WithDoubaoASRSAUCCtxOptions(ctx context.Context, opts DoubaoASRSAUCCtxOptio
 
 // Transform converts audio Blob chunks to Text chunks.
 // DoubaoASRSAUC creates sessions on demand, so it returns immediately.
-func (t *DoubaoASRSAUC) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+// The ctx is unused (session creation happens lazily in the loop);
+// the goroutine lifetime is governed by the input Stream.
+func (t *DoubaoASRSAUC) Transform(_ context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	output := newBufferStream(100)
 
-	go t.transformLoop(ctx, input, output)
+	go t.transformLoop(input, output)
 
 	return output, nil
 }
 
-func (t *DoubaoASRSAUC) transformLoop(ctx context.Context, input genx.Stream, output *bufferStream) {
+func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 	defer output.Close()
 
 	// Track last chunk for metadata
@@ -159,7 +161,7 @@ func (t *DoubaoASRSAUC) transformLoop(ctx context.Context, input genx.Stream, ou
 	// Helper to start a new ASR session
 	startSession := func() error {
 		var err error
-		session, err = t.openSession(ctx)
+		session, err = t.openSession(context.Background())
 		if err != nil {
 			return err
 		}
@@ -180,7 +182,7 @@ func (t *DoubaoASRSAUC) transformLoop(ctx context.Context, input genx.Stream, ou
 		if session == nil {
 			return nil
 		}
-		session.SendAudio(ctx, nil, true)
+		session.SendAudio(context.Background(), nil, true)
 		err := <-resultsDone
 		session.Close()
 		session = nil
@@ -189,15 +191,6 @@ func (t *DoubaoASRSAUC) transformLoop(ctx context.Context, input genx.Stream, ou
 
 	// Process input stream
 	for {
-		select {
-		case <-ctx.Done():
-			if session != nil {
-				session.Close()
-			}
-			output.CloseWithError(ctx.Err())
-			return
-		default:
-		}
 
 		chunk, err := input.Next()
 		if err != nil {
@@ -255,7 +248,7 @@ func (t *DoubaoASRSAUC) transformLoop(ctx context.Context, input genx.Stream, ou
 				}
 			}
 			// Send audio to ASR
-			if err := session.SendAudio(ctx, blob.Data, false); err != nil {
+			if err := session.SendAudio(context.Background(), blob.Data, false); err != nil {
 				session.Close()
 				output.CloseWithError(err)
 				return
