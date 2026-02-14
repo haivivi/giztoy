@@ -45,15 +45,15 @@ func (m *mockGenerator) Invoke(_ context.Context, _ string, mctx genx.ModelConte
 
 func validExtractJSON() string {
 	arg := extractArg{
-		Segment: SegmentOutput{
+		Segment: extractSegment{
 			Summary:  "小明和爸爸聊了恐龙，小明最喜欢霸王龙。",
 			Keywords: []string{"恐龙", "霸王龙", "小明"},
 			Labels:   []string{"person:小明", "person:爸爸", "topic:恐龙"},
 		},
-		Entities: []EntityOutput{
-			{Label: "person:小明", Attrs: map[string]any{"age": float64(5), "favorite_dinosaur": "霸王龙"}},
-			{Label: "person:爸爸", Attrs: map[string]any{}},
-			{Label: "topic:恐龙", Attrs: map[string]any{"category": "古生物"}},
+		Entities: []extractEntity{
+			{Label: "person:小明", Attrs: []extractAttr{{Key: "age", Value: "5"}, {Key: "favorite_dinosaur", Value: "霸王龙"}}},
+			{Label: "person:爸爸", Attrs: []extractAttr{}},
+			{Label: "topic:恐龙", Attrs: []extractAttr{{Key: "category", Value: "古生物"}}},
 		},
 		Relations: []RelationOutput{
 			{From: "person:小明", To: "topic:恐龙", RelType: "likes"},
@@ -437,12 +437,12 @@ func TestBuildConversationText(t *testing.T) {
 
 func TestParseResult_EmptyEntities(t *testing.T) {
 	arg := extractArg{
-		Segment: SegmentOutput{
+		Segment: extractSegment{
 			Summary:  "just a summary",
 			Keywords: []string{"test"},
 			Labels:   []string{},
 		},
-		Entities:  []EntityOutput{},
+		Entities:  []extractEntity{},
 		Relations: []RelationOutput{},
 	}
 	b, _ := json.Marshal(arg)

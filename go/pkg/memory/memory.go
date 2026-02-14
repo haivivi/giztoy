@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/haivivi/giztoy/go/pkg/graph"
 	"github.com/haivivi/giztoy/go/pkg/kv"
@@ -15,10 +14,10 @@ import (
 // It provides:
 //
 //   - Graph: the persona's view of the world (entities + relations)
-//   - Segments: compressed memory fragments with vector + keyword search
-//   - LongTerm: multi-granularity time summaries (hour → life)
+//   - Segments: compressed memory fragments organized in time-granularity buckets
 //   - Conversations: active dialogue sessions
 //   - Recall: combined graph expansion + segment search for LLM context
+//   - Compaction: automatic cascading compression (1h → 1d → 1w → ... → lt)
 //
 // Each Memory is fully isolated — it owns a [recall.Index] scoped under
 // a unique KV prefix "mem:{id}".
@@ -26,7 +25,6 @@ type Memory struct {
 	id         string
 	store      kv.Store
 	index      *recall.Index
-	longterm   *LongTerm
 	compressor Compressor     // default compressor from Host, may be nil
 	policy     CompressPolicy // auto-compression thresholds
 }
@@ -36,7 +34,6 @@ func newMemory(id string, store kv.Store, index *recall.Index, compressor Compre
 		id:         id,
 		store:      store,
 		index:      index,
-		longterm:   newLongTerm(store, id),
 		compressor: compressor,
 		policy:     policy,
 	}
@@ -54,9 +51,6 @@ func (m *Memory) Graph() graph.Graph { return m.index.Graph() }
 // (store, delete, search). Most callers should use [Recall] instead.
 func (m *Memory) Index() *recall.Index { return m.index }
 
-// LongTerm returns the long-term summary store.
-func (m *Memory) LongTerm() *LongTerm { return m.longterm }
-
 // OpenConversation opens (or resumes) a conversation session.
 // convID is typically a device ID or session ID. labels mark which entities
 // are involved (e.g., ["person:Alice"]). Multiple calls with the same convID
@@ -70,13 +64,12 @@ func (m *Memory) OpenConversation(convID string, labels []string) *Conversation 
 }
 
 // Recall performs combined retrieval: graph expansion + multi-signal segment
-// search + entity attribute lookup + long-term summaries.
+// search + entity attribute lookup.
 //
 // This is the primary method for building LLM context. The flow:
 //  1. Expand seed labels through the graph (BFS, up to Hops).
-//  2. Search segments using expanded labels + query text.
+//  2. Search segments across all buckets using expanded labels + query text.
 //  3. Fetch entity attributes for all expanded labels.
-//  4. Fetch the life summary as baseline context.
 func (m *Memory) Recall(ctx context.Context, q RecallQuery) (*RecallResult, error) {
 	hops := q.Hops
 	if hops <= 0 {
@@ -127,30 +120,16 @@ func (m *Memory) Recall(ctx context.Context, q RecallQuery) (*RecallResult, erro
 		}
 	}
 
-	// Step 4: fetch life summary.
-	var summaries []TimedSummary
-	lifeSummary, err := m.longterm.LifeSummary(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("memory: life summary: %w", err)
-	}
-	if lifeSummary != "" {
-		summaries = append(summaries, TimedSummary{
-			Grain:   GrainLife,
-			Summary: lifeSummary,
-		})
-	}
-
 	return &RecallResult{
-		Entities:  entities,
-		Segments:  segments,
-		Summaries: summaries,
+		Entities: entities,
+		Segments: segments,
 	}, nil
 }
 
 // StoreSegment stores a new segment in this persona's recall index.
-// It generates an ID and timestamp if not already set on the input,
-// and indexes the segment for search.
-func (m *Memory) StoreSegment(ctx context.Context, input SegmentInput) error {
+// It generates an ID and timestamp, sets the bucket, and indexes the
+// segment for search.
+func (m *Memory) StoreSegment(ctx context.Context, input SegmentInput, bucket recall.Bucket) error {
 	ts := nowNano()
 	seg := recall.Segment{
 		ID:        fmt.Sprintf("%s-%d", m.id, ts),
@@ -158,6 +137,7 @@ func (m *Memory) StoreSegment(ctx context.Context, input SegmentInput) error {
 		Keywords:  input.Keywords,
 		Labels:    input.Labels,
 		Timestamp: ts,
+		Bucket:    bucket,
 	}
 	return m.index.StoreSegment(ctx, seg)
 }
@@ -204,7 +184,7 @@ func (m *Memory) ApplyEntityUpdate(ctx context.Context, update *EntityUpdate) er
 // Compress runs the full compression pipeline on a conversation:
 //  1. Read all messages.
 //  2. ExtractEntities → apply to graph.
-//  3. CompressMessages → store segments + update long-term summary.
+//  3. CompressMessages → store segments in [recall.Bucket1H].
 //  4. Clear the conversation.
 //
 // If compressor is non-nil, it is used for this call. Otherwise, the
@@ -241,18 +221,10 @@ func (m *Memory) Compress(ctx context.Context, conv *Conversation, compressor Co
 		return fmt.Errorf("memory: compress messages: %w", err)
 	}
 
-	// Store the segments.
+	// Store the segments in the 1h bucket.
 	for _, seg := range result.Segments {
-		if err := m.StoreSegment(ctx, seg); err != nil {
+		if err := m.StoreSegment(ctx, seg, recall.Bucket1H); err != nil {
 			return fmt.Errorf("memory: store segment: %w", err)
-		}
-	}
-
-	// Update the hourly summary (most recent grain).
-	if result.Summary != "" {
-		now := time.Now()
-		if err := m.longterm.SetSummary(ctx, GrainHour, now, result.Summary); err != nil {
-			return fmt.Errorf("memory: set summary: %w", err)
 		}
 	}
 

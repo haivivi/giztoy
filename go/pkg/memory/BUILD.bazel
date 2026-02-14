@@ -3,11 +3,11 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "memory",
     srcs = [
+        "compact.go",
         "compressor.go",
         "conversation.go",
         "host.go",
         "keys.go",
-        "longterm.go",
         "memory.go",
         "types.go",
     ],

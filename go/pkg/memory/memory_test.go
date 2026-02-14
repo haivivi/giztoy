@@ -156,6 +156,24 @@ func (mc *mockCompressor) ExtractEntities(_ context.Context, _ []Message) (*Enti
 	}, nil
 }
 
+func (mc *mockCompressor) CompactSegments(_ context.Context, summaries []string) (*CompressResult, error) {
+	combined := ""
+	for _, s := range summaries {
+		if combined != "" {
+			combined += " | "
+		}
+		combined += s
+	}
+	return &CompressResult{
+		Segments: []SegmentInput{{
+			Summary:  combined,
+			Keywords: []string{"compacted"},
+			Labels:   []string{"person:test"},
+		}},
+		Summary: combined,
+	}, nil
+}
+
 // testSep is the KV separator used in tests. ASCII Unit Separator (0x1F)
 // allows natural colon-namespaced labels like "person:小明".
 const testSep byte = 0x1F
@@ -498,128 +516,101 @@ func TestConversationClear(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// LongTerm tests
+// Bucket compaction tests
 // ---------------------------------------------------------------------------
 
-func TestLongTermSummary(t *testing.T) {
+func TestBucketStatsEmpty(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
 	m := mustOpen(t, h, "test")
 	ctx := context.Background()
-	lt := m.LongTerm()
 
-	now := time.Date(2026, 2, 13, 15, 0, 0, 0, time.UTC)
-
-	// Get non-existent summary.
-	s, err := lt.GetSummary(ctx, GrainHour, now)
+	count, chars, err := m.Index().BucketStats(ctx, recall.Bucket1H)
 	if err != nil {
-		t.Fatalf("GetSummary: %v", err)
+		t.Fatalf("BucketStats: %v", err)
 	}
-	if s != "" {
-		t.Fatalf("expected empty summary, got %q", s)
-	}
-
-	// Set and retrieve.
-	if err := lt.SetSummary(ctx, GrainHour, now, "chatted about dinosaurs"); err != nil {
-		t.Fatalf("SetSummary: %v", err)
-	}
-	s, err = lt.GetSummary(ctx, GrainHour, now)
-	if err != nil {
-		t.Fatalf("GetSummary: %v", err)
-	}
-	if s != "chatted about dinosaurs" {
-		t.Fatalf("GetSummary = %q, want %q", s, "chatted about dinosaurs")
+	if count != 0 || chars != 0 {
+		t.Fatalf("expected 0/0, got %d/%d", count, chars)
 	}
 }
 
-func TestLongTermLifeSummary(t *testing.T) {
+func TestStoreSegmentInBucket(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
 	m := mustOpen(t, h, "test")
 	ctx := context.Background()
-	lt := m.LongTerm()
 
-	// Empty initially.
-	s, err := lt.LifeSummary(ctx)
-	if err != nil {
-		t.Fatalf("LifeSummary: %v", err)
+	// Store segments in different buckets.
+	if err := m.StoreSegment(ctx, SegmentInput{
+		Summary: "hourly summary", Keywords: []string{"test"}, Labels: []string{"person:小明"},
+	}, recall.Bucket1H); err != nil {
+		t.Fatalf("StoreSegment 1h: %v", err)
 	}
-	if s != "" {
-		t.Fatalf("expected empty life summary, got %q", s)
+	if err := m.StoreSegment(ctx, SegmentInput{
+		Summary: "daily summary", Keywords: []string{"test"}, Labels: []string{"person:小明"},
+	}, recall.Bucket1D); err != nil {
+		t.Fatalf("StoreSegment 1d: %v", err)
 	}
 
-	// Set and retrieve.
-	if err := lt.SetLifeSummary(ctx, "I am a virtual cat companion"); err != nil {
-		t.Fatalf("SetLifeSummary: %v", err)
-	}
-	s, err = lt.LifeSummary(ctx)
+	// Verify bucket stats.
+	count1h, _, err := m.Index().BucketStats(ctx, recall.Bucket1H)
 	if err != nil {
-		t.Fatalf("LifeSummary: %v", err)
+		t.Fatalf("BucketStats 1h: %v", err)
 	}
-	if s != "I am a virtual cat companion" {
-		t.Fatalf("LifeSummary = %q, want %q", s, "I am a virtual cat companion")
+	if count1h != 1 {
+		t.Fatalf("1h count = %d, want 1", count1h)
+	}
+
+	count1d, _, err := m.Index().BucketStats(ctx, recall.Bucket1D)
+	if err != nil {
+		t.Fatalf("BucketStats 1d: %v", err)
+	}
+	if count1d != 1 {
+		t.Fatalf("1d count = %d, want 1", count1d)
+	}
+
+	// Search should find segments across all buckets.
+	segs, err := m.Index().RecentSegments(ctx, 10)
+	if err != nil {
+		t.Fatalf("RecentSegments: %v", err)
+	}
+	if len(segs) != 2 {
+		t.Fatalf("RecentSegments = %d, want 2", len(segs))
 	}
 }
 
-func TestLongTermSummaries(t *testing.T) {
+func TestCompactBucketNoOp(t *testing.T) {
 	h := newTestHost(t)
 	defer h.Close()
 	m := mustOpen(t, h, "test")
 	ctx := context.Background()
-	lt := m.LongTerm()
 
-	// Store daily summaries for 3 consecutive days.
-	days := []struct {
-		t time.Time
-		s string
+	// Compact on empty bucket should be no-op.
+	if err := m.Compact(ctx); err != nil {
+		t.Fatalf("Compact: %v", err)
+	}
+}
+
+func TestBucketForSpan(t *testing.T) {
+	tests := []struct {
+		span time.Duration
+		want recall.Bucket
 	}{
-		{time.Date(2026, 2, 10, 0, 0, 0, 0, time.UTC), "day 10 summary"},
-		{time.Date(2026, 2, 11, 0, 0, 0, 0, time.UTC), "day 11 summary"},
-		{time.Date(2026, 2, 12, 0, 0, 0, 0, time.UTC), "day 12 summary"},
+		{30 * time.Minute, recall.Bucket1H},
+		{1 * time.Hour, recall.Bucket1H},
+		{12 * time.Hour, recall.Bucket1D},
+		{3 * 24 * time.Hour, recall.Bucket1W},
+		{10 * 24 * time.Hour, recall.Bucket1M},
+		{60 * 24 * time.Hour, recall.Bucket3M},
+		{120 * 24 * time.Hour, recall.Bucket6M},
+		{300 * 24 * time.Hour, recall.Bucket1Y},
+		{400 * 24 * time.Hour, recall.BucketLT},
 	}
-	for _, d := range days {
-		if err := lt.SetSummary(ctx, GrainDay, d.t, d.s); err != nil {
-			t.Fatalf("SetSummary: %v", err)
+	for _, tt := range tests {
+		got := recall.BucketForSpan(tt.span)
+		if got != tt.want {
+			t.Errorf("BucketForSpan(%v) = %s, want %s", tt.span, got, tt.want)
 		}
-	}
-
-	// Query range that includes day 11 and 12 (from=11, to=13).
-	from := time.Date(2026, 2, 11, 0, 0, 0, 0, time.UTC)
-	to := time.Date(2026, 2, 13, 0, 0, 0, 0, time.UTC)
-
-	summaries, err := lt.Summaries(ctx, GrainDay, from, to)
-	if err != nil {
-		t.Fatalf("Summaries: %v", err)
-	}
-	if len(summaries) != 2 {
-		t.Fatalf("len(summaries) = %d, want 2", len(summaries))
-	}
-	if summaries[0].Summary != "day 11 summary" {
-		t.Errorf("summaries[0] = %q, want %q", summaries[0].Summary, "day 11 summary")
-	}
-	if summaries[1].Summary != "day 12 summary" {
-		t.Errorf("summaries[1] = %q, want %q", summaries[1].Summary, "day 12 summary")
-	}
-}
-
-func TestLongTermGetViaLifeGrain(t *testing.T) {
-	h := newTestHost(t)
-	defer h.Close()
-	m := mustOpen(t, h, "test")
-	ctx := context.Background()
-	lt := m.LongTerm()
-
-	if err := lt.SetLifeSummary(ctx, "life story"); err != nil {
-		t.Fatalf("SetLifeSummary: %v", err)
-	}
-
-	// GetSummary with GrainLife should delegate to LifeSummary.
-	s, err := lt.GetSummary(ctx, GrainLife, time.Now())
-	if err != nil {
-		t.Fatalf("GetSummary(GrainLife): %v", err)
-	}
-	if s != "life story" {
-		t.Fatalf("got %q, want %q", s, "life story")
 	}
 }
 
@@ -702,7 +693,7 @@ func TestMemoryStoreAndRecall(t *testing.T) {
 		{Summary: "一起做了饭", Keywords: []string{"cooking"}, Labels: []string{"person:xiaoming"}},
 	}
 	for _, seg := range segments {
-		if err := m.StoreSegment(ctx, seg); err != nil {
+		if err := m.StoreSegment(ctx, seg, recall.Bucket1H); err != nil {
 			t.Fatalf("StoreSegment: %v", err)
 		}
 	}
@@ -743,32 +734,9 @@ func TestMemoryStoreAndRecall(t *testing.T) {
 	}
 }
 
-func TestMemoryRecallWithLifeSummary(t *testing.T) {
-	h := newTestHost(t)
-	defer h.Close()
-	m := mustOpen(t, h, "test")
-	ctx := context.Background()
-
-	// Set a life summary.
-	if err := m.LongTerm().SetLifeSummary(ctx, "I have been with this family for 6 months"); err != nil {
-		t.Fatalf("SetLifeSummary: %v", err)
-	}
-
-	// Recall should include the life summary.
-	result, err := m.Recall(ctx, RecallQuery{Text: "anything"})
-	if err != nil {
-		t.Fatalf("Recall: %v", err)
-	}
-	if len(result.Summaries) != 1 {
-		t.Fatalf("len(summaries) = %d, want 1", len(result.Summaries))
-	}
-	if result.Summaries[0].Grain != GrainLife {
-		t.Errorf("grain = %v, want GrainLife", result.Summaries[0].Grain)
-	}
-	if result.Summaries[0].Summary != "I have been with this family for 6 months" {
-		t.Errorf("summary = %q", result.Summaries[0].Summary)
-	}
-}
+// TestMemoryRecallWithLifeSummary was removed — LongTerm is replaced by
+// bucket-based segment compaction. The lt bucket segments are found by
+// normal search.
 
 // ---------------------------------------------------------------------------
 // Memory: Isolation tests
@@ -786,7 +754,7 @@ func TestMemoryIsolation(t *testing.T) {
 	if err := m1.StoreSegment(ctx, SegmentInput{
 		Summary: "persona_a segment",
 		Labels:  []string{"test"},
-	}); err != nil {
+	}, recall.Bucket1H); err != nil {
 		t.Fatalf("StoreSegment: %v", err)
 	}
 
@@ -794,7 +762,7 @@ func TestMemoryIsolation(t *testing.T) {
 	if err := m2.StoreSegment(ctx, SegmentInput{
 		Summary: "persona_b segment",
 		Labels:  []string{"test"},
-	}); err != nil {
+	}, recall.Bucket1H); err != nil {
 		t.Fatalf("StoreSegment: %v", err)
 	}
 
@@ -969,55 +937,8 @@ func TestApplyEntityUpdateNil(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Grain string tests
-// ---------------------------------------------------------------------------
-
-func TestGrainString(t *testing.T) {
-	tests := []struct {
-		g    Grain
-		want string
-	}{
-		{GrainHour, "hour"},
-		{GrainDay, "day"},
-		{GrainWeek, "week"},
-		{GrainMonth, "month"},
-		{GrainYear, "year"},
-		{GrainLife, "life"},
-		{Grain(99), "unknown"},
-	}
-	for _, tt := range tests {
-		if got := tt.g.String(); got != tt.want {
-			t.Errorf("Grain(%d).String() = %q, want %q", tt.g, got, tt.want)
-		}
-	}
-}
-
-// ---------------------------------------------------------------------------
 // Keys tests
 // ---------------------------------------------------------------------------
-
-func TestGrainTimeKey(t *testing.T) {
-	ts := time.Date(2026, 2, 13, 15, 30, 0, 0, time.UTC).UnixNano()
-
-	tests := []struct {
-		grain Grain
-		want  string
-	}{
-		{GrainHour, "2026021315"},
-		{GrainDay, "20260213"},
-		{GrainMonth, "202602"},
-		{GrainYear, "2026"},
-	}
-	for _, tt := range tests {
-		got, err := grainTimeKey(tt.grain, ts)
-		if err != nil {
-			t.Fatalf("grainTimeKey(%v): %v", tt.grain, err)
-		}
-		if got != tt.want {
-			t.Errorf("grainTimeKey(%v) = %q, want %q", tt.grain, got, tt.want)
-		}
-	}
-}
 
 func TestConvMsgKeyFormat(t *testing.T) {
 	key := convMsgKey("cat", "dev1", 12345)
@@ -1053,7 +974,7 @@ func TestHostNoVecSearch(t *testing.T) {
 		Summary:  "test segment",
 		Keywords: []string{"test"},
 		Labels:   []string{"label"},
-	}); err != nil {
+	}, recall.Bucket1H); err != nil {
 		t.Fatalf("StoreSegment: %v", err)
 	}
 
@@ -1131,7 +1052,6 @@ func TestRealisticScenario(t *testing.T) {
 	m := mustOpen(t, h, "cat_girl")
 	ctx := context.Background()
 	g := m.Graph()
-	lt := m.LongTerm()
 
 	// ---- Step 1: Build the entity graph ----
 
@@ -1262,22 +1182,12 @@ func TestRealisticScenario(t *testing.T) {
 			Summary:  s.summary,
 			Keywords: s.keywords,
 			Labels:   s.labels,
-		}); err != nil {
+		}, recall.Bucket1H); err != nil {
 			t.Fatalf("StoreSegment %q: %v", s.summary, err)
 		}
 	}
 
-	// ---- Step 3: Set long-term summaries ----
-
-	if err := lt.SetLifeSummary(ctx, "我是小猫咪，一只虚拟猫猫伙伴。和这个家庭在一起已经半年了。小明8岁，最喜欢恐龙。小红6岁，喜欢画画和公主故事。"); err != nil {
-		t.Fatalf("SetLifeSummary: %v", err)
-	}
-	if err := lt.SetSummary(ctx, GrainDay, time.Date(2026, 2, 12, 0, 0, 0, 0, time.UTC),
-		"今天全家去了博物馆，小明看恐龙化石很兴奋，小红画了恐龙素描，小明还去天文馆看了星空"); err != nil {
-		t.Fatalf("SetSummary day: %v", err)
-	}
-
-	// ---- Step 4: Test recall queries ----
+	// ---- Step 3: Test recall queries ----
 
 	t.Run("recall dinosaurs from 小明", func(t *testing.T) {
 		result, err := m.Recall(ctx, RecallQuery{
@@ -1312,10 +1222,6 @@ func TestRealisticScenario(t *testing.T) {
 			t.Logf("  %d. [%.3f] %s | labels=%v", i+1, s.Score, s.Summary, s.Labels)
 		}
 
-		// Life summary should be included.
-		if len(result.Summaries) == 0 {
-			t.Error("expected life summary in recall")
-		}
 	})
 
 	t.Run("recall drawing from 小红", func(t *testing.T) {
@@ -1590,6 +1496,24 @@ func (fc *familyCompressor) ExtractEntities(_ context.Context, _ []Message) (*En
 	}, nil
 }
 
+func (fc *familyCompressor) CompactSegments(_ context.Context, summaries []string) (*CompressResult, error) {
+	combined := ""
+	for _, s := range summaries {
+		if combined != "" {
+			combined += " "
+		}
+		combined += s
+	}
+	return &CompressResult{
+		Segments: []SegmentInput{{
+			Summary:  combined,
+			Keywords: []string{"family", "compacted"},
+			Labels:   []string{"person:小明"},
+		}},
+		Summary: combined,
+	}, nil
+}
+
 // ---------------------------------------------------------------------------
 // Benchmarks
 // ---------------------------------------------------------------------------
@@ -1658,7 +1582,7 @@ func BenchmarkStoreSegment(b *testing.B) {
 			Summary:  "benchmark segment about dinosaurs",
 			Keywords: []string{"dinosaurs", "benchmark"},
 			Labels:   []string{"person:bench"},
-		})
+		}, recall.Bucket1H)
 	}
 }
 
@@ -1687,7 +1611,7 @@ func BenchmarkRecall(b *testing.B) {
 			Summary:  fmt.Sprintf("segment %d about dinosaurs", i),
 			Keywords: []string{"dinosaurs"},
 			Labels:   []string{"person:xiaoming", "topic:dinosaurs"},
-		})
+		}, recall.Bucket1H)
 	}
 
 	b.ResetTimer()
@@ -1700,19 +1624,4 @@ func BenchmarkRecall(b *testing.B) {
 	}
 }
 
-func BenchmarkLongTermSetSummary(b *testing.B) {
-	store := kv.NewMemory(&kv.Options{Separator: testSep})
-	h, err := NewHost(context.Background(), HostConfig{Store: store, Separator: testSep})
-	if err != nil {
-		b.Fatal(err)
-	}
-	m := mustOpen(b, h, "bench")
-	ctx := context.Background()
-	lt := m.LongTerm()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		t := time.Date(2026, 1, 1, i%24, 0, 0, 0, time.UTC)
-		_ = lt.SetSummary(ctx, GrainHour, t, "benchmark summary")
-	}
-}
+// BenchmarkLongTermSetSummary was removed — LongTerm replaced by bucket compaction.

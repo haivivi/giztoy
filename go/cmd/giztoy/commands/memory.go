@@ -82,7 +82,7 @@ var memAddCmd = &cobra.Command{
 			seg.Keywords = splitComma(keywords)
 		}
 
-		if err := env.mem.StoreSegment(cmd.Context(), seg); err != nil {
+		if err := env.mem.StoreSegment(cmd.Context(), seg, recall.Bucket1H); err != nil {
 			return fmt.Errorf("store segment: %w", err)
 		}
 
@@ -205,15 +205,7 @@ var memRecallCmd = &cobra.Command{
 			fmt.Println()
 		}
 
-		// Summaries.
-		if len(result.Summaries) > 0 {
-			fmt.Printf("Summaries (%d):\n", len(result.Summaries))
-			for _, s := range result.Summaries {
-				fmt.Printf("  [%s] %s\n", s.Grain, s.Summary)
-			}
-		}
-
-		if len(result.Entities) == 0 && len(result.Segments) == 0 && len(result.Summaries) == 0 {
+		if len(result.Entities) == 0 && len(result.Segments) == 0 {
 			fmt.Println("No results found.")
 		}
 		return nil
@@ -422,7 +414,6 @@ func runMemoryDemo(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("open persona: %w", err)
 	}
 	g := m.Graph()
-	lt := m.LongTerm()
 
 	// ---- Step 1: Build entity graph ----
 	fmt.Println("📌 Building entity graph...")
@@ -513,19 +504,13 @@ func runMemoryDemo(cmd *cobra.Command, _ []string) error {
 	for _, s := range segments {
 		if err := m.StoreSegment(ctx, memory.SegmentInput{
 			Summary: s.summary, Keywords: s.keywords, Labels: s.labels,
-		}); err != nil {
+		}, recall.Bucket1H); err != nil {
 			return fmt.Errorf("store segment: %w", err)
 		}
 	}
 	fmt.Printf("   %d segments stored\n\n", len(segments))
 
-	// ---- Step 3: Set long-term summaries ----
-	if err := lt.SetLifeSummary(ctx,
-		"我是小猫咪，一只虚拟猫猫伙伴。和这个家庭在一起已经半年了。小明8岁最喜欢恐龙，小红6岁喜欢画画和公主故事。",
-	); err != nil {
-		return fmt.Errorf("set life summary: %w", err)
-	}
-	fmt.Println("📚 Life summary set.\n")
+	// (LongTerm summaries removed — now all segments are in buckets.)
 
 	// ---- Step 4: Run recall queries ----
 	queries := []struct {
@@ -569,11 +554,6 @@ func runMemoryDemo(cmd *cobra.Command, _ []string) error {
 			fmt.Println("   (no segments)")
 		}
 
-		if len(result.Summaries) > 0 {
-			for _, s := range result.Summaries {
-				fmt.Printf("   [%s] %s\n", s.Grain, s.Summary)
-			}
-		}
 		fmt.Println()
 	}
 

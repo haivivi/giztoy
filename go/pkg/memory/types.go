@@ -1,10 +1,9 @@
 // Package memory provides a personal memory system for AI personas.
 //
 // Each persona (virtual character) has an isolated [Memory] instance containing
-// an entity-relation graph, time-stamped segments (compressed memory fragments),
-// multi-level time summaries, and active conversations. The [Host] manages many
-// Memory instances sharing a single KV store, embedding service, and vector
-// index.
+// an entity-relation graph, time-bucketed segments (compressed memory fragments),
+// and active conversations. The [Host] manages many Memory instances sharing a
+// single KV store, embedding service, and vector index.
 //
 // # Architecture
 //
@@ -13,7 +12,8 @@
 //   - Atom isolation: each persona gets its own [recall.Index] scoped by a
 //     KV key prefix ("mem:{id}").
 //   - Conversations: short-term message storage per device/session.
-//   - Long-term summaries: multi-granularity time compression (hour → life).
+//   - Bucket-based compaction: segments at finer granularity are automatically
+//     compacted into coarser buckets (1h → 1d → 1w → 1m → 3m → 6m → 1y → lt).
 //   - Recall: combined graph expansion + segment search for context building.
 //
 // The package does not embed compression logic. An upper-layer [Compressor]
@@ -84,50 +84,6 @@ type Message struct {
 }
 
 // ---------------------------------------------------------------------------
-// LongTerm types: multi-level time compression
-// ---------------------------------------------------------------------------
-
-// Grain represents the time granularity for long-term summaries.
-type Grain int
-
-const (
-	GrainHour Grain = iota
-	GrainDay
-	GrainWeek
-	GrainMonth
-	GrainYear
-	GrainLife
-)
-
-// String returns a human-readable name for the grain.
-func (g Grain) String() string {
-	switch g {
-	case GrainHour:
-		return "hour"
-	case GrainDay:
-		return "day"
-	case GrainWeek:
-		return "week"
-	case GrainMonth:
-		return "month"
-	case GrainYear:
-		return "year"
-	case GrainLife:
-		return "life"
-	default:
-		return "unknown"
-	}
-}
-
-// TimedSummary is a summary at a specific time granularity.
-type TimedSummary struct {
-	Grain   Grain    `json:"grain" msgpack:"grain"`
-	Time    int64    `json:"time" msgpack:"time"` // Unix nanoseconds
-	Labels  []string `json:"labels,omitempty" msgpack:"labels,omitempty"`
-	Summary string   `json:"summary" msgpack:"summary"`
-}
-
-// ---------------------------------------------------------------------------
 // Recall types: combined search query and result
 // ---------------------------------------------------------------------------
 
@@ -154,11 +110,8 @@ type RecallResult struct {
 	Entities []EntityInfo
 
 	// Segments are the matching memory fragments, scored and sorted
-	// by relevance.
+	// by relevance. Segments from all buckets are merged.
 	Segments []ScoredSegment
-
-	// Summaries are relevant long-term summaries for the time window.
-	Summaries []TimedSummary
 }
 
 // EntityInfo holds a graph entity's label and attributes for context building.
@@ -182,17 +135,20 @@ type ScoredSegment struct {
 // ---------------------------------------------------------------------------
 
 // CompressPolicy controls when [Conversation.Append] triggers automatic
-// compression. Compression fires when either threshold is reached.
+// compression, and when bucket compaction is triggered by [Memory.Compact].
+//
+// The same policy applies to all buckets uniformly. Compression fires when
+// either threshold is reached.
 //
 // Zero values for both fields disables auto-compression — the caller must
 // invoke [Memory.Compress] manually.
 type CompressPolicy struct {
 	// MaxChars triggers compression when the total character count of
-	// pending (uncompressed) messages reaches this value. Default 2000.
+	// pending (uncompressed) content reaches this value. Default 2000.
 	MaxChars int
 
 	// MaxMessages triggers compression when the number of pending
-	// (uncompressed) messages reaches this value. Default 50.
+	// items (messages or segments) reaches this value. Default 50.
 	MaxMessages int
 }
 
@@ -219,24 +175,31 @@ func (p CompressPolicy) shouldCompress(chars, msgs int) bool {
 // Compressor: upper-layer compression interface
 // ---------------------------------------------------------------------------
 
-// Compressor is implemented by the agent runtime to drive message compression.
-// The memory package calls these methods when conversations are closed or
-// when message count exceeds a threshold.
+// Compressor is implemented by the agent runtime to drive message compression
+// and segment compaction. The memory package calls these methods when
+// conversations exceed thresholds or when bucket compaction is triggered.
 type Compressor interface {
-	// CompressMessages compresses old conversation messages into memory
+	// CompressMessages compresses conversation messages into memory
 	// segments and an updated summary.
 	CompressMessages(ctx context.Context, messages []Message) (*CompressResult, error)
 
 	// ExtractEntities extracts entity and relation updates from messages.
 	ExtractEntities(ctx context.Context, messages []Message) (*EntityUpdate, error)
+
+	// CompactSegments compresses multiple segment summaries into a single
+	// new segment. Used for bucket compaction (e.g., merging hourly
+	// segments into a daily segment). The input strings are the summaries
+	// of the segments being compacted.
+	CompactSegments(ctx context.Context, summaries []string) (*CompressResult, error)
 }
 
-// CompressResult holds the output of [Compressor.CompressMessages].
+// CompressResult holds the output of [Compressor.CompressMessages] or
+// [Compressor.CompactSegments].
 type CompressResult struct {
 	// Segments are newly created memory fragments.
 	Segments []SegmentInput
 
-	// Summary is the updated summary text for long-term storage.
+	// Summary is the updated summary text for the compacted segment.
 	Summary string
 }
 

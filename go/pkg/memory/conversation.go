@@ -103,6 +103,12 @@ func (c *Conversation) Append(ctx context.Context, msg Message) error {
 			c.pendingChars = 0
 			c.pendingMsgs = 0
 			c.lastCompressErr = nil
+
+			// Cascade: check if any buckets need compaction.
+			// Non-fatal — compaction failure doesn't block Append.
+			if err := c.mem.Compact(ctx); err != nil {
+				c.lastCompressErr = err
+			}
 		}
 	}
 

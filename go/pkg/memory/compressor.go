@@ -85,6 +85,38 @@ func (c *LLMCompressor) CompressMessages(ctx context.Context, messages []Message
 	}, nil
 }
 
+// CompactSegments compresses multiple segment summaries into a single
+// new segment by calling the segmentor LLM. This is used for bucket
+// compaction — the input strings are summaries of existing segments.
+func (c *LLMCompressor) CompactSegments(ctx context.Context, summaries []string) (*CompressResult, error) {
+	input := segmentors.Input{
+		Messages: summaries,
+		Schema:   c.cfg.Schema,
+	}
+
+	var result *segmentors.Result
+	var err error
+	if c.segMux != nil {
+		result, err = c.segMux.Process(ctx, c.cfg.Segmentor, input)
+	} else {
+		result, err = segmentors.Process(ctx, c.cfg.Segmentor, input)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	seg := SegmentInput{
+		Summary:  result.Segment.Summary,
+		Keywords: result.Segment.Keywords,
+		Labels:   result.Segment.Labels,
+	}
+
+	return &CompressResult{
+		Segments: []SegmentInput{seg},
+		Summary:  result.Segment.Summary,
+	}, nil
+}
+
 // ExtractEntities extracts entity and relation updates from messages
 // by calling the segmentor (and optionally the profiler) LLM.
 func (c *LLMCompressor) ExtractEntities(ctx context.Context, messages []Message) (*EntityUpdate, error) {
