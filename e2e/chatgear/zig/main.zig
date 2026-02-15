@@ -86,6 +86,13 @@ var g_downlink_commands: std.atomic.Value(u32) = std.atomic.Value(u32).init(0);
 var g_streaming_on: std.atomic.Value(bool) = std.atomic.Value(bool).init(false);
 
 var g_port: ?*Port = null;
+var g_decoder: ?*opus.Decoder = null;
+
+// Downlink PCM accumulation buffer (max ~60s at 16kHz = 960K samples)
+const MAX_DL_SAMPLES = 960_000;
+var g_dl_pcm: [MAX_DL_SAMPLES]i16 = undefined;
+var g_dl_pcm_len: std.atomic.Value(u32) = std.atomic.Value(u32).init(0);
+var g_dl_mutex: std.Thread.Mutex = .{};
 
 fn onDownlinkCommand(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
     _ = g_downlink_commands.fetchAdd(1, .monotonic);
@@ -108,6 +115,21 @@ fn onDownlinkAudio(_: []const u8, msg: *const mqtt0.Message) anyerror!void {
     if (g_port) |port| {
         const f = chatgear.unstampFrame(msg.payload) catch return;
         port.pushDownlinkAudio(f);
+
+        // Decode opus → PCM and accumulate
+        if (g_decoder) |dec| {
+            var pcm_buf: [FRAME_SAMPLES * 2]i16 = undefined;
+            const decoded = dec.decode(f.frame(), &pcm_buf, false) catch return;
+            if (decoded.len > 0) {
+                g_dl_mutex.lock();
+                defer g_dl_mutex.unlock();
+                const pos = g_dl_pcm_len.load(.monotonic);
+                const room = MAX_DL_SAMPLES - pos;
+                const n: u32 = @intCast(@min(decoded.len, room));
+                @memcpy(g_dl_pcm[pos..][0..n], decoded[0..n]);
+                g_dl_pcm_len.store(pos + n, .monotonic);
+            }
+        }
     }
 }
 
@@ -231,6 +253,11 @@ fn connect() !struct { port: *Port, conn: *Conn, client: *MqttClient, encoder: *
     try encoder.setComplexity(5);
     try encoder.setSignal(.voice);
 
+    // Opus decoder (for downlink audio verification)
+    const decoder = try alloc.create(opus.Decoder);
+    decoder.* = try opus.Decoder.init(alloc, SAMPLE_RATE, 1);
+    g_decoder = decoder;
+
     return .{ .port = port, .conn = conn, .client = client, .encoder = encoder };
 }
 
@@ -260,6 +287,30 @@ fn resetCounters() void {
     g_downlink_audio_frames.store(0, .monotonic);
     g_downlink_commands.store(0, .monotonic);
     g_streaming_on.store(false, .monotonic);
+    g_dl_pcm_len.store(0, .monotonic);
+}
+
+/// Save accumulated downlink PCM to file and return sample count.
+fn saveDlPcm(filename: []const u8) u32 {
+    g_dl_mutex.lock();
+    defer g_dl_mutex.unlock();
+    const n = g_dl_pcm_len.load(.monotonic);
+    if (n == 0) {
+        log.info("No downlink audio to save", .{});
+        return 0;
+    }
+    const bytes = std.mem.sliceAsBytes(g_dl_pcm[0..n]);
+    const file = std.fs.cwd().createFile(filename, .{}) catch |err| {
+        log.err("Failed to create {s}: {}", .{ filename, err });
+        return n;
+    };
+    defer file.close();
+    file.writeAll(bytes) catch |err| {
+        log.err("Failed to write {s}: {}", .{ filename, err });
+        return n;
+    };
+    log.info("Saved {d} samples ({d:.1}s) to {s}", .{ n, @as(f32, @floatFromInt(n)) / 16000.0, filename });
+    return n;
 }
 
 // ============================================================================
@@ -298,6 +349,7 @@ fn testBasicRecording(port: *Port, encoder: *opus.Encoder) !void {
     }
 
     port.setState(.ready);
+    _ = saveDlPcm("/tmp/chatgear_test1_reply.pcm");
     log.info("TEST 1 DONE: audio_frames={d} commands={d}", .{
         g_downlink_audio_frames.load(.monotonic),
         g_downlink_commands.load(.monotonic),
@@ -341,6 +393,7 @@ fn testRecordingInterrupt(port: *Port, encoder: *opus.Encoder) !void {
     }
 
     port.setState(.ready);
+    _ = saveDlPcm("/tmp/chatgear_test2_reply.pcm");
     log.info("TEST 2 DONE: audio_frames={d} commands={d}", .{
         g_downlink_audio_frames.load(.monotonic),
         g_downlink_commands.load(.monotonic),
@@ -381,6 +434,7 @@ fn testCallingMode(port: *Port, encoder: *opus.Encoder) !void {
     std_impl.time.sleepMs(10000);
 
     port.setState(.ready);
+    _ = saveDlPcm("/tmp/chatgear_test3_reply.pcm");
     log.info("TEST 3 DONE: audio_frames={d} commands={d}", .{
         g_downlink_audio_frames.load(.monotonic),
         g_downlink_commands.load(.monotonic),
