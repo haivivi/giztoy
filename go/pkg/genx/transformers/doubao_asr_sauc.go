@@ -139,16 +139,24 @@ func WithDoubaoASRSAUCCtxOptions(ctx context.Context, opts DoubaoASRSAUCCtxOptio
 
 // Transform converts audio Blob chunks to Text chunks.
 // DoubaoASRSAUC creates sessions on demand, so it returns immediately.
-func (t *DoubaoASRSAUC) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+// The ctx is unused (session creation happens lazily in the loop);
+// the goroutine lifetime is governed by the input Stream.
+func (t *DoubaoASRSAUC) Transform(_ context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	output := newBufferStream(100)
 
-	go t.transformLoop(ctx, input, output)
+	go t.transformLoop(input, output)
 
 	return output, nil
 }
 
-func (t *DoubaoASRSAUC) transformLoop(ctx context.Context, input genx.Stream, output *bufferStream) {
+func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 	defer output.Close()
+
+	// Local cancel context tied to the loop lifecycle.
+	// When the loop exits, defer cancel() cancels any in-flight WebSocket
+	// dial or audio send operation.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// Track last chunk for metadata
 	var lastChunk *genx.MessageChunk
@@ -189,15 +197,6 @@ func (t *DoubaoASRSAUC) transformLoop(ctx context.Context, input genx.Stream, ou
 
 	// Process input stream
 	for {
-		select {
-		case <-ctx.Done():
-			if session != nil {
-				session.Close()
-			}
-			output.CloseWithError(ctx.Err())
-			return
-		default:
-		}
 
 		chunk, err := input.Next()
 		if err != nil {

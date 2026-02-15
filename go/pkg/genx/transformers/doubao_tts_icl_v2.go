@@ -131,29 +131,29 @@ func WithDoubaoTTSICLV2CtxOptions(ctx context.Context, opts DoubaoTTSICLV2CtxOpt
 
 // Transform converts Text chunks to audio Blob chunks.
 // DoubaoTTSICLV2 does not require connection setup, so it returns immediately.
-func (t *DoubaoTTSICLV2) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+// The ctx is unused (no initialization needed); the goroutine lifetime
+// is governed by the input Stream.
+func (t *DoubaoTTSICLV2) Transform(_ context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	output := newBufferStream(100)
 
-	go t.transformLoop(ctx, input, output)
+	go t.transformLoop(input, output)
 
 	return output, nil
 }
 
-func (t *DoubaoTTSICLV2) transformLoop(ctx context.Context, input genx.Stream, output *bufferStream) {
+func (t *DoubaoTTSICLV2) transformLoop(input genx.Stream, output *bufferStream) {
 	defer output.Close()
+
+	// Local cancel context tied to the loop lifecycle.
+	// When the loop exits, defer cancel() cancels any in-flight HTTP request.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	mimeType := t.mimeType()
 	var textBuilder strings.Builder
 	var lastChunk *genx.MessageChunk
 
 	for {
-		select {
-		case <-ctx.Done():
-			output.CloseWithError(ctx.Err())
-			return
-		default:
-		}
-
 		chunk, err := input.Next()
 		if err != nil {
 			if err != io.EOF {
@@ -180,13 +180,13 @@ func (t *DoubaoTTSICLV2) transformLoop(ctx context.Context, input genx.Stream, o
 		if chunk.IsEndOfStream() {
 			if _, ok := chunk.Part.(genx.Text); ok {
 				// Text EoS: synthesize accumulated text, emit audio, then emit audio EoS
-				if textBuilder.Len() > 0 {
-					if err := t.synthesize(ctx, textBuilder.String(), lastChunk, mimeType, output); err != nil {
-						output.CloseWithError(err)
-						return
-					}
-					textBuilder.Reset()
+			if textBuilder.Len() > 0 {
+				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, mimeType, output); err != nil {
+					output.CloseWithError(err)
+					return
 				}
+				textBuilder.Reset()
+			}
 				// Emit audio EoS
 				eosChunk := genx.NewEndOfStream(mimeType)
 				if lastChunk != nil {
