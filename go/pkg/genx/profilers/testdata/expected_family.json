@@ -1,0 +1,32 @@
+{
+  "SchemaChanges": [
+    {
+      "entity_type": "person",
+      "field": "birthday_wish",
+      "def": {"type": "string", "desc": "生日愿望/想要的礼物"},
+      "action": "add"
+    },
+    {
+      "entity_type": "person",
+      "field": "school",
+      "def": {"type": "string", "desc": "就读学校名称"},
+      "action": "add"
+    }
+  ],
+  "ProfileUpdates": {
+    "person:小明": {
+      "age": 5,
+      "school": "阳光幼儿园",
+      "favorite_things": ["恐龙", "霸王龙"],
+      "birthday_wish": "恐龙模型"
+    },
+    "person:小红": {
+      "age": 3,
+      "favorite_things": ["画画"],
+      "birthday_wish": "画画工具"
+    }
+  },
+  "Relations": [
+    {"from": "person:小明", "to": "place:阳光幼儿园", "rel_type": "attends"}
+  ]
+}

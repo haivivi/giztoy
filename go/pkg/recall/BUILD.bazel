@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "recall",
+    srcs = [
+        "index.go",
+        "keys.go",
+        "search.go",
+        "segment.go",
+        "types.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/recall",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/embed",
+        "//go/pkg/graph",
+        "//go/pkg/kv",
+        "//go/pkg/vecstore",
+        "@com_github_vmihailenco_msgpack_v5//:msgpack",
+    ],
+)
+
+go_test(
+    name = "recall_test",
+    srcs = ["recall_test.go"],
+    embed = [":recall"],
+    deps = [
+        "//go/pkg/graph",
+        "//go/pkg/kv",
+        "//go/pkg/vecstore",
+    ],
+)

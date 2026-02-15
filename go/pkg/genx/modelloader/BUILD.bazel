@@ -5,7 +5,9 @@ go_library(
     srcs = [
         "asr.go",
         "config.go",
+        "profiler.go",
         "realtime.go",
+        "segmentor.go",
         "tts.go",
     ],
     importpath = "github.com/haivivi/giztoy/go/pkg/genx/modelloader",
@@ -14,6 +16,8 @@ go_library(
         "//go/pkg/doubaospeech",
         "//go/pkg/genx",
         "//go/pkg/genx/generators",
+        "//go/pkg/genx/profilers",
+        "//go/pkg/genx/segmentors",
         "//go/pkg/genx/transformers",
         "//go/pkg/minimax",
         "@com_github_goccy_go_yaml//:go-yaml",

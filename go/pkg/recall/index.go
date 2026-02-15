@@ -27,6 +27,11 @@ type IndexConfig struct {
 	// All segment keys are stored under {Prefix}:seg:... and graph keys
 	// under {Prefix}:g:...
 	Prefix kv.Key
+
+	// Separator is the KV key separator byte used by the Store.
+	// It is passed to the graph layer for label validation — labels must
+	// not contain this character. Zero means [kv.DefaultSeparator] (':').
+	Separator byte
 }
 
 // Index is a single search space combining segment storage, an entity-relation
@@ -53,11 +58,15 @@ func NewIndex(cfg IndexConfig) *Index {
 	if cfg.Store == nil {
 		panic("recall: IndexConfig.Store is required")
 	}
+	var graphArgs []byte
+	if cfg.Separator != 0 {
+		graphArgs = []byte{cfg.Separator}
+	}
 	return &Index{
 		store:    cfg.Store,
 		embedder: cfg.Embedder,
 		vec:      cfg.Vec,
-		graph:    graph.NewKVGraph(cfg.Store, graphPrefix(cfg.Prefix)),
+		graph:    graph.NewKVGraph(cfg.Store, graphPrefix(cfg.Prefix), graphArgs...),
 		prefix:   cfg.Prefix,
 	}
 }

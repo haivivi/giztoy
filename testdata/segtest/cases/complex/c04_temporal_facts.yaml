@@ -1,0 +1,20 @@
+name: c04_temporal_facts
+desc: "Extract time and date related facts correctly"
+messages:
+  - "user: 小杰的生日是3月15号"
+  - "assistant: 是哪一年的？"
+  - "user: 2018年3月15日出生的"
+  - "assistant: 那他现在快8岁了"
+  - "user: 他去年9月开始上小学了"
+  - "assistant: 一年级吗？"
+  - "user: 对，在朝阳区实验小学，每天早上7:30上学"
+  - "assistant: 挺早的呢"
+  - "user: 他明年暑假要去日本旅游，大概7月份"
+  - "assistant: 日本夏天也挺热的"
+  - "user: 他每周三下午有钢琴课，周六上午有游泳课"
+  - "assistant: 安排得挺充实的"
+expect:
+  min_entities: 1
+  entities_contain: ["person:小杰"]
+  summary_contains: ["小杰"]
+  labels_contain: ["person:小杰"]

@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "segmentors",
+    srcs = [
+        "genx.go",
+        "mux.go",
+        "prompt.go",
+        "segmentors.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/segmentors",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+        "//go/pkg/trie",
+    ],
+)
+
+go_test(
+    name = "segmentors_test",
+    srcs = ["segmentors_test.go"],
+    embed = [":segmentors"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+    ],
+)

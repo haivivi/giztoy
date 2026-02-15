@@ -1,0 +1,10 @@
+# Segmentor model configuration.
+# References a generator pattern that must be registered first
+# (e.g., from dashscope.yaml above).
+schema: "genx/segmentor/v1"
+type: "segmentor"
+models:
+  - name: "seg/qwen-turbo"
+    model: "qwen/turbo"
+  - name: "seg/qwen-plus"
+    model: "qwen/plus"

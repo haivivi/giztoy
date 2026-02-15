@@ -1,0 +1,27 @@
+name: c09_shared_entity
+desc: "Entity appears across multiple topics"
+messages:
+  - "user: 小美特别喜欢画画"
+  - "assistant: 她画什么风格的？"
+  - "user: 主要是水彩画，画得特别好"
+  - "assistant: 水彩画很有意境"
+  - "user: 对了，小美还特别会做饭"
+  - "assistant: 多才多艺呢"
+  - "user: 她最拿手的是红烧肉和糖醋排骨"
+  - "assistant: 听起来好好吃"
+  - "user: 她上周参加了一个马拉松比赛"
+  - "assistant: 还跑马拉松？"
+  - "user: 她跑了半马，成绩是2小时10分"
+  - "assistant: 对于业余选手已经很不错了"
+  - "user: 她平时每天晨跑5公里"
+  - "assistant: 难怪体力好"
+  - "user: 小美今年28岁，在一家设计公司工作"
+  - "assistant: 设计和画画很搭"
+expect:
+  min_entities: 1
+  entities_contain: ["person:小美"]
+  entity_attrs:
+    person:小美:
+      age: 28
+  summary_contains: ["小美"]
+  labels_contain: ["person:小美"]

@@ -1,0 +1,30 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "profilers",
+    srcs = [
+        "genx.go",
+        "mux.go",
+        "profilers.go",
+        "prompt.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/profilers",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+        "//go/pkg/genx/segmentors",
+        "//go/pkg/trie",
+    ],
+)
+
+go_test(
+    name = "profilers_test",
+    srcs = ["profilers_test.go"],
+    embed = [":profilers"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+        "//go/pkg/genx/segmentors",
+    ],
+)

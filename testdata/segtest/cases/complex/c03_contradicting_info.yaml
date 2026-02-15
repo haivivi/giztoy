@@ -1,0 +1,21 @@
+name: c03_contradicting_info
+desc: "Later information should override earlier contradicting info"
+messages:
+  - "user: 小花今年12岁"
+  - "assistant: 好的，12岁"
+  - "user: 她在读六年级"
+  - "assistant: 六年级是小学最后一年了"
+  - "user: 哦不对，我记错了，小花今年13岁了，上个月刚过的生日"
+  - "assistant: 生日快乐！那她13岁了"
+  - "user: 对，她已经上初一了，不是六年级"
+  - "assistant: 初一是新阶段呢"
+  - "user: 她在人大附中读书，特别喜欢物理"
+  - "assistant: 人大附中是很好的学校"
+expect:
+  min_entities: 1
+  entities_contain: ["person:小花"]
+  entity_attrs:
+    person:小花:
+      age: 13
+  summary_contains: ["小花"]
+  labels_contain: ["person:小花"]

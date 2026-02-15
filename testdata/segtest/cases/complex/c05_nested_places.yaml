@@ -1,0 +1,20 @@
+name: c05_nested_places
+desc: "Nested places: school within a city, company within a district"
+messages:
+  - "user: 我在上海工作"
+  - "assistant: 上海是个好地方"
+  - "user: 具体是在浦东新区的张江高科技园区"
+  - "assistant: 张江是科技公司聚集地"
+  - "user: 我在一家叫星辰科技的公司上班"
+  - "assistant: 做什么方向的？"
+  - "user: 做AI的，公司在张江的集电港大厦"
+  - "assistant: AI很热门呢"
+  - "user: 我女儿在浦东的明珠小学读书"
+  - "assistant: 离你公司远吗？"
+  - "user: 不远，开车大概15分钟"
+  - "assistant: 那还挺方便的"
+expect:
+  min_entities: 2
+  entities_contain: ["place:上海", "place:张江"]
+  summary_contains: ["上海"]
+  labels_contain: ["place:上海"]

@@ -1,0 +1,14 @@
+{
+    "schema": "genx/segmentor/v1",
+    "type": "segmentor",
+    "models": [
+        {
+            "name": "seg/openai-gpt4o-mini",
+            "model": "openai/gpt-4o-mini"
+        },
+        {
+            "name": "seg/openai-gpt4.1-mini",
+            "model": "openai/gpt-4.1-mini"
+        }
+    ]
+}

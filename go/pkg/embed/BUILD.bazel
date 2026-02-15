@@ -6,11 +6,13 @@ go_library(
         "config.go",
         "dashscope.go",
         "embed.go",
+        "mux.go",
         "openai.go",
     ],
     importpath = "github.com/haivivi/giztoy/go/pkg/embed",
     visibility = ["//visibility:public"],
     deps = [
+        "//go/pkg/trie",
         "@com_github_openai_openai_go//:openai-go",
         "@com_github_openai_openai_go//option",
     ],
@@ -18,6 +20,9 @@ go_library(
 
 go_test(
     name = "embed_test",
-    srcs = ["embed_test.go"],
+    srcs = [
+        "embed_test.go",
+        "mux_test.go",
+    ],
     deps = [":embed"],
 )

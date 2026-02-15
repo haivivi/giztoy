@@ -1,0 +1,21 @@
+name: s02_two_siblings
+desc: "Extract two people with sibling relation"
+messages:
+  - "user: 小明和小红是兄妹"
+  - "assistant: 小明是哥哥，小红是妹妹吗？"
+  - "user: 对，小明是哥哥，今年10岁，小红是妹妹，7岁"
+  - "assistant: 好的，我记住了"
+expect:
+  min_entities: 2
+  entities_contain: ["person:小明", "person:小红"]
+  entity_attrs:
+    person:小明:
+      age: 10
+    person:小红:
+      age: 7
+  relations_contain:
+    - from: "person:小明"
+      to: "person:小红"
+      rel_type: "sibling"
+  summary_contains: ["小明", "小红"]
+  labels_contain: ["person:小明", "person:小红"]

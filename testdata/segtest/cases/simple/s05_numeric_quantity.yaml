@@ -1,0 +1,11 @@
+name: s05_numeric_quantity
+desc: "Extract numeric attributes correctly"
+messages:
+  - "user: 家里有3只猫和2只狗"
+  - "assistant: 你们家养了好多宠物呀"
+  - "user: 是啊，猫叫花花、毛毛和球球"
+  - "assistant: 名字都好可爱"
+expect:
+  min_entities: 1
+  summary_contains: ["猫", "狗"]
+  min_keywords: 1

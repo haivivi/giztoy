@@ -1,0 +1,12 @@
+name: s09_boolean_fact
+desc: "Extract yes/no factual information"
+messages:
+  - "user: 小强是素食主义者"
+  - "assistant: 他是纯素还是蛋奶素？"
+  - "user: 纯素的，他不吃任何动物制品，已经坚持了两年"
+  - "assistant: 两年了很了不起呢"
+expect:
+  min_entities: 1
+  entities_contain: ["person:小强"]
+  summary_contains: ["小强", "素食"]
+  labels_contain: ["person:小强"]

@@ -192,6 +192,10 @@ func registerBySchema(cfg ConfigFile) ([]string, error) {
 		return registerASRBySchema(cfg)
 	case "realtime":
 		return registerRealtimeBySchema(cfg)
+	case "segmentor":
+		return registerSegmentorBySchema(cfg)
+	case "profiler":
+		return registerProfilerBySchema(cfg)
 	default:
 		return nil, fmt.Errorf("unknown type: %s", cfg.Type)
 	}
