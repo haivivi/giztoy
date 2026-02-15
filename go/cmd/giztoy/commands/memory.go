@@ -270,9 +270,13 @@ Examples:
 		}
 
 		// No attributes — create only if not exists, never overwrite.
-		if _, err := g.GetEntity(ctx, label); err == nil {
+		_, getErr := g.GetEntity(ctx, label)
+		if getErr == nil {
 			fmt.Printf("Entity %q already exists (use attrs JSON to update, or 'delete' to remove)\n", label)
 			return nil
+		}
+		if !errors.Is(getErr, graph.ErrNotFound) {
+			return fmt.Errorf("get entity: %w", getErr)
 		}
 		if err := g.SetEntity(ctx, graph.Entity{Label: label}); err != nil {
 			return fmt.Errorf("set entity: %w", err)

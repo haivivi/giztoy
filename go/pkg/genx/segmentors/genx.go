@@ -106,8 +106,9 @@ func (g *GenX) buildModelContext(input Input) genx.ModelContext {
 	// Conversation as user message.
 	mcb.UserText("conversation", buildConversationText(input.Messages))
 
-	// Add the extraction tool.
-	mcb.AddTool(extractTool)
+	// Note: extractTool is NOT added here — it is passed as the fn argument
+	// to generators.Invoke, which handles tool registration. Adding it here
+	// would cause duplicate tool definitions in tool-calls mode.
 
 	return mcb.Build()
 }
