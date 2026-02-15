@@ -173,5 +173,5 @@ use_repo(hos_sdk, "hos_sdk")
 
 local_path_override(
     module_name = "embed_zig",
-    path = "../../embed-zig/esp-scripts-go",
+    path = "../../embed-zig/main",
 )

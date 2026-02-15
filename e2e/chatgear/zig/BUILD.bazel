@@ -1,8 +1,29 @@
-# ChatGear E2E Test — Shared sources
+# ChatGear E2E Test — Native macOS
+#
+# Connects to stage MQTT broker, exercises full chatgear protocol:
+# opus encode TTS audio → send uplink → receive downlink → verify.
+#
+# Run: bazel run //e2e/chatgear/zig:test
+
+load("@embed_zig//bazel/zig:defs.bzl", "zig_binary")
 
 package(default_visibility = ["//visibility:public"])
 
-filegroup(
-    name = "app_srcs",
+zig_binary(
+    name = "test",
+    main = "main.zig",
     srcs = glob(["*.zig"]),
+    deps = [
+        "@embed_zig//lib/platform/std",
+        "@embed_zig//lib/trait",
+        "@embed_zig//lib/pkg/net/mqtt0",
+        "@embed_zig//lib/pkg/net/tls",
+        "@embed_zig//lib/pkg/net/dns",
+        "@embed_zig//lib/pkg/crypto",
+        "@embed_zig//lib/pkg/async/channel",
+        "@embed_zig//lib/pkg/async/cancellation",
+        "@embed_zig//third_party/opus:opus_float",
+        "//zig/chatgear",
+    ],
+    optimize = "ReleaseSafe",
 )

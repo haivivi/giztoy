@@ -54,10 +54,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
     const Conn = conn_mod.MqttClientConn(MqttClient);
 
     // Channel types
-    // Audio channel capacity: 32 frames × ~272B = ~8.5KB per channel.
-    // At 20ms/frame this is 640ms of buffer — plenty for real-time VoIP.
-    // (Was 256, but that made ClientPort ~140KB — too large for embedded stacks.)
-    const AudioCh = channel.Channel(types.StampedFrame, 32, Rt);
+    const AudioCh = channel.Channel(types.StampedFrame, 256, Rt);
     const CommandCh = channel.Channel(types.CommandEvent, 32, Rt);
     const StateCh = channel.Channel(types.StateEvent, 32, Rt);
     const StatsCh = channel.Channel(types.StatsEvent, 32, Rt);
@@ -132,22 +129,27 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
         // Lifecycle
         // ====================================================================
 
-        /// Stack size for spawned tasks. TLS encryption needs large stacks.
-        const TASK_STACK_SIZE: u32 = 65536;
-
-        /// Spawn options for chatgear background tasks.
-        const task_opts: Rt.Options = .{ .stack_size = TASK_STACK_SIZE };
-
         /// Start background tasks for periodic state/stats reporting
         /// and uplink transmission. Matches Go StartPeriodicReporting +
         /// WriteTo goroutines.
         pub fn startPeriodicReporting(self: *Self) !void {
-            try Rt.spawn("cg_state", stateSendLoopFn, @ptrCast(self), task_opts);
-            try Rt.spawn("cg_stats", statsReportLoopFn, @ptrCast(self), task_opts);
-            try Rt.spawn("cg_tx_audio", txAudioLoopFn, @ptrCast(self), task_opts);
-            try Rt.spawn("cg_tx_state", txStateLoopFn, @ptrCast(self), task_opts);
-            try Rt.spawn("cg_tx_stats", txStatsLoopFn, @ptrCast(self), task_opts);
+            inline for (.{
+                stateSendLoopEntry,
+                statsReportLoopEntry,
+                txAudioLoopEntry,
+                txStateLoopEntry,
+                txStatsLoopEntry,
+            }) |entry| {
+                const t = try Rt.Thread.spawn(.{}, entry, .{self});
+                t.detach();
+            }
         }
+
+        fn stateSendLoopEntry(self: *Self) void { self.stateSendLoop(); }
+        fn statsReportLoopEntry(self: *Self) void { self.statsReportLoop(); }
+        fn txAudioLoopEntry(self: *Self) void { self.txAudioLoop(); }
+        fn txStateLoopEntry(self: *Self) void { self.txStateLoop(); }
+        fn txStatsLoopEntry(self: *Self) void { self.txStatsLoop(); }
 
         /// Cancel all background tasks and close channels.
         pub fn close(self: *Self) void {
@@ -388,8 +390,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
 
         /// State send loop — every 5s, send current state unconditionally.
         /// Matches Go stateSendLoop.
-        fn stateSendLoopFn(ctx: ?*anyopaque) void {
-            const self: *Self = @ptrCast(@alignCast(ctx));
+        fn stateSendLoop(self: *Self) void {
             while (!self.token.isCancelled()) {
                 Time.sleepMs(STATE_INTERVAL_MS);
                 if (self.token.isCancelled()) return;
@@ -410,12 +411,7 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
         }
 
         /// Stats report loop — tiered periodic reporting.
-        /// Matches Go statsReportLoop:
-        /// - Every 60s  (20s * 3): battery, volume, brightness, light_mode, sys_ver, wifi, pair_status
-        /// - Every 120s (20s * 6): shaking
-        /// - Every 600s (20s * 30): (reserved)
-        fn statsReportLoopFn(ctx: ?*anyopaque) void {
-            const self: *Self = @ptrCast(@alignCast(ctx));
+        fn statsReportLoop(self: *Self) void {
             var rounds: u32 = 0;
 
             while (!self.token.isCancelled()) {
@@ -491,23 +487,20 @@ pub fn ClientPort(comptime MqttClient: type, comptime Rt: type) type {
         // Transmission loops — drain channels and send via conn
         // ====================================================================
 
-        fn txAudioLoopFn(ctx: ?*anyopaque) void {
-            const self: *Self = @ptrCast(@alignCast(ctx));
+        fn txAudioLoop(self: *Self) void {
             while (self.uplink_audio.recv()) |f| {
                 self.conn.sendOpusFrame(f.timestamp_ms, f.frame()) catch {};
             }
         }
 
-        fn txStateLoopFn(ctx: ?*anyopaque) void {
-            const self: *Self = @ptrCast(@alignCast(ctx));
+        fn txStateLoop(self: *Self) void {
             while (self.uplink_state.recv()) |evt| {
                 var event = evt;
                 self.conn.sendState(&event) catch {};
             }
         }
 
-        fn txStatsLoopFn(ctx: ?*anyopaque) void {
-            const self: *Self = @ptrCast(@alignCast(ctx));
+        fn txStatsLoop(self: *Self) void {
             while (self.uplink_stats.recv()) |evt| {
                 var event = evt;
                 self.conn.sendStats(&event) catch {};
