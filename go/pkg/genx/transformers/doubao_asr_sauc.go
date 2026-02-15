@@ -152,6 +152,12 @@ func (t *DoubaoASRSAUC) Transform(_ context.Context, _ string, input genx.Stream
 func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 	defer output.Close()
 
+	// Local cancel context tied to the loop lifecycle.
+	// When the loop exits, defer cancel() cancels any in-flight WebSocket
+	// dial or audio send operation.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Track last chunk for metadata
 	var lastChunk *genx.MessageChunk
 	var session *doubaospeech.ASRV2Session
@@ -161,7 +167,7 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 	// Helper to start a new ASR session
 	startSession := func() error {
 		var err error
-		session, err = t.openSession(context.Background())
+		session, err = t.openSession(ctx)
 		if err != nil {
 			return err
 		}
@@ -182,7 +188,7 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 		if session == nil {
 			return nil
 		}
-		session.SendAudio(context.Background(), nil, true)
+		session.SendAudio(ctx, nil, true)
 		err := <-resultsDone
 		session.Close()
 		session = nil
@@ -248,7 +254,7 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 				}
 			}
 			// Send audio to ASR
-			if err := session.SendAudio(context.Background(), blob.Data, false); err != nil {
+			if err := session.SendAudio(ctx, blob.Data, false); err != nil {
 				session.Close()
 				output.CloseWithError(err)
 				return
