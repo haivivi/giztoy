@@ -147,6 +147,11 @@ func (t *DoubaoTTSSeedV2) Transform(_ context.Context, _ string, input genx.Stre
 func (t *DoubaoTTSSeedV2) transformLoop(input genx.Stream, output *bufferStream) {
 	defer output.Close()
 
+	// Local cancel context tied to the loop lifecycle.
+	// When the loop exits, defer cancel() cancels any in-flight HTTP request.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	mimeType := t.mimeType()
 	var textBuilder strings.Builder
 	var lastChunk *genx.MessageChunk
@@ -160,7 +165,7 @@ func (t *DoubaoTTSSeedV2) transformLoop(input genx.Stream, output *bufferStream)
 			}
 			// EOF: synthesize any remaining text
 			if textBuilder.Len() > 0 {
-				if err := t.synthesize(textBuilder.String(), lastChunk, mimeType, output); err != nil {
+				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, mimeType, output); err != nil {
 					output.CloseWithError(err)
 					return
 				}
@@ -179,7 +184,7 @@ func (t *DoubaoTTSSeedV2) transformLoop(input genx.Stream, output *bufferStream)
 			if _, ok := chunk.Part.(genx.Text); ok {
 				// Text EoS: synthesize accumulated text, emit audio, then emit audio EoS
 			if textBuilder.Len() > 0 {
-				if err := t.synthesize(textBuilder.String(), lastChunk, mimeType, output); err != nil {
+				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, mimeType, output); err != nil {
 					output.CloseWithError(err)
 					return
 				}
@@ -215,7 +220,7 @@ func (t *DoubaoTTSSeedV2) transformLoop(input genx.Stream, output *bufferStream)
 	}
 }
 
-func (t *DoubaoTTSSeedV2) synthesize(text string, lastChunk *genx.MessageChunk, mimeType string, output *bufferStream) error {
+func (t *DoubaoTTSSeedV2) synthesize(ctx context.Context, text string, lastChunk *genx.MessageChunk, mimeType string, output *bufferStream) error {
 	req := &doubaospeech.TTSV2Request{
 		Text:        text,
 		Speaker:     t.speaker,
@@ -230,7 +235,7 @@ func (t *DoubaoTTSSeedV2) synthesize(text string, lastChunk *genx.MessageChunk, 
 		Language:    t.language,
 	}
 
-	for chunk, err := range t.client.TTSV2.Stream(context.Background(), req) {
+	for chunk, err := range t.client.TTSV2.Stream(ctx, req) {
 		if err != nil {
 			return err
 		}

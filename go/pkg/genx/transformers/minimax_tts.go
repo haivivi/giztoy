@@ -147,6 +147,11 @@ func (t *MinimaxTTS) Transform(_ context.Context, _ string, input genx.Stream) (
 func (t *MinimaxTTS) transformLoop(input genx.Stream, output *bufferStream) {
 	defer output.Close()
 
+	// Local cancel context tied to the loop lifecycle.
+	// When the loop exits, defer cancel() cancels any in-flight HTTP request.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	mimeType := t.mimeType()
 	var textBuilder strings.Builder
 	var lastChunk *genx.MessageChunk
@@ -161,7 +166,7 @@ func (t *MinimaxTTS) transformLoop(input genx.Stream, output *bufferStream) {
 			}
 			// EOF: synthesize any remaining text
 			if textBuilder.Len() > 0 {
-				if err := t.synthesize(textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
+				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
 					output.CloseWithError(err)
 					return
 				}
@@ -188,11 +193,11 @@ func (t *MinimaxTTS) transformLoop(input genx.Stream, output *bufferStream) {
 			if _, ok := chunk.Part.(genx.Text); ok {
 				// Text EoS: synthesize accumulated text, emit audio, then emit audio EoS
 				if textBuilder.Len() > 0 {
-					if err := t.synthesize(textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
-						output.CloseWithError(err)
-						return
-					}
-					textBuilder.Reset()
+				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
+					output.CloseWithError(err)
+					return
+				}
+				textBuilder.Reset()
 				}
 				// Emit audio EoS with StreamID
 				eosChunk := &genx.MessageChunk{
@@ -237,7 +242,7 @@ func (t *MinimaxTTS) transformLoop(input genx.Stream, output *bufferStream) {
 	}
 }
 
-func (t *MinimaxTTS) synthesize(text string, lastChunk *genx.MessageChunk, streamID, mimeType string, output *bufferStream) error {
+func (t *MinimaxTTS) synthesize(ctx context.Context, text string, lastChunk *genx.MessageChunk, streamID, mimeType string, output *bufferStream) error {
 	// Emit BOS at the start of synthesis
 	bosChunk := &genx.MessageChunk{
 		Ctrl: &genx.StreamCtrl{StreamID: streamID, BeginOfStream: true},
@@ -267,7 +272,7 @@ func (t *MinimaxTTS) synthesize(text string, lastChunk *genx.MessageChunk, strea
 		},
 	}
 
-	for chunk, err := range t.client.Speech.SynthesizeStream(context.Background(), req) {
+	for chunk, err := range t.client.Speech.SynthesizeStream(ctx, req) {
 		if err != nil {
 			return err
 		}
