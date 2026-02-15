@@ -124,11 +124,13 @@ func (g *GenX) parseResult(call *genx.FuncCall) (*Result, error) {
 	}
 
 	// Convert extractArg to Result, converting []extractAttr to map[string]any.
+	// Values are stored as-is (string) — no type guessing. Attrs are used as
+	// prompt context for LLMs, so string representation is all that's needed.
 	entities := make([]EntityOutput, len(arg.Entities))
 	for i, e := range arg.Entities {
 		attrs := make(map[string]any, len(e.Attrs))
 		for _, a := range e.Attrs {
-			attrs[a.Key] = parseAttrValue(a.Value)
+			attrs[a.Key] = a.Value
 		}
 		entities[i] = EntityOutput{
 			Label: e.Label,
@@ -147,16 +149,3 @@ func (g *GenX) parseResult(call *genx.FuncCall) (*Result, error) {
 	}, nil
 }
 
-// parseAttrValue attempts to parse a string value into a typed value.
-// Numbers are returned as float64/int, booleans as bool, otherwise string.
-func parseAttrValue(s string) any {
-	// Try JSON number/bool first.
-	var v any
-	if err := json.Unmarshal([]byte(s), &v); err == nil {
-		switch v.(type) {
-		case float64, bool:
-			return v
-		}
-	}
-	return s
-}

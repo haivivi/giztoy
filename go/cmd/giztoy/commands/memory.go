@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -255,6 +256,10 @@ Examples:
 			if mergeErr == nil {
 				fmt.Printf("Updated entity %q\n", label)
 				return nil
+			}
+			if !errors.Is(mergeErr, graph.ErrNotFound) {
+				// Real storage error — surface it.
+				return fmt.Errorf("merge attrs: %w", mergeErr)
 			}
 			// Entity doesn't exist — create with attrs.
 			if err := g.SetEntity(ctx, graph.Entity{Label: label, Attrs: attrs}); err != nil {
