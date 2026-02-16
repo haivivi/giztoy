@@ -35,7 +35,7 @@ pub struct MQTTServerConfig {
 /// `UplinkRx` (receive audio/state/stats from client) and
 /// `DownlinkTx` (send audio/commands to client).
 pub struct MQTTServerConn {
-    client: Arc<giztoy_mqtt0::Client>,
+    client: Arc<BrokerOrClient>,
     cancel: CancellationToken,
     scope: String,
     gear_id: String,
@@ -102,7 +102,7 @@ pub async fn dial_mqtt_server(cfg: MQTTServerConfig, log: Arc<dyn Logger>) -> Re
     let latest_stats = Arc::new(Mutex::new(None));
 
     let conn = MQTTServerConn {
-        client: client.clone(),
+        client: Arc::new(BrokerOrClient::Client(Arc::clone(&client))),
         cancel: cancel.clone(),
         scope: scope.clone(),
         gear_id: cfg.gear_id.clone(),
@@ -129,6 +129,132 @@ pub async fn dial_mqtt_server(cfg: MQTTServerConfig, log: Arc<dyn Logger>) -> Re
     });
 
     Ok(conn)
+}
+
+/// Starts an embedded MQTT broker and returns a server connection.
+///
+/// The server handles messages internally without network overhead for the
+/// server side. Clients connect to `cfg.addr` to communicate.
+/// Matches Go's `ListenMQTTServer`.
+pub async fn listen_mqtt_server(cfg: MQTTServerConfig, log: Arc<dyn Logger>) -> Result<MQTTServerConn, ConnError> {
+    let scope = if cfg.scope.is_empty() || cfg.scope.ends_with('/') {
+        cfg.scope.clone()
+    } else {
+        format!("{}/", cfg.scope)
+    };
+
+    let (opus_tx, opus_rx) = mpsc::channel(1024);
+    let (states_tx, states_rx) = mpsc::channel(32);
+    let (stats_tx, stats_rx) = mpsc::channel(32);
+    let cancel = CancellationToken::new();
+    let latest_stats = Arc::new(Mutex::new(None));
+
+    let handler_scope = scope.clone();
+    let handler_gear_id = cfg.gear_id.clone();
+    let handler_log = log.clone();
+    let handler_latest_stats = latest_stats.clone();
+
+    let broker_cfg = giztoy_mqtt0::BrokerConfig::new(&cfg.addr).sys_events(false);
+    let broker = std::sync::Arc::new(giztoy_mqtt0::Broker::builder(broker_cfg)
+        .handler(BrokerMessageHandler {
+            scope: handler_scope,
+            gear_id: handler_gear_id,
+            logger: handler_log,
+            opus_tx,
+            states_tx,
+            stats_tx,
+            latest_stats: handler_latest_stats,
+        })
+        .build());
+
+    let broker_for_serve = broker.clone();
+    let broker_cancel = cancel.clone();
+    let serve_log = log.clone();
+    tokio::spawn(async move {
+        tokio::select! {
+            result = broker_for_serve.serve() => {
+                if let Err(e) = result {
+                    serve_log.error(&format!("broker serve error: {}", e));
+                }
+            }
+            _ = broker_cancel.cancelled() => {
+                serve_log.info("listen_mqtt_server: shutting down");
+            }
+        }
+    });
+
+    log.info(&format!("MQTT broker listening on {} for gear {}", cfg.addr, cfg.gear_id));
+
+    Ok(MQTTServerConn {
+        client: std::sync::Arc::new(BrokerOrClient::Broker(broker)),
+        cancel,
+        scope,
+        gear_id: cfg.gear_id,
+        logger: log,
+        opus_rx: Arc::new(Mutex::new(opus_rx)),
+        states_rx: Arc::new(Mutex::new(states_rx)),
+        stats_rx: Arc::new(Mutex::new(stats_rx)),
+        latest_stats,
+        closed: Arc::new(Mutex::new(false)),
+    })
+}
+
+/// Message handler for embedded broker mode.
+struct BrokerMessageHandler {
+    scope: String,
+    gear_id: String,
+    logger: Arc<dyn Logger>,
+    opus_tx: mpsc::Sender<StampedOpusFrame>,
+    states_tx: mpsc::Sender<GearStateEvent>,
+    stats_tx: mpsc::Sender<GearStatsEvent>,
+    latest_stats: Arc<Mutex<Option<GearStatsEvent>>>,
+}
+
+impl giztoy_mqtt0::Handler for BrokerMessageHandler {
+    fn handle(&self, _client_id: &str, msg: &giztoy_mqtt0::Message) {
+        let audio_topic = format!("{}device/{}/input_audio_stream", self.scope, self.gear_id);
+        let state_topic = format!("{}device/{}/state", self.scope, self.gear_id);
+        let stats_topic = format!("{}device/{}/stats", self.scope, self.gear_id);
+
+        if msg.topic == audio_topic {
+            if let Some(frame) = unstamp_frame(&msg.payload) {
+                let _ = self.opus_tx.try_send(frame);
+            }
+        } else if msg.topic == state_topic {
+            if let Ok(evt) = serde_json::from_slice::<GearStateEvent>(&msg.payload) {
+                let _ = self.states_tx.try_send(evt);
+            }
+        } else if msg.topic == stats_topic {
+            if let Ok(evt) = serde_json::from_slice::<GearStatsEvent>(&msg.payload) {
+                // Use try_lock since this is synchronous handler context
+                if let Ok(mut guard) = self.latest_stats.try_lock() {
+                    *guard = Some(evt.clone());
+                }
+                let _ = self.stats_tx.try_send(evt);
+            }
+        }
+    }
+}
+
+/// Enum to hold either a client or broker for publishing.
+enum BrokerOrClient {
+    Client(Arc<giztoy_mqtt0::Client>),
+    Broker(std::sync::Arc<giztoy_mqtt0::Broker>),
+}
+
+impl BrokerOrClient {
+    async fn publish(&self, topic: &str, payload: &[u8]) -> Result<(), ConnError> {
+        match self {
+            BrokerOrClient::Client(client) => {
+                client.publish(topic, payload).await
+                    .map_err(|e| ConnError::SendFailed(e.to_string()))
+            }
+            BrokerOrClient::Broker(broker) => {
+                broker.publish(topic, payload)
+                    .map_err(|e| ConnError::SendFailed(e.to_string()))
+            }
+        }
+    }
 }
 
 async fn server_receive_loop(
