@@ -13,6 +13,12 @@ pub trait Writer: Send + Sync {
     fn write(&self, chunk: &dyn Chunk) -> io::Result<()>;
 }
 
+/// A writer for chunks of audio data that also supports closing.
+pub trait WriteCloser: Writer {
+    /// Closes the writer, flushing any remaining data.
+    fn close(&mut self) -> io::Result<()>;
+}
+
 /// A function that implements the Writer trait.
 pub struct WriteFunc<F>(pub F);
 

@@ -51,7 +51,6 @@ impl Default for ListenerConfig {
 }
 
 /// A newly connected device.
-#[derive(Debug)]
 pub struct AcceptedPort {
     /// Device identifier.
     pub gear_id: String,
@@ -61,6 +60,35 @@ pub struct AcceptedPort {
     pub state_rx: mpsc::Receiver<GearStateEvent>,
     /// Receiver for stats events from this device.
     pub stats_rx: mpsc::Receiver<GearStatsEvent>,
+    /// Handle for sending data back to this device (downlink).
+    /// None if the broker reference is not yet available.
+    pub downlink: Option<DownlinkHandle>,
+}
+
+/// Handle for sending data to a specific device via the Listener's broker.
+pub struct DownlinkHandle {
+    broker: Arc<giztoy_mqtt0::Broker>,
+    scope: String,
+    gear_id: String,
+}
+
+impl DownlinkHandle {
+    /// Sends a stamped opus frame to the device.
+    pub fn send_opus_frame(&self, frame: &StampedOpusFrame) -> Result<(), ConnError> {
+        let topic = format!("{}device/{}/output_audio_stream", self.scope, self.gear_id);
+        let stamped = crate::conn_mqtt::stamp_frame(frame);
+        self.broker.publish(&topic, &stamped)
+            .map_err(|e| ConnError::SendFailed(e.to_string()))
+    }
+
+    /// Sends a command to the device.
+    pub fn send_command(&self, cmd: &crate::SessionCommandEvent) -> Result<(), ConnError> {
+        let topic = format!("{}device/{}/command", self.scope, self.gear_id);
+        let data = serde_json::to_vec(cmd)
+            .map_err(|e| ConnError::SendFailed(e.to_string()))?;
+        self.broker.publish(&topic, &data)
+            .map_err(|e| ConnError::SendFailed(e.to_string()))
+    }
 }
 
 /// Tracks a managed device port.
@@ -130,22 +158,30 @@ pub async fn listen_mqtt0(
     let handler_log = log.clone();
     let handler_timeout = timeout;
 
+    let broker_ref: Arc<std::sync::OnceLock<Arc<giztoy_mqtt0::Broker>>> =
+        Arc::new(std::sync::OnceLock::new());
+
     let broker_cfg = giztoy_mqtt0::BrokerConfig::new(&cfg.addr).sys_events(false);
-    let broker = giztoy_mqtt0::Broker::builder(broker_cfg)
+    let broker = Arc::new(giztoy_mqtt0::Broker::builder(broker_cfg)
         .handler(MessageHandler {
             ports: handler_ports.clone(),
+            broker: broker_ref.clone(),
             scope: handler_scope.clone(),
             accept_tx: handler_accept_tx,
             logger: handler_log.clone(),
         })
-        .build();
+        .build());
+
+    // Set the broker reference now that it exists
+    let _ = broker_ref.set(broker.clone());
 
     // Start broker
+    let broker_for_serve = broker.clone();
     let broker_cancel = cancel.clone();
     let broker_log = log.clone();
     tokio::spawn(async move {
         tokio::select! {
-            result = broker.serve() => {
+            result = broker_for_serve.serve() => {
                 if let Err(e) = result {
                     broker_log.error(&format!("broker serve error: {}", e));
                 }
@@ -192,6 +228,7 @@ pub async fn listen_mqtt0(
 /// MQTT message handler that routes messages to per-device channels.
 struct MessageHandler {
     ports: Arc<RwLock<HashMap<String, ManagedPort>>>,
+    broker: Arc<std::sync::OnceLock<Arc<giztoy_mqtt0::Broker>>>,
     scope: String,
     accept_tx: mpsc::Sender<AcceptedPort>,
     logger: Arc<dyn Logger>,
@@ -218,9 +255,11 @@ impl giztoy_mqtt0::Handler for MessageHandler {
             return;
         }
 
-        // Use a blocking approach for the async lock since Handler::handle is sync
+        // Clone all fields before spawning since Handler::handle takes &self
         let ports = self.ports.clone();
         let accept_tx = self.accept_tx.clone();
+        let broker_ref = self.broker.clone();
+        let scope = self.scope.clone();
         let gear_id = gear_id.to_string();
         let msg_type = msg_type.to_string();
         let payload = payload.to_vec();
@@ -244,11 +283,19 @@ impl giztoy_mqtt0::Handler for MessageHandler {
                 });
 
                 // Notify listener of new device
+                let downlink = broker_ref.get().map(|broker| {
+                    DownlinkHandle {
+                        broker: broker.clone(),
+                        scope: scope.clone(),
+                        gear_id: gear_id.clone(),
+                    }
+                });
                 let _ = accept_tx.try_send(AcceptedPort {
                     gear_id: gear_id.clone(),
                     opus_rx,
                     state_rx,
                     stats_rx,
+                    downlink,
                 });
 
                 logger.info(&format!("new device connected: {}", gear_id));
