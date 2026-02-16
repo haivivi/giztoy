@@ -1141,6 +1141,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "giztoy-embed"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "giztoy-encoding"
 version = "0.1.0"
 dependencies = [
@@ -1173,6 +1184,15 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-test",
+]
+
+[[package]]
+name = "giztoy-graph"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -1296,6 +1316,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "giztoy-recall"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "rmp-serde",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
 name = "giztoy-trie"
 version = "0.1.0"
 dependencies = [
@@ -1310,6 +1342,14 @@ dependencies = [
  "criterion",
  "serde",
  "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "giztoy-vecstore"
+version = "0.1.0"
+dependencies = [
+ "rand 0.8.5",
  "thiserror 2.0.18",
 ]
 
@@ -2624,6 +2664,25 @@ dependencies = [
  "libc",
  "untrusted",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "rmp"
+version = "0.8.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ba8be72d372b2c9b35542551678538b562e7cf86c3315773cae48dfbfe7790c"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "rmp-serde"
+version = "1.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72f81bee8c8ef9b577d1681a70ebbc962c232461e397b22c208c43c04b67a155"
+dependencies = [
+ "rmp",
+ "serde",
 ]
 
 [[package]]
