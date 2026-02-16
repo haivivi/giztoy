@@ -26,6 +26,7 @@
 //! ```
 
 pub mod codec;
+pub mod fbank;
 pub mod pcm;
 pub mod resampler;
 pub mod songs;
