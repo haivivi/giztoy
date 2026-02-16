@@ -293,6 +293,9 @@ impl TtsService {
             read: Arc::new(tokio::sync::Mutex::new(read)),
             proto,
             config: config.clone(),
+            auth: auth.clone(),
+            req_id: Uuid::new_v4().to_string(),
+            started: std::sync::atomic::AtomicBool::new(false),
             closed: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         })
     }
@@ -686,13 +689,19 @@ pub struct TtsDuplexSession {
     read: Arc<tokio::sync::Mutex<futures::stream::SplitStream<WsStream>>>,
     proto: crate::protocol::BinaryProtocol,
     config: TtsDuplexConfig,
+    auth: crate::http::AuthConfig,
+    req_id: String,
+    started: std::sync::atomic::AtomicBool,
     closed: Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl TtsDuplexSession {
     /// Sends text to the session for synthesis.
     ///
-    /// Set `is_last` to true for the final text segment.
+    /// The first call sends a full request with app/user/audio config and
+    /// `operation: "submit"`. Subsequent calls send only the text with
+    /// `operation: "append"`. Set `is_last` to true for the final segment,
+    /// which sends `operation: "finish"`.
     pub async fn send_text(&self, text: &str, is_last: bool) -> Result<()> {
         use tokio_tungstenite::tungstenite::Message as WsMessage;
 
@@ -700,21 +709,64 @@ impl TtsDuplexSession {
             return Err(Error::Other("session closed".to_string()));
         }
 
-        let msg = crate::protocol::Message {
-            msg_type: if is_last {
-                crate::protocol::MessageType::FullClient
-            } else {
-                crate::protocol::MessageType::FullClient
-            },
-            flags: crate::protocol::MessageFlags::NoSequence,
-            payload: text.as_bytes().to_vec(),
-            ..Default::default()
+        let req = if !self.started.swap(true, std::sync::atomic::Ordering::Relaxed) {
+            // First send: full request with config
+            let mut audio = serde_json::json!({
+                "voice_type": self.config.voice_type,
+            });
+            if let Some(encoding) = self.config.encoding {
+                audio["encoding"] = serde_json::json!(encoding.as_str());
+            }
+            if let Some(speed) = self.config.speed_ratio {
+                audio["speed_ratio"] = serde_json::json!(speed);
+            }
+            if let Some(volume) = self.config.volume_ratio {
+                audio["volume_ratio"] = serde_json::json!(volume);
+            }
+            if let Some(pitch) = self.config.pitch_ratio {
+                audio["pitch_ratio"] = serde_json::json!(pitch);
+            }
+
+            serde_json::json!({
+                "app": {
+                    "appid": self.auth.app_id,
+                    "cluster": self.auth.cluster.as_deref().unwrap_or("volcano_tts"),
+                },
+                "user": {
+                    "uid": self.auth.user_id,
+                },
+                "audio": audio,
+                "request": {
+                    "reqid": self.req_id,
+                    "text": text,
+                    "text_type": "plain",
+                    "operation": "submit",
+                },
+            })
+        } else if is_last {
+            // Final send: finish operation
+            serde_json::json!({
+                "request": {
+                    "reqid": self.req_id,
+                    "operation": "finish",
+                },
+            })
+        } else {
+            // Append text
+            serde_json::json!({
+                "request": {
+                    "reqid": self.req_id,
+                    "text": text,
+                    "operation": "append",
+                },
+            })
         };
 
-        let data = self.proto.marshal(&msg)?;
+        let json = serde_json::to_string(&req)
+            .map_err(|e| Error::Other(format!("serialize request: {}", e)))?;
         futures::SinkExt::send(
             &mut *self.write.lock().await,
-            WsMessage::Binary(data.into()),
+            WsMessage::Text(json.into()),
         )
         .await
         .map_err(Error::WebSocket)?;

@@ -298,11 +298,64 @@ impl PodcastService {
             closed: Arc::new(AtomicBool::new(false)),
         };
 
-        // Send the podcast request
-        let req_json = serde_json::to_vec(req)
+        // Build and send the structured request
+        let req_id = crate::client::generate_req_id();
+
+        let speakers: Vec<serde_json::Value> = req.speakers.iter().map(|sp| {
+            let mut s = serde_json::json!({
+                "name": sp.name,
+                "voice_type": sp.voice_type,
+            });
+            if let Some(speed) = sp.speed_ratio {
+                s["speed_ratio"] = serde_json::json!(speed);
+            }
+            if let Some(volume) = sp.volume_ratio {
+                s["volume_ratio"] = serde_json::json!(volume);
+            }
+            s
+        }).collect();
+
+        let dialogues: Vec<serde_json::Value> = req.dialogues.iter().map(|d| {
+            let mut dl = serde_json::json!({
+                "speaker": d.speaker,
+                "text": d.text,
+            });
+            if let Some(ref emotion) = d.emotion {
+                dl["emotion"] = serde_json::json!(emotion);
+            }
+            dl
+        }).collect();
+
+        let mut full_req = serde_json::json!({
+            "app": {
+                "appid": auth.app_id,
+                "cluster": auth.cluster.as_deref().unwrap_or("volcano_mega"),
+            },
+            "user": {
+                "uid": auth.user_id,
+            },
+            "request": {
+                "reqid": req_id,
+                "speakers": speakers,
+                "dialogues": dialogues,
+            },
+        });
+
+        if req.encoding.is_some() || req.sample_rate.is_some() {
+            let mut audio = serde_json::json!({});
+            if let Some(encoding) = req.encoding {
+                audio["encoding"] = serde_json::json!(encoding.as_str());
+            }
+            if let Some(sample_rate) = req.sample_rate {
+                audio["sample_rate"] = serde_json::json!(sample_rate.as_i32());
+            }
+            full_req["audio"] = audio;
+        }
+
+        let req_json = serde_json::to_string(&full_req)
             .map_err(|e| Error::Other(format!("serialize request: {}", e)))?;
         session.write.lock().await
-            .send(WsMessage::Text(String::from_utf8_lossy(&req_json).into_owned().into()))
+            .send(WsMessage::Text(req_json.into()))
             .await
             .map_err(Error::WebSocket)?;
 
@@ -750,16 +803,28 @@ impl PodcastSAMISession {
 /// Podcast stream request (non-SAMI, V3 endpoint).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PodcastStreamRequest {
-    /// Input text content.
-    pub text: String,
-    /// Speaker configurations.
+    /// Speaker configurations (required).
     pub speakers: Vec<PodcastSpeaker>,
+    /// Dialogue lines (required).
+    pub dialogues: Vec<PodcastDialogueLine>,
     /// Audio encoding format.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub encoding: Option<AudioEncoding>,
     /// Sample rate.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sample_rate: Option<SampleRate>,
+}
+
+/// A dialogue line for podcast streaming.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PodcastDialogueLine {
+    /// Speaker name (must match one of the speakers).
+    pub speaker: String,
+    /// Dialogue text.
+    pub text: String,
+    /// Emotion (optional).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub emotion: Option<String>,
 }
 
 /// Speaker configuration for podcast.
