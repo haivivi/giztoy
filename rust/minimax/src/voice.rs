@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     error::Result,
+    file::UploadResponse,
     http::{decode_hex_audio, HttpClient},
     types::{BaseResp, VoiceType},
 };
@@ -154,6 +155,58 @@ impl VoiceService {
             voice_id: resp.voice_id,
             demo_audio,
         })
+    }
+
+    /// Uploads an audio file for voice cloning.
+    ///
+    /// The returned file_id can be used in the `clone` method's `VoiceCloneRequest`.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// let audio_bytes = std::fs::read("voice_sample.mp3")?;
+    /// let upload = client.voice().upload_clone_audio(&audio_bytes, "voice_sample.mp3").await?;
+    /// println!("File ID: {}", upload.file_id);
+    /// ```
+    pub async fn upload_clone_audio(
+        &self,
+        data: &[u8],
+        filename: &str,
+    ) -> Result<UploadResponse> {
+        self.http
+            .upload_file(
+                "/v1/files/upload",
+                data.to_vec(),
+                filename,
+                vec![("purpose", "voice_clone".to_string())],
+            )
+            .await
+    }
+
+    /// Uploads a demo audio file for voice cloning.
+    ///
+    /// This is optional and can enhance the cloning quality by providing
+    /// a reference audio sample.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// let demo_bytes = std::fs::read("demo_audio.mp3")?;
+    /// let upload = client.voice().upload_demo_audio(&demo_bytes, "demo_audio.mp3").await?;
+    /// ```
+    pub async fn upload_demo_audio(
+        &self,
+        data: &[u8],
+        filename: &str,
+    ) -> Result<UploadResponse> {
+        self.http
+            .upload_file(
+                "/v1/files/upload",
+                data.to_vec(),
+                filename,
+                vec![("purpose", "prompt_audio".to_string())],
+            )
+            .await
     }
 
     /// Deletes a custom voice.
