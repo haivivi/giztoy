@@ -45,3 +45,24 @@ alias(
     name = "giztoy_vecid",
     actual = "//rust/vecid:giztoy_vecid",
 )
+
+# Phase A: memory pipeline
+alias(
+    name = "giztoy_graph",
+    actual = "//rust/graph:graph",
+)
+
+alias(
+    name = "giztoy_vecstore",
+    actual = "//rust/vecstore:vecstore",
+)
+
+alias(
+    name = "giztoy_embed",
+    actual = "//rust/embed:embed",
+)
+
+alias(
+    name = "giztoy_recall",
+    actual = "//rust/recall:recall",
+)
