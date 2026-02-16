@@ -1308,6 +1308,7 @@ dependencies = [
 name = "giztoy-voiceprint"
 version = "0.1.0"
 dependencies = [
+ "giztoy-ncnn",
  "thiserror 2.0.18",
 ]
 

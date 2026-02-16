@@ -35,6 +35,7 @@ mod error;
 pub mod fbank;
 mod hasher;
 mod model;
+mod model_ncnn;
 mod voiceprint;
 
 pub use detector::{Detector, DetectorConfig};
@@ -42,4 +43,5 @@ pub use error::VoiceprintError;
 pub use fbank::{cmvn, compute_fbank, l2_normalize, FbankConfig};
 pub use hasher::Hasher;
 pub use model::VoiceprintModel;
+pub use model_ncnn::{NCNNModel, NCNNModelConfig};
 pub use voiceprint::{voice_label, SpeakerChunk, SpeakerStatus};

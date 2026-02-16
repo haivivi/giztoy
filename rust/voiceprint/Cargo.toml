@@ -8,3 +8,4 @@ description = "Speaker identification via audio embeddings and locality-sensitiv
 
 [dependencies]
 thiserror = { workspace = true }
+giztoy-ncnn = { workspace = true }
