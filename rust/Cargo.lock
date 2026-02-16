@@ -1050,6 +1050,7 @@ dependencies = [
  "giztoy-audio",
  "giztoy-encoding",
  "giztoy-jsontime",
+ "giztoy-mqtt0",
  "serde",
  "serde_json",
  "thiserror 2.0.18",

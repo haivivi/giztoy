@@ -26,6 +26,8 @@ mod stats;
 mod conn;
 pub mod logger;
 mod port;
+pub mod conn_mqtt;
+pub mod conn_mqtt_server;
 pub mod conn_pipe;
 mod client_port;
 mod server_port;

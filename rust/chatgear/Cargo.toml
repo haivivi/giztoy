@@ -10,6 +10,7 @@ description = "Core types for device state, statistics, and commands"
 giztoy-jsontime = { workspace = true }
 giztoy-encoding = { workspace = true }
 giztoy-audio = { workspace = true }
+giztoy-mqtt0 = { workspace = true }
 
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
