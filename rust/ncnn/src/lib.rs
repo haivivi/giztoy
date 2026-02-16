@@ -33,8 +33,10 @@
 mod error;
 mod ffi;
 pub mod model;
+mod model_embed;
 mod ncnn;
 
 pub use error::NcnnError;
 pub use model::{load_model, list_models, register_model, ModelId};
+pub use model_embed::register_embedded_models;
 pub use ncnn::{version, Extractor, Mat, NcnnOption, Net};

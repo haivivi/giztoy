@@ -336,3 +336,75 @@ impl Drop for Mat {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model_embed::register_embedded_models;
+
+    #[test]
+    fn version_nonempty() {
+        let v = version();
+        assert!(!v.is_empty(), "ncnn version should not be empty");
+    }
+
+    #[test]
+    fn mat_2d_roundtrip() {
+        let data: Vec<f32> = (0..12).map(|i| i as f32).collect();
+        let mat = Mat::new_2d(4, 3, &data).unwrap();
+        assert_eq!(mat.w(), 4);
+        assert_eq!(mat.h(), 3);
+        let out = mat.float_data().unwrap();
+        assert_eq!(out.len(), 12);
+        assert_eq!(out, data);
+    }
+
+    #[test]
+    fn mat_3d_roundtrip() {
+        let data: Vec<f32> = (0..24).map(|i| i as f32).collect();
+        let mat = Mat::new_3d(4, 3, 2, &data).unwrap();
+        assert_eq!(mat.w(), 4);
+        assert_eq!(mat.h(), 3);
+        assert_eq!(mat.c(), 2);
+        let out = mat.float_data().unwrap();
+        assert_eq!(out.len(), 24);
+        assert_eq!(out, data);
+    }
+
+    #[test]
+    fn mat_empty_error() {
+        assert!(Mat::new_2d(1, 1, &[]).is_err());
+    }
+
+    #[test]
+    fn speaker_model_inference() {
+        register_embedded_models();
+
+        let net = crate::load_model(crate::ModelId::SPEAKER_ERES2NET).unwrap();
+
+        // Create dummy input: [T=100, 80] fbank features.
+        let t = 100;
+        let mels = 80;
+        let data = vec![0.0f32; t * mels];
+        let input = Mat::new_2d(mels as i32, t as i32, &data).unwrap();
+
+        let mut ex = net.extractor().unwrap();
+        ex.set_input("in0", &input).unwrap();
+        let output = ex.extract("out0").unwrap();
+
+        let embedding = output.float_data().unwrap();
+        // Speaker model should output 512-dim embedding.
+        assert_eq!(embedding.len(), 512, "expected 512-dim embedding, got {}", embedding.len());
+        // Not all zeros (model should produce some output even for zero input).
+        let nonzero = embedding.iter().any(|&v| v != 0.0);
+        assert!(nonzero, "embedding should not be all zeros");
+    }
+
+    #[test]
+    fn option_fp16_and_threads() {
+        let mut opt = NcnnOption::new().unwrap();
+        opt.set_fp16(false);
+        opt.set_num_threads(2);
+        // Just verify it doesn't crash.
+    }
+}
