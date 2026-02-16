@@ -38,6 +38,9 @@ bazel_dep(name = "rules_swift", version = "3.4.2")
 # Rust rules
 bazel_dep(name = "rules_rust", version = "0.68.1")
 
+# OpenERP (kv + blob storage crates)
+bazel_dep(name = "openerp", version = "0.0.1")
+
 # C/C++ rules (after apple_support for correct toolchain resolution)
 bazel_dep(name = "rules_cc", version = "0.2.16")
 
@@ -173,3 +176,11 @@ hos_sdk.sdk(
     install_components = ["OpenHarmony/toolchains:9"],
 )
 use_repo(hos_sdk, "hos_sdk")
+
+# ============================================================================
+# Local path overrides (development only, CI uses git_override)
+# ============================================================================
+local_path_override(
+    module_name = "openerp",
+    path = "../../openerp/main",
+)
