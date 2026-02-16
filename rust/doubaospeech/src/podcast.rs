@@ -246,6 +246,69 @@ impl PodcastService {
         Ok(session)
     }
 
+    /// Opens a non-SAMI podcast WebSocket stream session.
+    ///
+    /// This uses the V3 podcast endpoint (`/api/v3/tts/podcast`) with
+    /// query-param authentication, which is the older streaming method
+    /// before SAMI was introduced.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// let session = client.podcast().stream(&PodcastStreamRequest {
+    ///     text: "AI is changing our lives...".to_string(),
+    ///     speakers: vec![
+    ///         PodcastSpeaker { name: "host".to_string(), voice_type: "zh_male_dayixiansheng".to_string(), ..Default::default() },
+    ///         PodcastSpeaker { name: "guest".to_string(), voice_type: "zh_female_mizaitongxue".to_string(), ..Default::default() },
+    ///     ],
+    ///     ..Default::default()
+    /// }).await?;
+    ///
+    /// while let Some(result) = session.recv().await {
+    ///     let chunk = result?;
+    ///     // Process chunk.audio
+    ///     if chunk.is_last { break; }
+    /// }
+    /// ```
+    pub async fn stream(&self, req: &PodcastStreamRequest) -> Result<PodcastStreamSession> {
+        use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+
+        let auth = self.http.auth();
+
+        let mut endpoint = format!("{}/api/v3/tts/podcast?appid={}", self.http.ws_url(), auth.app_id);
+        if let Some(ref token) = auth.access_token {
+            endpoint.push_str(&format!("&token={}", token));
+        }
+        if let Some(ref cluster) = auth.cluster {
+            endpoint.push_str(&format!("&cluster={}", cluster));
+        }
+
+        let request = endpoint.into_client_request()
+            .map_err(|e| Error::Other(format!("build ws request: {}", e)))?;
+
+        let (ws_stream, _) = connect_async(request)
+            .await
+            .map_err(Error::WebSocket)?;
+
+        let (write, read) = ws_stream.split();
+
+        let session = PodcastStreamSession {
+            write: Arc::new(Mutex::new(write)),
+            read: Arc::new(Mutex::new(read)),
+            closed: Arc::new(AtomicBool::new(false)),
+        };
+
+        // Send the podcast request
+        let req_json = serde_json::to_vec(req)
+            .map_err(|e| Error::Other(format!("serialize request: {}", e)))?;
+        session.write.lock().await
+            .send(WsMessage::Text(String::from_utf8_lossy(&req_json).into_owned().into()))
+            .await
+            .map_err(Error::WebSocket)?;
+
+        Ok(session)
+    }
+
     /// Queries podcast task status.
     ///
     /// # Example
@@ -679,5 +742,117 @@ impl PodcastSAMISession {
         }
 
         Ok(Some(chunk))
+    }
+}
+
+// ================== Non-SAMI Podcast Stream Types ==================
+
+/// Podcast stream request (non-SAMI, V3 endpoint).
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PodcastStreamRequest {
+    /// Input text content.
+    pub text: String,
+    /// Speaker configurations.
+    pub speakers: Vec<PodcastSpeaker>,
+    /// Audio encoding format.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encoding: Option<AudioEncoding>,
+    /// Sample rate.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sample_rate: Option<SampleRate>,
+}
+
+/// Speaker configuration for podcast.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PodcastSpeaker {
+    /// Speaker name/role.
+    pub name: String,
+    /// Voice type.
+    pub voice_type: String,
+    /// Speed ratio.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speed_ratio: Option<f32>,
+    /// Volume ratio.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub volume_ratio: Option<f32>,
+}
+
+/// Non-SAMI podcast streaming chunk.
+#[derive(Debug, Clone, Default)]
+pub struct PodcastStreamChunk {
+    /// Audio data (binary).
+    pub audio: Vec<u8>,
+    /// Sequence number.
+    pub sequence: i32,
+    /// Whether this is the last chunk.
+    pub is_last: bool,
+}
+
+/// Non-SAMI podcast WebSocket streaming session.
+pub struct PodcastStreamSession {
+    write: Arc<Mutex<futures::stream::SplitSink<WsStream, WsMessage>>>,
+    read: Arc<Mutex<futures::stream::SplitStream<WsStream>>>,
+    closed: Arc<AtomicBool>,
+}
+
+impl PodcastStreamSession {
+    /// Receives the next audio chunk from the session.
+    ///
+    /// Returns `None` when the session is closed or the final chunk is received.
+    pub async fn recv(&self) -> Option<Result<PodcastStreamChunk>> {
+        loop {
+            if self.closed.load(Ordering::Relaxed) {
+                return None;
+            }
+
+            let msg = self.read.lock().await.next().await?;
+
+            match msg {
+                Ok(WsMessage::Binary(data)) => {
+                    // Binary audio data
+                    return Some(Ok(PodcastStreamChunk {
+                        audio: data.to_vec(),
+                        sequence: 0,
+                        is_last: false,
+                    }));
+                }
+                Ok(WsMessage::Text(text)) => {
+                    // JSON control message
+                    if let Ok(resp) = serde_json::from_str::<serde_json::Value>(&text) {
+                        let code = resp.get("code").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
+                        if code != 0 {
+                            let message = resp.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                            return Some(Err(Error::api(code, message, 200)));
+                        }
+
+                        let is_last = resp.get("is_last").and_then(|v| v.as_bool()).unwrap_or(false);
+                        if is_last {
+                            self.closed.store(true, Ordering::Relaxed);
+                            return Some(Ok(PodcastStreamChunk {
+                                audio: Vec::new(),
+                                sequence: -1,
+                                is_last: true,
+                            }));
+                        }
+                    }
+                    continue;
+                }
+                Ok(WsMessage::Close(_)) => {
+                    self.closed.store(true, Ordering::Relaxed);
+                    return None;
+                }
+                Ok(_) => continue,
+                Err(e) => return Some(Err(Error::WebSocket(e))),
+            }
+        }
+    }
+
+    /// Closes the session.
+    pub async fn close(&self) -> Result<()> {
+        if self.closed.swap(true, Ordering::Relaxed) {
+            return Ok(());
+        }
+        self.write.lock().await.close().await.map_err(Error::WebSocket)?;
+        Ok(())
     }
 }
