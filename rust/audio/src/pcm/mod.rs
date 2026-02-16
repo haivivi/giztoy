@@ -26,6 +26,7 @@
 
 mod format;
 mod chunk;
+pub mod io;
 mod mixer;
 mod atomic;
 
