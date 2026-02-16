@@ -1,0 +1,20 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "vecstore",
+    crate_name = "giztoy_vecstore",
+    srcs = glob(["src/**/*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crate_index//:rand",
+        "@crate_index//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "vecstore_test",
+    crate = ":vecstore",
+    deps = [
+        "@crate_index//:rand",
+    ],
+)

@@ -1,0 +1,10 @@
+[package]
+name = "giztoy-vecstore"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+rand = "0.8"
+thiserror = { workspace = true }
