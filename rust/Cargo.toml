@@ -24,6 +24,7 @@ members = [
     "vecid",
     "voiceprint",
     "ncnn",
+    "onnx",
 ]
 
 [workspace.package]
@@ -50,6 +51,7 @@ giztoy-chatgear = { path = "chatgear" }
 giztoy-luau = { path = "luau" }
 giztoy-luau-runtime = { path = "luau/runtime" }
 giztoy-ncnn = { path = "ncnn" }
+giztoy-onnx = { path = "onnx" }
 giztoy-vecid = { path = "vecid" }
 giztoy-voiceprint = { path = "voiceprint" }
 

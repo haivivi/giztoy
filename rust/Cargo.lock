@@ -1263,6 +1263,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "giztoy-onnx"
+version = "0.1.0"
+dependencies = [
+ "once_cell",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "giztoy-openai-realtime"
 version = "0.1.0"
 dependencies = [
