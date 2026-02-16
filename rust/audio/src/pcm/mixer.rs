@@ -4,9 +4,8 @@
 //! Each track can have independent gain (volume) control.
 
 use super::{AtomicF32, Chunk, Format, FormatExt};
-use std::collections::VecDeque;
 use std::io::{self, Read};
-use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
@@ -108,7 +107,7 @@ pub struct Mixer {
     silence_gap: Duration,
 
     state: Mutex<MixerState>,
-    notify: Condvar,
+    notify: Arc<Condvar>,
 
     // Mixing buffer (reused across reads)
     mix_buf: Mutex<Vec<f32>>,
@@ -139,7 +138,7 @@ impl Mixer {
                 close_write: false,
                 running_silence: initial_silence,
             }),
-            notify: Condvar::new(),
+            notify: Arc::new(Condvar::new()),
             mix_buf: Mutex::new(Vec::new()),
             on_track_created: opts.on_track_created,
             on_track_closed: opts.on_track_closed,
@@ -374,40 +373,40 @@ impl Mixer {
 
         let initial_track_count = state.tracks.len();
 
-        // Try to read from all tracks
+        // Pull fixed-size chunk from each track using readFull.
+        // Each track's read_full pre-zeros the buffer and reads whatever
+        // is available, zero-filling the rest. This ensures all tracks
+        // contribute to every mixer read with proper frame alignment.
         state.tracks.retain(|track| {
-            if track.is_closed() {
-                return false; // Remove closed tracks
-            }
+            // Zero the track buffer before readFull
+            track_buf.fill(0);
 
-            let n = track.try_read(&mut track_buf);
+            let (n, _done) = track.read_full(&mut track_buf);
             if n > 0 {
                 has_data = true;
                 let gain = track.gain.load(Ordering::Relaxed);
 
-                // Mix this track's audio into the buffer
+                // Mix this track's audio into the buffer.
+                // n is always bytes_needed because read_full returns
+                // the full buffer size (with zero-fill for missing data).
                 let sample_count = n / 2;
                 for i in 0..sample_count.min(mix_buf.len()) {
                     let sample =
                         i16::from_le_bytes([track_buf[i * 2], track_buf[i * 2 + 1]]);
                     if sample != 0 {
-                        // Convert int16 to float32 in range [-1.0, 1.0]
                         let s = if sample >= 0 {
                             sample as f32 / 32767.0
                         } else {
                             sample as f32 / 32768.0
                         };
-                        // Apply track gain
                         let s = s * gain;
-                        // Track peak amplitude
                         peak = peak.max(s.abs());
-                        // Accumulate into mixing buffer
                         mix_buf[i] += s;
                     }
                 }
             }
 
-            !track.is_done() // Keep track if not done
+            !track.is_done()
         });
 
         // Fire on_track_closed for each removed track
@@ -438,6 +437,9 @@ impl Read for &Mixer {
 }
 
 /// Internal track controller state.
+///
+/// Uses the `InternalTrack` from the track module, which provides
+/// independent ring buffers per input and readFull with zero-fill.
 struct TrackCtrlInner {
     mixer: Arc<Mixer>,
     label: Option<String>,
@@ -445,27 +447,29 @@ struct TrackCtrlInner {
     read_bytes: AtomicI64,
     fade_out_ms: AtomicI64,
 
-    buffer: Mutex<TrackBuffer>,
-    buffer_notify: Condvar, // Notifies when buffer space becomes available
-    closed: AtomicBool,
-    write_closed: AtomicBool,
-    error: Mutex<Option<String>>,
+    track: super::track::InternalTrack,
+    /// The current active ring buffer for writing.
+    current_rb: Mutex<Option<Arc<super::track::TrackRingBuf>>>,
 }
 
 impl TrackCtrlInner {
     fn new(mixer: Arc<Mixer>, label: Option<String>) -> Self {
-        let buffer_size = mixer.output.bytes_rate() as usize * 10; // 10 seconds
+        let notify = mixer.notify.clone();
+        let track = super::track::InternalTrack::new(notify.clone());
+
+        // Create the default input ring buffer (10 seconds capacity)
+        let buf_size = mixer.output.bytes_rate() as usize * 10;
+        let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
+        track.add_input(rb.clone());
+
         Self {
             mixer,
             label,
             gain: AtomicF32::new(1.0),
             read_bytes: AtomicI64::new(0),
             fade_out_ms: AtomicI64::new(0),
-            buffer: Mutex::new(TrackBuffer::new(buffer_size)),
-            buffer_notify: Condvar::new(),
-            closed: AtomicBool::new(false),
-            write_closed: AtomicBool::new(false),
-            error: Mutex::new(None),
+            track,
+            current_rb: Mutex::new(Some(rb)),
         }
     }
 
@@ -474,136 +478,59 @@ impl TrackCtrlInner {
             return Ok(0);
         }
 
-        if self.closed.load(Ordering::SeqCst) {
-            return Err(io::Error::new(io::ErrorKind::BrokenPipe, "track closed"));
-        }
+        let rb = self.current_rb.lock().unwrap();
+        let rb = rb.as_ref().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::BrokenPipe, "track write closed")
+        })?;
 
-        if self.write_closed.load(Ordering::SeqCst) {
-            return Err(io::Error::new(
-                io::ErrorKind::BrokenPipe,
-                "track write closed",
-            ));
-        }
-
-        let mut written = 0;
-        let mut remaining = data;
-
-        let mut buffer = self.buffer.lock().unwrap();
-
-        while !remaining.is_empty() {
-            // Try to write to buffer
-            let n = buffer.write(remaining);
-            if n > 0 {
-                written += n;
-                remaining = &remaining[n..];
-                // Notify mixer that data is available
-                self.mixer.notify_data_available();
-            }
-
-            if remaining.is_empty() {
-                break;
-            }
-
-            // Buffer full, wait for space to become available
-            // Use wait_timeout to periodically check for close signals
-            let (new_buffer, _timeout) = self
-                .buffer_notify
-                .wait_timeout(buffer, Duration::from_millis(100))
-                .unwrap();
-            buffer = new_buffer;
-
-            // Check if we should stop
-            if self.closed.load(Ordering::SeqCst) {
-                return Err(io::Error::new(io::ErrorKind::BrokenPipe, "track closed"));
-            }
-
-            if self.write_closed.load(Ordering::SeqCst) {
-                return Err(io::Error::new(
-                    io::ErrorKind::BrokenPipe,
-                    "track write closed",
-                ));
-            }
-        }
-
-        Ok(written)
+        rb.write(data).map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
     }
 
-    /// Try to read data from the buffer (non-blocking).
-    fn try_read(&self, buf: &mut [u8]) -> usize {
-        let mut buffer = self.buffer.lock().unwrap();
-        let n = buffer.read(buf);
+    /// Creates a new input with its own ring buffer.
+    /// Closes the previous input and returns the new ring buffer.
+    fn new_input(&self, format: Format) -> Arc<super::track::TrackRingBuf> {
+        let buf_size = format.bytes_rate() as usize * 10;
+        let notify = self.mixer.notify.clone();
+        let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
+
+        // Close the previous input
+        {
+            let mut current = self.current_rb.lock().unwrap();
+            if let Some(old_rb) = current.take() {
+                old_rb.close_write();
+            }
+            *current = Some(rb.clone());
+        }
+
+        self.track.add_input(rb.clone());
+        rb
+    }
+
+    /// Reads a full chunk using readFull semantics (zero-fill).
+    fn read_full(&self, buf: &mut [u8]) -> (usize, bool) {
+        let (n, done) = self.track.read_full(buf);
         if n > 0 {
             self.read_bytes.fetch_add(n as i64, Ordering::Relaxed);
-            // Notify writers that buffer space is available
-            self.buffer_notify.notify_one();
         }
-        n
-    }
-
-    fn is_closed(&self) -> bool {
-        self.closed.load(Ordering::SeqCst)
+        (n, done)
     }
 
     fn is_done(&self) -> bool {
-        if self.closed.load(Ordering::SeqCst) {
-            return true;
-        }
-        // Done if write is closed and buffer is empty
-        if self.write_closed.load(Ordering::SeqCst) {
-            let buffer = self.buffer.lock().unwrap();
-            if buffer.is_empty() {
-                return true;
-            }
-        }
-        false
+        self.track.is_done()
     }
 
     fn close_write(&self) {
-        self.write_closed.store(true, Ordering::SeqCst);
-        self.buffer_notify.notify_all(); // Wake up any waiting writers
-        self.mixer.notify_data_available();
+        {
+            let rb = self.current_rb.lock().unwrap();
+            if let Some(ref rb) = *rb {
+                rb.close_write();
+            }
+        }
+        self.track.close_write();
     }
 
     fn close_with_error(&self, err: String) {
-        *self.error.lock().unwrap() = Some(err);
-        self.closed.store(true, Ordering::SeqCst);
-        self.write_closed.store(true, Ordering::SeqCst);
-        self.buffer_notify.notify_all(); // Wake up any waiting writers
-        self.mixer.notify_data_available();
-    }
-}
-
-/// Ring buffer for track audio data.
-struct TrackBuffer {
-    data: VecDeque<u8>,
-    capacity: usize,
-}
-
-impl TrackBuffer {
-    fn new(capacity: usize) -> Self {
-        Self {
-            data: VecDeque::with_capacity(capacity),
-            capacity,
-        }
-    }
-
-    fn write(&mut self, data: &[u8]) -> usize {
-        let available = self.capacity - self.data.len();
-        let to_write = data.len().min(available);
-        self.data.extend(&data[..to_write]);
-        to_write
-    }
-
-    fn read(&mut self, buf: &mut [u8]) -> usize {
-        let to_read = buf.len().min(self.data.len());
-        for (i, byte) in self.data.drain(..to_read).enumerate() {
-            buf[i] = byte;
-        }
-        to_read
-    }
-
-    fn is_empty(&self) -> bool {
-        self.data.is_empty()
+        self.track.close_with_error(err);
     }
 }
 
@@ -616,11 +543,13 @@ impl Track {
     /// Creates a `TrackWriter` that accepts audio in a different format
     /// and auto-resamples to the mixer's output format.
     ///
+    /// Each call creates a new input with its own independent ring buffer.
+    /// The previous input is closed and will be drained by the mixer.
     /// If the input format matches the mixer's output format, no resampling occurs.
-    /// Each call with a new format closes the previous writer and creates a new one.
     pub fn input(&self, format: Format) -> TrackWriter {
+        let rb = self.inner.new_input(format);
         TrackWriter {
-            inner: self.inner.clone(),
+            rb,
             input_format: format,
             output_format: self.inner.mixer.output,
         }
@@ -645,12 +574,13 @@ impl Track {
     }
 }
 
-/// A format-aware writer for a track that auto-resamples if needed.
+/// A format-aware writer for a track with its own independent ring buffer.
 ///
-/// Created by `Track::input(format)`. If the input format differs from
-/// the mixer's output format, data is resampled using the `resampler` module.
+/// Created by `Track::input(format)`. Each TrackWriter has its own ring buffer,
+/// so multiple writers don't block each other. If the input format differs from
+/// the mixer's output format, data is resampled before writing.
 pub struct TrackWriter {
-    inner: Arc<TrackCtrlInner>,
+    rb: Arc<super::track::TrackRingBuf>,
     input_format: Format,
     output_format: Format,
 }
@@ -664,10 +594,11 @@ impl TrackWriter {
     /// Writes raw PCM bytes in the input format.
     ///
     /// If resampling is needed, the data is resampled to the mixer's output
-    /// format before being written to the track's ring buffer.
+    /// format before being written to this writer's ring buffer.
     pub fn write_bytes(&self, data: &[u8]) -> io::Result<usize> {
         if self.input_format == self.output_format {
-            return self.inner.write(data);
+            return self.rb.write(data)
+                .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e));
         }
 
         // Resample: convert input samples to output sample rate
@@ -681,9 +612,8 @@ impl TrackWriter {
             .collect();
 
         let out_len = (in_samples.len() as f64 * ratio).ceil() as usize;
-        let mut out_samples = Vec::with_capacity(out_len);
+        let mut out_bytes = Vec::with_capacity(out_len * 2);
 
-        // Linear interpolation resampling
         for i in 0..out_len {
             let src_pos = i as f64 / ratio;
             let src_idx = src_pos as usize;
@@ -698,15 +628,16 @@ impl TrackWriter {
             } else {
                 0
             };
-            out_samples.push(sample);
+            out_bytes.extend_from_slice(&sample.to_le_bytes());
         }
 
-        let mut out_bytes = Vec::with_capacity(out_samples.len() * 2);
-        for s in &out_samples {
-            out_bytes.extend_from_slice(&s.to_le_bytes());
-        }
+        self.rb.write(&out_bytes)
+            .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
+    }
 
-        self.inner.write(&out_bytes)
+    /// Closes writing to this input.
+    pub fn close_write(&self) {
+        self.rb.close_write();
     }
 }
 
@@ -795,7 +726,6 @@ impl TrackCtrl {
         if fade_ms > 0 {
             let inner = self.inner.clone();
             std::thread::spawn(move || {
-                // Fade out
                 let from = inner.gain.load(Ordering::Relaxed);
                 let steps = (fade_ms / 10) as usize;
                 for i in 0..steps {
@@ -803,15 +733,11 @@ impl TrackCtrl {
                     let progress = i as f32 / steps as f32;
                     inner.gain.store(from * (1.0 - progress), Ordering::Relaxed);
                 }
-                inner.closed.store(true, Ordering::SeqCst);
-                inner.write_closed.store(true, Ordering::SeqCst);
-                inner.mixer.notify_data_available();
+                inner.close_with_error("track closed".to_string());
             });
             self.inner.close_write();
         } else {
-            self.inner.closed.store(true, Ordering::SeqCst);
-            self.inner.write_closed.store(true, Ordering::SeqCst);
-            self.inner.mixer.notify_data_available();
+            self.inner.close_with_error("track closed".to_string());
         }
     }
 
@@ -822,7 +748,6 @@ impl TrackCtrl {
             let inner = self.inner.clone();
             let err_msg = err.to_string();
             std::thread::spawn(move || {
-                // Fade out
                 let from = inner.gain.load(Ordering::Relaxed);
                 let steps = (fade_ms / 10) as usize;
                 for i in 0..steps {
@@ -964,22 +889,7 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_track_buffer() {
-        let mut buf = TrackBuffer::new(100);
-
-        // Write data
-        let data = [1u8, 2, 3, 4, 5];
-        assert_eq!(buf.write(&data), 5);
-
-        // Read data
-        let mut out = [0u8; 5];
-        assert_eq!(buf.read(&mut out), 5);
-        assert_eq!(out, data);
-
-        // Buffer should be empty
-        assert!(buf.is_empty());
-    }
+    // TrackBuffer test removed — ring buffer tests are in track.rs
 
     #[test]
     fn test_mixer_concurrent_write() {

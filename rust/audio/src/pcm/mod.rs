@@ -29,6 +29,7 @@ mod chunk;
 pub mod io;
 mod mixer;
 mod atomic;
+pub(crate) mod track;
 
 pub use format::{Format, FormatExt};
 pub use chunk::{Chunk, DataChunk, SilenceChunk};
