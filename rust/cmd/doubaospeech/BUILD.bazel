@@ -8,7 +8,6 @@ rust_binary(
     srcs = glob(["src/**/*.rs"]),
     aliases = aliases(),
     deps = [
-        "//rust/cli:giztoy_cli",
         "//rust/doubaospeech:giztoy_doubaospeech",
     ] + all_crate_deps(normal = True),
 )

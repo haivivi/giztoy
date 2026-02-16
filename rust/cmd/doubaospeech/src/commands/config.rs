@@ -4,7 +4,7 @@
 
 use clap::{Args, Subcommand};
 
-use giztoy_cli::config::{mask_api_key, Context as CliContext};
+use super::cli_config::{mask_api_key, Context as CliContext};
 
 use super::{get_config, print_success};
 use crate::Cli;

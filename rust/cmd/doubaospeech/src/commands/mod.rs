@@ -1,5 +1,6 @@
 //! CLI commands module.
 
+pub(crate) mod cli_config;
 mod asr;
 mod config;
 mod media;

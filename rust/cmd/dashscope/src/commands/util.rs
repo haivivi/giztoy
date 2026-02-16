@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use giztoy_cli::config::{load_config, Config, Context};
+use super::cli_config::{load_config, Config, Context};
 use giztoy_dashscope::Client;
 
 use crate::Cli;

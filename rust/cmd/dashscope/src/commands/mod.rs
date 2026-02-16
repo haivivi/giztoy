@@ -1,5 +1,6 @@
 //! CLI commands module.
 
+pub(crate) mod cli_config;
 mod config;
 mod omni;
 mod util;
