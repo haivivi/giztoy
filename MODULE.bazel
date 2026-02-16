@@ -182,9 +182,12 @@ hos_sdk.sdk(
 use_repo(hos_sdk, "hos_sdk")
 
 # ============================================================================
-# Local path overrides (development only, CI uses git_override)
+# OpenERP module override
+# CI: fetch from GitHub at pinned commit.
+# Local dev: override with --override_module=openerp=../../openerp/main
 # ============================================================================
-local_path_override(
+git_override(
     module_name = "openerp",
-    path = "../../openerp/main",
+    remote = "https://github.com/haivivi/openerp.git",
+    commit = "03685b38c58ec20164055dd551ffa3bdcad28f7b",
 )
