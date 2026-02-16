@@ -190,9 +190,44 @@ pub fn int16_to_bytes(samples: &[i16]) -> Vec<u8> {
     data
 }
 
+/// Generates a chord with piano-like sound by mixing multiple frequencies.
+///
+/// Each frequency is rendered as a rich note and mixed together with
+/// soft clipping to prevent overflow.
+pub fn generate_chord(freqs: &[f64], samples: usize, sample_rate: u32, volume: f64) -> Vec<i16> {
+    let mut data = vec![0i16; samples];
+    if freqs.is_empty() {
+        return data;
+    }
+
+    // Filter out rests
+    let active_freqs: Vec<f64> = freqs.iter().copied().filter(|&f| f != REST).collect();
+    if active_freqs.is_empty() {
+        return data;
+    }
+
+    // Scale volume per voice to prevent clipping
+    let voice_volume = volume / (active_freqs.len() as f64).sqrt();
+
+    for freq in &active_freqs {
+        let note_data = generate_rich_note(*freq, samples, sample_rate, voice_volume);
+        for i in 0..data.len() {
+            let mixed = data[i] as f64 + note_data[i] as f64;
+            data[i] = (clamp(mixed / 32767.0, -1.0, 1.0) * 32767.0) as i16;
+        }
+    }
+
+    data
+}
+
 /// Calculates the number of samples for a given duration in ms.
 pub fn duration_samples(dur_ms: i32, sample_rate: u32) -> usize {
     (sample_rate as usize * dur_ms as usize) / 1000
+}
+
+/// Calculates the number of samples for a given duration using a pcm Format.
+pub fn duration_samples_format(dur_ms: i32, format: Format) -> usize {
+    (format.sample_rate() as usize * dur_ms as usize) / 1000
 }
 
 /// Returns the total duration of a melody in milliseconds.
