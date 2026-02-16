@@ -26,7 +26,6 @@
 //! ```
 
 pub mod codec;
-pub mod opusrt;
 pub mod pcm;
 pub mod resampler;
 pub mod songs;
