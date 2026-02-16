@@ -293,6 +293,34 @@ impl Broker {
         }
     }
 
+    /// Handles a single connection.
+    ///
+    /// This is useful for custom listeners or testing where you
+    /// provide your own transport layer instead of using `serve()`.
+    pub async fn serve_conn(&self, stream: TcpStream) -> Result<()> {
+        let addr = stream.peer_addr().unwrap_or_else(|_| {
+            "0.0.0.0:0".parse().unwrap()
+        });
+
+        let ctx = BrokerContext {
+            authenticator: Arc::clone(&self.authenticator),
+            handler: self.handler.clone(),
+            on_connect: self.on_connect.clone(),
+            on_disconnect: self.on_disconnect.clone(),
+            subscriptions: Arc::clone(&self.subscriptions),
+            clients: Arc::clone(&self.clients),
+            client_subscriptions: Arc::clone(&self.client_subscriptions),
+            shared_trie: Arc::clone(&self.shared_trie),
+            max_packet_size: self.config.max_packet_size,
+            sys_events_enabled: self.config.sys_events_enabled,
+            max_topic_alias: self.config.max_topic_alias,
+            max_topic_length: self.config.max_topic_length,
+            max_subscriptions_per_client: self.config.max_subscriptions_per_client,
+        };
+
+        ctx.handle_connection(stream, addr).await
+    }
+
     /// Publish a message from the broker.
     pub fn publish(&self, topic: &str, payload: &[u8]) -> Result<()> {
         let msg = Message::new(topic, Bytes::copy_from_slice(payload));
