@@ -129,6 +129,7 @@ crate.from_cargo(
         "//rust/luau:Cargo.toml",
         "//rust/cmd/dashscope:Cargo.toml",
         "//rust/cmd/minimax:Cargo.toml",
+        "//rust/ncnn:Cargo.toml",
         "//rust/vecid:Cargo.toml",
         "//rust/voiceprint:Cargo.toml",
         "//examples/rust/audio:Cargo.toml",

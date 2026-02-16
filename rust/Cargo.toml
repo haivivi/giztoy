@@ -23,6 +23,7 @@ members = [
     "cmd/luau",
     "vecid",
     "voiceprint",
+    "ncnn",
 ]
 
 [workspace.package]
@@ -48,6 +49,7 @@ giztoy-trie = { path = "trie" }
 giztoy-chatgear = { path = "chatgear" }
 giztoy-luau = { path = "luau" }
 giztoy-luau-runtime = { path = "luau/runtime" }
+giztoy-ncnn = { path = "ncnn" }
 giztoy-vecid = { path = "vecid" }
 giztoy-voiceprint = { path = "voiceprint" }
 

@@ -1,0 +1,24 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "giztoy_ncnn",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "giztoy_ncnn",
+    deps = [
+        "@ncnn",
+        "@crate_index//:thiserror",
+        "@crate_index//:once_cell",
+    ],
+)
+
+rust_test(
+    name = "giztoy_ncnn_test",
+    crate = ":giztoy_ncnn",
+    data = [
+        "//data/models/ncnn:speaker_eres2net",
+        "//data/models/ncnn:vad_silero",
+        "//data/models/ncnn:denoise_nsnet2",
+    ],
+)
