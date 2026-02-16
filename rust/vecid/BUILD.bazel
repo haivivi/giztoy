@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -14,4 +14,14 @@ rust_library(
 rust_test(
     name = "giztoy_vecid_test",
     crate = ":giztoy_vecid",
+)
+
+rust_binary(
+    name = "bench",
+    srcs = ["benches/vecid_bench.rs"],
+    deps = [
+        ":giztoy_vecid",
+        "@crate_index//:criterion",
+    ],
+    tags = ["manual"],
 )

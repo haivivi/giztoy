@@ -11,3 +11,10 @@ thiserror = { workspace = true }
 giztoy-ncnn = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "voiceprint_bench"
+harness = false

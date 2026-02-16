@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -43,4 +43,14 @@ rust_test(
     name = "giztoy_ncnn_test",
     crate = ":giztoy_ncnn",
     data = ["//testdata/compat/inference:reference_data"],
+)
+
+rust_binary(
+    name = "bench",
+    srcs = ["benches/ncnn_bench.rs"],
+    deps = [
+        ":giztoy_ncnn",
+        "@crate_index//:criterion",
+    ],
+    tags = ["manual"],
 )

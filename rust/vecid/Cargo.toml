@@ -8,3 +8,10 @@ description = "Stable vector ID assignment via online nearest-centroid matching 
 
 [dependencies]
 thiserror = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "vecid_bench"
+harness = false

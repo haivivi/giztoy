@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,4 +26,15 @@ rust_library(
 rust_test(
     name = "giztoy_voiceprint_test",
     crate = ":giztoy_voiceprint",
+)
+
+rust_binary(
+    name = "bench",
+    srcs = ["benches/voiceprint_bench.rs"],
+    deps = [
+        ":giztoy_voiceprint",
+        "//rust/ncnn:giztoy_ncnn",
+        "@crate_index//:criterion",
+    ],
+    tags = ["manual"],
 )
