@@ -24,3 +24,24 @@ alias(
     name = "giztoy_cli",
     actual = "//rust/cli:giztoy_cli",
 )
+
+# Phase B: inference + voiceprint
+alias(
+    name = "giztoy_ncnn",
+    actual = "//rust/ncnn:giztoy_ncnn",
+)
+
+alias(
+    name = "giztoy_onnx",
+    actual = "//rust/onnx:giztoy_onnx",
+)
+
+alias(
+    name = "giztoy_voiceprint",
+    actual = "//rust/voiceprint:giztoy_voiceprint",
+)
+
+alias(
+    name = "giztoy_vecid",
+    actual = "//rust/vecid:giztoy_vecid",
+)
