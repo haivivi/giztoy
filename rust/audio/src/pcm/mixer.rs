@@ -10,13 +10,19 @@ use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
+/// Callback type for mixer events.
+type MixerCallback = Arc<dyn Fn() + Send + Sync>;
+
 /// Options for configuring a Mixer.
-#[derive(Debug, Clone)]
 pub struct MixerOptions {
     /// Automatically close writing when all tracks are removed.
     pub auto_close: bool,
     /// Duration of silence after which the mixer will close (0 = disabled).
     pub silence_gap: Duration,
+    /// Called when a new track is created.
+    on_track_created: Option<MixerCallback>,
+    /// Called when a track is closed/removed.
+    on_track_closed: Option<MixerCallback>,
 }
 
 impl Default for MixerOptions {
@@ -24,7 +30,20 @@ impl Default for MixerOptions {
         Self {
             auto_close: false,
             silence_gap: Duration::ZERO,
+            on_track_created: None,
+            on_track_closed: None,
         }
+    }
+}
+
+impl std::fmt::Debug for MixerOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MixerOptions")
+            .field("auto_close", &self.auto_close)
+            .field("silence_gap", &self.silence_gap)
+            .field("on_track_created", &self.on_track_created.is_some())
+            .field("on_track_closed", &self.on_track_closed.is_some())
+            .finish()
     }
 }
 
@@ -38,6 +57,18 @@ impl MixerOptions {
     /// Sets the silence gap duration.
     pub fn with_silence_gap(mut self, gap: Duration) -> Self {
         self.silence_gap = gap;
+        self
+    }
+
+    /// Sets a callback that fires when a new track is created.
+    pub fn with_on_track_created(mut self, f: impl Fn() + Send + Sync + 'static) -> Self {
+        self.on_track_created = Some(Arc::new(f));
+        self
+    }
+
+    /// Sets a callback that fires when a track is closed/removed.
+    pub fn with_on_track_closed(mut self, f: impl Fn() + Send + Sync + 'static) -> Self {
+        self.on_track_closed = Some(Arc::new(f));
         self
     }
 }
@@ -81,6 +112,10 @@ pub struct Mixer {
 
     // Mixing buffer (reused across reads)
     mix_buf: Mutex<Vec<f32>>,
+
+    // Callbacks
+    on_track_created: Option<MixerCallback>,
+    on_track_closed: Option<MixerCallback>,
 }
 
 impl Mixer {
@@ -106,6 +141,8 @@ impl Mixer {
             }),
             notify: Condvar::new(),
             mix_buf: Mutex::new(Vec::new()),
+            on_track_created: opts.on_track_created,
+            on_track_closed: opts.on_track_closed,
         })
     }
 
@@ -142,6 +179,12 @@ impl Mixer {
 
         // Notify readers that a new track is available
         self.notify.notify_all();
+
+        // Fire on_track_created callback (outside the lock scope by dropping state first)
+        drop(state);
+        if let Some(ref cb) = self.on_track_created {
+            cb();
+        }
 
         Ok((
             Track {
@@ -329,6 +372,8 @@ impl Mixer {
         let bytes_needed = mix_buf.len() * 2;
         let mut track_buf = vec![0u8; bytes_needed];
 
+        let initial_track_count = state.tracks.len();
+
         // Try to read from all tracks
         state.tracks.retain(|track| {
             if track.is_closed() {
@@ -364,6 +409,16 @@ impl Mixer {
 
             !track.is_done() // Keep track if not done
         });
+
+        // Fire on_track_closed for each removed track
+        let removed = initial_track_count - state.tracks.len();
+        if removed > 0 {
+            if let Some(ref cb) = self.on_track_closed {
+                for _ in 0..removed {
+                    cb();
+                }
+            }
+        }
 
         (peak, has_data, false, false)
     }
