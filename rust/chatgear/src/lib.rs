@@ -24,6 +24,7 @@ mod state;
 mod command;
 mod stats;
 mod conn;
+pub mod logger;
 mod port;
 pub mod conn_pipe;
 mod client_port;
