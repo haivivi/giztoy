@@ -5,7 +5,7 @@
 use crate::{
     ConnectedCellular, ConnectedWifi, DownlinkTx, GearStateEvent, GearStatsChanges,
     GearStatsEvent, PortError, ReadNFCTag, ServerPortRx, ServerPortTx, SessionCommand,
-    SessionCommandEvent, StoredWifiList, UplinkRx, OTA,
+    SessionCommandEvent, StampedOpusFrame, StoredWifiList, UplinkRx, OTA,
     DeleteWifi, Halt, Raise, Reset, SetBrightness, SetLightMode, SetVolume, SetWifi,
 };
 use serde::Serialize;
@@ -23,8 +23,8 @@ pub struct ServerPort<T: DownlinkTx> {
     cancel: CancellationToken,
 
     // Input - audio from device
-    opus_frames_rx: Arc<Mutex<mpsc::Receiver<Vec<u8>>>>,
-    opus_frames_tx: mpsc::Sender<Vec<u8>>,
+    opus_frames_rx: Arc<Mutex<mpsc::Receiver<StampedOpusFrame>>>,
+    opus_frames_tx: mpsc::Sender<StampedOpusFrame>,
 
     // Stats & State
     gear_stats: Arc<RwLock<Option<GearStatsEvent>>>,
@@ -67,7 +67,7 @@ impl<T: DownlinkTx + 'static> ServerPort<T> {
     }
 
     /// Returns the opus frames receiver.
-    pub fn opus_frames_receiver(&self) -> Arc<Mutex<mpsc::Receiver<Vec<u8>>>> {
+    pub fn opus_frames_receiver(&self) -> Arc<Mutex<mpsc::Receiver<StampedOpusFrame>>> {
         self.opus_frames_rx.clone()
     }
 
@@ -82,8 +82,8 @@ impl<T: DownlinkTx + 'static> ServerPort<T> {
     }
 
     /// Handles incoming opus frames from the device.
-    pub async fn handle_opus_frames(&self, stamped_frame: Vec<u8>) {
-        if let Err(e) = self.opus_frames_tx.send(stamped_frame).await {
+    pub async fn handle_opus_frame(&self, frame: StampedOpusFrame) {
+        if let Err(e) = self.opus_frames_tx.send(frame).await {
             warn!("failed to buffer opus frame: {}", e);
         }
     }
@@ -348,7 +348,7 @@ impl<T: DownlinkTx + 'static> ServerPortTx for ServerPort<T> {
 
 #[async_trait]
 impl<T: DownlinkTx + 'static> ServerPortRx for ServerPort<T> {
-    async fn recv_opus_frame(&self) -> Option<Vec<u8>> {
+    async fn recv_opus_frame(&self) -> Option<StampedOpusFrame> {
         self.opus_frames_rx.lock().await.recv().await
     }
 

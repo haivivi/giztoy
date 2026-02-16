@@ -5,7 +5,7 @@
 
 use crate::{
     ConnError, DownlinkRx, DownlinkTx, GearStateEvent, GearStatsEvent, SessionCommandEvent,
-    UplinkRx, UplinkTx,
+    StampedOpusFrame, UplinkRx, UplinkTx,
 };
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -15,12 +15,12 @@ use tokio::sync::{mpsc, Mutex, RwLock};
 /// This is useful for testing and in-process communication.
 pub fn new_pipe() -> (PipeServerConn, PipeClientConn) {
     // Uplink channels (client -> server)
-    let (uplink_opus_tx, uplink_opus_rx) = mpsc::channel(1024);
+    let (uplink_opus_tx, uplink_opus_rx) = mpsc::channel::<StampedOpusFrame>(1024);
     let (uplink_states_tx, uplink_states_rx) = mpsc::channel(32);
     let (uplink_stats_tx, uplink_stats_rx) = mpsc::channel(32);
 
     // Downlink channels (server -> client)
-    let (downlink_opus_tx, downlink_opus_rx) = mpsc::channel(1024);
+    let (downlink_opus_tx, downlink_opus_rx) = mpsc::channel::<StampedOpusFrame>(1024);
     let (downlink_cmds_tx, downlink_cmds_rx) = mpsc::channel(32);
 
     // Shared error state
@@ -33,6 +33,7 @@ pub fn new_pipe() -> (PipeServerConn, PipeClientConn) {
         downlink_opus: downlink_opus_tx,
         downlink_cmds: downlink_cmds_tx,
         shared: shared.clone(),
+        latest_stats: Arc::new(Mutex::new(None)),
         closed: Arc::new(Mutex::new(false)),
     };
 
@@ -60,21 +61,22 @@ struct PipeSharedState {
 /// Implements UplinkRx (receive from client) and DownlinkTx (send to client).
 pub struct PipeServerConn {
     // Uplink channels (receive from client)
-    uplink_opus: Arc<Mutex<mpsc::Receiver<Vec<u8>>>>,
+    uplink_opus: Arc<Mutex<mpsc::Receiver<StampedOpusFrame>>>,
     uplink_states: Arc<Mutex<mpsc::Receiver<GearStateEvent>>>,
     uplink_stats: Arc<Mutex<mpsc::Receiver<GearStatsEvent>>>,
 
     // Downlink channels (send to client)
-    downlink_opus: mpsc::Sender<Vec<u8>>,
+    downlink_opus: mpsc::Sender<StampedOpusFrame>,
     downlink_cmds: mpsc::Sender<SessionCommandEvent>,
 
     shared: Arc<RwLock<PipeSharedState>>,
+    latest_stats: Arc<Mutex<Option<GearStatsEvent>>>,
     closed: Arc<Mutex<bool>>,
 }
 
 impl PipeServerConn {
     /// Returns the uplink opus receiver for direct access.
-    pub fn uplink_opus(&self) -> Arc<Mutex<mpsc::Receiver<Vec<u8>>>> {
+    pub fn uplink_opus(&self) -> Arc<Mutex<mpsc::Receiver<StampedOpusFrame>>> {
         self.uplink_opus.clone()
     }
 
@@ -106,7 +108,7 @@ impl PipeServerConn {
 
 #[async_trait]
 impl UplinkRx for PipeServerConn {
-    async fn recv_opus_frame(&self) -> Result<Option<Vec<u8>>, ConnError> {
+    async fn recv_opus_frame(&self) -> Result<Option<StampedOpusFrame>, ConnError> {
         let mut rx = self.uplink_opus.lock().await;
         match rx.recv().await {
             Some(frame) => Ok(Some(frame)),
@@ -139,7 +141,10 @@ impl UplinkRx for PipeServerConn {
     async fn recv_stats(&self) -> Result<Option<GearStatsEvent>, ConnError> {
         let mut rx = self.uplink_stats.lock().await;
         match rx.recv().await {
-            Some(stats) => Ok(Some(stats)),
+            Some(stats) => {
+                *self.latest_stats.lock().await = Some(stats.clone());
+                Ok(Some(stats))
+            }
             None => {
                 let shared = self.shared.read().await;
                 if let Some(ref err) = shared.client_err {
@@ -151,6 +156,10 @@ impl UplinkRx for PipeServerConn {
         }
     }
 
+    async fn latest_stats(&self) -> Option<GearStatsEvent> {
+        self.latest_stats.lock().await.clone()
+    }
+
     async fn close(&self) -> Result<(), ConnError> {
         self.close_with_error(None).await
     }
@@ -158,9 +167,9 @@ impl UplinkRx for PipeServerConn {
 
 #[async_trait]
 impl DownlinkTx for PipeServerConn {
-    async fn send_opus_frames(&self, stamped_frame: &[u8]) -> Result<(), ConnError> {
+    async fn send_opus_frame(&self, frame: &StampedOpusFrame) -> Result<(), ConnError> {
         self.downlink_opus
-            .send(stamped_frame.to_vec())
+            .send(frame.clone())
             .await
             .map_err(|e| ConnError::SendFailed(e.to_string()))
     }
@@ -181,12 +190,12 @@ impl DownlinkTx for PipeServerConn {
 /// Implements UplinkTx (send to server) and DownlinkRx (receive from server).
 pub struct PipeClientConn {
     // Uplink channels (send to server)
-    uplink_opus: mpsc::Sender<Vec<u8>>,
+    uplink_opus: mpsc::Sender<StampedOpusFrame>,
     uplink_states: mpsc::Sender<GearStateEvent>,
     uplink_stats: mpsc::Sender<GearStatsEvent>,
 
     // Downlink channels (receive from server)
-    downlink_opus: Arc<Mutex<mpsc::Receiver<Vec<u8>>>>,
+    downlink_opus: Arc<Mutex<mpsc::Receiver<StampedOpusFrame>>>,
     downlink_cmds: Arc<Mutex<mpsc::Receiver<SessionCommandEvent>>>,
 
     shared: Arc<RwLock<PipeSharedState>>,
@@ -195,7 +204,7 @@ pub struct PipeClientConn {
 
 impl PipeClientConn {
     /// Returns the downlink opus receiver for direct access.
-    pub fn downlink_opus(&self) -> Arc<Mutex<mpsc::Receiver<Vec<u8>>>> {
+    pub fn downlink_opus(&self) -> Arc<Mutex<mpsc::Receiver<StampedOpusFrame>>> {
         self.downlink_opus.clone()
     }
 
@@ -222,9 +231,9 @@ impl PipeClientConn {
 
 #[async_trait]
 impl UplinkTx for PipeClientConn {
-    async fn send_opus_frames(&self, stamped_frame: &[u8]) -> Result<(), ConnError> {
+    async fn send_opus_frame(&self, frame: &StampedOpusFrame) -> Result<(), ConnError> {
         self.uplink_opus
-            .send(stamped_frame.to_vec())
+            .send(frame.clone())
             .await
             .map_err(|e| ConnError::SendFailed(e.to_string()))
     }
@@ -250,7 +259,7 @@ impl UplinkTx for PipeClientConn {
 
 #[async_trait]
 impl DownlinkRx for PipeClientConn {
-    async fn recv_opus_frame(&self) -> Result<Option<Vec<u8>>, ConnError> {
+    async fn recv_opus_frame(&self) -> Result<Option<StampedOpusFrame>, ConnError> {
         let mut rx = self.downlink_opus.lock().await;
         match rx.recv().await {
             Some(frame) => Ok(Some(frame)),
@@ -302,26 +311,26 @@ mod pipe_tests {
     async fn test_pipe_opus_client_to_server() {
         let (server, client) = new_pipe();
 
-        // Client sends opus frame
-        let frame = vec![0xFC, 0x01, 0x02, 0x03];
-        client.send_opus_frames(&frame).await.unwrap();
+        // Client sends stamped opus frame
+        let frame = StampedOpusFrame::now(vec![0xFC, 0x01, 0x02, 0x03]);
+        client.send_opus_frame(&frame).await.unwrap();
 
         // Server receives it
         let received = server.recv_opus_frame().await.unwrap().unwrap();
-        assert_eq!(received, frame);
+        assert_eq!(received.frame, frame.frame);
     }
 
     #[tokio::test]
     async fn test_pipe_opus_server_to_client() {
         let (server, client) = new_pipe();
 
-        // Server sends opus frame
-        let frame = vec![0xFC, 0x04, 0x05, 0x06];
-        server.send_opus_frames(&frame).await.unwrap();
+        // Server sends stamped opus frame
+        let frame = StampedOpusFrame::now(vec![0xFC, 0x04, 0x05, 0x06]);
+        server.send_opus_frame(&frame).await.unwrap();
 
         // Client receives it
         let received = client.recv_opus_frame().await.unwrap().unwrap();
-        assert_eq!(received, frame);
+        assert_eq!(received.frame, frame.frame);
     }
 
     #[tokio::test]
@@ -402,16 +411,16 @@ mod pipe_tests {
         let (server, client) = new_pipe();
 
         // Simultaneous communication
-        let client_frame = vec![0x01, 0x02];
-        let server_frame = vec![0x03, 0x04];
+        let client_frame = StampedOpusFrame::now(vec![0x01, 0x02]);
+        let server_frame = StampedOpusFrame::now(vec![0x03, 0x04]);
 
-        client.send_opus_frames(&client_frame).await.unwrap();
-        server.send_opus_frames(&server_frame).await.unwrap();
+        client.send_opus_frame(&client_frame).await.unwrap();
+        server.send_opus_frame(&server_frame).await.unwrap();
 
         let from_client = server.recv_opus_frame().await.unwrap().unwrap();
         let from_server = client.recv_opus_frame().await.unwrap().unwrap();
 
-        assert_eq!(from_client, client_frame);
-        assert_eq!(from_server, server_frame);
+        assert_eq!(from_client.frame, client_frame.frame);
+        assert_eq!(from_server.frame, server_frame.frame);
     }
 }

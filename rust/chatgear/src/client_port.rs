@@ -4,7 +4,7 @@
 
 use crate::{
     ClientPortRx, ClientPortTx, DownlinkRx, GearStateEvent, GearStatsEvent,
-    PortError, SessionCommandEvent, UplinkTx,
+    PortError, SessionCommandEvent, StampedOpusFrame, UplinkTx,
 };
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -18,8 +18,8 @@ pub struct ClientPort<T: UplinkTx> {
     cancel: CancellationToken,
 
     // Output - audio from server (ClientPortRx)
-    opus_frames_rx: Arc<Mutex<mpsc::Receiver<Vec<u8>>>>,
-    opus_frames_tx: mpsc::Sender<Vec<u8>>,
+    opus_frames_rx: Arc<Mutex<mpsc::Receiver<StampedOpusFrame>>>,
+    opus_frames_tx: mpsc::Sender<StampedOpusFrame>,
     commands_rx: Arc<Mutex<mpsc::Receiver<SessionCommandEvent>>>,
     commands_tx: mpsc::Sender<SessionCommandEvent>,
 
@@ -49,8 +49,8 @@ impl<T: UplinkTx + 'static> ClientPort<T> {
     }
 
     /// Handles incoming opus frames from the server.
-    pub async fn handle_opus_frames(&self, stamped_frame: Vec<u8>) {
-        if let Err(e) = self.opus_frames_tx.send(stamped_frame).await {
+    pub async fn handle_opus_frame(&self, frame: StampedOpusFrame) {
+        if let Err(e) = self.opus_frames_tx.send(frame).await {
             warn!("failed to buffer opus frame: {}", e);
         }
     }
@@ -134,9 +134,9 @@ impl<T: UplinkTx + 'static> ClientPort<T> {
 
 #[async_trait]
 impl<T: UplinkTx + 'static> ClientPortTx for ClientPort<T> {
-    async fn send_opus_frames(&self, stamped_frame: &[u8]) -> Result<(), PortError> {
+    async fn send_opus_frame(&self, frame: &StampedOpusFrame) -> Result<(), PortError> {
         self.tx
-            .send_opus_frames(stamped_frame)
+            .send_opus_frame(frame)
             .await
             .map_err(|e| PortError::SendFailed(e.to_string()))
     }
@@ -158,7 +158,7 @@ impl<T: UplinkTx + 'static> ClientPortTx for ClientPort<T> {
 
 #[async_trait]
 impl<T: UplinkTx + 'static> ClientPortRx for ClientPort<T> {
-    async fn recv_opus_frame(&self) -> Option<Vec<u8>> {
+    async fn recv_opus_frame(&self) -> Option<StampedOpusFrame> {
         self.opus_frames_rx.lock().await.recv().await
     }
 
@@ -205,11 +205,11 @@ mod client_port_tests {
         let (server, client) = new_pipe();
         let port = ClientPort::new(client);
 
-        let frame = vec![0x01, 0x02, 0x03];
-        port.send_opus_frames(&frame).await.unwrap();
+        let frame = StampedOpusFrame::now(vec![0x01, 0x02, 0x03]);
+        port.send_opus_frame(&frame).await.unwrap();
 
         let received = server.recv_opus_frame().await.unwrap().unwrap();
-        assert_eq!(received, frame);
+        assert_eq!(received.frame, frame.frame);
     }
 
     #[tokio::test]
