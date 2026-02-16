@@ -1313,6 +1313,8 @@ name = "giztoy-voiceprint"
 version = "0.1.0"
 dependencies = [
  "giztoy-ncnn",
+ "serde",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 
@@ -3710,9 +3712,9 @@ checksum = "dbc4bc3a9f746d862c45cb89d705aa10f187bb96c76001afab07a0d35ce60142"
 
 [[package]]
 name = "unicode-ident"
-version = "1.0.23"
+version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "537dd038a89878be9b64dd4bd1b260315c1bb94f4d784956b81e27a088d9a09e"
+checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
 
 [[package]]
 name = "unicode-segmentation"

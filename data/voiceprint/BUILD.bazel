@@ -1,0 +1,6 @@
+package(default_visibility = ["//visibility:public"])
+
+filegroup(
+    name = "planes_512_16",
+    srcs = ["planes_512_16.json"],
+)

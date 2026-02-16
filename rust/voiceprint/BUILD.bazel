@@ -2,12 +2,23 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 package(default_visibility = ["//visibility:public"])
 
+# Copy planes file into src/ for include_bytes!.
+genrule(
+    name = "embed_planes",
+    srcs = ["//data/voiceprint:planes_512_16"],
+    outs = ["src/planes_512_16.json"],
+    cmd = "cp $< $@",
+)
+
 rust_library(
     name = "giztoy_voiceprint",
     srcs = glob(["src/**/*.rs"]),
+    compile_data = [":embed_planes"],
     crate_name = "giztoy_voiceprint",
     deps = [
         "//rust/ncnn:giztoy_ncnn",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
         "@crate_index//:thiserror",
     ],
 )

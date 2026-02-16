@@ -1,6 +1,7 @@
 package voiceprint
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -156,6 +157,64 @@ func TestHasherAccessors(t *testing.T) {
 	}
 	if h.Dim() != 192 {
 		t.Errorf("Dim() = %d, want 192", h.Dim())
+	}
+}
+
+func TestHasherFromPlanesSameAsSeed(t *testing.T) {
+	// NewHasher(512, 16, 42) and NewHasherFromPlanes with the same planes
+	// must produce identical hashes.
+	seed := NewHasher(512, 16, 42)
+
+	planes := seed.Planes()
+	loaded := NewHasherFromPlanes(planes)
+
+	emb := make([]float32, 512)
+	for i := range emb {
+		emb[i] = float32(i) * 0.01
+	}
+
+	hash1 := seed.Hash(emb)
+	hash2 := loaded.Hash(emb)
+
+	if hash1 != hash2 {
+		t.Errorf("seed hash %q != planes hash %q", hash1, hash2)
+	}
+
+	// Reference hash from gen_planes.go.
+	if hash1 != "82A9" {
+		t.Errorf("expected reference hash 82A9, got %q", hash1)
+	}
+}
+
+func TestHasherFromJSON(t *testing.T) {
+	seed := NewHasher(512, 16, 42)
+	emb := make([]float32, 512)
+	for i := range emb {
+		emb[i] = float32(i) * 0.01
+	}
+	expectedHash := seed.Hash(emb)
+
+	// Marshal planes to JSON.
+	pf := PlanesFile{
+		Dim:    seed.Dim(),
+		Bits:   seed.Bits(),
+		Seed:   42,
+		Planes: seed.Planes(),
+	}
+	data, err := json.Marshal(pf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Load from JSON.
+	loaded, err := NewHasherFromJSON(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hash := loaded.Hash(emb)
+	if hash != expectedHash {
+		t.Errorf("JSON-loaded hash %q != expected %q", hash, expectedHash)
 	}
 }
 

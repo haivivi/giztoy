@@ -2,6 +2,8 @@ package voiceprint
 
 import (
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"math"
 	"math/rand/v2"
 )
@@ -71,6 +73,53 @@ func NewHasher(dim, bits int, seed uint64) *Hasher {
 	}
 	return &Hasher{dim: dim, bits: bits, planes: planes}
 }
+
+// PlanesFile is the JSON format for persisted hyperplane matrices.
+// Both Go and Rust load the same file to ensure cross-language hash consistency.
+type PlanesFile struct {
+	Dim    int         `json:"dim"`
+	Bits   int         `json:"bits"`
+	Seed   uint64      `json:"seed"`
+	Planes [][]float32 `json:"planes"`
+}
+
+// NewHasherFromPlanes creates a Hasher from a pre-computed planes matrix.
+// Use this for production to ensure deterministic, cross-language-consistent hashes.
+//
+// The planes data should be loaded from a persisted JSON file
+// (e.g., data/voiceprint/planes_512_16.json).
+func NewHasherFromPlanes(planes [][]float32) *Hasher {
+	bits := len(planes)
+	if bits == 0 || bits%4 != 0 {
+		panic("voiceprint: planes count must be a positive multiple of 4")
+	}
+	dim := len(planes[0])
+	if dim <= 0 {
+		panic("voiceprint: plane dimension must be positive")
+	}
+	for i, p := range planes {
+		if len(p) != dim {
+			panic(fmt.Sprintf("voiceprint: plane %d has dimension %d, expected %d", i, len(p), dim))
+		}
+	}
+	return &Hasher{dim: dim, bits: bits, planes: planes}
+}
+
+// NewHasherFromJSON creates a Hasher from a JSON-encoded planes file.
+func NewHasherFromJSON(data []byte) (*Hasher, error) {
+	var pf PlanesFile
+	if err := json.Unmarshal(data, &pf); err != nil {
+		return nil, fmt.Errorf("voiceprint: parse planes JSON: %w", err)
+	}
+	if len(pf.Planes) == 0 {
+		return nil, fmt.Errorf("voiceprint: empty planes in JSON")
+	}
+	return NewHasherFromPlanes(pf.Planes), nil
+}
+
+// Planes returns the internal hyperplane matrix.
+// Useful for serializing to JSON for cross-language sharing.
+func (h *Hasher) Planes() [][]float32 { return h.planes }
 
 // Hash projects an embedding vector into a hex hash string.
 // The input must have length equal to the hasher's dimension.
