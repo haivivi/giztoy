@@ -290,6 +290,66 @@ mod tests {
         assert!(Tensor::new(&[1], &[]).is_err());
     }
 
+    /// Cross-language validation: same model + same input → same output as Go.
+    #[test]
+    fn cross_lang_onnx_speaker() {
+        crate::model_embed::register_embedded_models();
+
+        let env = TEST_ENV.lock().unwrap();
+        let model_data = {
+            let reg = crate::model::REGISTRY.lock().unwrap();
+            let info = reg.get(crate::model::ModelId::SPEAKER_ERES2NET).unwrap();
+            info.data.to_vec()
+        };
+        let session = env.new_session(&model_data).unwrap();
+
+        // Same input as Go: data[i] = float32(i%100) * 0.01, shape [1, 40, 80]
+        let t = 40i64;
+        let mels = 80i64;
+        let mut data = vec![0.0f32; (1 * t * mels) as usize];
+        for (i, v) in data.iter_mut().enumerate() {
+            *v = (i % 100) as f32 * 0.01;
+        }
+        let input = Tensor::new(&[1, t, mels], &data).unwrap();
+        let outputs = session.run(&["x"], &[&input], &["embedding"]).unwrap();
+        let rust_emb = outputs[0].float_data().unwrap();
+        assert_eq!(rust_emb.len(), 512);
+
+        // Load Go reference.
+        let ref_path = std::env::var("TEST_SRCDIR")
+            .map(|d| {
+                let ws = std::env::var("TEST_WORKSPACE").unwrap_or("_main".into());
+                format!("{d}/{ws}/testdata/compat/inference/reference.json")
+            })
+            .unwrap_or_else(|_| "testdata/compat/inference/reference.json".into());
+
+        if let Ok(json_data) = std::fs::read_to_string(&ref_path) {
+            #[derive(serde::Deserialize)]
+            struct Ref {
+                engine: String,
+                embedding: Vec<f32>,
+            }
+            let refs: Vec<Ref> = serde_json::from_str(&json_data).unwrap();
+            let onnx_ref = refs.iter().find(|r| r.engine == "onnx").unwrap();
+
+            assert_eq!(onnx_ref.embedding.len(), rust_emb.len());
+
+            let mut max_diff: f32 = 0.0;
+            for (i, (&go_v, &rs_v)) in onnx_ref.embedding.iter().zip(rust_emb.iter()).enumerate() {
+                let diff = (go_v - rs_v).abs();
+                if diff > max_diff {
+                    max_diff = diff;
+                }
+                if diff > 1e-5 {
+                    panic!("onnx embedding[{i}] Go={go_v} Rust={rs_v} diff={diff} > 1e-5");
+                }
+            }
+            eprintln!("onnx cross-lang: max_diff={max_diff:.2e} (bit-exact within 1e-5)");
+        } else {
+            eprintln!("reference.json not found at {ref_path}, skipping cross-lang check");
+        }
+    }
+
     #[test]
     fn speaker_model_inference() {
         crate::model_embed::register_embedded_models();

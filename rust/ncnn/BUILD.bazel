@@ -34,10 +34,13 @@ rust_library(
         "@ncnn",
         "@crate_index//:thiserror",
         "@crate_index//:once_cell",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
     ],
 )
 
 rust_test(
     name = "giztoy_ncnn_test",
     crate = ":giztoy_ncnn",
+    data = ["//testdata/compat/inference:reference_data"],
 )

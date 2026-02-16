@@ -1259,6 +1259,8 @@ name = "giztoy-ncnn"
 version = "0.1.0"
 dependencies = [
  "once_cell",
+ "serde",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 
@@ -1267,6 +1269,8 @@ name = "giztoy-onnx"
 version = "0.1.0"
 dependencies = [
  "once_cell",
+ "serde",
+ "serde_json",
  "thiserror 2.0.18",
 ]
 

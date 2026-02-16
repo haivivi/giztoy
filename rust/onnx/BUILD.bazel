@@ -43,6 +43,8 @@ rust_library(
         ":ort_shim",
         "@crate_index//:thiserror",
         "@crate_index//:once_cell",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
     ],
     rustc_flags = select({
         "@platforms//os:macos": [
@@ -64,6 +66,7 @@ rust_library(
 rust_test(
     name = "giztoy_onnx_test",
     crate = ":giztoy_onnx",
+    data = ["//testdata/compat/inference:reference_data"],
     rustc_flags = select({
         "@platforms//os:macos": [
             "-Clink-args=-Wl,-rpath,@loader_path",
