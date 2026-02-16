@@ -22,6 +22,7 @@ members = [
     "cmd/matchtest",
     "cmd/luau",
     "vecid",
+    "voiceprint",
 ]
 
 [workspace.package]
@@ -48,6 +49,7 @@ giztoy-chatgear = { path = "chatgear" }
 giztoy-luau = { path = "luau" }
 giztoy-luau-runtime = { path = "luau/runtime" }
 giztoy-vecid = { path = "vecid" }
+giztoy-voiceprint = { path = "voiceprint" }
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }

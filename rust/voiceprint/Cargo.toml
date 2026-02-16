@@ -1,0 +1,10 @@
+[package]
+name = "giztoy-voiceprint"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Speaker identification via audio embeddings and locality-sensitive hashing"
+
+[dependencies]
+thiserror = { workspace = true }
