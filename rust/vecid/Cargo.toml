@@ -8,6 +8,8 @@ description = "Stable vector ID assignment via online nearest-centroid matching 
 
 [dependencies]
 thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }

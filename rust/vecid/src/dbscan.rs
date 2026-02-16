@@ -209,4 +209,56 @@ mod tests {
         let labels = dbscan(&[], 0.1, 2);
         assert!(labels.is_empty());
     }
+
+    /// Cross-language validation: same vectors + same params → same labels as Go.
+    #[test]
+    fn cross_lang_dbscan() {
+        let ref_path = std::env::var("TEST_SRCDIR")
+            .map(|d| {
+                let ws = std::env::var("TEST_WORKSPACE").unwrap_or("_main".into());
+                format!("{d}/{ws}/testdata/compat/dbscan/reference.json")
+            })
+            .unwrap_or_else(|_| "testdata/compat/dbscan/reference.json".into());
+
+        let json_data = match std::fs::read_to_string(&ref_path) {
+            Ok(d) => d,
+            Err(_) => {
+                eprintln!("dbscan reference.json not found at {ref_path}, skipping");
+                return;
+            }
+        };
+
+        #[derive(serde::Deserialize)]
+        struct DbscanRef {
+            eps: f32,
+            min_pts: usize,
+            vectors: Vec<Vec<f32>>,
+            labels: Vec<i32>,
+        }
+        let go_ref: DbscanRef = serde_json::from_str(&json_data).unwrap();
+
+        let refs: Vec<&[f32]> = go_ref.vectors.iter().map(|v| v.as_slice()).collect();
+        let rust_labels = dbscan(&refs, go_ref.eps, go_ref.min_pts);
+
+        assert_eq!(
+            rust_labels.len(),
+            go_ref.labels.len(),
+            "label count mismatch: Rust {} vs Go {}",
+            rust_labels.len(),
+            go_ref.labels.len()
+        );
+
+        for (i, (&rl, &gl)) in rust_labels.iter().zip(go_ref.labels.iter()).enumerate() {
+            assert_eq!(
+                rl, gl,
+                "dbscan label[{i}] mismatch: Rust={rl} Go={gl}\nRust labels: {rust_labels:?}\nGo labels: {:?}",
+                go_ref.labels
+            );
+        }
+        eprintln!(
+            "dbscan cross-lang: {} vectors, labels match exactly: {:?}",
+            go_ref.vectors.len(),
+            rust_labels
+        );
+    }
 }

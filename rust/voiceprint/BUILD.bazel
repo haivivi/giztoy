@@ -26,6 +26,7 @@ rust_library(
 rust_test(
     name = "giztoy_voiceprint_test",
     crate = ":giztoy_voiceprint",
+    data = ["//testdata/compat/fbank:reference_data"],
 )
 
 rust_binary(

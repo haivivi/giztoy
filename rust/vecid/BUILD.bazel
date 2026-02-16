@@ -8,12 +8,15 @@ rust_library(
     crate_name = "giztoy_vecid",
     deps = [
         "@crate_index//:thiserror",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
     ],
 )
 
 rust_test(
     name = "giztoy_vecid_test",
     crate = ":giztoy_vecid",
+    data = ["//testdata/compat/dbscan:reference_data"],
 )
 
 rust_binary(
