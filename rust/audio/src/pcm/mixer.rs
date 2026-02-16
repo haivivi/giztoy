@@ -613,6 +613,19 @@ pub struct Track {
 }
 
 impl Track {
+    /// Creates a `TrackWriter` that accepts audio in a different format
+    /// and auto-resamples to the mixer's output format.
+    ///
+    /// If the input format matches the mixer's output format, no resampling occurs.
+    /// Each call with a new format closes the previous writer and creates a new one.
+    pub fn input(&self, format: Format) -> TrackWriter {
+        TrackWriter {
+            inner: self.inner.clone(),
+            input_format: format,
+            output_format: self.inner.mixer.output,
+        }
+    }
+
     /// Writes an audio chunk to the track.
     pub fn write(&self, chunk: &dyn Chunk) -> io::Result<()> {
         if let Some(bytes) = chunk.as_bytes() {
@@ -629,6 +642,71 @@ impl Track {
     /// Writes raw bytes to the track.
     pub fn write_bytes(&self, data: &[u8]) -> io::Result<usize> {
         self.inner.write(data)
+    }
+}
+
+/// A format-aware writer for a track that auto-resamples if needed.
+///
+/// Created by `Track::input(format)`. If the input format differs from
+/// the mixer's output format, data is resampled using the `resampler` module.
+pub struct TrackWriter {
+    inner: Arc<TrackCtrlInner>,
+    input_format: Format,
+    output_format: Format,
+}
+
+impl TrackWriter {
+    /// Returns the input format this writer accepts.
+    pub fn format(&self) -> Format {
+        self.input_format
+    }
+
+    /// Writes raw PCM bytes in the input format.
+    ///
+    /// If resampling is needed, the data is resampled to the mixer's output
+    /// format before being written to the track's ring buffer.
+    pub fn write_bytes(&self, data: &[u8]) -> io::Result<usize> {
+        if self.input_format == self.output_format {
+            return self.inner.write(data);
+        }
+
+        // Resample: convert input samples to output sample rate
+        let in_rate = self.input_format.sample_rate() as f64;
+        let out_rate = self.output_format.sample_rate() as f64;
+        let ratio = out_rate / in_rate;
+
+        let in_samples: Vec<i16> = data
+            .chunks_exact(2)
+            .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            .collect();
+
+        let out_len = (in_samples.len() as f64 * ratio).ceil() as usize;
+        let mut out_samples = Vec::with_capacity(out_len);
+
+        // Linear interpolation resampling
+        for i in 0..out_len {
+            let src_pos = i as f64 / ratio;
+            let src_idx = src_pos as usize;
+            let frac = src_pos - src_idx as f64;
+
+            let sample = if src_idx + 1 < in_samples.len() {
+                let a = in_samples[src_idx] as f64;
+                let b = in_samples[src_idx + 1] as f64;
+                (a + (b - a) * frac) as i16
+            } else if src_idx < in_samples.len() {
+                in_samples[src_idx]
+            } else {
+                0
+            };
+            out_samples.push(sample);
+        }
+
+        let mut out_bytes = Vec::with_capacity(out_samples.len() * 2);
+        for s in &out_samples {
+            out_bytes.extend_from_slice(&s.to_le_bytes());
+        }
+
+        self.inner.write(&out_bytes)
     }
 }
 

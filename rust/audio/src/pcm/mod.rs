@@ -32,5 +32,5 @@ mod atomic;
 
 pub use format::{Format, FormatExt};
 pub use chunk::{Chunk, DataChunk, SilenceChunk};
-pub use mixer::{Mixer, MixerOptions, Track, TrackCtrl, TrackOptions};
+pub use mixer::{Mixer, MixerOptions, Track, TrackCtrl, TrackOptions, TrackWriter};
 pub use atomic::AtomicF32;
