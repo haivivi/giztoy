@@ -21,6 +21,10 @@ members = [
     "cmd/doubaospeech",
     "cmd/matchtest",
     "cmd/luau",
+    "vecid",
+    "voiceprint",
+    "ncnn",
+    "onnx",
 ]
 
 [workspace.package]
@@ -46,6 +50,10 @@ giztoy-trie = { path = "trie" }
 giztoy-chatgear = { path = "chatgear" }
 giztoy-luau = { path = "luau" }
 giztoy-luau-runtime = { path = "luau/runtime" }
+giztoy-ncnn = { path = "ncnn" }
+giztoy-onnx = { path = "onnx" }
+giztoy-vecid = { path = "vecid" }
+giztoy-voiceprint = { path = "voiceprint" }
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }

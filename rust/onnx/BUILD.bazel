@@ -1,0 +1,84 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# Copy ONNX model files into src/ for include_bytes!.
+genrule(
+    name = "embed_models",
+    srcs = [
+        "//data/models/onnx:speaker_eres2net",
+        "//data/models/onnx:vad_silero",
+        "//data/models/onnx:denoise_nsnet2",
+    ],
+    outs = [
+        "src/speaker_eres2net.onnx",
+        "src/vad_silero.onnx",
+        "src/denoise_nsnet2.onnx",
+    ],
+    cmd = """
+        for f in $(SRCS); do
+            cp $$f $(RULEDIR)/src/$$(basename $$f)
+        done
+    """,
+)
+
+# C shim that wraps ONNX Runtime function pointer API into plain C functions.
+cc_library(
+    name = "ort_shim",
+    srcs = ["ort_shim.c"],
+    deps = ["@onnxruntime"],
+)
+
+# Bazel places shared libraries in _solib_{platform}/{mangled}/ under the
+# bin directory. Rust test binaries need rpath entries to find them.
+_SOLIB_SUBDIR = "_U_A_A+onnxruntime_Uext+onnxruntime_S_S_Connxruntime_Ulib___Ulib"
+
+_ONNX_RPATH_FLAGS = select({
+    "@platforms//os:macos": [
+        "-Clink-args=-Wl,-rpath,@loader_path",
+        "-Clink-args=-Wl,-rpath,@loader_path/../../../../_solib_darwin_arm64/" + _SOLIB_SUBDIR,
+        "-Clink-args=-Wl,-rpath,@loader_path/../../../../../_solib_darwin_arm64/" + _SOLIB_SUBDIR,
+        "-Clink-args=-Wl,-rpath,@loader_path/../../../../../../_solib_darwin_arm64/" + _SOLIB_SUBDIR,
+    ],
+    "@platforms//os:linux": [
+        "-Clink-args=-Wl,-rpath,$$ORIGIN",
+        "-Clink-args=-Wl,-rpath,$$ORIGIN/../../../../_solib_k8/" + _SOLIB_SUBDIR,
+        "-Clink-args=-Wl,-rpath,$$ORIGIN/../../../../../_solib_k8/" + _SOLIB_SUBDIR,
+        "-Clink-args=-Wl,-rpath,$$ORIGIN/../../../../../../_solib_k8/" + _SOLIB_SUBDIR,
+    ],
+    "//conditions:default": [],
+})
+
+rust_library(
+    name = "giztoy_onnx",
+    srcs = glob(["src/**/*.rs"]),
+    compile_data = [":embed_models"],
+    crate_name = "giztoy_onnx",
+    deps = [
+        ":ort_shim",
+        "@crate_index//:thiserror",
+        "@crate_index//:once_cell",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+    ],
+    rustc_flags = _ONNX_RPATH_FLAGS,
+)
+
+rust_test(
+    name = "giztoy_onnx_test",
+    crate = ":giztoy_onnx",
+    data = ["//testdata/compat/inference:reference_data"],
+    rustc_flags = _ONNX_RPATH_FLAGS,
+)
+
+rust_binary(
+    name = "bench",
+    srcs = ["benches/onnx_bench.rs"],
+    deps = [
+        ":giztoy_onnx",
+        "@crate_index//:criterion",
+    ],
+    rustc_flags = _ONNX_RPATH_FLAGS,
+    tags = ["manual"],
+)

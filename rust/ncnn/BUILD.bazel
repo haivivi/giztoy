@@ -1,0 +1,56 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+# Copy pre-built model files into src/ for include_bytes!.
+genrule(
+    name = "embed_models",
+    srcs = [
+        "//data/models/ncnn:speaker_eres2net",
+        "//data/models/ncnn:vad_silero",
+        "//data/models/ncnn:denoise_nsnet2",
+    ],
+    outs = [
+        "src/speaker_eres2net.ncnn.param",
+        "src/speaker_eres2net.ncnn.bin",
+        "src/vad_silero.ncnn.param",
+        "src/vad_silero.ncnn.bin",
+        "src/denoise_nsnet2.ncnn.param",
+        "src/denoise_nsnet2.ncnn.bin",
+    ],
+    cmd = """
+        for f in $(SRCS); do
+            cp $$f $(RULEDIR)/src/$$(basename $$f)
+        done
+    """,
+)
+
+rust_library(
+    name = "giztoy_ncnn",
+    srcs = glob(["src/**/*.rs"]),
+    compile_data = [":embed_models"],
+    crate_name = "giztoy_ncnn",
+    deps = [
+        "@ncnn",
+        "@crate_index//:thiserror",
+        "@crate_index//:once_cell",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "giztoy_ncnn_test",
+    crate = ":giztoy_ncnn",
+    data = ["//testdata/compat/inference:reference_data"],
+)
+
+rust_binary(
+    name = "bench",
+    srcs = ["benches/ncnn_bench.rs"],
+    deps = [
+        ":giztoy_ncnn",
+        "@crate_index//:criterion",
+    ],
+    tags = ["manual"],
+)

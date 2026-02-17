@@ -1,0 +1,19 @@
+[package]
+name = "giztoy-vecid"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Stable vector ID assignment via online nearest-centroid matching and offline DBSCAN clustering"
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "vecid_bench"
+harness = false

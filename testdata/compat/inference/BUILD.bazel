@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_binary")
+
+go_binary(
+    name = "gen_reference",
+    srcs = ["gen_reference.go"],
+    deps = [
+        "//go/pkg/ncnn",
+        "//go/pkg/onnx",
+    ],
+)
+
+filegroup(
+    name = "reference_data",
+    srcs = ["reference.json"],
+    visibility = ["//visibility:public"],
+)

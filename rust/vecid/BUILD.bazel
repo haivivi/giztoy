@@ -1,0 +1,30 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "giztoy_vecid",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "giztoy_vecid",
+    deps = [
+        "@crate_index//:thiserror",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+    ],
+)
+
+rust_test(
+    name = "giztoy_vecid_test",
+    crate = ":giztoy_vecid",
+    data = ["//testdata/compat/dbscan:reference_data"],
+)
+
+rust_binary(
+    name = "bench",
+    srcs = ["benches/vecid_bench.rs"],
+    deps = [
+        ":giztoy_vecid",
+        "@crate_index//:criterion",
+    ],
+    tags = ["manual"],
+)
