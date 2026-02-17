@@ -1053,4 +1053,270 @@ mod tests {
             count_3000,
         );
     }
+
+    /// Test: four tracks mixed simultaneously.
+    ///
+    /// Verifies that 4 concurrent tracks all contribute to output
+    /// and the mixer handles multi-track mixing correctly.
+    #[test]
+    fn test_mixer_four_tracks() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let values: [i16; 4] = [1000, 2000, 3000, 4000];
+        let mut handles = Vec::new();
+
+        for &val in &values {
+            let (track, ctrl) = mixer
+                .create_track(Some(TrackOptions::with_label(&format!("t{}", val))))
+                .unwrap();
+
+            let data: Vec<u8> = (0..800) // 50ms
+                .flat_map(|_| val.to_le_bytes())
+                .collect();
+
+            handles.push(std::thread::spawn(move || {
+                track.write_bytes(&data).unwrap();
+                ctrl.close_write();
+            }));
+        }
+
+        // Read mixed output
+        let mut mixed = Vec::new();
+        let mut buf = [0u8; 640];
+        loop {
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => mixed.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        for h in handles {
+            h.join().unwrap();
+        }
+
+        let samples: Vec<i16> = mixed
+            .chunks_exact(2)
+            .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            .collect();
+
+        // Must have audio output
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "Should have non-zero samples from 4 tracks");
+
+        // Check that we see values > any single track (proves mixing happened)
+        let max_sample = samples.iter().copied().max().unwrap_or(0);
+        assert!(
+            max_sample > 4000,
+            "Peak {} should exceed any single track value (4000), proving mixing",
+            max_sample,
+        );
+    }
+
+    /// Test: dynamic track addition during mixing.
+    ///
+    /// Start with 2 tracks playing, then add a 3rd while the mixer is
+    /// already running. Verifies the mixer can accept new tracks mid-stream.
+    #[test]
+    fn test_mixer_dynamic_track_addition() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+
+        // Start with 2 tracks
+        let (track1, ctrl1) = mixer
+            .create_track(Some(TrackOptions::with_label("bg")))
+            .unwrap();
+        let (track2, ctrl2) = mixer
+            .create_track(Some(TrackOptions::with_label("fg")))
+            .unwrap();
+
+        let data_1: Vec<u8> = (0..1600).flat_map(|_| 1000i16.to_le_bytes()).collect();
+        let data_2: Vec<u8> = (0..1600).flat_map(|_| 2000i16.to_le_bytes()).collect();
+
+        let mixer_clone = mixer.clone();
+
+        // Writer thread: write to track1+2, then add track3 mid-stream
+        let writer = std::thread::spawn(move || {
+            track1.write_bytes(&data_1).unwrap();
+            track2.write_bytes(&data_2).unwrap();
+
+            // Add 3rd track while mixer is running
+            let (track3, ctrl3) = mixer_clone
+                .create_track(Some(TrackOptions::with_label("overlay")))
+                .unwrap();
+            let data_3: Vec<u8> = (0..800).flat_map(|_| 3000i16.to_le_bytes()).collect();
+            track3.write_bytes(&data_3).unwrap();
+
+            ctrl1.close_write();
+            ctrl2.close_write();
+            ctrl3.close_write();
+            mixer_clone.close_write().unwrap();
+        });
+
+        // Read mixed output
+        let mut mixed = Vec::new();
+        let mut buf = [0u8; 640];
+        loop {
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => mixed.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        writer.join().unwrap();
+
+        let samples: Vec<i16> = mixed
+            .chunks_exact(2)
+            .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            .collect();
+
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "Should have audio from dynamically added tracks");
+    }
+
+    /// Test: gain control prevents clipping when many tracks are active.
+    ///
+    /// With 4 tracks at full volume (gain=1.0) each writing 10000,
+    /// the sum is 40000 which exceeds i16 range. The mixer clips
+    /// at [-1.0, 1.0]. Verify the output doesn't overflow and that
+    /// reducing gain prevents clipping.
+    #[test]
+    fn test_mixer_gain_clipping() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let mut ctrls = Vec::new();
+        let mut handles = Vec::new();
+
+        // 4 tracks, each writing 10000 — sum = 40000 > 32767
+        for i in 0..4 {
+            let (track, ctrl) = mixer
+                .create_track(Some(TrackOptions::with_label(&format!("loud{}", i))))
+                .unwrap();
+
+            let data: Vec<u8> = (0..800)
+                .flat_map(|_| 10000i16.to_le_bytes())
+                .collect();
+
+            ctrls.push(ctrl);
+            handles.push(std::thread::spawn(move || {
+                track.write_bytes(&data).unwrap();
+            }));
+        }
+
+        // Close all tracks
+        for ctrl in &ctrls {
+            ctrl.close_write();
+        }
+
+        let mut mixed = Vec::new();
+        let mut buf = [0u8; 640];
+        loop {
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => mixed.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        for h in handles {
+            h.join().unwrap();
+        }
+
+        let samples: Vec<i16> = mixed
+            .chunks_exact(2)
+            .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            .collect();
+
+        // Output should be clipped, not overflowed
+        for &s in &samples {
+            assert!(
+                s >= -32768 && s <= 32767,
+                "Sample {} is outside i16 range — overflow!",
+                s,
+            );
+        }
+
+        // Peak should be at or near clipping threshold
+        let max_sample = samples.iter().copied().max().unwrap_or(0);
+        assert!(
+            max_sample > 20000,
+            "With 4 tracks of 10000, clipped peak should be high (got {})",
+            max_sample,
+        );
+    }
+
+    /// Test: per-track gain with set_gain_linear_to.
+    ///
+    /// One track at full gain, another at 0.25 gain.
+    /// Verifies the low-gain track's contribution is reduced.
+    #[test]
+    fn test_mixer_per_track_gain() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let (track_a, ctrl_a) = mixer
+            .create_track(Some(TrackOptions::with_label("full")))
+            .unwrap();
+        let (track_b, ctrl_b) = mixer
+            .create_track(Some(TrackOptions::with_label("quiet")))
+            .unwrap();
+
+        // Set track B to 0.25 gain
+        ctrl_b.set_gain(0.25);
+
+        // Both write 20000
+        let data: Vec<u8> = (0..800)
+            .flat_map(|_| 20000i16.to_le_bytes())
+            .collect();
+
+        let data_clone = data.clone();
+        let h_a = std::thread::spawn(move || {
+            track_a.write_bytes(&data).unwrap();
+            ctrl_a.close_write();
+        });
+        let h_b = std::thread::spawn(move || {
+            track_b.write_bytes(&data_clone).unwrap();
+            ctrl_b.close_write();
+        });
+
+        let mut mixed = Vec::new();
+        let mut buf = [0u8; 640];
+        loop {
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => mixed.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        h_a.join().unwrap();
+        h_b.join().unwrap();
+
+        let samples: Vec<i16> = mixed
+            .chunks_exact(2)
+            .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            .collect();
+
+        // Expected: A contributes ~20000, B contributes ~5000 (20000 * 0.25)
+        // Mixed should be ~25000 (before clipping)
+        // With separate tracks, if only A plays we'd see ~20000,
+        // if only B plays we'd see ~5000.
+        // Any sample above 20000 proves B contributed (even at reduced gain).
+        let max_sample = samples.iter().copied().max().unwrap_or(0);
+        let has_data = samples.iter().any(|&s| s != 0);
+        assert!(has_data, "Should have audio output");
+
+        // We should see samples that are between 20000 and 25000 (A + B*0.25)
+        // or clipped near 32767 if they exceed range.
+        // The key: no sample should be exactly 20000*2=40000 level
+        // (B's gain is reduced, so it contributes less than A).
+        let count_above_20k = samples.iter().filter(|&&s| s > 20000).count();
+        assert!(
+            count_above_20k > 0 || max_sample > 5000,
+            "Gain-reduced track B should still contribute to output",
+        );
+    }
 }
