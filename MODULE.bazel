@@ -38,6 +38,9 @@ bazel_dep(name = "rules_swift", version = "3.4.2")
 # Rust rules
 bazel_dep(name = "rules_rust", version = "0.68.1")
 
+# OpenERP (kv + blob storage crates)
+bazel_dep(name = "openerp", version = "0.0.1")
+
 # C/C++ rules (after apple_support for correct toolchain resolution)
 bazel_dep(name = "rules_cc", version = "0.2.16")
 
@@ -133,6 +136,10 @@ crate.from_cargo(
         "//rust/onnx:Cargo.toml",
         "//rust/vecid:Cargo.toml",
         "//rust/voiceprint:Cargo.toml",
+        "//rust/graph:Cargo.toml",
+        "//rust/vecstore:Cargo.toml",
+        "//rust/embed:Cargo.toml",
+        "//rust/recall:Cargo.toml",
         "//examples/rust/audio:Cargo.toml",
         "//examples/rust/minimax:Cargo.toml",
         "//examples/rust/genx:Cargo.toml",
@@ -173,3 +180,14 @@ hos_sdk.sdk(
     install_components = ["OpenHarmony/toolchains:9"],
 )
 use_repo(hos_sdk, "hos_sdk")
+
+# ============================================================================
+# OpenERP module override
+# CI: fetch from GitHub at pinned commit.
+# Local dev: override with --override_module=openerp=../../openerp/main
+# ============================================================================
+git_override(
+    module_name = "openerp",
+    remote = "https://github.com/haivivi/openerp.git",
+    commit = "03685b38c58ec20164055dd551ffa3bdcad28f7b",
+)

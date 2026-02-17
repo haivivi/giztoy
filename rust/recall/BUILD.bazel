@@ -1,0 +1,28 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "recall",
+    crate_name = "giztoy_recall",
+    srcs = glob(["src/**/*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//rust/embed:embed",
+        "//rust/graph:graph",
+        "//rust/vecstore:vecstore",
+        "@openerp//rust/lib/kv:kv",
+        "@crate_index//:chrono",
+        "@crate_index//:rmp-serde",
+        "@crate_index//:serde",
+        "@crate_index//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "recall_test",
+    crate = ":recall",
+    deps = [
+        "@openerp//rust/lib/kv:kv",
+        "@crate_index//:tempfile",
+        "@crate_index//:tokio",
+    ],
+)

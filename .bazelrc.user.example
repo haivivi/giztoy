@@ -4,6 +4,14 @@
 # Copy this file to .bazelrc.user and modify according to your environment
 
 # =============================================================================
+# OpenERP Local Override (for rust/graph, rust/recall dependencies)
+# =============================================================================
+# Use a local checkout of openerp instead of fetching from GitHub.
+# Uncomment and adjust the path to your local openerp worktree.
+
+# common --override_module=openerp=../../openerp/main
+
+# =============================================================================
 # LLM API Keys (for matchtest and other tools)
 # =============================================================================
 

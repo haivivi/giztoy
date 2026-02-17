@@ -16,6 +16,10 @@ members = [
     "chatgear",
     "luau",
     "luau/runtime",
+    "graph",
+    "vecstore",
+    "embed",
+    "recall",
     "cmd/dashscope",
     "cmd/minimax",
     "cmd/doubaospeech",
@@ -54,6 +58,10 @@ giztoy-ncnn = { path = "ncnn" }
 giztoy-onnx = { path = "onnx" }
 giztoy-vecid = { path = "vecid" }
 giztoy-voiceprint = { path = "voiceprint" }
+giztoy-graph = { path = "graph" }
+giztoy-vecstore = { path = "vecstore" }
+giztoy-embed = { path = "embed" }
+giztoy-recall = { path = "recall" }
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }
@@ -71,6 +79,7 @@ ureq = "3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
+rmp-serde = "1"
 
 # JSON Schema
 schemars = "1"

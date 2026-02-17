@@ -1,0 +1,23 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "graph",
+    crate_name = "giztoy_graph",
+    srcs = glob(["src/**/*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@openerp//rust/lib/kv:kv",
+        "@crate_index//:serde_json",
+        "@crate_index//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "graph_test",
+    crate = ":graph",
+    deps = [
+        "@openerp//rust/lib/kv:kv",
+        "@crate_index//:serde_json",
+        "@crate_index//:tempfile",
+    ],
+)

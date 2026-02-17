@@ -1,0 +1,16 @@
+[package]
+name = "giztoy-recall"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+rmp-serde = "1"
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+tempfile = "3"
