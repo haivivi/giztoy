@@ -1807,6 +1807,97 @@ func (fc *familyCompressor) CompactSegments(_ context.Context, summaries []strin
 }
 
 // ---------------------------------------------------------------------------
+// Memory: InferLabels tests
+// ---------------------------------------------------------------------------
+
+func TestMemoryInferLabels(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	m := mustOpen(t, h, "cat_girl")
+	ctx := context.Background()
+	g := m.Graph()
+
+	// Build graph with typed entities.
+	entities := []graph.Entity{
+		{Label: "person:小明", Attrs: map[string]any{"nickname": "明明"}},
+		{Label: "person:小红"},
+		{Label: "topic:恐龙"},
+		{Label: "topic:太空"},
+	}
+	for _, e := range entities {
+		if err := g.SetEntity(ctx, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Basic: text mentions 小明 and 恐龙.
+	labels, err := m.InferLabels(ctx, "今天和小明聊了恐龙的话题", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{"person:小明": true, "topic:恐龙": true}
+	if len(labels) != len(want) {
+		t.Fatalf("got %v, want %v", labels, want)
+	}
+	for _, l := range labels {
+		if !want[l] {
+			t.Errorf("unexpected label %q", l)
+		}
+	}
+
+	// Attr-based match: "明明" is a nickname of person:小明.
+	cfg := &recall.InferConfig{AttrKeys: []string{"nickname"}}
+	labels, err = m.InferLabels(ctx, "明明今天很开心", cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(labels) != 1 || labels[0] != "person:小明" {
+		t.Errorf("got %v, want [person:小明]", labels)
+	}
+
+	// No match.
+	labels, err = m.InferLabels(ctx, "今天天气不错", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if labels != nil {
+		t.Errorf("expected nil, got %v", labels)
+	}
+}
+
+func TestMemoryInferLabelsIsolation(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	ctx := context.Background()
+
+	m1 := mustOpen(t, h, "persona_a")
+	m2 := mustOpen(t, h, "persona_b")
+
+	// Set up entity in persona_a only.
+	if err := m1.Graph().SetEntity(ctx, graph.Entity{Label: "person:小明"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// persona_a should find it.
+	labels, err := m1.InferLabels(ctx, "和小明聊天", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(labels) != 1 || labels[0] != "person:小明" {
+		t.Errorf("persona_a got %v, want [person:小明]", labels)
+	}
+
+	// persona_b should NOT find it (different graph).
+	labels, err = m2.InferLabels(ctx, "和小明聊天", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if labels != nil {
+		t.Errorf("persona_b should not find persona_a's entities, got %v", labels)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Benchmarks
 // ---------------------------------------------------------------------------
 

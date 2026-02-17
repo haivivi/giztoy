@@ -126,6 +126,20 @@ func (m *Memory) Recall(ctx context.Context, q RecallQuery) (*RecallResult, erro
 	}, nil
 }
 
+// InferLabels discovers entity labels from the persona's graph that are
+// referenced in the given text. It is a convenience wrapper around
+// [recall.Index.InferLabels].
+//
+// This is useful for automatically augmenting seed labels before calling
+// [Recall]. For example, given "今天和小明聊了恐龙" and a graph containing
+// "person:小明" and "topic:恐龙", InferLabels returns both labels.
+//
+// See [recall.InferConfig] for configuration options (attribute matching,
+// minimum name length).
+func (m *Memory) InferLabels(ctx context.Context, text string, cfg *recall.InferConfig) ([]string, error) {
+	return m.index.InferLabels(ctx, text, cfg)
+}
+
 // StoreSegment stores a new segment in this persona's recall index.
 // It generates an ID and timestamp, sets the bucket, and indexes the
 // segment for search.
