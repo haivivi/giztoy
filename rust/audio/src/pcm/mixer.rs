@@ -1124,7 +1124,6 @@ mod tests {
     fn test_mixer_gain_clipping() {
         let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
 
-        let mut ctrls = Vec::new();
         let mut handles = Vec::new();
 
         // 4 tracks, each writing 10000 — sum = 40000 > 32767
@@ -1137,15 +1136,10 @@ mod tests {
                 .flat_map(|_| 10000i16.to_le_bytes())
                 .collect();
 
-            ctrls.push(ctrl);
             handles.push(std::thread::spawn(move || {
                 track.write_bytes(&data).unwrap();
+                ctrl.close_write();
             }));
-        }
-
-        // Close all tracks
-        for ctrl in &ctrls {
-            ctrl.close_write();
         }
 
         let mut mixed = Vec::new();
