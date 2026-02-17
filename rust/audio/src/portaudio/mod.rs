@@ -296,6 +296,19 @@ impl Stream {
             return Err(io::Error::new(io::ErrorKind::Other, "no output channels"));
         }
 
+        // Bounds check: buffer capacity is frames_per_buffer * output_channels
+        let buffer_capacity = self.config.frames_per_buffer * self.config.output_channels as usize;
+        if samples.len() > buffer_capacity {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "samples length {} exceeds buffer capacity {}",
+                    samples.len(),
+                    buffer_capacity
+                ),
+            ));
+        }
+
         unsafe {
             ptr::copy_nonoverlapping(
                 samples.as_ptr(),

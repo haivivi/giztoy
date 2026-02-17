@@ -281,8 +281,19 @@ impl Mixer {
             }
 
             // Try to read and mix data
-            let (peak, read, should_return_silence, should_eof) =
+            let (peak, read, should_return_silence, should_eof, tracks_removed) =
                 self.try_read_and_mix(&mut state, &mut mix_buf[..sample_count]);
+
+            // Fire on_track_closed callbacks outside the state lock
+            if tracks_removed > 0 {
+                if let Some(ref cb) = self.on_track_closed {
+                    drop(state);
+                    for _ in 0..tracks_removed {
+                        cb();
+                    }
+                    state = self.state.lock().unwrap();
+                }
+            }
 
             if should_eof {
                 return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "EOF"));
@@ -333,30 +344,30 @@ impl Mixer {
     }
 
     /// Try to read and mix audio data from all tracks.
-    /// Returns (peak, has_data, should_return_silence, should_eof)
+    /// Returns (peak, has_data, should_return_silence, should_eof, tracks_removed)
     fn try_read_and_mix(
         &self,
         state: &mut MixerState,
         mix_buf: &mut [f32],
-    ) -> (f32, bool, bool, bool) {
+    ) -> (f32, bool, bool, bool, usize) {
         // Check if we should EOF
         if state.tracks.is_empty() {
             if state.close_write {
-                return (0.0, false, false, true); // EOF
+                return (0.0, false, false, true, 0); // EOF
             }
 
             if self.auto_close {
                 let _ = self.close_write_locked(state);
-                return (0.0, false, false, true); // EOF
+                return (0.0, false, false, true, 0); // EOF
             }
 
             // No tracks, return silence if within silence gap
             if state.running_silence < self.silence_gap {
-                return (0.0, false, true, false); // silence
+                return (0.0, false, true, false, 0); // silence
             }
 
             // No data, no silence, caller should wait
-            return (0.0, false, false, false);
+            return (0.0, false, false, false, 0);
         }
 
         // Clear mixing buffer
@@ -409,17 +420,8 @@ impl Mixer {
             !track.is_done()
         });
 
-        // Fire on_track_closed for each removed track
         let removed = initial_track_count - state.tracks.len();
-        if removed > 0 {
-            if let Some(ref cb) = self.on_track_closed {
-                for _ in 0..removed {
-                    cb();
-                }
-            }
-        }
-
-        (peak, has_data, false, false)
+        (peak, has_data, false, false, removed)
     }
 }
 
@@ -632,7 +634,10 @@ impl TrackWriter {
         }
 
         self.rb.write(&out_bytes)
-            .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
+            .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
+        // Return input bytes consumed, not output bytes written.
+        // The caller tracks how much input was consumed, not the resampled output size.
+        Ok(data.len())
     }
 
     /// Closes writing to this input.
@@ -733,11 +738,13 @@ impl TrackCtrl {
                     let progress = i as f32 / steps as f32;
                     inner.gain.store(from * (1.0 - progress), Ordering::Relaxed);
                 }
-                inner.close_with_error("track closed".to_string());
+                inner.close_write();
             });
             self.inner.close_write();
         } else {
-            self.inner.close_with_error("track closed".to_string());
+            // Normal close: signal no more writes but let mixer drain remaining data.
+            // close_with_error would discard buffered audio — only use for errors.
+            self.inner.close_write();
         }
     }
 
