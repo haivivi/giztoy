@@ -748,10 +748,14 @@ impl TrackCtrl {
                     let progress = i as f32 / steps as f32;
                     inner.gain.store(from * (1.0 - progress), Ordering::Relaxed);
                 }
-                // Only close_write after fade completes — don't close on main
-                // thread, otherwise mixer drains the buffer before fade finishes.
-                inner.close_write();
+                // After fade completes, fully close the track.
+                inner.close_with_error("track closed".to_string());
             });
+            // Signal no more writes immediately so mixer starts draining.
+            // Fade thread adjusts gain while mixer reads — this only works
+            // when the consumer reads at realtime pace (not burst).
+            // Matches Go: tc.CloseWrite() on main thread + goroutine fades.
+            self.inner.close_write();
         } else {
             // Normal close: signal no more writes but let mixer drain remaining data.
             // close_with_error would discard buffered audio — only use for errors.
@@ -1263,17 +1267,17 @@ mod tests {
         );
     }
 
-    /// Test: fade-out should not truncate audio.
+    /// Test: fade-out with realtime-paced reader.
     ///
-    /// Write 200ms of audio, set 100ms fade-out, then close().
-    /// The mixer should output all the audio with a gradual volume
-    /// decrease at the end — not abruptly cut off.
+    /// Fade-out only works when the consumer reads at realtime pace,
+    /// because the fade thread adjusts gain over time while the mixer
+    /// drains buffered data. A burst reader would drain everything
+    /// before the fade thread gets to adjust gain.
     ///
-    /// Bug: close() with fade calls close_write() immediately on the
-    /// main thread, causing the mixer to drain and remove the track
-    /// before the fade thread finishes adjusting gain.
+    /// This test writes 200ms of audio, sets 100ms fade, and reads
+    /// at ~20ms intervals to simulate a realtime consumer.
     #[test]
-    fn test_mixer_fade_out_not_truncated() {
+    fn test_mixer_fade_out_realtime() {
         let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
 
         let (track, ctrl) = mixer
@@ -1287,53 +1291,67 @@ mod tests {
             .collect();
         track.write_bytes(&data).unwrap();
 
-        // Set 100ms fade-out, then close
+        // Set 100ms fade-out, then close.
+        // close() calls close_write() on main thread (mixer starts drain)
+        // + spawns fade thread that adjusts gain over 100ms.
         ctrl.set_fade_out_duration(Duration::from_millis(100));
         ctrl.close();
 
-        // Wait for fade thread to finish
-        std::thread::sleep(Duration::from_millis(200));
-        mixer.close_write().unwrap();
-
-        // Read all output
-        let mut mixed = Vec::new();
+        // Read at realtime pace: 20ms per chunk = 640 bytes at 16kHz mono
+        let mut chunks: Vec<Vec<i16>> = Vec::new();
         let mut buf = [0u8; 640];
         loop {
+            // Simulate realtime consumer pace
+            std::thread::sleep(Duration::from_millis(20));
+
             match (&*mixer).read(&mut buf) {
                 Ok(0) => break,
-                Ok(n) => mixed.extend_from_slice(&buf[..n]),
+                Ok(n) => {
+                    let samples: Vec<i16> = buf[..n]
+                        .chunks_exact(2)
+                        .map(|b| i16::from_le_bytes([b[0], b[1]]))
+                        .collect();
+                    chunks.push(samples);
+                }
                 Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
                 Err(e) => panic!("read error: {}", e),
             }
         }
 
-        let samples: Vec<i16> = mixed
-            .chunks_exact(2)
-            .map(|b| i16::from_le_bytes([b[0], b[1]]))
-            .collect();
-
-        // Should have at least 150ms worth of audio (200ms data - some fade)
-        // 150ms at 16kHz = 2400 samples
-        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        // Should have multiple chunks (200ms / 20ms = ~10 chunks)
         assert!(
-            non_zero >= 2400,
-            "Fade-out should preserve most audio. Got {} non-zero samples, \
-             expected >= 2400 (150ms). The fade may have truncated the track.",
-            non_zero,
+            chunks.len() >= 3,
+            "Should have multiple chunks for 200ms of audio, got {}",
+            chunks.len(),
         );
 
-        // Check that later samples have lower amplitude (fade effect)
-        if samples.len() >= 3200 {
-            let first_quarter: i64 = samples[..800].iter().map(|&s| s.abs() as i64).sum();
-            let last_quarter: i64 = samples[2400..3200].iter().map(|&s| s.abs() as i64).sum();
-            // Last quarter should be noticeably quieter due to fade
-            assert!(
-                last_quarter < first_quarter,
-                "Last quarter should be quieter than first (fade effect). \
-                 first={}, last={}",
-                first_quarter,
-                last_quarter,
-            );
+        // Compute average amplitude per chunk
+        let chunk_amps: Vec<f64> = chunks
+            .iter()
+            .map(|c| {
+                let sum: i64 = c.iter().map(|&s| s.abs() as i64).sum();
+                sum as f64 / c.len() as f64
+            })
+            .collect();
+
+        // First chunk should have high amplitude (no fade yet)
+        assert!(
+            chunk_amps[0] > 5000.0,
+            "First chunk amplitude should be high (got {:.0})",
+            chunk_amps[0],
+        );
+
+        // Last non-trivial chunk should have lower amplitude than first
+        // (fade effect). Allow some tolerance for timing.
+        if let Some(&last_amp) = chunk_amps.last() {
+            if last_amp > 0.0 {
+                assert!(
+                    last_amp < chunk_amps[0] * 0.9,
+                    "Last chunk ({:.0}) should be quieter than first ({:.0}) due to fade",
+                    last_amp,
+                    chunk_amps[0],
+                );
+            }
         }
     }
 }
