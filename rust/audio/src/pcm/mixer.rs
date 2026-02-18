@@ -1278,7 +1278,7 @@ mod tests {
     /// at ~20ms intervals to simulate a realtime consumer.
     #[test]
     fn test_mixer_fade_out_realtime() {
-        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
 
         let (track, ctrl) = mixer
             .create_track(Some(TrackOptions::with_label("fade")))
