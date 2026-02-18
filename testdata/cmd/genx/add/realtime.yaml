@@ -1,0 +1,6 @@
+# Test: genx add realtime config
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [genx, add, testdata/models/realtime-doubao.json]
+    exit_code: 0

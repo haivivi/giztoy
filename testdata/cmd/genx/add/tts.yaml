@@ -1,0 +1,6 @@
+# Test: genx add tts config
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [genx, add, testdata/models/tts-minimax.json]
+    exit_code: 0

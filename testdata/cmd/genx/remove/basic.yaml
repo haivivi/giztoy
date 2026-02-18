@@ -1,0 +1,8 @@
+# Test: genx remove by pattern
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [genx, add, testdata/models/generator-qwen.json]
+  - args: [genx, remove, "qwen/turbo-latest"]
+    exit_code: 0
+    stdout_contains: "Removed"

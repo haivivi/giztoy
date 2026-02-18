@@ -1,0 +1,7 @@
+# Test: genx add generator config
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [genx, add, testdata/models/generator-qwen.json]
+    exit_code: 0
+    stdout_contains: "Added"

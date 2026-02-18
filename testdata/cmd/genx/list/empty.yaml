@@ -1,0 +1,7 @@
+# Test: genx list with no configs
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [genx, list]
+    exit_code: 0
+    stdout_contains: "No genx configs"
