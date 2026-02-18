@@ -748,9 +748,10 @@ impl TrackCtrl {
                     let progress = i as f32 / steps as f32;
                     inner.gain.store(from * (1.0 - progress), Ordering::Relaxed);
                 }
+                // Only close_write after fade completes — don't close on main
+                // thread, otherwise mixer drains the buffer before fade finishes.
                 inner.close_write();
             });
-            self.inner.close_write();
         } else {
             // Normal close: signal no more writes but let mixer drain remaining data.
             // close_with_error would discard buffered audio — only use for errors.
@@ -1260,5 +1261,79 @@ mod tests {
             count_above_20k > 0 || max_sample > 5000,
             "Gain-reduced track B should still contribute to output",
         );
+    }
+
+    /// Test: fade-out should not truncate audio.
+    ///
+    /// Write 200ms of audio, set 100ms fade-out, then close().
+    /// The mixer should output all the audio with a gradual volume
+    /// decrease at the end — not abruptly cut off.
+    ///
+    /// Bug: close() with fade calls close_write() immediately on the
+    /// main thread, causing the mixer to drain and remove the track
+    /// before the fade thread finishes adjusting gain.
+    #[test]
+    fn test_mixer_fade_out_not_truncated() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+
+        let (track, ctrl) = mixer
+            .create_track(Some(TrackOptions::with_label("fade")))
+            .unwrap();
+
+        // Write 200ms of constant 10000
+        let samples_200ms = 3200; // 16kHz * 0.2s
+        let data: Vec<u8> = (0..samples_200ms)
+            .flat_map(|_| 10000i16.to_le_bytes())
+            .collect();
+        track.write_bytes(&data).unwrap();
+
+        // Set 100ms fade-out, then close
+        ctrl.set_fade_out_duration(Duration::from_millis(100));
+        ctrl.close();
+
+        // Wait for fade thread to finish
+        std::thread::sleep(Duration::from_millis(200));
+        mixer.close_write().unwrap();
+
+        // Read all output
+        let mut mixed = Vec::new();
+        let mut buf = [0u8; 640];
+        loop {
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => mixed.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        let samples: Vec<i16> = mixed
+            .chunks_exact(2)
+            .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            .collect();
+
+        // Should have at least 150ms worth of audio (200ms data - some fade)
+        // 150ms at 16kHz = 2400 samples
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(
+            non_zero >= 2400,
+            "Fade-out should preserve most audio. Got {} non-zero samples, \
+             expected >= 2400 (150ms). The fade may have truncated the track.",
+            non_zero,
+        );
+
+        // Check that later samples have lower amplitude (fade effect)
+        if samples.len() >= 3200 {
+            let first_quarter: i64 = samples[..800].iter().map(|&s| s.abs() as i64).sum();
+            let last_quarter: i64 = samples[2400..3200].iter().map(|&s| s.abs() as i64).sum();
+            // Last quarter should be noticeably quieter due to fade
+            assert!(
+                last_quarter < first_quarter,
+                "Last quarter should be quieter than first (fade effect). \
+                 first={}, last={}",
+                first_quarter,
+                last_quarter,
+            );
+        }
     }
 }

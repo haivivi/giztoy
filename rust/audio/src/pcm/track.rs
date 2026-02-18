@@ -213,27 +213,18 @@ impl InternalTrack {
         }
 
         let mut inputs = self.inputs.lock().unwrap();
-        let mut offset = 0;
 
-        while offset < buf.len() && !inputs.is_empty() {
-            match inputs[0].rb.read(&mut buf[offset..]) {
-                ReadResult::Data(n) => {
-                    offset += n;
-                    // Got some data, return what we have (rest is zero-filled)
-                    if offset > 0 {
-                        return (buf.len(), false);
-                    }
+        while !inputs.is_empty() {
+            match inputs[0].rb.read(buf) {
+                ReadResult::Data(_n) => {
+                    // Got data (rest of buf is already zeroed). Return full chunk.
+                    return (buf.len(), false);
                 }
                 ReadResult::Empty => {
-                    // No data available from this input yet
-                    // Return zeros (the buffer is already zeroed)
-                    if offset > 0 {
-                        return (buf.len(), false);
-                    }
+                    // No data yet from this input. Return zeroed buffer.
                     return (0, false);
                 }
                 ReadResult::Eof => {
-                    // This input is done, move to next
                     inputs.remove(0);
                     continue;
                 }
@@ -244,14 +235,10 @@ impl InternalTrack {
             }
         }
 
-        if inputs.is_empty() && self.close_write.load(Ordering::SeqCst) {
-            return (offset, true);
-        }
-
-        if offset > 0 {
-            (buf.len(), false) // Zero-filled remainder
+        if self.close_write.load(Ordering::SeqCst) {
+            (0, true) // All inputs exhausted, track done
         } else {
-            (0, false) // No data yet
+            (0, false) // No inputs yet
         }
     }
 

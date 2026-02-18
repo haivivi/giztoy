@@ -168,6 +168,9 @@ impl<W: Write> OpusWriter<W> {
     }
 
     /// Ends the specified stream by writing an EOS page.
+    ///
+    /// If OpusTags hasn't been written yet (no frames were written to this
+    /// stream), it's written first to ensure RFC 7845 compliance.
     pub fn stream_end(&mut self, serial_no: i32) -> io::Result<()> {
         if self.closed {
             return Err(io::Error::new(io::ErrorKind::BrokenPipe, "writer closed"));
@@ -178,6 +181,19 @@ impl<W: Write> OpusWriter<W> {
 
         if stream.ended {
             return Ok(());
+        }
+
+        // Ensure OpusTags is written even if no frames were written.
+        if !stream.tags_written {
+            stream.tags_written = true;
+            self.write_tags_page_for(serial_no)?;
+            let stream = self.streams.get_mut(&serial_no).unwrap();
+            let granule = stream.granule as u64;
+            let page_index = stream.page_index;
+            stream.page_index += 1;
+            stream.ended = true;
+            let page = self.create_page(&[], PAGE_HEADER_TYPE_EOS, granule, page_index, serial_no);
+            return self.writer.write_all(&page);
         }
 
         let granule = stream.granule as u64;
