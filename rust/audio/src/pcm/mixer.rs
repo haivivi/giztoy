@@ -279,7 +279,9 @@ impl Mixer {
             let (peak, read, should_return_silence, should_eof, tracks_removed) =
                 self.try_read_and_mix(&mut state, &mut mix_buf[..sample_count]);
 
-            // Fire on_track_closed callbacks outside the state lock
+            // Fire on_track_closed callbacks outside the state lock.
+            // After re-acquiring the lock, continue the loop to re-evaluate
+            // state — it may have changed during the unlocked window.
             if tracks_removed > 0 {
                 if let Some(ref cb) = self.on_track_closed {
                     drop(state);
@@ -287,6 +289,7 @@ impl Mixer {
                         cb();
                     }
                     state = self.state.lock().unwrap();
+                    continue;
                 }
             }
 

@@ -38,6 +38,21 @@ pub struct OpusWriter<W: Write> {
     closed: bool,
 }
 
+impl<W: Write> Drop for OpusWriter<W> {
+    fn drop(&mut self) {
+        if self.closed {
+            return;
+        }
+        // Best-effort: write EOS pages for all active streams.
+        // Errors are silently ignored since Drop can't propagate them.
+        let serial_nos: Vec<i32> = self.streams.keys().copied().collect();
+        for serial_no in serial_nos {
+            let _ = self.stream_end(serial_no);
+        }
+        self.closed = true;
+    }
+}
+
 impl<W: Write> OpusWriter<W> {
     /// Creates a new OGG Opus writer with a default stream.
     pub fn new(writer: W, sample_rate: u32, channels: u16) -> io::Result<Self> {

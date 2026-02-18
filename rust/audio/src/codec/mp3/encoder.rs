@@ -282,16 +282,32 @@ impl<W: Write> Mp3Encoder<W> {
     }
 
     /// Closes the encoder, flushing any remaining buffered frames first.
+    ///
+    /// Flush and close are done under a single mutex acquisition to avoid
+    /// any gap between the two operations.
     pub fn close(&mut self) -> Result<(), EncoderError> {
-        // Flush remaining buffered frames before closing.
-        // LAME internally buffers partial frames; without flushing,
-        // the last few audio frames would be silently discarded.
-        self.flush()?;
-
         let mut inner = self.inner.lock().unwrap();
 
         if inner.closed {
             return Ok(());
+        }
+
+        // Flush remaining buffered frames before closing.
+        if inner.inited && !inner.lame.is_null() {
+            let encoded = unsafe {
+                ffi::lame_encode_flush(
+                    inner.lame,
+                    inner.mp3buf.as_mut_ptr(),
+                    inner.mp3buf.len() as i32,
+                )
+            };
+            if encoded > 0 {
+                let flush_data = inner.mp3buf[..encoded as usize].to_vec();
+                inner
+                    .writer
+                    .write_all(&flush_data)
+                    .map_err(EncoderError::Io)?;
+            }
         }
 
         inner.closed = true;
