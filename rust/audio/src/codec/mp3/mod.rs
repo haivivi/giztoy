@@ -19,7 +19,7 @@ use std::io::{self, Read, Write};
 /// Encodes an entire PCM stream to MP3.
 ///
 /// Reads PCM data from `pcm` and writes encoded MP3 to `w`.
-/// Returns the total number of bytes written.
+/// Returns the total number of PCM input bytes consumed.
 pub fn encode_pcm_stream(
     w: &mut dyn Write,
     pcm: &mut dyn Read,

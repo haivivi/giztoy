@@ -7,7 +7,9 @@
 use std::collections::HashMap;
 use std::io::{self, Write};
 
-const PAGE_HEADER_TYPE_CONTINUATION: u8 = 0x00;
+/// Normal data page (no special flags). OGG spec: 0x00 = fresh packet.
+/// Note: OGG continuation flag is 0x01, which is different.
+const PAGE_HEADER_TYPE_FRESH: u8 = 0x00;
 const PAGE_HEADER_TYPE_BOS: u8 = 0x02;
 const PAGE_HEADER_TYPE_EOS: u8 = 0x04;
 const DEFAULT_PRE_SKIP: u16 = 3840; // 80ms at 48kHz (RFC 7845 §5.1)
@@ -96,7 +98,7 @@ impl<W: Write> OpusWriter<W> {
         comment_header[12..18].copy_from_slice(b"giztoy"); // Vendor
         comment_header[18..22].copy_from_slice(&0u32.to_le_bytes()); // No comments
 
-        let page = self.create_page(&comment_header, PAGE_HEADER_TYPE_CONTINUATION, 0, stream.page_index, stream.serial_no);
+        let page = self.create_page(&comment_header, PAGE_HEADER_TYPE_FRESH, 0, stream.page_index, stream.serial_no);
         self.writer.write_all(&page)?;
         stream.page_index += 1;
 
@@ -129,7 +131,7 @@ impl<W: Write> OpusWriter<W> {
         let page_index = stream.page_index;
         stream.page_index += 1;
 
-        let page = self.create_page(frame, PAGE_HEADER_TYPE_CONTINUATION, granule, page_index, serial_no);
+        let page = self.create_page(frame, PAGE_HEADER_TYPE_FRESH, granule, page_index, serial_no);
         self.writer.write_all(&page)
     }
 

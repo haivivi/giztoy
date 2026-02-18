@@ -281,8 +281,13 @@ impl<W: Write> Mp3Encoder<W> {
         Ok(())
     }
 
-    /// Closes the encoder.
+    /// Closes the encoder, flushing any remaining buffered frames first.
     pub fn close(&mut self) -> Result<(), EncoderError> {
+        // Flush remaining buffered frames before closing.
+        // LAME internally buffers partial frames; without flushing,
+        // the last few audio frames would be silently discarded.
+        self.flush()?;
+
         let mut inner = self.inner.lock().unwrap();
 
         if inner.closed {
