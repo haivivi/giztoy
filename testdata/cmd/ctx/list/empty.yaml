@@ -1,0 +1,5 @@
+# Test: ctx list with no contexts
+steps:
+  - args: [ctx, list]
+    exit_code: 0
+    stdout_contains: "No contexts"

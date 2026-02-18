@@ -1,0 +1,5 @@
+# Test: ctx add creates a new context
+steps:
+  - args: [ctx, add, dev]
+    exit_code: 0
+    stdout_contains: "created"

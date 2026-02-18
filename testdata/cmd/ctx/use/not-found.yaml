@@ -1,0 +1,5 @@
+# Test: ctx use fails for nonexistent context
+steps:
+  - args: [ctx, use, nonexistent]
+    exit_code: 1
+    stderr_contains: "not found"

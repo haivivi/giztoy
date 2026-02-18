@@ -1,0 +1,17 @@
+# Test: ctx show displays current context details
+steps:
+  - args: [ctx, add, dev]
+    exit_code: 0
+  - args: [ctx, use, dev]
+    exit_code: 0
+  - args: [ctx, config, set, kv, "badger:///tmp/test"]
+    exit_code: 0
+  - args: [ctx, show]
+    exit_code: 0
+    stdout_contains: "dev"
+    stdout_contains: "badger:///tmp/test"
+  - args: [ctx, show, --json]
+    exit_code: 0
+    stdout_json:
+      name: dev
+      kv: "badger:///tmp/test"

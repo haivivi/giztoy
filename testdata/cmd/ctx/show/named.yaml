@@ -1,0 +1,11 @@
+# Test: ctx show with explicit name
+steps:
+  - args: [ctx, add, dev]
+    exit_code: 0
+  - args: [ctx, add, prod]
+    exit_code: 0
+  - args: [ctx, use, dev]
+    exit_code: 0
+  - args: [ctx, show, prod]
+    exit_code: 0
+    stdout_contains: "prod"

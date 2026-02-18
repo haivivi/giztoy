@@ -1,0 +1,10 @@
+# Test: ctx config list shows all supported keys
+steps:
+  - args: [ctx, config, list]
+    exit_code: 0
+    stdout_contains: "kv"
+    stdout_contains: "storage"
+    stdout_contains: "vecstore"
+    stdout_contains: "embed"
+  - args: [ctx, config, list, --json]
+    exit_code: 0
