@@ -109,8 +109,6 @@ pub struct Mixer {
     state: Mutex<MixerState>,
     notify: Arc<Condvar>,
 
-    // Mixing buffer (reused across reads)
-    mix_buf: Mutex<Vec<f32>>,
 
     // Callbacks
     on_track_created: Option<MixerCallback>,
@@ -139,7 +137,6 @@ impl Mixer {
                 running_silence: initial_silence,
             }),
             notify: Arc::new(Condvar::new()),
-            mix_buf: Mutex::new(Vec::new()),
             on_track_created: opts.on_track_created,
             on_track_closed: opts.on_track_closed,
         })
@@ -266,11 +263,9 @@ impl Mixer {
 
         let sample_count = len / 2;
 
-        // Get or resize mixing buffer
-        let mut mix_buf = self.mix_buf.lock().unwrap();
-        if mix_buf.len() < sample_count {
-            mix_buf.resize(sample_count, 0.0);
-        }
+        // Local mixing buffer — no mutex needed since mixer is single-reader.
+        // This avoids holding a lock across the condvar wait_timeout below.
+        let mut mix_buf = vec![0.0f32; sample_count];
 
         let mut state = self.state.lock().unwrap();
 

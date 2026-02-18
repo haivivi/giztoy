@@ -209,12 +209,19 @@ pub fn generate_chord(freqs: &[f64], samples: usize, sample_rate: u32, volume: f
     // Scale volume per voice to prevent clipping
     let voice_volume = volume / (active_freqs.len() as f64).sqrt();
 
+    // Accumulate all voices in f64 to avoid intermediate clipping.
+    // Clamping at each iteration would permanently lose dynamic range.
+    let mut accum = vec![0.0f64; samples];
     for freq in &active_freqs {
         let note_data = generate_rich_note(*freq, samples, sample_rate, voice_volume);
-        for i in 0..data.len() {
-            let mixed = data[i] as f64 + note_data[i] as f64;
-            data[i] = (clamp(mixed / 32767.0, -1.0, 1.0) * 32767.0) as i16;
+        for i in 0..accum.len() {
+            accum[i] += note_data[i] as f64;
         }
+    }
+
+    // Single clamp pass at the end
+    for i in 0..data.len() {
+        data[i] = (clamp(accum[i] / 32767.0, -1.0, 1.0) * 32767.0) as i16;
     }
 
     data

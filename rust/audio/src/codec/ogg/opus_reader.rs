@@ -1,5 +1,6 @@
 //! Read Opus packets from an OGG container.
 
+use std::collections::HashSet;
 use std::io::{self, Read};
 use super::opus_writer::OpusPacket;
 
@@ -10,9 +11,12 @@ const PAGE_HEADER_SIZE: usize = 27;
 ///
 /// Yields `OpusPacket` instances for each audio packet found,
 /// skipping header pages (OpusHead, OpusTags).
+/// Handles multi-stream OGG: only terminates when ALL known streams
+/// have sent their EOS page.
 pub struct OpusPacketReader<R: Read> {
     reader: R,
-    buf: Vec<u8>,
+    known_streams: HashSet<i32>,
+    eos_streams: HashSet<i32>,
 }
 
 impl<R: Read> OpusPacketReader<R> {
@@ -20,7 +24,8 @@ impl<R: Read> OpusPacketReader<R> {
     pub fn new(reader: R) -> Self {
         Self {
             reader,
-            buf: Vec::new(),
+            known_streams: HashSet::new(),
+            eos_streams: HashSet::new(),
         }
     }
 
@@ -59,8 +64,9 @@ impl<R: Read> OpusPacketReader<R> {
             let mut payload = vec![0u8; payload_size];
             self.reader.read_exact(&mut payload)?;
 
-            // Skip BOS pages (headers)
+            // Track known streams from BOS pages
             if header_type & 0x02 != 0 {
+                self.known_streams.insert(serial_no);
                 continue;
             }
 
@@ -69,11 +75,30 @@ impl<R: Read> OpusPacketReader<R> {
                 continue;
             }
 
-            // Skip empty EOS pages
-            if payload.is_empty() {
-                if header_type & 0x04 != 0 {
-                    return Ok(None); // EOS
+            // Handle EOS pages per-stream
+            if header_type & 0x04 != 0 {
+                self.eos_streams.insert(serial_no);
+                // Only terminate when ALL known streams have EOS
+                if !self.known_streams.is_empty()
+                    && self.eos_streams.len() >= self.known_streams.len()
+                {
+                    // Return this last packet if non-empty, then next call returns None
+                    if !payload.is_empty() {
+                        return Ok(Some(OpusPacket {
+                            data: payload,
+                            granule,
+                            serial_no,
+                        }));
+                    }
+                    return Ok(None);
                 }
+                // This stream's EOS but others still active — skip empty payload
+                if payload.is_empty() {
+                    continue;
+                }
+            }
+
+            if payload.is_empty() {
                 continue;
             }
 
