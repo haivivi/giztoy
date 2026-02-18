@@ -174,7 +174,7 @@ pub(crate) struct TrackInput {
 /// Holds a queue of TrackInputs. The mixer reads from the head input;
 /// when it returns EOF, the next input is activated.
 pub(crate) struct InternalTrack {
-    pub inputs: Mutex<Vec<Arc<TrackRingBuf>>>,
+    pub inputs: Mutex<Vec<TrackInput>>,
     pub close_write: AtomicBool,
     pub close_err: Mutex<Option<String>>,
     pub notify_mixer: Arc<Condvar>,
@@ -190,9 +190,9 @@ impl InternalTrack {
         }
     }
 
-    /// Adds a new input ring buffer to the track.
-    pub fn add_input(&self, rb: Arc<TrackRingBuf>) {
-        self.inputs.lock().unwrap().push(rb);
+    /// Adds a new input with its format and ring buffer.
+    pub fn add_input(&self, format: Format, rb: Arc<TrackRingBuf>) {
+        self.inputs.lock().unwrap().push(TrackInput { format, rb });
     }
 
     /// Reads a full chunk from the track. Zero-fills if not enough data.
@@ -216,8 +216,7 @@ impl InternalTrack {
         let mut offset = 0;
 
         while offset < buf.len() && !inputs.is_empty() {
-            let rb = &inputs[0];
-            match rb.read(&mut buf[offset..]) {
+            match inputs[0].rb.read(&mut buf[offset..]) {
                 ReadResult::Data(n) => {
                     offset += n;
                     // Got some data, return what we have (rest is zero-filled)
@@ -260,7 +259,7 @@ impl InternalTrack {
         self.close_write.store(true, Ordering::SeqCst);
         let inputs = self.inputs.lock().unwrap();
         if let Some(last) = inputs.last() {
-            last.close_write();
+            last.rb.close_write();
         }
         self.notify_mixer.notify_all();
     }
@@ -269,8 +268,8 @@ impl InternalTrack {
         *self.close_err.lock().unwrap() = Some(err.clone());
         self.close_write.store(true, Ordering::SeqCst);
         let inputs = self.inputs.lock().unwrap();
-        for rb in inputs.iter() {
-            rb.close_with_error(err.clone());
+        for input in inputs.iter() {
+            input.rb.close_with_error(err.clone());
         }
         self.notify_mixer.notify_all();
     }
@@ -283,7 +282,7 @@ impl InternalTrack {
             return false;
         }
         let inputs = self.inputs.lock().unwrap();
-        inputs.iter().all(|rb| rb.is_eof())
+        inputs.iter().all(|input| input.rb.is_eof())
     }
 }
 
@@ -350,7 +349,7 @@ mod tests {
         let rb = Arc::new(TrackRingBuf::new(1000, notify));
         // Write only 4 bytes (2 samples)
         rb.write(&[0x10, 0x00, 0x20, 0x00]).unwrap();
-        track.add_input(rb);
+        track.add_input(Format::L16Mono16K, rb);
 
         // Read 10 bytes — should get 4 real + 6 zeros
         let mut buf = vec![0xFFu8; 10];
@@ -377,13 +376,13 @@ mod tests {
         let rb1 = Arc::new(TrackRingBuf::new(100, notify.clone()));
         rb1.write(&[1, 0, 2, 0]).unwrap();
         rb1.close_write();
-        track.add_input(rb1);
+        track.add_input(Format::L16Mono16K, rb1);
 
         // Input 2: writes [3,0, 4,0]
         let rb2 = Arc::new(TrackRingBuf::new(100, notify.clone()));
         rb2.write(&[3, 0, 4, 0]).unwrap();
         rb2.close_write();
-        track.add_input(rb2);
+        track.add_input(Format::L16Mono16K, rb2);
 
         track.close_write();
 

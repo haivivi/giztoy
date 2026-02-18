@@ -97,19 +97,6 @@ impl<W: Write> OpusWriter<W> {
         Ok(())
     }
 
-    fn write_tags_page(&mut self, stream: &mut OpusStream) -> io::Result<()> {
-        let mut comment_header = vec![0u8; 22];
-        comment_header[..8].copy_from_slice(b"OpusTags");
-        comment_header[8..12].copy_from_slice(&6u32.to_le_bytes()); // Vendor length
-        comment_header[12..18].copy_from_slice(b"giztoy"); // Vendor
-        comment_header[18..22].copy_from_slice(&0u32.to_le_bytes()); // No comments
-
-        let page = self.create_page(&comment_header, PAGE_HEADER_TYPE_FRESH, 0, stream.page_index, stream.serial_no);
-        self.writer.write_all(&page)?;
-        stream.page_index += 1;
-        Ok(())
-    }
-
     /// Writes an Opus frame to the default stream.
     ///
     /// `duration_48k` is the frame duration in samples at 48kHz
@@ -208,16 +195,27 @@ impl<W: Write> OpusWriter<W> {
         }
 
         let serial_nos: Vec<i32> = self.streams.keys().copied().collect();
+        let mut first_err = None;
         for serial_no in serial_nos {
-            let _ = self.stream_end(serial_no);
+            if let Err(e) = self.stream_end(serial_no) {
+                if first_err.is_none() {
+                    first_err = Some(e);
+                }
+            }
         }
         self.closed = true;
-        Ok(())
+        match first_err {
+            Some(e) => Err(e),
+            None => Ok(()),
+        }
     }
 
     fn create_page(&self, payload: &[u8], header_type: u8, granule_pos: u64, page_index: u32, serial_no: i32) -> Vec<u8> {
         let payload_len = payload.len();
         let n_segments = if payload_len > 0 { (payload_len / 255) + 1 } else { 1 };
+
+        // OGG page segment count must fit in a u8 (max 255 segments = ~65KB payload).
+        assert!(n_segments <= 255, "payload too large for single OGG page: {} bytes requires {} segments", payload_len, n_segments);
 
         let mut page = vec![0u8; PAGE_HEADER_SIZE + n_segments + payload_len];
 

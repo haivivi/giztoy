@@ -462,7 +462,7 @@ impl TrackCtrlInner {
         // Create the default input ring buffer (10 seconds capacity)
         let buf_size = mixer.output.bytes_rate() as usize * 10;
         let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
-        track.add_input(rb.clone());
+        track.add_input(mixer.output, rb.clone());
 
         Self {
             mixer,
@@ -509,7 +509,7 @@ impl TrackCtrlInner {
             *current = Some(rb.clone());
         }
 
-        self.track.add_input(rb.clone());
+        self.track.add_input(format, rb.clone());
         rb
     }
 
