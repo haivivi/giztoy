@@ -480,10 +480,15 @@ impl TrackCtrlInner {
             return Ok(0);
         }
 
-        let rb = self.current_rb.lock().unwrap();
-        let rb = rb.as_ref().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::BrokenPipe, "track write closed")
-        })?;
+        // Clone the Arc and drop the lock before the potentially-blocking
+        // rb.write(). Otherwise new_input() can't acquire current_rb to
+        // install a replacement, causing deadlock when the buffer is full.
+        let rb = {
+            let guard = self.current_rb.lock().unwrap();
+            guard.as_ref().cloned().ok_or_else(|| {
+                io::Error::new(io::ErrorKind::BrokenPipe, "track write closed")
+            })?
+        };
 
         rb.write(data).map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
     }
@@ -597,6 +602,11 @@ impl TrackWriter {
     ///
     /// If resampling is needed, the data is resampled to the mixer's output
     /// format before being written to this writer's ring buffer.
+    ///
+    /// Note: the current resampler treats all samples as a flat array and
+    /// does not handle stereo (interleaved L/R) correctly. This is fine for
+    /// the current mono-only usage in chatgear/genx. Stereo support would
+    /// require per-channel interpolation.
     pub fn write_bytes(&self, data: &[u8]) -> io::Result<usize> {
         if self.input_format == self.output_format {
             return self.rb.write(data)

@@ -24,6 +24,7 @@ struct OpusStream {
     granule: i64,
     page_index: u32,
     ended: bool,
+    tags_written: bool,
 }
 
 /// Writes Opus frames into an OGG container.
@@ -53,7 +54,10 @@ impl<W: Write> OpusWriter<W> {
         Ok(ow)
     }
 
-    /// Creates a new stream and writes its headers.
+    /// Creates a new stream and writes its BOS (OpusHead) page.
+    ///
+    /// Per RFC 3533, all BOS pages must appear before any non-BOS pages.
+    /// The OpusTags page is deferred until the first `stream_write` call.
     /// Returns the serial number assigned to this stream.
     pub fn stream_begin(&mut self, sample_rate: u32, channels: u16) -> io::Result<i32> {
         let serial_no = self.generate_serial_no();
@@ -64,9 +68,10 @@ impl<W: Write> OpusWriter<W> {
             granule: 0,
             page_index: 0,
             ended: false,
+            tags_written: false,
         };
 
-        self.write_stream_headers(&mut stream)?;
+        self.write_bos_page(&mut stream)?;
         self.streams.insert(serial_no, stream);
         Ok(serial_no)
     }
@@ -76,8 +81,7 @@ impl<W: Write> OpusWriter<W> {
         (self.streams.len() as i32) + 1
     }
 
-    fn write_stream_headers(&mut self, stream: &mut OpusStream) -> io::Result<()> {
-        // OpusHead header (19 bytes)
+    fn write_bos_page(&mut self, stream: &mut OpusStream) -> io::Result<()> {
         let mut id_header = vec![0u8; 19];
         id_header[..8].copy_from_slice(b"OpusHead");
         id_header[8] = 1; // Version
@@ -90,8 +94,10 @@ impl<W: Write> OpusWriter<W> {
         let page = self.create_page(&id_header, PAGE_HEADER_TYPE_BOS, 0, stream.page_index, stream.serial_no);
         self.writer.write_all(&page)?;
         stream.page_index += 1;
+        Ok(())
+    }
 
-        // OpusTags header (22 bytes)
+    fn write_tags_page(&mut self, stream: &mut OpusStream) -> io::Result<()> {
         let mut comment_header = vec![0u8; 22];
         comment_header[..8].copy_from_slice(b"OpusTags");
         comment_header[8..12].copy_from_slice(&6u32.to_le_bytes()); // Vendor length
@@ -101,7 +107,6 @@ impl<W: Write> OpusWriter<W> {
         let page = self.create_page(&comment_header, PAGE_HEADER_TYPE_FRESH, 0, stream.page_index, stream.serial_no);
         self.writer.write_all(&page)?;
         stream.page_index += 1;
-
         Ok(())
     }
 
@@ -126,6 +131,22 @@ impl<W: Write> OpusWriter<W> {
             return Err(io::Error::new(io::ErrorKind::BrokenPipe, "stream ended"));
         }
 
+        // Write OpusTags page on first data write (deferred from stream_begin
+        // to ensure all BOS pages precede any non-BOS pages per RFC 3533).
+        if !stream.tags_written {
+            stream.tags_written = true;
+            self.write_tags_page_for(serial_no)?;
+            // Re-borrow after mutable self call
+            let stream = self.streams.get_mut(&serial_no).unwrap();
+            stream.granule += duration_48k;
+            let granule = stream.granule as u64;
+            let page_index = stream.page_index;
+            stream.page_index += 1;
+
+            let page = self.create_page(frame, PAGE_HEADER_TYPE_FRESH, granule, page_index, serial_no);
+            return self.writer.write_all(&page);
+        }
+
         stream.granule += duration_48k;
         let granule = stream.granule as u64;
         let page_index = stream.page_index;
@@ -133,6 +154,25 @@ impl<W: Write> OpusWriter<W> {
 
         let page = self.create_page(frame, PAGE_HEADER_TYPE_FRESH, granule, page_index, serial_no);
         self.writer.write_all(&page)
+    }
+
+    /// Write tags page for a specific stream.
+    fn write_tags_page_for(&mut self, serial_no: i32) -> io::Result<()> {
+        let stream = self.streams.get(&serial_no).unwrap();
+        let page_index = stream.page_index;
+
+        let mut comment_header = vec![0u8; 22];
+        comment_header[..8].copy_from_slice(b"OpusTags");
+        comment_header[8..12].copy_from_slice(&6u32.to_le_bytes());
+        comment_header[12..18].copy_from_slice(b"giztoy");
+        comment_header[18..22].copy_from_slice(&0u32.to_le_bytes());
+
+        let page = self.create_page(&comment_header, PAGE_HEADER_TYPE_FRESH, 0, page_index, serial_no);
+        self.writer.write_all(&page)?;
+
+        let stream = self.streams.get_mut(&serial_no).unwrap();
+        stream.page_index += 1;
+        Ok(())
     }
 
     /// Returns the current granule position of the default stream.
