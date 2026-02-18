@@ -1,0 +1,7 @@
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [dashscope, app, add, default, --api-key, k1]
+  - args: [dashscope, app, remove, default]
+    exit_code: 0
+    stdout_contains: "removed"

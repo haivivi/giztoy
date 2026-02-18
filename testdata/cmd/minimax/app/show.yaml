@@ -1,0 +1,10 @@
+# Test: minimax app show
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [minimax, app, add, cn, --api-key, test-key-123, --base-url, "https://api.minimaxi.com"]
+  - args: [minimax, app, show, cn, --json]
+    exit_code: 0
+    stdout_json:
+      api-key: test-key-123
+      base-url: "https://api.minimaxi.com"

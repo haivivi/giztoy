@@ -1,0 +1,7 @@
+# Test: minimax app add fails without api-key
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [minimax, app, add, cn]
+    exit_code: 1
+    stderr_contains: "--api-key is required"

@@ -1,0 +1,9 @@
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [doubaospeech, app, add, test, --app-id, "111", --token, "tok1"]
+  - args: [doubaospeech, app, add, prod, --app-id, "222", --token, "tok2"]
+  - args: [doubaospeech, app, list]
+    exit_code: 0
+    stdout_contains: "test"
+    stdout_contains: "prod"

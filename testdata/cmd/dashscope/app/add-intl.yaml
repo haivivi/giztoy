@@ -1,0 +1,5 @@
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [dashscope, app, add, intl, --api-key, sk-intl, --base-url, "https://dashscope-intl.aliyuncs.com"]
+    exit_code: 0

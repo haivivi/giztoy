@@ -1,0 +1,7 @@
+# Test: doubaospeech app add fails without required fields
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [doubaospeech, app, add, test, --token, tok]
+    exit_code: 1
+    stderr_contains: "--app-id is required"

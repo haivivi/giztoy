@@ -1,0 +1,7 @@
+# Test: minimax app add cn with base-url
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [minimax, app, add, cn, --api-key, test-key, --base-url, "https://api.minimaxi.com"]
+    exit_code: 0
+    stdout_contains: "added"

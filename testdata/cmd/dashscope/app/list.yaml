@@ -1,0 +1,9 @@
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [dashscope, app, add, default, --api-key, k1]
+  - args: [dashscope, app, add, intl, --api-key, k2]
+  - args: [dashscope, app, list]
+    exit_code: 0
+    stdout_contains: "default"
+    stdout_contains: "intl"

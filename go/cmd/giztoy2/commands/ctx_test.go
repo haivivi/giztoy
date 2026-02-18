@@ -6,6 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+
 	"github.com/haivivi/giztoy/go/pkg/cortex"
 )
 
@@ -38,6 +41,10 @@ func runCmd(t *testing.T, args ...string) (stdout, stderr string, exitCode int) 
 	os.Stdout = wOut
 	os.Stderr = wErr
 
+	// Reset global flags to avoid state pollution between tests.
+	verbose = false
+	jsonOutput = false
+
 	rootCmd.SetArgs(args)
 	err := rootCmd.Execute()
 
@@ -58,7 +65,21 @@ func runCmd(t *testing.T, args ...string) (stdout, stderr string, exitCode int) 
 			stderr = err.Error()
 		}
 	}
+
+	// Reset all cobra command flag state to prevent leaks between tests.
+	resetFlags(rootCmd)
+
 	return
+}
+
+func resetFlags(cmd *cobra.Command) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		f.Changed = false
+		f.Value.Set(f.DefValue)
+	})
+	for _, sub := range cmd.Commands() {
+		resetFlags(sub)
+	}
 }
 
 func TestCtxAddBasic(t *testing.T) {

@@ -1,0 +1,6 @@
+# Test: minimax app add global with overseas base-url
+steps:
+  - args: [ctx, add, dev]
+  - args: [ctx, use, dev]
+  - args: [minimax, app, add, global, --api-key, test-key, --base-url, "https://api.minimaxi.chat"]
+    exit_code: 0
