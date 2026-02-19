@@ -94,6 +94,10 @@ struct MixerState {
     close_err: Option<String>,
     close_write: bool,
     running_silence: Duration,
+    /// Reusable mixing buffer (f32 samples). Allocated once, grown as needed.
+    mix_buf: Vec<f32>,
+    /// Reusable track read buffer (raw bytes). Allocated once, grown as needed.
+    track_buf: Vec<u8>,
 }
 
 /// A multi-track audio mixer.
@@ -135,6 +139,8 @@ impl Mixer {
                 close_err: None,
                 close_write: false,
                 running_silence: initial_silence,
+                mix_buf: Vec::new(),
+                track_buf: Vec::new(),
             }),
             notify: Arc::new(Condvar::new()),
             on_track_created: opts.on_track_created,
@@ -261,11 +267,15 @@ impl Mixer {
 
         let sample_count = len / 2;
 
-        // Local mixing buffer — no mutex needed since mixer is single-reader.
-        // This avoids holding a lock across the condvar wait_timeout below.
-        let mut mix_buf = vec![0.0f32; sample_count];
-
         let mut state = self.state.lock().unwrap();
+
+        // Ensure reusable buffers are large enough (allocated once, grown as needed).
+        if state.mix_buf.len() < sample_count {
+            state.mix_buf.resize(sample_count, 0.0);
+        }
+        if state.track_buf.len() < len {
+            state.track_buf.resize(len, 0);
+        }
 
         loop {
             // Check for error
@@ -275,7 +285,7 @@ impl Mixer {
 
             // Try to read and mix data
             let (peak, read, should_return_silence, should_eof, tracks_removed) =
-                self.try_read_and_mix(&mut state, &mut mix_buf[..sample_count]);
+                self.try_read_and_mix(&mut state, sample_count);
 
             // Fire on_track_closed callbacks outside the state lock.
             // We do this AFTER checking read/eof/silence results below,
@@ -302,7 +312,7 @@ impl Mixer {
                 } else {
                     // Convert mixed float32 samples to int16
                     for i in 0..sample_count {
-                        let mut t = mix_buf[i];
+                        let mut t = state.mix_buf[i];
                         // Clip to prevent overflow
                         t = t.clamp(-1.0, 1.0);
                         // Convert to int16
@@ -356,7 +366,7 @@ impl Mixer {
     fn try_read_and_mix(
         &self,
         state: &mut MixerState,
-        mix_buf: &mut [f32],
+        sample_count: usize,
     ) -> (f32, bool, bool, bool, usize) {
         // Check if we should EOF
         if state.tracks.is_empty() {
@@ -378,18 +388,18 @@ impl Mixer {
             return (0.0, false, false, false, 0);
         }
 
+        // Swap buffers out of state to avoid borrow conflicts with tracks.retain().
+        // Vec::new() is zero-cost (no heap allocation); the original Vec keeps its capacity.
+        let mut mix_buf = std::mem::replace(&mut state.mix_buf, Vec::new());
+        let mut track_buf = std::mem::replace(&mut state.track_buf, Vec::new());
+
         // Clear mixing buffer
-        for sample in mix_buf.iter_mut() {
-            *sample = 0.0;
-        }
+        mix_buf[..sample_count].fill(0.0);
 
         let mut peak: f32 = 0.0;
         let mut has_data = false;
 
-        // Create temporary buffer for reading track data
-        let bytes_needed = mix_buf.len() * 2;
-        let mut track_buf = vec![0u8; bytes_needed];
-
+        let bytes_needed = sample_count * 2;
         let initial_track_count = state.tracks.len();
 
         // Pull fixed-size chunk from each track using readFull.
@@ -397,19 +407,15 @@ impl Mixer {
         // is available, zero-filling the rest. This ensures all tracks
         // contribute to every mixer read with proper frame alignment.
         state.tracks.retain(|track| {
-            // Zero the track buffer before readFull
-            track_buf.fill(0);
+            track_buf[..bytes_needed].fill(0);
 
-            let (n, _done) = track.read_full(&mut track_buf);
+            let (n, _done) = track.read_full(&mut track_buf[..bytes_needed]);
             if n > 0 {
                 has_data = true;
                 let gain = track.gain.load(Ordering::Relaxed);
 
-                // Mix this track's audio into the buffer.
-                // n is always bytes_needed because read_full returns
-                // the full buffer size (with zero-fill for missing data).
-                let sample_count = n / 2;
-                for i in 0..sample_count.min(mix_buf.len()) {
+                let sc = n / 2;
+                for i in 0..sc.min(sample_count) {
                     let sample =
                         i16::from_le_bytes([track_buf[i * 2], track_buf[i * 2 + 1]]);
                     if sample != 0 {
@@ -427,6 +433,10 @@ impl Mixer {
 
             !track.is_done()
         });
+
+        // Swap buffers back into state for reuse on the next call.
+        state.mix_buf = mix_buf;
+        state.track_buf = track_buf;
 
         let removed = initial_track_count - state.tracks.len();
         (peak, has_data, false, false, removed)

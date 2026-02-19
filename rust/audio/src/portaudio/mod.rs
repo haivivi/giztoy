@@ -317,12 +317,23 @@ impl Stream {
             );
         }
 
+        let channels = self.config.output_channels as usize;
+        if samples.len() % channels != 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!(
+                    "samples length {} not aligned to channel count {}",
+                    samples.len(),
+                    channels,
+                ),
+            ));
+        }
+
         pa_check(unsafe {
             ffi::Pa_WriteStream(
                 self.pa_stream,
                 self.buffer as *const _,
-                samples.len() as std::os::raw::c_ulong
-                    / self.config.output_channels as std::os::raw::c_ulong,
+                (samples.len() / channels) as std::os::raw::c_ulong,
             )
         })
     }

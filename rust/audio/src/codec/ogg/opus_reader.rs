@@ -3,7 +3,7 @@
 //! Correctly parses OGG page segment tables to extract packet boundaries,
 //! supporting pages that contain multiple packets (per RFC 3533).
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{self, Read};
 use super::opus_writer::OpusPacket;
 
@@ -23,9 +23,8 @@ pub struct OpusPacketReader<R: Read> {
     eos_streams: HashSet<i32>,
     /// Buffered packets extracted from current page but not yet returned.
     pending: VecDeque<OpusPacket>,
-    /// Partial packet data carried over from a page that ended with lacing value 255.
-    continued_packet: Vec<u8>,
-    continued_serial: i32,
+    /// Per-stream partial packet data carried over from pages ending with lacing value 255.
+    continued: HashMap<i32, Vec<u8>>,
     all_eos: bool,
 }
 
@@ -37,8 +36,7 @@ impl<R: Read> OpusPacketReader<R> {
             known_streams: HashSet::new(),
             eos_streams: HashSet::new(),
             pending: VecDeque::new(),
-            continued_packet: Vec::new(),
-            continued_serial: 0,
+            continued: HashMap::new(),
             all_eos: false,
         }
     }
@@ -107,17 +105,15 @@ impl<R: Read> OpusPacketReader<R> {
         let mut current_packet = Vec::new();
         let mut offset = 0;
 
-        // If this page has the continuation flag and we have carried-over data
-        // from the previous page, prepend it — but only if the serial matches.
-        if header_type & 0x01 != 0
-            && !self.continued_packet.is_empty()
-            && serial_no == self.continued_serial
-        {
-            current_packet.append(&mut self.continued_packet);
-        } else if serial_no == self.continued_serial {
-            // Same stream, fresh page — discard stale carried-over data.
-            // If different stream, keep continued_packet for the original stream.
-            self.continued_packet.clear();
+        // If this page has the continuation flag, prepend carried-over data
+        // for this stream (if any).
+        if header_type & 0x01 != 0 {
+            if let Some(mut carried) = self.continued.remove(&serial_no) {
+                current_packet.append(&mut carried);
+            }
+        } else {
+            // Fresh page — discard any stale carried-over data for this stream.
+            self.continued.remove(&serial_no);
         }
 
         for &lacing in &segment_table {
@@ -136,8 +132,7 @@ impl<R: Read> OpusPacketReader<R> {
 
         // If the last lacing value was 255, the packet continues on the next page
         if !current_packet.is_empty() {
-            self.continued_packet = current_packet;
-            self.continued_serial = serial_no;
+            self.continued.insert(serial_no, current_packet);
         }
 
         // Handle EOS
