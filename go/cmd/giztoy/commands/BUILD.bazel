@@ -1,0 +1,41 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "commands",
+    srcs = [
+        "apply.go",
+        "ctx.go",
+        "delete_cmd.go",
+        "get_cmd.go",
+        "list_cmd.go",
+        "root.go",
+        "run_cmd.go",
+        "version.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/cmd/giztoy/commands",
+    visibility = ["//go/cmd/giztoy:__subpackages__"],
+    deps = [
+        "//go/pkg/cortex",
+        "//go/pkg/kv",
+        "@com_github_goccy_go_yaml//:go-yaml",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)
+
+go_test(
+    name = "commands_test",
+    srcs = [
+        "apply_test.go",
+        "ctx_test.go",
+        "list_get_delete_test.go",
+        "run_test.go",
+        "version_test.go",
+    ],
+    embed = [":commands"],
+    deps = [
+        "//go/pkg/cortex",
+        "//go/pkg/kv",
+        "@com_github_spf13_cobra//:cobra",
+        "@com_github_spf13_pflag//:pflag",
+    ],
+)

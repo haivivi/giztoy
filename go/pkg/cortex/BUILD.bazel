@@ -1,0 +1,47 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "cortex",
+    srcs = [
+        "configstore.go",
+        "cortex.go",
+        "document.go",
+        "kinds.go",
+        "run.go",
+        "run_dashscope.go",
+        "run_doubaospeech.go",
+        "run_genai.go",
+        "run_genx.go",
+        "run_memory.go",
+        "run_minimax.go",
+        "run_openai.go",
+        "schema.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/cortex",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/dashscope",
+        "//go/pkg/doubaospeech",
+        "//go/pkg/graph",
+        "//go/pkg/kv",
+        "//go/pkg/memory",
+        "//go/pkg/minimax",
+        "//go/pkg/recall",
+        "@com_github_goccy_go_yaml//:go-yaml",
+        "@com_github_openai_openai_go//:openai-go",
+        "@com_github_openai_openai_go//option",
+        "@org_golang_google_genai//:genai",
+    ],
+)
+
+go_test(
+    name = "cortex_test",
+    srcs = [
+        "configstore_test.go",
+        "cortex_test.go",
+    ],
+    embed = [":cortex"],
+    deps = [
+        "//go/pkg/kv",
+    ],
+)
