@@ -236,18 +236,21 @@ func runApplyErrors(ctx context.Context, c *cortex.Cortex, dir string) []testRes
 		start := time.Now()
 		docs, parseErr := cortex.ParseDocumentsFromFile(filepath.Join(dir, e.Name()))
 		if parseErr != nil {
-			results = append(results, testResult{
-				File: "apply/" + e.Name(), Kind: "apply-error", Status: "pass", Elapsed: time.Since(start),
-			})
+			r := testResult{File: "apply/" + e.Name(), Kind: "apply-error", Status: "pass", Elapsed: time.Since(start)}
+			results = append(results, r)
+			printResult(r)
 			continue
 		}
 		_, applyErr := c.Apply(ctx, docs)
 		elapsed := time.Since(start)
+		var r testResult
 		if applyErr != nil {
-			results = append(results, testResult{File: "apply/" + e.Name(), Kind: "apply-error", Status: "pass", Elapsed: elapsed})
+			r = testResult{File: "apply/" + e.Name(), Kind: "apply-error", Status: "pass", Elapsed: elapsed}
 		} else {
-			results = append(results, testResult{File: "apply/" + e.Name(), Kind: "apply-error", Status: "fail", Elapsed: elapsed, Error: "expected error"})
+			r = testResult{File: "apply/" + e.Name(), Kind: "apply-error", Status: "fail", Elapsed: elapsed, Error: "expected error"}
 		}
+		results = append(results, r)
+		printResult(r)
 	}
 	return results
 }
@@ -312,22 +315,37 @@ func runTestdata(ctx context.Context, c *cortex.Cortex, dir, filter string, avai
 		_, runErr := c.Run(ctx, task)
 		elapsed := time.Since(start)
 
+		var r testResult
 		if isErrorCase {
 			if runErr != nil {
-				results = append(results, testResult{File: "run/" + rel, Kind: task.Kind, Status: "pass", Elapsed: elapsed})
+				r = testResult{File: "run/" + rel, Kind: task.Kind, Status: "pass", Elapsed: elapsed}
 			} else {
-				results = append(results, testResult{File: "run/" + rel, Kind: task.Kind, Status: "fail", Elapsed: elapsed, Error: "expected error"})
+				r = testResult{File: "run/" + rel, Kind: task.Kind, Status: "fail", Elapsed: elapsed, Error: "expected error"}
 			}
 		} else {
 			if runErr != nil {
-				results = append(results, testResult{File: "run/" + rel, Kind: task.Kind, Status: "fail", Elapsed: elapsed, Error: runErr.Error()})
+				r = testResult{File: "run/" + rel, Kind: task.Kind, Status: "fail", Elapsed: elapsed, Error: runErr.Error()}
 			} else {
-				results = append(results, testResult{File: "run/" + rel, Kind: task.Kind, Status: "pass", Elapsed: elapsed})
+				r = testResult{File: "run/" + rel, Kind: task.Kind, Status: "pass", Elapsed: elapsed}
 			}
 		}
+		results = append(results, r)
+		printResult(r)
 		return nil
 	})
 	return results
+}
+
+func printResult(r testResult) {
+	switch r.Status {
+	case "pass":
+		fmt.Printf("%s[PASS]%s %-50s %-30s %s\n", colorGreen, colorReset, r.File, r.Kind, r.Elapsed)
+	case "fail":
+		fmt.Printf("%s[FAIL]%s %-50s %-30s %s\n", colorRed, colorReset, r.File, r.Kind, r.Error)
+	case "skip":
+		fmt.Printf("%s[SKIP]%s %-50s %s\n", colorYellow, colorReset, r.File, "(no creds)")
+	}
+	flush()
 }
 
 func printReport(results []testResult) {
@@ -337,13 +355,10 @@ func printReport(results []testResult) {
 		switch r.Status {
 		case "pass":
 			passed++
-			fmt.Printf("%s[PASS]%s %-50s %-30s %s\n", colorGreen, colorReset, r.File, r.Kind, r.Elapsed)
 		case "fail":
 			failed++
-			fmt.Printf("%s[FAIL]%s %-50s %-30s %s\n", colorRed, colorReset, r.File, r.Kind, r.Error)
 		case "skip":
 			skipped++
-			fmt.Printf("%s[SKIP]%s %-50s %s\n", colorYellow, colorReset, r.File, "(no creds)")
 		}
 	}
 
@@ -365,8 +380,15 @@ func printReport(results []testResult) {
 	}
 }
 
-func logInfo(format string, args ...any)  { fmt.Printf("%s[INFO]%s %s\n", colorBlue, colorReset, fmt.Sprintf(format, args...)) }
-func logWarn(format string, args ...any)  { fmt.Printf("%s[WARN]%s %s\n", colorYellow, colorReset, fmt.Sprintf(format, args...)) }
+func flush() { os.Stdout.Sync() }
+func logInfo(format string, args ...any) {
+	fmt.Printf("%s[INFO]%s %s\n", colorBlue, colorReset, fmt.Sprintf(format, args...))
+	flush()
+}
+func logWarn(format string, args ...any) {
+	fmt.Printf("%s[WARN]%s %s\n", colorYellow, colorReset, fmt.Sprintf(format, args...))
+	flush()
+}
 func fatal(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, "%s[FATAL]%s %s\n", colorRed, colorReset, fmt.Sprintf(format, args...))
 	os.Exit(1)
