@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/haivivi/giztoy/go/pkg/cortex"
+	"github.com/haivivi/giztoy/go/pkg/kv"
 )
 
 func setupTestEnv(t *testing.T) (*cortex.ConfigStore, func()) {
@@ -30,6 +32,22 @@ func setupTestEnv(t *testing.T) (*cortex.ConfigStore, func()) {
 	}
 }
 
+// setupTestEnvWithKV sets up a test env with ctx + shared memory KV.
+func setupTestEnvWithKV(t *testing.T) func() {
+	t.Helper()
+	s, cleanup := setupTestEnv(t)
+	s.CtxAdd("test")
+	s.CtxUse("test")
+	s.CtxConfigSet("kv", "memory://")
+
+	memKV := kv.NewMemory(nil)
+	testKVOverride = memKV
+	return func() {
+		testKVOverride = nil
+		cleanup()
+	}
+}
+
 func runCmd(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
 
@@ -41,9 +59,9 @@ func runCmd(t *testing.T, args ...string) (stdout, stderr string, exitCode int) 
 	os.Stdout = wOut
 	os.Stderr = wErr
 
-	// Reset global flags to avoid state pollution between tests.
 	verbose = false
-	jsonOutput = false
+	formatOutput = "table"
+	outputFile = ""
 
 	rootCmd.SetArgs(args)
 	err := rootCmd.Execute()
@@ -66,9 +84,7 @@ func runCmd(t *testing.T, args ...string) (stdout, stderr string, exitCode int) 
 		}
 	}
 
-	// Reset all cobra command flag state to prevent leaks between tests.
 	resetFlags(rootCmd)
-
 	return
 }
 
@@ -81,6 +97,21 @@ func resetFlags(cmd *cobra.Command) {
 		resetFlags(sub)
 	}
 }
+
+// writeTestYAML writes a YAML file to a temp dir and returns its path.
+func writeTestYAML(t *testing.T, name, content string) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// ---------------------------------------------------------------------------
+// ctx tests (same as before)
+// ---------------------------------------------------------------------------
 
 func TestCtxAddBasic(t *testing.T) {
 	_, cleanup := setupTestEnv(t)
@@ -105,7 +136,7 @@ func TestCtxAddDuplicate(t *testing.T) {
 		t.Fatal("expected non-zero exit for duplicate")
 	}
 	if !strings.Contains(stderr, "already exists") {
-		t.Fatalf("expected 'already exists' in stderr, got: %s", stderr)
+		t.Fatalf("expected 'already exists', got: %s", stderr)
 	}
 }
 
@@ -173,7 +204,7 @@ func TestCtxRemoveCurrentFails(t *testing.T) {
 	runCmd(t, "ctx", "use", "dev")
 	_, stderr, code := runCmd(t, "ctx", "remove", "dev")
 	if code == 0 {
-		t.Fatal("expected non-zero exit when removing current context")
+		t.Fatal("expected non-zero exit")
 	}
 	if !strings.Contains(stderr, "cannot remove current") {
 		t.Fatalf("expected 'cannot remove current', got: %s", stderr)
@@ -226,3 +257,8 @@ func TestCtxConfigList(t *testing.T) {
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Suppressed import for kv — used in setupTestEnvWithKV
+// ---------------------------------------------------------------------------
+var _ = kv.NewMemory

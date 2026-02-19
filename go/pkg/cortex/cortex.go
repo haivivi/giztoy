@@ -13,9 +13,10 @@ import (
 // Cortex is the unified runtime for giztoy. It opens KV from ctx config
 // and provides Apply/Get/List/Delete for all resources with schema validation.
 type Cortex struct {
-	config  *ConfigStore
-	kv      kv.Store
-	schemas *SchemaRegistry
+	config   *ConfigStore
+	kv       kv.Store
+	schemas  *SchemaRegistry
+	ownsKV   bool // true if Cortex opened the KV (should close it)
 }
 
 // Option configures Cortex creation.
@@ -39,18 +40,21 @@ func New(ctx context.Context, cfg *ConfigStore, opts ...Option) (*Cortex, error)
 	}
 
 	kvStore := o.kv
+	ownsKV := false
 	if kvStore == nil {
 		store, err := openKVFromConfig(cfg)
 		if err != nil {
 			return nil, err
 		}
 		kvStore = store
+		ownsKV = true
 	}
 
 	return &Cortex{
 		config:  cfg,
 		kv:      kvStore,
 		schemas: NewSchemaRegistry(),
+		ownsKV:  ownsKV,
 	}, nil
 }
 
@@ -60,9 +64,10 @@ func (c *Cortex) Config() *ConfigStore { return c.config }
 // KV returns the underlying KV store.
 func (c *Cortex) KV() kv.Store { return c.kv }
 
-// Close releases all resources.
+// Close releases all resources. If the KV was injected via WithKV,
+// it is NOT closed (the caller owns it).
 func (c *Cortex) Close() error {
-	if c.kv != nil {
+	if c.ownsKV && c.kv != nil {
 		return c.kv.Close()
 	}
 	return nil

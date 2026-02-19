@@ -45,7 +45,7 @@ var ctxAddCmd = &cobra.Command{
 		if err := s.CtxAdd(args[0]); err != nil {
 			return err
 		}
-		if jsonOutput {
+		if formatOutput == "json" {
 			return printJSON(map[string]any{"name": args[0], "status": "created"})
 		}
 		fmt.Printf("Context %q created.\n", args[0])
@@ -65,7 +65,7 @@ var ctxRemoveCmd = &cobra.Command{
 		if err := s.CtxRemove(args[0]); err != nil {
 			return err
 		}
-		if jsonOutput {
+		if formatOutput == "json" {
 			return printJSON(map[string]any{"name": args[0], "status": "removed"})
 		}
 		fmt.Printf("Context %q removed.\n", args[0])
@@ -85,7 +85,7 @@ var ctxUseCmd = &cobra.Command{
 		if err := s.CtxUse(args[0]); err != nil {
 			return err
 		}
-		if jsonOutput {
+		if formatOutput == "json" {
 			return printJSON(map[string]any{"name": args[0], "status": "active"})
 		}
 		fmt.Printf("Switched to context %q.\n", args[0])
@@ -105,7 +105,7 @@ var ctxCurrentCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if jsonOutput {
+		if formatOutput == "json" {
 			return printJSON(map[string]any{"current": name})
 		}
 		fmt.Println(name)
@@ -125,7 +125,7 @@ var ctxListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if jsonOutput {
+		if formatOutput == "json" {
 			return printJSON(infos)
 		}
 		if len(infos) == 0 {
@@ -161,7 +161,7 @@ var ctxShowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if jsonOutput {
+		if formatOutput == "json" {
 			return printJSON(map[string]any{
 				"name":     ctxName,
 				"kv":       cfg.KV,
@@ -196,7 +196,7 @@ var ctxConfigSetCmd = &cobra.Command{
 		if err := s.CtxConfigSet(args[0], args[1]); err != nil {
 			return err
 		}
-		if jsonOutput {
+		if formatOutput == "json" {
 			return printJSON(map[string]any{"key": args[0], "value": args[1], "status": "set"})
 		}
 		fmt.Printf("Set %s = %s\n", args[0], args[1])
@@ -213,7 +213,7 @@ var ctxConfigListCmd = &cobra.Command{
 			return err
 		}
 		keys := s.CtxConfigList()
-		if jsonOutput {
+		if formatOutput == "json" {
 			return printJSON(keys)
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
