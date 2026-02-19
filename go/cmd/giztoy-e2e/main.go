@@ -102,7 +102,12 @@ func main() {
 	results = append(results, runApplyErrors(ctx, c, filepath.Join(testdataDir, "apply"))...)
 	results = append(results, runTestdata(ctx, c, filepath.Join(testdataDir, "run"), filter, available, tmpDir, root)...)
 
-	printReport(results)
+	exitCode := printReport(results)
+
+	// Close resources before exit (defer won't run after os.Exit)
+	c.Close()
+	os.RemoveAll(tmpDir)
+	os.Exit(exitCode)
 }
 
 func projectRoot() string {
@@ -346,7 +351,7 @@ func printResult(r testResult) {
 	flush()
 }
 
-func printReport(results []testResult) {
+func printReport(results []testResult) int {
 	fmt.Println()
 	passed, failed, skipped := 0, 0, 0
 	for _, r := range results {
@@ -375,11 +380,12 @@ func printReport(results []testResult) {
 
 	if passed+failed+skipped == 0 {
 		fmt.Fprintf(os.Stderr, "%s[ERROR]%s No tests were executed. Check testdata path and filter.\n", colorRed, colorReset)
-		os.Exit(1)
+		return 1
 	}
 	if failed > 0 {
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 func flush() { os.Stdout.Sync() }

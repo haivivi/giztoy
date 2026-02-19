@@ -33,9 +33,15 @@ func setupTestEnv(t *testing.T) (*cortex.ConfigStore, func()) {
 func setupTestEnvWithKV(t *testing.T) func() {
 	t.Helper()
 	s, cleanup := setupTestEnv(t)
-	s.CtxAdd("test")
-	s.CtxUse("test")
-	s.CtxConfigSet("kv", "memory://")
+	if err := s.CtxAdd("test"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CtxUse("test"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CtxConfigSet("kv", "memory://"); err != nil {
+		t.Fatal(err)
+	}
 
 	memKV := kv.NewMemory(nil)
 	testKVOverride = memKV
