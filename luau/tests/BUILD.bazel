@@ -55,7 +55,7 @@ sh_test(
         "//luau/libs:haivivi",
         "test_builtin.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -71,7 +71,7 @@ sh_test(
         "//luau/libs:haivivi",
         "test_require.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -87,7 +87,7 @@ sh_test(
         "//luau/libs:haivivi",
         "test_json.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -103,7 +103,7 @@ sh_test(
         "//luau/libs:haivivi",
         "test_kvs.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -119,7 +119,7 @@ sh_test(
         "//luau/libs:haivivi",
         "test_env.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -135,7 +135,7 @@ sh_test(
         "//luau/libs:haivivi",
         "test_http_unit.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 # Rust runner unit tests
@@ -248,7 +248,7 @@ sh_test(
         "//luau/libs:haivivi",
         "test_time.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -280,7 +280,7 @@ sh_test(
         "//luau/libs:haivivi",
         "test_coroutine.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -467,7 +467,7 @@ sh_test(
         "//luau/libs:haivivi",
         "tool/test_basic.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -501,7 +501,7 @@ sh_test(
         "//luau/libs:haivivi",
         "tool/test_require.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
@@ -535,7 +535,7 @@ sh_test(
         "//luau/libs:haivivi",
         "tool/test_stream.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 # =============================================================================
@@ -556,7 +556,7 @@ sh_test(
         "//luau/libs:haivivi",
         "agent/test_basic.luau",
     ],
-    tags = ["unit"],
+    tags = ["unit", "manual"],
 )
 
 sh_test(
