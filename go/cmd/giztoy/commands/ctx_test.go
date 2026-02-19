@@ -7,9 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-
 	"github.com/haivivi/giztoy/go/pkg/cortex"
 	"github.com/haivivi/giztoy/go/pkg/kv"
 )
@@ -84,18 +81,20 @@ func runCmd(t *testing.T, args ...string) (stdout, stderr string, exitCode int) 
 		}
 	}
 
-	resetFlags(rootCmd)
+	resetAllFlags()
 	return
 }
 
-func resetFlags(cmd *cobra.Command) {
-	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		f.Changed = false
-		f.Value.Set(f.DefValue)
-	})
-	for _, sub := range cmd.Commands() {
-		resetFlags(sub)
-	}
+func resetAllFlags() {
+	// Reset known flag variables to avoid state leaking between tests.
+	verbose = false
+	formatOutput = "table"
+	outputFile = ""
+	listLimit = 10
+	listFrom = ""
+	listAll = false
+	applyFile = ""
+	runFile = ""
 }
 
 // writeTestYAML writes a YAML file to a temp dir and returns its path.

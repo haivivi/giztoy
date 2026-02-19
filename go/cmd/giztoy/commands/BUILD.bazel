@@ -35,7 +35,5 @@ go_test(
     deps = [
         "//go/pkg/cortex",
         "//go/pkg/kv",
-        "@com_github_spf13_cobra//:cobra",
-        "@com_github_spf13_pflag//:pflag",
     ],
 )
