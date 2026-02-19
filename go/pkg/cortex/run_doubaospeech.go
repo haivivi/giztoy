@@ -26,15 +26,16 @@ func newDoubaoClient(cred map[string]any) (*ds.Client, error) {
 		return nil, fmt.Errorf("doubaospeech cred missing app_id")
 	}
 	var opts []ds.Option
-	if token, _ := cred["token"].(string); token != "" {
+	token, _ := cred["token"].(string)
+	if token != "" {
 		opts = append(opts, ds.WithBearerToken(token))
 	}
-	if apiKey, _ := cred["api_key"].(string); apiKey != "" {
-		appKey, _ := cred["app_key"].(string)
-		if appKey == "" {
-			appKey = appID
-		}
-		opts = append(opts, ds.WithV2APIKey(apiKey, appKey))
+	appKey, _ := cred["app_key"].(string)
+	if appKey == "" {
+		appKey = appID
+	}
+	if token != "" {
+		opts = append(opts, ds.WithV2APIKey(token, appKey))
 	}
 	if baseURL, _ := cred["base_url"].(string); baseURL != "" {
 		opts = append(opts, ds.WithBaseURL(baseURL))
