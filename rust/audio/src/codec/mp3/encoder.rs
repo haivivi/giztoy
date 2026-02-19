@@ -293,6 +293,10 @@ impl<W: Write> Mp3Encoder<W> {
         }
 
         // Flush remaining buffered frames before closing.
+        // Even if flush/write fails, we must close the LAME handle to avoid
+        // resource leaks. lame_encode_flush consumes buffered data, so retrying
+        // after failure would not recover the lost frames.
+        let mut flush_err = None;
         if inner.inited && !inner.lame.is_null() {
             let encoded = unsafe {
                 ffi::lame_encode_flush(
@@ -302,14 +306,12 @@ impl<W: Write> Mp3Encoder<W> {
                 )
             };
             if encoded < 0 {
-                return Err(EncoderError::EncodeFailed);
-            }
-            if encoded > 0 {
+                flush_err = Some(EncoderError::EncodeFailed);
+            } else if encoded > 0 {
                 let flush_data = inner.mp3buf[..encoded as usize].to_vec();
-                inner
-                    .writer
-                    .write_all(&flush_data)
-                    .map_err(EncoderError::Io)?;
+                if let Err(e) = inner.writer.write_all(&flush_data) {
+                    flush_err = Some(EncoderError::Io(e));
+                }
             }
         }
 
@@ -320,7 +322,10 @@ impl<W: Write> Mp3Encoder<W> {
             inner.lame = ptr::null_mut();
         }
 
-        Ok(())
+        match flush_err {
+            Some(e) => Err(e),
+            None => Ok(()),
+        }
     }
 }
 

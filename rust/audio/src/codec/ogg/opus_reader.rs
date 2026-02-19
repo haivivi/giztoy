@@ -92,9 +92,16 @@ impl<R: Read> OpusPacketReader<R> {
         let mut payload = vec![0u8; payload_size];
         self.reader.read_exact(&mut payload)?;
 
-        // Track BOS pages
+        // Track BOS pages. Also check EOS — a single-page stream can have
+        // both BOS and EOS set simultaneously (valid per OGG spec).
         if header_type & 0x02 != 0 {
             self.known_streams.insert(serial_no);
+            if header_type & 0x04 != 0 {
+                self.eos_streams.insert(serial_no);
+                if self.eos_streams.len() >= self.known_streams.len() {
+                    self.all_eos = true;
+                }
+            }
             return Ok(true);
         }
 
