@@ -118,9 +118,11 @@ func validateMaxTokens(fields map[string]any) error {
 		switch t := v.(type) {
 		case int:
 			n = t
-		case float64:
-			n = int(t)
 		case int64:
+			n = int(t)
+		case uint64:
+			n = int(t)
+		case float64:
 			n = int(t)
 		default:
 			return fmt.Errorf("field 'max_tokens' must be a number")

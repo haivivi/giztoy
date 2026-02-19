@@ -81,6 +81,22 @@ func main() {
 	available := applyCredsFromEnv(ctx, c)
 	logInfo("Creds: %s", formatAvailable(available))
 
+	// Verify creds are readable
+	for service := range available {
+		docs, _ := c.List(ctx, "creds:"+service+":*", cortex.ListOpts{All: true})
+		for _, d := range docs {
+			key := d.GetString("api_key")
+			if key == "" {
+				key = d.GetString("token")
+			}
+			if len(key) > 20 {
+				logInfo("  creds:%s:%s api_key=%s...%s (len=%d)", service, d.Name(), key[:8], key[len(key)-8:], len(key))
+			} else {
+				logInfo("  creds:%s:%s api_key=%s (len=%d)", service, d.Name(), key, len(key))
+			}
+		}
+	}
+
 	applyCount := applyTestdataConfigs(ctx, c, filepath.Join(testdataDir, "apply"))
 	logInfo("Applied %d genx configs", applyCount)
 
@@ -180,12 +196,27 @@ func applyTestdataConfigs(ctx context.Context, c *cortex.Cortex, dir string) int
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") || strings.HasPrefix(e.Name(), "error-") {
 			continue
 		}
+		// Skip batch-all.yaml (contains cred placeholders like ${MINIMAX_API_KEY})
+		if e.Name() == "batch-all.yaml" {
+			continue
+		}
 		docs, err := cortex.ParseDocumentsFromFile(filepath.Join(dir, e.Name()))
 		if err != nil {
 			logWarn("parse %s: %v", e.Name(), err)
 			continue
 		}
-		results, err := c.Apply(ctx, docs)
+		// Skip docs with creds kind — creds are injected from env vars, not testdata
+		var filtered []cortex.Document
+		for _, d := range docs {
+			if strings.HasPrefix(d.Kind, "creds/") {
+				continue
+			}
+			filtered = append(filtered, d)
+		}
+		if len(filtered) == 0 {
+			continue
+		}
+		results, err := c.Apply(ctx, filtered)
 		if err != nil {
 			logWarn("apply %s: %v", e.Name(), err)
 			continue

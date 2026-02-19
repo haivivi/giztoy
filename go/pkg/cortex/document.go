@@ -61,17 +61,19 @@ func (d *Document) GetFloat(key string) float64 {
 
 // GetInt returns an int field or 0.
 func (d *Document) GetInt(key string) int {
-	if v, ok := d.Fields[key]; ok {
-		switch n := v.(type) {
-		case int:
-			return n
-		case int64:
-			return int(n)
-		case float64:
-			return int(n)
-		case uint64:
-			return int(n)
-		}
+	return toInt(d.Fields[key])
+}
+
+func toInt(v any) int {
+	switch n := v.(type) {
+	case int:
+		return n
+	case int64:
+		return int(n)
+	case uint64:
+		return int(n)
+	case float64:
+		return int(n)
 	}
 	return 0
 }

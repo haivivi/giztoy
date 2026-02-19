@@ -5,10 +5,19 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/haivivi/giztoy/go/pkg/minimax"
 )
+
+func mapKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
 
 func init() {
 	RegisterRunHandler("minimax/text/chat", runMinimaxTextChat)
@@ -26,7 +35,18 @@ func init() {
 func newMinimaxClient(cred map[string]any) (*minimax.Client, error) {
 	apiKey, _ := cred["api_key"].(string)
 	if apiKey == "" {
-		return nil, fmt.Errorf("minimax cred missing api_key")
+		// Try alternate key names that go-yaml might produce
+		for k, v := range cred {
+			if strings.Contains(k, "api") && strings.Contains(k, "key") {
+				if s, ok := v.(string); ok {
+					apiKey = s
+					break
+				}
+			}
+		}
+	}
+	if apiKey == "" {
+		return nil, fmt.Errorf("minimax cred missing api_key (keys: %v)", mapKeys(cred))
 	}
 	var opts []minimax.Option
 	if baseURL, _ := cred["base_url"].(string); baseURL != "" {
@@ -36,7 +56,11 @@ func newMinimaxClient(cred map[string]any) (*minimax.Client, error) {
 }
 
 func runMinimaxTextChat(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {
-	cred, err := c.ResolveCred(ctx, task.GetString("cred"))
+	credRef := task.GetString("cred")
+	if credRef == "" {
+		return nil, fmt.Errorf("minimax/text/chat: missing 'cred' field")
+	}
+	cred, err := c.ResolveCred(ctx, credRef)
 	if err != nil {
 		return nil, err
 	}
