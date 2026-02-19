@@ -67,9 +67,15 @@ func main() {
 	if err != nil {
 		fatal("open config store: %v", err)
 	}
-	store.CtxAdd("e2e")
-	store.CtxUse("e2e")
-	store.CtxConfigSet("kv", "badger:///"+filepath.Join(tmpDir, "kv"))
+	if err := store.CtxAdd("e2e"); err != nil {
+		fatal("ctx add: %v", err)
+	}
+	if err := store.CtxUse("e2e"); err != nil {
+		fatal("ctx use: %v", err)
+	}
+	if err := store.CtxConfigSet("kv", "badger://"+filepath.Join(tmpDir, "kv")); err != nil {
+		fatal("ctx config set: %v", err)
+	}
 
 	ctx := context.Background()
 	c, err := cortex.New(ctx, store)
@@ -81,19 +87,11 @@ func main() {
 	available := applyCredsFromEnv(ctx, c)
 	logInfo("Creds: %s", formatAvailable(available))
 
-	// Verify creds are readable
+	// Verify creds are readable (keys masked)
 	for service := range available {
 		docs, _ := c.List(ctx, "creds:"+service+":*", cortex.ListOpts{All: true})
 		for _, d := range docs {
-			key := d.GetString("api_key")
-			if key == "" {
-				key = d.GetString("token")
-			}
-			if len(key) > 20 {
-				logInfo("  creds:%s:%s api_key=%s...%s (len=%d)", service, d.Name(), key[:8], key[len(key)-8:], len(key))
-			} else {
-				logInfo("  creds:%s:%s api_key=%s (len=%d)", service, d.Name(), key, len(key))
-			}
+			logInfo("  creds:%s:%s ✓", service, d.Name())
 		}
 	}
 
@@ -375,6 +373,10 @@ func printReport(results []testResult) {
 	fmt.Println("======================================")
 	fmt.Println()
 
+	if passed+failed+skipped == 0 {
+		fmt.Fprintf(os.Stderr, "%s[ERROR]%s No tests were executed. Check testdata path and filter.\n", colorRed, colorReset)
+		os.Exit(1)
+	}
 	if failed > 0 {
 		os.Exit(1)
 	}
