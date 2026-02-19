@@ -13,3 +13,13 @@ go_binary(
     embed = [":giztoy_lib"],
     visibility = ["//visibility:public"],
 )
+
+# Install giztoy to ~/go/bin/
+# Usage: bazel run //go/cmd/giztoy:install
+go_binary(
+    name = "install",
+    srcs = ["install/main.go"],
+    data = [":giztoy"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
