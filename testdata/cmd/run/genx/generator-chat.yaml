@@ -1,0 +1,5 @@
+kind: genx/generator
+name: qwen/turbo
+messages:
+  - role: user
+    content: 说一句话测试

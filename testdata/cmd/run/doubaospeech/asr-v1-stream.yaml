@@ -1,0 +1,5 @@
+kind: doubaospeech/asr/v1/stream
+cred: doubaospeech:test
+audio: testdata/doubaospeech/test_speech.mp3
+format: mp3
+sample_rate: 16000

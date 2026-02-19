@@ -1,0 +1,4 @@
+kind: doubaospeech/asr/v2/file
+cred: doubaospeech:test
+audio_url: https://example.com/test.mp3
+language: zh-CN

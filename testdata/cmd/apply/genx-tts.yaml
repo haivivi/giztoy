@@ -1,0 +1,25 @@
+---
+kind: genx/tts
+name: minimax/shaonv
+cred: minimax:cn
+voice_id: female-shaonv
+---
+kind: genx/tts
+name: minimax/yujie
+cred: minimax:cn
+voice_id: female-yujie
+---
+kind: genx/tts
+name: minimax/qingse
+cred: minimax:cn
+voice_id: male-qn-qingse
+---
+kind: genx/tts
+name: doubao/xiaohe
+cred: doubaospeech:test
+voice_id: zh_female_xiaohe_uranus_bigtts
+---
+kind: genx/tts
+name: doubao/cancan
+cred: doubaospeech:test
+voice_id: zh_female_cancan

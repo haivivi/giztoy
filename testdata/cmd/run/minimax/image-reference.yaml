@@ -1,0 +1,6 @@
+kind: minimax/image/reference
+cred: minimax:cn
+model: image-01
+prompt: Same style but with different colors
+image_prompt: https://example.com/reference.jpg
+image_prompt_strength: 0.7

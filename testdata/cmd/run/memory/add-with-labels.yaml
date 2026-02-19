@@ -1,0 +1,9 @@
+kind: memory/add
+persona: cat_girl
+text: 小红画了一个公主城堡
+labels:
+  - "person:小红"
+  - "topic:画画"
+keywords:
+  - 画画
+  - 公主

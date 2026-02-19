@@ -1,0 +1,6 @@
+kind: minimax/video/frame
+cred: minimax:cn
+model: MiniMax-Hailuo-2.3
+first_frame_image: https://example.com/start.jpg
+last_frame_image: https://example.com/end.jpg
+prompt: Smooth transition

@@ -1,0 +1,6 @@
+kind: memory/recall
+persona: cat_girl
+text: 恐龙
+labels:
+  - "person:小明"
+limit: 5

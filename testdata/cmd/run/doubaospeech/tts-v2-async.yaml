@@ -1,0 +1,4 @@
+kind: doubaospeech/tts/v2/async
+cred: doubaospeech:test
+text: 异步长文本语音合成测试。
+voice_type: zh_female_cancan

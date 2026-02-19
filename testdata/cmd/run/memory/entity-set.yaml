@@ -1,0 +1,6 @@
+kind: memory/entity/set
+persona: cat_girl
+label: "person:小明"
+attrs:
+  age: 8
+  likes: 恐龙

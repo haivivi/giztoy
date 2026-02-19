@@ -1,0 +1,8 @@
+kind: doubaospeech/tts/v2/stream
+cred: doubaospeech:test
+text: 你好，这是V2大模型测试。
+speaker: zh_female_xiaohe_uranus_bigtts
+resource_id: seed-tts-2.0
+format: mp3
+sample_rate: 24000
+output: /tmp/giztoy-doubao-tts-v2.mp3

@@ -1,0 +1,30 @@
+---
+kind: genx/generator
+name: qwen/turbo
+cred: openai:qwen
+model: qwen-turbo-latest
+max_tokens: 2048
+temperature: 1.0
+---
+kind: genx/generator
+name: qwen/plus
+cred: openai:qwen
+model: qwen-plus-latest
+max_tokens: 2048
+---
+kind: genx/generator
+name: deepseek/chat
+cred: openai:deepseek
+model: deepseek-chat
+max_tokens: 4096
+---
+kind: genx/generator
+name: minimax/abab
+cred: minimax:cn
+model: MiniMax-M2.1
+max_tokens: 2048
+---
+kind: genx/generator
+name: gemini/flash
+cred: genai:default
+model: gemini-2.0-flash

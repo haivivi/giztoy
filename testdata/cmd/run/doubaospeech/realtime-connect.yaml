@@ -1,0 +1,9 @@
+kind: doubaospeech/realtime/connect
+cred: doubaospeech:test
+greeting: 你好
+tts:
+  speaker: zh_female_cancan
+  audio_config:
+    channel: 1
+    format: pcm
+    sample_rate: 24000

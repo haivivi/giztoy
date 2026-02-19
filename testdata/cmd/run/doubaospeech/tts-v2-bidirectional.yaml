@@ -1,0 +1,7 @@
+kind: doubaospeech/tts/v2/bidirectional
+cred: doubaospeech:test
+text: 双向WebSocket合成测试。
+speaker: zh_female_xiaohe_uranus_bigtts
+resource_id: seed-tts-2.0
+format: mp3
+output: /tmp/giztoy-doubao-tts-v2-bidir.mp3

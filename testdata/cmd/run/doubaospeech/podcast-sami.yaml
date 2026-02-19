@@ -1,0 +1,11 @@
+kind: doubaospeech/podcast/sami
+cred: doubaospeech:test
+input_text: 分析当前大语言模型的发展
+audio_config:
+  format: mp3
+  sample_rate: 24000
+speaker_info:
+  speakers:
+    - zh_male_dayixiansheng_v2_saturn_bigtts
+    - zh_female_mizaitongxue_v2_saturn_bigtts
+output: /tmp/giztoy-doubao-podcast.mp3

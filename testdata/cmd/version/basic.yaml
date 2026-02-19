@@ -1,0 +1,5 @@
+# Test: version command outputs version info
+steps:
+  - args: [version]
+    exit_code: 0
+    stdout_contains: "giztoy"

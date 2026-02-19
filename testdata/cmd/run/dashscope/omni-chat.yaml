@@ -1,0 +1,5 @@
+kind: dashscope/omni/chat
+cred: dashscope:default
+model: qwen-omni-turbo-realtime-latest
+voice: Chelsie
+instructions: You are a helpful voice assistant. Reply briefly.

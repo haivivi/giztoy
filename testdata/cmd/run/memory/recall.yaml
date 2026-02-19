@@ -1,0 +1,5 @@
+kind: memory/recall
+persona: cat_girl
+text: 恐龙
+limit: 5
+hops: 2

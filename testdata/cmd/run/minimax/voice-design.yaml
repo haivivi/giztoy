@@ -1,0 +1,5 @@
+kind: minimax/voice/design
+cred: minimax:cn
+prompt: A warm, friendly female voice with a slight accent
+preview_text: Hello, this is a preview of the designed voice.
+voice_id: my-designed-voice

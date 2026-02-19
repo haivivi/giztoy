@@ -1,0 +1,6 @@
+# Test: version command with json format
+steps:
+  - args: [version, --format, json]
+    exit_code: 0
+    stdout_json:
+      version: dev

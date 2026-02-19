@@ -1,0 +1,3 @@
+kind: genx/asr
+name: doubao/sauc
+audio: testdata/doubaospeech/test_speech.mp3

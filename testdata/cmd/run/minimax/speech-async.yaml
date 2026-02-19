@@ -1,0 +1,5 @@
+kind: minimax/speech/async
+cred: minimax:cn
+model: speech-2.6-hd
+text: 这是异步语音合成的长文本测试。
+voice_id: female-shaonv

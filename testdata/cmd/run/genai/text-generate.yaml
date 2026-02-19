@@ -1,0 +1,6 @@
+kind: genai/text/generate
+cred: genai:default
+model: gemini-2.0-flash
+messages:
+  - role: user
+    content: Say hello in one word.

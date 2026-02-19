@@ -1,0 +1,6 @@
+kind: openai/text/chat-stream
+cred: openai:qwen
+model: qwen-turbo-latest
+messages:
+  - role: user
+    content: Count from 1 to 5.
