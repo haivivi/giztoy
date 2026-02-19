@@ -102,7 +102,7 @@ func main() {
 
 	var results []testResult
 	results = append(results, runApplyErrors(ctx, c, filepath.Join(testdataDir, "apply"))...)
-	results = append(results, runTestdata(ctx, c, filepath.Join(testdataDir, "run"), filter, available, tmpDir)...)
+	results = append(results, runTestdata(ctx, c, filepath.Join(testdataDir, "run"), filter, available, tmpDir, root)...)
 
 	printReport(results)
 }
@@ -252,7 +252,7 @@ func runApplyErrors(ctx context.Context, c *cortex.Cortex, dir string) []testRes
 	return results
 }
 
-func runTestdata(ctx context.Context, c *cortex.Cortex, dir, filter string, available map[string]bool, tmpDir string) []testResult {
+func runTestdata(ctx context.Context, c *cortex.Cortex, dir, filter string, available map[string]bool, tmpDir string, root string) []testResult {
 	var results []testResult
 
 	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
@@ -268,9 +268,15 @@ func runTestdata(ctx context.Context, c *cortex.Cortex, dir, filter string, avai
 			return nil
 		}
 
+		isErrorCase := strings.HasPrefix(d.Name(), "error-")
+
 		docs, err := cortex.ParseDocumentsFromFile(path)
 		if err != nil {
-			results = append(results, testResult{File: "run/" + rel, Status: "fail", Error: "parse: " + err.Error()})
+			if isErrorCase {
+				results = append(results, testResult{File: "run/" + rel, Kind: "parse-error", Status: "pass", Elapsed: 0})
+			} else {
+				results = append(results, testResult{File: "run/" + rel, Status: "fail", Error: "parse: " + err.Error()})
+			}
 			return nil
 		}
 		if len(docs) != 1 {
@@ -279,7 +285,6 @@ func runTestdata(ctx context.Context, c *cortex.Cortex, dir, filter string, avai
 		}
 
 		task := docs[0]
-		isErrorCase := strings.HasPrefix(d.Name(), "error-")
 
 		credRef := task.GetString("cred")
 		if credRef != "" {
@@ -294,6 +299,13 @@ func runTestdata(ctx context.Context, c *cortex.Cortex, dir, filter string, avai
 			tmpOutput := filepath.Join(tmpDir, "output", rel+filepath.Ext(output))
 			os.MkdirAll(filepath.Dir(tmpOutput), 0755)
 			task.Fields["output"] = tmpOutput
+		}
+
+		// Resolve relative audio/file paths to project root
+		for _, pathField := range []string{"audio", "file_path"} {
+			if p := task.GetString(pathField); p != "" && !filepath.IsAbs(p) {
+				task.Fields[pathField] = filepath.Join(root, p)
+			}
 		}
 
 		start := time.Now()

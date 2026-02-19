@@ -1,5 +1,7 @@
 kind: minimax/speech/async
 cred: minimax:cn
 model: speech-2.6-hd
-text: 这是异步语音合成的长文本测试。
+text: 这是异步语音合成的长文本测试。这段文字需要足够长才能满足异步合成的最低字数要求。异步语音合成适用于长文本场景，可以处理大量文字内容。
 voice_id: female-shaonv
+format: mp3
+sample_rate: 32000

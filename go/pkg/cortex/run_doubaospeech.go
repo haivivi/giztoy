@@ -57,6 +57,7 @@ func runDoubaoTTSV1Synthesize(ctx context.Context, c *Cortex, task Document) (*R
 		Text:      task.GetString("text"),
 		VoiceType: task.GetString("voice_type"),
 		Encoding:  ds.AudioEncoding(task.GetString("encoding")),
+		Cluster:   task.GetString("cluster"),
 	}
 
 	reqCtx, cancel := context.WithTimeout(ctx, 300*time.Second)
@@ -91,6 +92,7 @@ func runDoubaoTTSV1Stream(ctx context.Context, c *Cortex, task Document) (*RunRe
 		Text:      task.GetString("text"),
 		VoiceType: task.GetString("voice_type"),
 		Encoding:  ds.AudioEncoding(task.GetString("encoding")),
+		Cluster:   task.GetString("cluster"),
 	}
 
 	reqCtx, cancel := context.WithTimeout(ctx, 300*time.Second)
