@@ -152,8 +152,8 @@ func applyCredsFromEnv(ctx context.Context, c *cortex.Cortex) map[string]bool {
 			"name": "test", "app_id": os.Getenv("DOUBAO_APP_ID"),
 			"token": os.Getenv("DOUBAO_TOKEN"), "api_key": os.Getenv("DOUBAO_API_KEY"),
 		}}},
-		{envKey: "DASHSCOPE_API_KEY", service: "dashscope", doc: cortex.Document{Kind: "creds/dashscope", Fields: map[string]any{
-			"name": "default", "api_key": os.Getenv("DASHSCOPE_API_KEY"),
+		{envKey: "QWEN_API_KEY", service: "dashscope", doc: cortex.Document{Kind: "creds/dashscope", Fields: map[string]any{
+			"name": "default", "api_key": os.Getenv("QWEN_API_KEY"),
 		}}},
 		{envKey: "GEMINI_API_KEY", service: "genai", doc: cortex.Document{Kind: "creds/genai", Fields: map[string]any{
 			"name": "default", "api_key": os.Getenv("GEMINI_API_KEY"),
