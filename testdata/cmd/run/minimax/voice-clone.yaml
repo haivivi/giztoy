@@ -1,5 +1,0 @@
-kind: minimax/voice/clone
-cred: minimax:cn
-file_id: uploaded-file-id
-voice_id: my-custom-voice
-text: Hello, this is a test for voice cloning.

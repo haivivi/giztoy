@@ -1,5 +1,5 @@
 kind: minimax/voice/design
 cred: minimax:cn
-prompt: A warm, friendly female voice with a slight accent
-preview_text: Hello, this is a preview of the designed voice.
-voice_id: my-designed-voice
+prompt: 一个温柔的年轻女性声音，音色清脆甜美，语气亲切自然
+preview_text: 你好，欢迎使用语音合成服务。
+model: speech-02-hd

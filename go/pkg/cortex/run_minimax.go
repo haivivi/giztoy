@@ -257,9 +257,16 @@ func runMinimaxSpeechAsync(ctx context.Context, c *Cortex, task Document) (*RunR
 		VoiceSetting: &minimax.VoiceSetting{
 			VoiceID: task.GetString("voice_id"),
 		},
+		AudioSetting: &minimax.AudioSetting{
+			Format:     minimax.AudioFormat(task.GetString("format")),
+			SampleRate: task.GetInt("sample_rate"),
+		},
 	}
 	if req.Model == "" {
 		req.Model = minimax.ModelSpeech26HD
+	}
+	if req.VoiceSetting.VoiceID == "" {
+		req.VoiceSetting.VoiceID = "female-shaonv"
 	}
 
 	reqCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
@@ -540,10 +547,15 @@ func runMinimaxVoiceDesign(ctx context.Context, c *Cortex, task Document) (*RunR
 	if err != nil {
 		return nil, err
 	}
+	voiceID := task.GetString("voice_id")
+	if voiceID == "" {
+		voiceID = fmt.Sprintf("giztoy-e2e-%d", time.Now().UnixNano())
+	}
 	req := &minimax.VoiceDesignRequest{
 		Prompt:      task.GetString("prompt"),
 		PreviewText: task.GetString("preview_text"),
-		VoiceID:     task.GetString("voice_id"),
+		VoiceID:     voiceID,
+		Model:       task.GetString("model"),
 	}
 	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
