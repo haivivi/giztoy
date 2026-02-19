@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/goccy/go-yaml"
 
 	"github.com/haivivi/giztoy/go/pkg/kv"
+	"github.com/haivivi/giztoy/go/pkg/memory"
 )
 
 // Cortex is the unified runtime for giztoy. It opens KV from ctx config
@@ -17,6 +19,9 @@ type Cortex struct {
 	kv       kv.Store
 	schemas  *SchemaRegistry
 	ownsKV   bool // true if Cortex opened the KV (should close it)
+
+	memMu   sync.Mutex
+	memHost *memory.Host
 }
 
 // Option configures Cortex creation.
