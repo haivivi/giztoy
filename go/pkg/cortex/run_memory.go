@@ -21,6 +21,7 @@ func init() {
 	RegisterRunHandler("memory/entity/delete", runMemoryEntityDelete)
 	RegisterRunHandler("memory/relation/add", runMemoryRelationAdd)
 	RegisterRunHandler("memory/relation/list", runMemoryRelationList)
+	RegisterRunHandler("memory/demo", runMemoryDemo)
 }
 
 const memorySep byte = 0x1F
@@ -302,4 +303,32 @@ func runMemoryRelationList(ctx context.Context, c *Cortex, task Document) (*RunR
 	}
 
 	return &RunResult{Kind: task.Kind, Status: "ok", Data: map[string]any{"relations": items, "count": len(items)}}, nil
+}
+
+func runMemoryDemo(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {
+	persona := task.GetString("persona")
+	if persona == "" {
+		persona = "demo"
+	}
+	mem, err := c.openMemory(ctx, persona)
+	if err != nil {
+		return nil, err
+	}
+	g := mem.Graph()
+
+	g.SetEntity(ctx, graph.Entity{Label: "person:小明", Attrs: map[string]any{"age": 8}})
+	g.SetEntity(ctx, graph.Entity{Label: "topic:恐龙"})
+	g.AddRelation(ctx, graph.Relation{From: "person:小明", To: "topic:恐龙", RelType: "likes"})
+
+	mem.StoreSegment(ctx, memory.SegmentInput{
+		Summary:  "和小明聊了恐龙",
+		Labels:   []string{"person:小明", "topic:恐龙"},
+		Keywords: []string{"恐龙", "霸王龙"},
+	}, recall.Bucket1H)
+
+	return &RunResult{Kind: task.Kind, Status: "ok", Data: map[string]any{
+		"persona":  persona,
+		"entities": 2,
+		"segments": 1,
+	}}, nil
 }

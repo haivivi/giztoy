@@ -26,10 +26,16 @@ func init() {
 	RegisterRunHandler("minimax/speech/stream", runMinimaxSpeechStream)
 	RegisterRunHandler("minimax/speech/async", runMinimaxSpeechAsync)
 	RegisterRunHandler("minimax/video/t2v", runMinimaxVideoT2V)
+	RegisterRunHandler("minimax/video/i2v", runMinimaxVideoI2V)
+	RegisterRunHandler("minimax/video/frame", runMinimaxVideoFrame)
 	RegisterRunHandler("minimax/image/generate", runMinimaxImageGenerate)
+	RegisterRunHandler("minimax/image/reference", runMinimaxImageReference)
 	RegisterRunHandler("minimax/music/generate", runMinimaxMusicGenerate)
 	RegisterRunHandler("minimax/voice/list", runMinimaxVoiceList)
+	RegisterRunHandler("minimax/voice/clone", runMinimaxVoiceClone)
+	RegisterRunHandler("minimax/voice/design", runMinimaxVoiceDesign)
 	RegisterRunHandler("minimax/file/list", runMinimaxFileList)
+	RegisterRunHandler("minimax/file/upload", runMinimaxFileUpload)
 }
 
 func newMinimaxClient(cred map[string]any) (*minimax.Client, error) {
@@ -411,4 +417,177 @@ func runMinimaxFileList(ctx context.Context, c *Cortex, task Document) (*RunResu
 	}
 
 	return &RunResult{Kind: task.Kind, Status: "ok", Data: map[string]any{"files": resp}}, nil
+}
+
+func runMinimaxVideoI2V(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {
+	cred, err := c.ResolveCred(ctx, task.GetString("cred"))
+	if err != nil {
+		return nil, err
+	}
+	client, err := newMinimaxClient(cred)
+	if err != nil {
+		return nil, err
+	}
+	req := &minimax.ImageToVideoRequest{
+		Model:           task.GetString("model"),
+		FirstFrameImage: task.GetString("first_frame_image"),
+		Prompt:          task.GetString("prompt"),
+	}
+	if req.Model == "" {
+		req.Model = minimax.ModelI2V01
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	taskResp, err := client.Video.CreateImageToVideo(reqCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("minimax video i2v: %w", err)
+	}
+	return &RunResult{Kind: task.Kind, Status: "ok", TaskID: taskResp.ID}, nil
+}
+
+func runMinimaxVideoFrame(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {
+	cred, err := c.ResolveCred(ctx, task.GetString("cred"))
+	if err != nil {
+		return nil, err
+	}
+	client, err := newMinimaxClient(cred)
+	if err != nil {
+		return nil, err
+	}
+	req := &minimax.FrameToVideoRequest{
+		Model:           task.GetString("model"),
+		FirstFrameImage: task.GetString("first_frame_image"),
+		LastFrameImage:  task.GetString("last_frame_image"),
+		Prompt:          task.GetString("prompt"),
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	taskResp, err := client.Video.CreateFrameToVideo(reqCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("minimax video frame: %w", err)
+	}
+	return &RunResult{Kind: task.Kind, Status: "ok", TaskID: taskResp.ID}, nil
+}
+
+func runMinimaxImageReference(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {
+	cred, err := c.ResolveCred(ctx, task.GetString("cred"))
+	if err != nil {
+		return nil, err
+	}
+	client, err := newMinimaxClient(cred)
+	if err != nil {
+		return nil, err
+	}
+	req := &minimax.ImageReferenceRequest{
+		ImageGenerateRequest: minimax.ImageGenerateRequest{
+			Model:  task.GetString("model"),
+			Prompt: task.GetString("prompt"),
+		},
+		ImagePrompt:         task.GetString("image_prompt"),
+		ImagePromptStrength: task.GetFloat("image_prompt_strength"),
+	}
+	if req.Model == "" {
+		req.Model = minimax.ModelImage01
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+	resp, err := client.Image.GenerateWithReference(reqCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("minimax image reference: %w", err)
+	}
+	data := map[string]any{"images_count": len(resp.Images)}
+	if len(resp.Images) > 0 {
+		data["first_url"] = resp.Images[0].URL
+	}
+	return &RunResult{Kind: task.Kind, Status: "ok", Data: data}, nil
+}
+
+func runMinimaxVoiceClone(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {
+	cred, err := c.ResolveCred(ctx, task.GetString("cred"))
+	if err != nil {
+		return nil, err
+	}
+	client, err := newMinimaxClient(cred)
+	if err != nil {
+		return nil, err
+	}
+	req := &minimax.VoiceCloneRequest{
+		FileID:  int64(task.GetInt("file_id")),
+		VoiceID: task.GetString("voice_id"),
+		Text:    task.GetString("text"),
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+	resp, err := client.Voice.Clone(reqCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("minimax voice clone: %w", err)
+	}
+	result := &RunResult{Kind: task.Kind, Status: "ok", Data: map[string]any{"voice_id": resp.VoiceID}}
+	if output := task.GetString("output"); output != "" && len(resp.DemoAudio) > 0 {
+		os.WriteFile(output, resp.DemoAudio, 0644)
+		result.AudioFile = output
+		result.AudioSize = len(resp.DemoAudio)
+	}
+	return result, nil
+}
+
+func runMinimaxVoiceDesign(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {
+	cred, err := c.ResolveCred(ctx, task.GetString("cred"))
+	if err != nil {
+		return nil, err
+	}
+	client, err := newMinimaxClient(cred)
+	if err != nil {
+		return nil, err
+	}
+	req := &minimax.VoiceDesignRequest{
+		Prompt:      task.GetString("prompt"),
+		PreviewText: task.GetString("preview_text"),
+		VoiceID:     task.GetString("voice_id"),
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+	resp, err := client.Voice.Design(reqCtx, req)
+	if err != nil {
+		return nil, fmt.Errorf("minimax voice design: %w", err)
+	}
+	result := &RunResult{Kind: task.Kind, Status: "ok", Data: map[string]any{"voice_id": resp.VoiceID}}
+	if output := task.GetString("output"); output != "" && len(resp.DemoAudio) > 0 {
+		os.WriteFile(output, resp.DemoAudio, 0644)
+		result.AudioFile = output
+		result.AudioSize = len(resp.DemoAudio)
+	}
+	return result, nil
+}
+
+func runMinimaxFileUpload(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {
+	cred, err := c.ResolveCred(ctx, task.GetString("cred"))
+	if err != nil {
+		return nil, err
+	}
+	client, err := newMinimaxClient(cred)
+	if err != nil {
+		return nil, err
+	}
+	filePath := task.GetString("file_path")
+	if filePath == "" {
+		return nil, fmt.Errorf("minimax/file/upload: missing 'file_path'")
+	}
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("open file: %w", err)
+	}
+	defer file.Close()
+	info, _ := file.Stat()
+	purpose := task.GetString("purpose")
+	if purpose == "" {
+		purpose = "voice_clone"
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, 300*time.Second)
+	defer cancel()
+	resp, err := client.File.Upload(reqCtx, file, info.Name(), minimax.FilePurpose(purpose))
+	if err != nil {
+		return nil, fmt.Errorf("minimax file upload: %w", err)
+	}
+	return &RunResult{Kind: task.Kind, Status: "ok", Data: map[string]any{"file_id": resp.FileID}}, nil
 }
