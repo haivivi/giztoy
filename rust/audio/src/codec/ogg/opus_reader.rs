@@ -1,6 +1,9 @@
 //! Read Opus packets from an OGG container.
+//!
+//! Correctly parses OGG page segment tables to extract packet boundaries,
+//! supporting pages that contain multiple packets (per RFC 3533).
 
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::io::{self, Read};
 use super::opus_writer::OpusPacket;
 
@@ -9,14 +12,21 @@ const PAGE_HEADER_SIZE: usize = 27;
 
 /// Reads Opus packets from an OGG stream.
 ///
-/// Yields `OpusPacket` instances for each audio packet found,
-/// skipping header pages (OpusHead, OpusTags).
-/// Handles multi-stream OGG: only terminates when ALL known streams
-/// have sent their EOS page.
+/// Correctly handles:
+/// - Multiple packets per page (parsed from segment table lacing values)
+/// - Packets spanning multiple pages (continuation flag)
+/// - Multi-stream OGG (terminates only when all streams have EOS)
+/// - Header pages (OpusHead, OpusTags) are skipped
 pub struct OpusPacketReader<R: Read> {
     reader: R,
     known_streams: HashSet<i32>,
     eos_streams: HashSet<i32>,
+    /// Buffered packets extracted from current page but not yet returned.
+    pending: VecDeque<OpusPacket>,
+    /// Partial packet data carried over from a page that ended with lacing value 255.
+    continued_packet: Vec<u8>,
+    continued_serial: i32,
+    all_eos: bool,
 }
 
 impl<R: Read> OpusPacketReader<R> {
@@ -26,88 +36,133 @@ impl<R: Read> OpusPacketReader<R> {
             reader,
             known_streams: HashSet::new(),
             eos_streams: HashSet::new(),
+            pending: VecDeque::new(),
+            continued_packet: Vec::new(),
+            continued_serial: 0,
+            all_eos: false,
         }
     }
 
     /// Reads the next Opus packet from the OGG stream.
     ///
-    /// Returns `Ok(None)` at end of stream.
+    /// Returns `Ok(None)` at end of stream (all streams have EOS).
     /// Skips header pages (OpusHead, OpusTags).
     pub fn read_packet(&mut self) -> io::Result<Option<OpusPacket>> {
         loop {
-            // Read page header
-            let mut header = [0u8; PAGE_HEADER_SIZE];
-            match self.reader.read_exact(&mut header) {
-                Ok(()) => {}
-                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => return Ok(None),
-                Err(e) => return Err(e),
+            // Return buffered packets first
+            if let Some(pkt) = self.pending.pop_front() {
+                return Ok(Some(pkt));
             }
 
-            // Verify signature
-            if &header[..4] != PAGE_HEADER_SIGNATURE {
-                return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid OGG page signature"));
+            if self.all_eos {
+                return Ok(None);
             }
 
-            let header_type = header[5];
-            let granule = i64::from_le_bytes(header[6..14].try_into().unwrap());
-            let serial_no = i32::from_le_bytes(header[14..18].try_into().unwrap());
-            let n_segments = header[26] as usize;
-
-            // Read segment table
-            let mut segment_table = vec![0u8; n_segments];
-            self.reader.read_exact(&mut segment_table)?;
-
-            // Calculate payload size
-            let payload_size: usize = segment_table.iter().map(|&s| s as usize).sum();
-
-            // Read payload
-            let mut payload = vec![0u8; payload_size];
-            self.reader.read_exact(&mut payload)?;
-
-            // Track known streams from BOS pages
-            if header_type & 0x02 != 0 {
-                self.known_streams.insert(serial_no);
-                continue;
+            // Read next page and extract packets from it
+            if !self.read_page()? {
+                return Ok(None); // EOF
             }
+        }
+    }
 
-            // Skip header-like payloads (OpusHead, OpusTags)
-            if payload.len() >= 8 && (&payload[..8] == b"OpusHead" || &payload[..8] == b"OpusTags") {
-                continue;
-            }
+    /// Reads one OGG page, extracts packets into self.pending.
+    /// Returns false on physical EOF.
+    fn read_page(&mut self) -> io::Result<bool> {
+        // Read page header
+        let mut header = [0u8; PAGE_HEADER_SIZE];
+        match self.reader.read_exact(&mut header) {
+            Ok(()) => {}
+            Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => return Ok(false),
+            Err(e) => return Err(e),
+        }
 
-            // Handle EOS pages per-stream
-            if header_type & 0x04 != 0 {
-                self.eos_streams.insert(serial_no);
-                // Only terminate when ALL known streams have EOS
-                if !self.known_streams.is_empty()
-                    && self.eos_streams.len() >= self.known_streams.len()
-                {
-                    // Return this last packet if non-empty, then next call returns None
-                    if !payload.is_empty() {
-                        return Ok(Some(OpusPacket {
-                            data: payload,
-                            granule,
-                            serial_no,
-                        }));
-                    }
-                    return Ok(None);
+        if &header[..4] != PAGE_HEADER_SIGNATURE {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid OGG page signature"));
+        }
+
+        let header_type = header[5];
+        let granule = i64::from_le_bytes(header[6..14].try_into().unwrap());
+        let serial_no = i32::from_le_bytes(header[14..18].try_into().unwrap());
+        let n_segments = header[26] as usize;
+
+        // Read segment table
+        let mut segment_table = vec![0u8; n_segments];
+        self.reader.read_exact(&mut segment_table)?;
+
+        // Read full page payload
+        let payload_size: usize = segment_table.iter().map(|&s| s as usize).sum();
+        let mut payload = vec![0u8; payload_size];
+        self.reader.read_exact(&mut payload)?;
+
+        // Track BOS pages
+        if header_type & 0x02 != 0 {
+            self.known_streams.insert(serial_no);
+            return Ok(true);
+        }
+
+        // Split payload into packets using segment table lacing values.
+        // A lacing value of 255 means the segment continues the current packet.
+        // A lacing value < 255 terminates the current packet.
+        let mut packets: Vec<Vec<u8>> = Vec::new();
+        let mut current_packet = Vec::new();
+        let mut offset = 0;
+
+        // If this page has the continuation flag and we have carried-over data
+        // from the previous page, prepend it.
+        if header_type & 0x01 != 0 && !self.continued_packet.is_empty() {
+            current_packet.append(&mut self.continued_packet);
+        } else {
+            self.continued_packet.clear();
+        }
+
+        for &lacing in &segment_table {
+            let seg_size = lacing as usize;
+            current_packet.extend_from_slice(&payload[offset..offset + seg_size]);
+            offset += seg_size;
+
+            if lacing < 255 {
+                // Packet complete
+                if !current_packet.is_empty() {
+                    packets.push(std::mem::take(&mut current_packet));
                 }
-                // This stream's EOS but others still active — skip empty payload
-                if payload.is_empty() {
-                    continue;
-                }
             }
+            // lacing == 255: packet continues in next segment (or next page)
+        }
 
-            if payload.is_empty() {
+        // If the last lacing value was 255, the packet continues on the next page
+        if !current_packet.is_empty() {
+            self.continued_packet = current_packet;
+            self.continued_serial = serial_no;
+        }
+
+        // Handle EOS
+        if header_type & 0x04 != 0 {
+            self.eos_streams.insert(serial_no);
+            if !self.known_streams.is_empty()
+                && self.eos_streams.len() >= self.known_streams.len()
+            {
+                self.all_eos = true;
+            }
+        }
+
+        // Filter out header packets (OpusHead, OpusTags) and enqueue data packets
+        for pkt_data in packets {
+            if pkt_data.len() >= 8
+                && (&pkt_data[..8] == b"OpusHead" || &pkt_data[..8] == b"OpusTags")
+            {
                 continue;
             }
-
-            return Ok(Some(OpusPacket {
-                data: payload,
+            if pkt_data.is_empty() {
+                continue;
+            }
+            self.pending.push_back(OpusPacket {
+                data: pkt_data,
                 granule,
                 serial_no,
-            }));
+            });
         }
+
+        Ok(true)
     }
 }
 
@@ -153,7 +208,6 @@ mod tests {
 
     #[test]
     fn test_write_read_roundtrip() {
-        // Write some opus frames
         let mut ogg_data = Vec::new();
         {
             let mut writer = OpusWriter::new(&mut ogg_data, 48000, 1).unwrap();
@@ -163,7 +217,6 @@ mod tests {
             writer.close().unwrap();
         }
 
-        // Read them back
         let packets: Vec<OpusPacket> = read_opus_packets(io::Cursor::new(&ogg_data))
             .collect::<io::Result<Vec<_>>>()
             .unwrap();

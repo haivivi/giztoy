@@ -301,6 +301,9 @@ impl<W: Write> Mp3Encoder<W> {
                     inner.mp3buf.len() as i32,
                 )
             };
+            if encoded < 0 {
+                return Err(EncoderError::EncodeFailed);
+            }
             if encoded > 0 {
                 let flush_data = inner.mp3buf[..encoded as usize].to_vec();
                 inner

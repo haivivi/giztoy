@@ -4,6 +4,9 @@ use std::f64::consts::PI;
 
 /// Generates a Hamming window of the given length.
 pub fn hamming_window(n: usize) -> Vec<f64> {
+    if n <= 1 {
+        return vec![1.0; n];
+    }
     (0..n)
         .map(|i| 0.54 - 0.46 * (2.0 * PI * i as f64 / (n - 1) as f64).cos())
         .collect()

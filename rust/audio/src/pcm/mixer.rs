@@ -280,18 +280,9 @@ impl Mixer {
                 self.try_read_and_mix(&mut state, &mut mix_buf[..sample_count]);
 
             // Fire on_track_closed callbacks outside the state lock.
-            // After re-acquiring the lock, continue the loop to re-evaluate
-            // state — it may have changed during the unlocked window.
-            if tracks_removed > 0 {
-                if let Some(ref cb) = self.on_track_closed {
-                    drop(state);
-                    for _ in 0..tracks_removed {
-                        cb();
-                    }
-                    state = self.state.lock().unwrap();
-                    continue;
-                }
-            }
+            // We do this AFTER checking read/eof/silence results below,
+            // so we don't discard mixed audio data that was just computed.
+            let fire_callbacks = tracks_removed > 0 && self.on_track_closed.is_some();
 
             if should_eof {
                 return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "EOF"));
@@ -328,11 +319,32 @@ impl Mixer {
                     }
                 }
 
+                // Fire callbacks outside the lock before returning
+                if fire_callbacks {
+                    drop(state);
+                    if let Some(ref cb) = self.on_track_closed {
+                        for _ in 0..tracks_removed {
+                            cb();
+                        }
+                    }
+                }
+
                 return Ok(len);
             }
 
+            // Fire callbacks for tracks removed this iteration (no data to output)
+            if fire_callbacks {
+                drop(state);
+                if let Some(ref cb) = self.on_track_closed {
+                    for _ in 0..tracks_removed {
+                        cb();
+                    }
+                }
+                state = self.state.lock().unwrap();
+                continue;
+            }
+
             // No data available, wait for notification
-            // Use wait_timeout to avoid infinite blocking
             let (new_state, _timeout) = self
                 .notify
                 .wait_timeout(state, Duration::from_millis(100))
