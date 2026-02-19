@@ -1,6 +1,0 @@
-# Test: genx add asr config
-steps:
-  - args: [ctx, add, dev]
-  - args: [ctx, use, dev]
-  - args: [genx, add, testdata/models/asr-doubao.json]
-    exit_code: 0

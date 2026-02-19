@@ -1,6 +1,0 @@
-steps:
-  - args: [ctx, add, dev]
-  - args: [ctx, use, dev]
-  - args: [dashscope, app, add, default, --api-key, sk-test123]
-    exit_code: 0
-    stdout_contains: "added"

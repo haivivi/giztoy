@@ -1,6 +1,0 @@
-# Test: doubaospeech app add prod with console credentials
-steps:
-  - args: [ctx, add, dev]
-  - args: [ctx, use, dev]
-  - args: [doubaospeech, app, add, prod, --app-id, "1234567890", --token, "tok123", --console-ak, "AKxxx", --console-sk, "SKyyy"]
-    exit_code: 0

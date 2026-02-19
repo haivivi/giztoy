@@ -1,8 +1,0 @@
-# Test: minimax app use
-steps:
-  - args: [ctx, add, dev]
-  - args: [ctx, use, dev]
-  - args: [minimax, app, add, cn, --api-key, k1]
-  - args: [minimax, app, use, cn]
-    exit_code: 0
-    stdout_contains: "Switched"

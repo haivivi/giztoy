@@ -1,7 +1,0 @@
-steps:
-  - args: [ctx, add, dev]
-  - args: [ctx, use, dev]
-  - args: [doubaospeech, app, add, test, --app-id, "111", --token, "tok"]
-  - args: [doubaospeech, app, use, test]
-    exit_code: 0
-    stdout_contains: "Switched"

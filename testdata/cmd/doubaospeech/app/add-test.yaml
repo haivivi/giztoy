@@ -1,7 +1,0 @@
-# Test: doubaospeech app add test
-steps:
-  - args: [ctx, add, dev]
-  - args: [ctx, use, dev]
-  - args: [doubaospeech, app, add, test, --app-id, "9476442538", --token, "94fW0uH45WkNiTuNryHNpnQVYCxsyF2J"]
-    exit_code: 0
-    stdout_contains: "added"

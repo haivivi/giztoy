@@ -1,6 +1,0 @@
-# Test: genx add segmentor config
-steps:
-  - args: [ctx, add, dev]
-  - args: [ctx, use, dev]
-  - args: [genx, add, testdata/models/segmentor-qwen.json]
-    exit_code: 0

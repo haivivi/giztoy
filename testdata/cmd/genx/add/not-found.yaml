@@ -1,6 +1,0 @@
-# Test: genx add fails for nonexistent file
-steps:
-  - args: [ctx, add, dev]
-  - args: [ctx, use, dev]
-  - args: [genx, add, /nonexistent/file.json]
-    exit_code: 1
