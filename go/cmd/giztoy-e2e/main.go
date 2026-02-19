@@ -1,4 +1,4 @@
-// Command giztoy2-e2e runs end-to-end tests for giztoy CLI v3.
+// Command giztoy-e2e runs end-to-end tests for giztoy CLI v3.
 //
 // It creates a temporary Cortex environment, injects credentials from
 // environment variables via Apply, applies genx configs from testdata,
@@ -6,7 +6,7 @@
 //
 // Usage:
 //
-//	go run ./cmd/giztoy2-e2e [filter]
+//	go run ./cmd/giztoy-e2e [filter]
 //
 // Filters: all, openai, minimax, doubaospeech, dashscope, genai, memory
 package main
