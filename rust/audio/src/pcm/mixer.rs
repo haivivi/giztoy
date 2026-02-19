@@ -722,10 +722,9 @@ impl TrackCtrl {
 
         for i in 0..steps {
             std::thread::sleep(Duration::from_millis(10));
-            let progress = i as f32 / steps as f32;
+            let progress = (i + 1) as f32 / steps as f32;
             self.set_gain(from + (to - from) * progress);
         }
-        self.set_gain(to);
     }
 
     /// Sets the fade-out duration for the track.
@@ -771,7 +770,7 @@ impl TrackCtrl {
                 let steps = (fade_ms / 10) as usize;
                 for i in 0..steps {
                     std::thread::sleep(Duration::from_millis(10));
-                    let progress = i as f32 / steps as f32;
+                    let progress = (i + 1) as f32 / steps as f32;
                     inner.gain.store(from * (1.0 - progress), Ordering::Relaxed);
                 }
                 // After fade completes, fully close the track.
@@ -800,7 +799,7 @@ impl TrackCtrl {
                 let steps = (fade_ms / 10) as usize;
                 for i in 0..steps {
                     std::thread::sleep(Duration::from_millis(10));
-                    let progress = i as f32 / steps as f32;
+                    let progress = (i + 1) as f32 / steps as f32;
                     inner.gain.store(from * (1.0 - progress), Ordering::Relaxed);
                 }
                 inner.close_with_error(err_msg);

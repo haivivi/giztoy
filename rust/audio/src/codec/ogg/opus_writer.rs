@@ -143,11 +143,8 @@ impl<W: Write> OpusWriter<W> {
         // to ensure all BOS pages precede any non-BOS pages per RFC 3533).
         if !stream.tags_written {
             self.write_tags_page_for(serial_no)?;
-            // Set flag after successful write so a retry is possible on I/O error.
             let stream = self.streams.get_mut(&serial_no).unwrap();
             stream.tags_written = true;
-            // Re-borrow after mutable self call
-            let stream = self.streams.get_mut(&serial_no).unwrap();
             stream.granule += duration_48k;
             let granule = stream.granule as u64;
             let page_index = stream.page_index;
