@@ -108,8 +108,11 @@ impl<R: Read> OpusPacketReader<R> {
         let mut offset = 0;
 
         // If this page has the continuation flag and we have carried-over data
-        // from the previous page, prepend it.
-        if header_type & 0x01 != 0 && !self.continued_packet.is_empty() {
+        // from the previous page, prepend it — but only if the serial matches.
+        if header_type & 0x01 != 0
+            && !self.continued_packet.is_empty()
+            && serial_no == self.continued_serial
+        {
             current_packet.append(&mut self.continued_packet);
         } else {
             self.continued_packet.clear();
@@ -145,8 +148,11 @@ impl<R: Read> OpusPacketReader<R> {
             }
         }
 
-        // Filter out header packets (OpusHead, OpusTags) and enqueue data packets
-        for pkt_data in packets {
+        // Filter out header packets (OpusHead, OpusTags) and enqueue data packets.
+        // Per RFC 3533, the granule position on a page applies only to the last
+        // completed packet. Earlier packets get granule = -1.
+        let n_packets = packets.len();
+        for (i, pkt_data) in packets.into_iter().enumerate() {
             if pkt_data.len() >= 8
                 && (&pkt_data[..8] == b"OpusHead" || &pkt_data[..8] == b"OpusTags")
             {
@@ -155,9 +161,10 @@ impl<R: Read> OpusPacketReader<R> {
             if pkt_data.is_empty() {
                 continue;
             }
+            let pkt_granule = if i + 1 == n_packets { granule } else { -1 };
             self.pending.push_back(OpusPacket {
                 data: pkt_data,
-                granule,
+                granule: pkt_granule,
                 serial_no,
             });
         }

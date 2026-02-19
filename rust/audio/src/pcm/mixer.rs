@@ -245,9 +245,7 @@ impl Mixer {
         Ok(())
     }
 
-    fn notify_data_available(&self) {
-        self.notify.notify_all();
-    }
+
 
     /// Reads mixed audio data from the mixer.
     fn read_mixed(&self, buf: &mut [u8]) -> io::Result<usize> {
@@ -506,7 +504,8 @@ impl TrackCtrlInner {
     /// Creates a new input with its own ring buffer.
     /// Closes the previous input and returns the new ring buffer.
     fn new_input(&self, format: Format) -> Arc<super::track::TrackRingBuf> {
-        let buf_size = format.bytes_rate() as usize * 10;
+        // Buffer sized for output format because TrackWriter resamples before writing.
+        let buf_size = self.mixer.output.bytes_rate() as usize * 10;
         let notify = self.mixer.notify.clone();
         let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
 
@@ -618,9 +617,18 @@ impl TrackWriter {
     /// the current mono-only usage in chatgear/genx. Stereo support would
     /// require per-channel interpolation.
     pub fn write_bytes(&self, data: &[u8]) -> io::Result<usize> {
+        // PCM16: 2 bytes per sample. Truncate to even boundary so we never
+        // silently drop a trailing byte while claiming it was consumed.
+        let usable = data.len() & !1;
+        if usable == 0 {
+            return Ok(0);
+        }
+        let data = &data[..usable];
+
         if self.input_format == self.output_format {
-            return self.rb.write(data)
-                .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e));
+            self.rb.write(data)
+                .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
+            return Ok(usable);
         }
 
         // Resample: convert input samples to output sample rate
@@ -655,9 +663,7 @@ impl TrackWriter {
 
         self.rb.write(&out_bytes)
             .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
-        // Return input bytes consumed, not output bytes written.
-        // The caller tracks how much input was consumed, not the resampled output size.
-        Ok(data.len())
+        Ok(usable)
     }
 
     /// Closes writing to this input.

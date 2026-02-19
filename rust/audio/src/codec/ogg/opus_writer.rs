@@ -122,6 +122,12 @@ impl<W: Write> OpusWriter<W> {
 
     /// Writes an Opus frame to the specified stream.
     pub fn stream_write(&mut self, serial_no: i32, frame: &[u8], duration_48k: i64) -> io::Result<()> {
+        if duration_48k < 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "duration_48k must be non-negative",
+            ));
+        }
         if self.closed {
             return Err(io::Error::new(io::ErrorKind::BrokenPipe, "writer closed"));
         }
@@ -136,8 +142,10 @@ impl<W: Write> OpusWriter<W> {
         // Write OpusTags page on first data write (deferred from stream_begin
         // to ensure all BOS pages precede any non-BOS pages per RFC 3533).
         if !stream.tags_written {
-            stream.tags_written = true;
             self.write_tags_page_for(serial_no)?;
+            // Set flag after successful write so a retry is possible on I/O error.
+            let stream = self.streams.get_mut(&serial_no).unwrap();
+            stream.tags_written = true;
             // Re-borrow after mutable self call
             let stream = self.streams.get_mut(&serial_no).unwrap();
             stream.granule += duration_48k;
@@ -200,9 +208,9 @@ impl<W: Write> OpusWriter<W> {
 
         // Ensure OpusTags is written even if no frames were written.
         if !stream.tags_written {
-            stream.tags_written = true;
             self.write_tags_page_for(serial_no)?;
             let stream = self.streams.get_mut(&serial_no).unwrap();
+            stream.tags_written = true;
             let granule = stream.granule as u64;
             let page_index = stream.page_index;
             stream.page_index += 1;
