@@ -114,7 +114,9 @@ impl<R: Read> OpusPacketReader<R> {
             && serial_no == self.continued_serial
         {
             current_packet.append(&mut self.continued_packet);
-        } else {
+        } else if serial_no == self.continued_serial {
+            // Same stream, fresh page — discard stale carried-over data.
+            // If different stream, keep continued_packet for the original stream.
             self.continued_packet.clear();
         }
 
