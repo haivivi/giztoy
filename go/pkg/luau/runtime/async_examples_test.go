@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 
 	"github.com/haivivi/giztoy/go/pkg/luau"
@@ -333,9 +334,9 @@ func TestAsyncHTTP_WithServer(t *testing.T) {
 
 // TestAsyncHTTP_Concurrent tests concurrent HTTP requests.
 func TestAsyncHTTP_Concurrent(t *testing.T) {
-	requestCount := 0
+	var requestCount atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
+		requestCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
@@ -391,7 +392,7 @@ func TestAsyncHTTP_Concurrent(t *testing.T) {
 		t.Errorf("expected success_count=3, got %v", result["success_count"])
 	}
 
-	if requestCount != 3 {
-		t.Errorf("expected 3 HTTP requests, got %d", requestCount)
+	if rc := requestCount.Load(); rc != 3 {
+		t.Errorf("expected 3 HTTP requests, got %d", rc)
 	}
 }
