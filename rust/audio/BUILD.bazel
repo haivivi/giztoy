@@ -9,6 +9,7 @@ C_DEPS = [
     "//third_party/ogg",
     "//third_party/lame",
     "//third_party/minimp3",
+    "//third_party/portaudio",
 ]
 
 rust_library(

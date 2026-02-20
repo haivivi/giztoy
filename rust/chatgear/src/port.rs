@@ -2,7 +2,7 @@
 
 use crate::{
     ConnectedCellular, ConnectedWifi, GearStateEvent, GearStatsChanges, GearStatsEvent,
-    ReadNFCTag, SessionCommandEvent, StoredWifiList, OTA,
+    ReadNFCTag, SessionCommandEvent, StampedOpusFrame, StoredWifiList, OTA,
 };
 use async_trait::async_trait;
 
@@ -32,7 +32,7 @@ pub enum PortError {
 #[async_trait]
 pub trait ClientPortTx: Send + Sync {
     /// Sends a stamped opus frame to the server.
-    async fn send_opus_frames(&self, stamped_opus_frame: &[u8]) -> Result<(), PortError>;
+    async fn send_opus_frame(&self, frame: &StampedOpusFrame) -> Result<(), PortError>;
 
     /// Sends a state event to the server.
     async fn send_state(&self, state: &GearStateEvent) -> Result<(), PortError>;
@@ -46,7 +46,7 @@ pub trait ClientPortTx: Send + Sync {
 #[async_trait]
 pub trait ClientPortRx: Send + Sync {
     /// Receives the next opus frame from the server.
-    async fn recv_opus_frame(&self) -> Option<Vec<u8>>;
+    async fn recv_opus_frame(&self) -> Option<StampedOpusFrame>;
 
     /// Receives the next command from the server.
     async fn recv_command(&self) -> Option<SessionCommandEvent>;
@@ -151,7 +151,7 @@ pub trait ServerPortTx: Send + Sync {
 #[async_trait]
 pub trait ServerPortRx: Send + Sync {
     /// Receives the next opus frame from the client.
-    async fn recv_opus_frame(&self) -> Option<Vec<u8>>;
+    async fn recv_opus_frame(&self) -> Option<StampedOpusFrame>;
 
     /// Receives the next state event from the client.
     async fn recv_state_event(&self) -> Option<GearStateEvent>;

@@ -13,6 +13,7 @@ rust_library(
         "//rust/audio:giztoy_audio",
         "//rust/encoding:giztoy_encoding",
         "//rust/jsontime:giztoy_jsontime",
+        "//rust/mqtt0",
         "@crate_index//:serde",
         "@crate_index//:serde_json",
         "@crate_index//:thiserror",

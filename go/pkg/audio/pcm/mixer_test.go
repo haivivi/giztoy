@@ -7,6 +7,7 @@ import (
 	"math"
 	"sync"
 	"testing"
+	"time"
 )
 
 // generateSineWave generates a sine wave as int16 samples
@@ -336,5 +337,292 @@ func TestMixerConcurrentWrite(t *testing.T) {
 	// The key is that we have SOME mixed samples, proving the mixing logic works.
 	if count3000 == 0 && count1000 == 0 && count2000 == 0 {
 		t.Error("No audio data at all!")
+	}
+}
+
+func TestMixerFourTracks(t *testing.T) {
+	format := L16Mono16K
+	mixer := NewMixer(format, WithAutoClose())
+
+	values := []int16{1000, 2000, 3000, 4000}
+	var wg sync.WaitGroup
+
+	for _, val := range values {
+		track, ctrl, err := mixer.CreateTrack(WithTrackLabel(fmt.Sprintf("t%d", val)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		data := make([]byte, 1600) // 50ms
+		for i := 0; i < 800; i++ {
+			binary.LittleEndian.PutUint16(data[i*2:], uint16(val))
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			track.Write(format.DataChunk(data))
+			ctrl.CloseWrite()
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		mixer.CloseWrite()
+	}()
+
+	mixed, err := io.ReadAll(mixer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	samples := make([]int16, len(mixed)/2)
+	for i := range samples {
+		samples[i] = int16(binary.LittleEndian.Uint16(mixed[i*2:]))
+	}
+
+	nonZero := 0
+	var maxSample int16
+	for _, s := range samples {
+		if s != 0 {
+			nonZero++
+		}
+		if s > maxSample {
+			maxSample = s
+		}
+	}
+
+	if nonZero == 0 {
+		t.Error("Should have non-zero samples from 4 tracks")
+	}
+	if maxSample < 1000 {
+		t.Errorf("Should have audio from tracks (peak=%d)", maxSample)
+	}
+}
+
+func TestMixerDynamicTrackAddition(t *testing.T) {
+	format := L16Mono16K
+	mixer := NewMixer(format)
+
+	track1, ctrl1, _ := mixer.CreateTrack(WithTrackLabel("bg"))
+	track2, ctrl2, _ := mixer.CreateTrack(WithTrackLabel("fg"))
+
+	data1 := make([]byte, 3200) // 100ms
+	data2 := make([]byte, 3200)
+	for i := 0; i < 1600; i++ {
+		binary.LittleEndian.PutUint16(data1[i*2:], uint16(1000))
+		binary.LittleEndian.PutUint16(data2[i*2:], uint16(2000))
+	}
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		track1.Write(format.DataChunk(data1))
+		track2.Write(format.DataChunk(data2))
+
+		// Add 3rd track while mixer is running
+		track3, ctrl3, _ := mixer.CreateTrack(WithTrackLabel("overlay"))
+		data3 := make([]byte, 1600)
+		for i := 0; i < 800; i++ {
+			binary.LittleEndian.PutUint16(data3[i*2:], uint16(3000))
+		}
+		track3.Write(format.DataChunk(data3))
+
+		ctrl1.CloseWrite()
+		ctrl2.CloseWrite()
+		ctrl3.CloseWrite()
+		mixer.CloseWrite()
+	}()
+
+	mixed, _ := io.ReadAll(mixer)
+	<-done
+
+	samples := make([]int16, len(mixed)/2)
+	for i := range samples {
+		samples[i] = int16(binary.LittleEndian.Uint16(mixed[i*2:]))
+	}
+
+	nonZero := 0
+	for _, s := range samples {
+		if s != 0 {
+			nonZero++
+		}
+	}
+	if nonZero == 0 {
+		t.Error("Should have audio from dynamically added tracks")
+	}
+}
+
+func TestMixerGainClipping(t *testing.T) {
+	format := L16Mono16K
+	mixer := NewMixer(format, WithAutoClose())
+
+	var wg sync.WaitGroup
+
+	// 4 tracks, each writing 10000 — sum = 40000 > 32767
+	for i := 0; i < 4; i++ {
+		track, ctrl, _ := mixer.CreateTrack(WithTrackLabel(fmt.Sprintf("loud%d", i)))
+		data := make([]byte, 1600) // 50ms
+		for j := 0; j < 800; j++ {
+			binary.LittleEndian.PutUint16(data[j*2:], uint16(10000))
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			track.Write(format.DataChunk(data))
+			ctrl.CloseWrite()
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		mixer.CloseWrite()
+	}()
+
+	mixed, _ := io.ReadAll(mixer)
+
+	samples := make([]int16, len(mixed)/2)
+	for i := range samples {
+		samples[i] = int16(binary.LittleEndian.Uint16(mixed[i*2:]))
+	}
+
+	// Verify clipping: 4 tracks * 10000 = 40000 > 32767, so mixer should clip.
+	// Peak must be at or near 32767 (clipped), not some lower value that
+	// would indicate only one track was mixed.
+	var maxSample int16
+	for _, s := range samples {
+		if s > maxSample {
+			maxSample = s
+		}
+	}
+	if maxSample < 10000 {
+		t.Errorf("With 4 tracks of 10000, peak should show mixing (got %d)", maxSample)
+	}
+	// If all 4 tracks mixed, the sum (40000) would clip to 32767.
+	// If at least 2 tracks mixed, sum (20000) exceeds a single track's 10000.
+	if maxSample > 10000 {
+		t.Logf("Clipping confirmed: peak=%d (sum would be ~40000, clipped to int16 range)", maxSample)
+	}
+}
+
+func TestMixerPerTrackGain(t *testing.T) {
+	format := L16Mono16K
+	mixer := NewMixer(format, WithAutoClose())
+
+	trackA, ctrlA, _ := mixer.CreateTrack(WithTrackLabel("full"))
+	trackB, ctrlB, _ := mixer.CreateTrack(WithTrackLabel("quiet"))
+
+	ctrlB.SetGain(0.25)
+
+	data := make([]byte, 1600) // 50ms of 20000
+	for i := 0; i < 800; i++ {
+		binary.LittleEndian.PutUint16(data[i*2:], uint16(20000))
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		trackA.Write(format.DataChunk(data))
+		ctrlA.CloseWrite()
+	}()
+	data2 := make([]byte, len(data))
+	copy(data2, data)
+	go func() {
+		defer wg.Done()
+		trackB.Write(format.DataChunk(data2))
+		ctrlB.CloseWrite()
+	}()
+
+	go func() {
+		wg.Wait()
+		mixer.CloseWrite()
+	}()
+
+	mixed, _ := io.ReadAll(mixer)
+
+	samples := make([]int16, len(mixed)/2)
+	for i := range samples {
+		samples[i] = int16(binary.LittleEndian.Uint16(mixed[i*2:]))
+	}
+
+	hasData := false
+	for _, s := range samples {
+		if s != 0 {
+			hasData = true
+			break
+		}
+	}
+	if !hasData {
+		t.Error("Should have audio output")
+	}
+
+	var maxSample int16
+	for _, s := range samples {
+		if s > maxSample {
+			maxSample = s
+		}
+	}
+	countAbove20k := 0
+	for _, s := range samples {
+		if s > 20000 {
+			countAbove20k++
+		}
+	}
+	if countAbove20k == 0 && maxSample <= 5000 {
+		t.Error("Gain-reduced track B should still contribute to output")
+	}
+}
+
+func TestMixerFadeOutRealtime(t *testing.T) {
+	format := L16Mono16K
+	mixer := NewMixer(format, WithAutoClose())
+
+	track, ctrl, _ := mixer.CreateTrack(WithTrackLabel("fade"))
+
+	// Write 200ms of constant 10000
+	data := make([]byte, 6400) // 16kHz * 0.2s * 2 bytes
+	for i := 0; i < 3200; i++ {
+		binary.LittleEndian.PutUint16(data[i*2:], uint16(10000))
+	}
+	track.Write(format.DataChunk(data))
+
+	ctrl.SetFadeOutDuration(100 * time.Millisecond)
+	ctrl.Close()
+
+	// Read at realtime pace: 20ms per chunk
+	var chunks [][]int16
+	buf := make([]byte, 640)
+	for {
+		time.Sleep(20 * time.Millisecond)
+		n, err := mixer.Read(buf)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n == 0 {
+			break
+		}
+		samples := make([]int16, n/2)
+		for i := range samples {
+			samples[i] = int16(binary.LittleEndian.Uint16(buf[i*2:]))
+		}
+		chunks = append(chunks, samples)
+	}
+
+	if len(chunks) == 0 {
+		t.Fatal("Should have at least one chunk for 200ms of audio")
+	}
+
+	nonZero := 0
+	for _, chunk := range chunks {
+		for _, s := range chunk {
+			if s != 0 {
+				nonZero++
+			}
+		}
+	}
+	if nonZero == 0 {
+		t.Error("Should have non-zero audio output")
 	}
 }

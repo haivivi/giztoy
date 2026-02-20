@@ -91,7 +91,8 @@ type Mixer struct {
 	trackNotify chan struct{}
 	writeNotify chan struct{}
 
-	buf []float32
+	buf      []float32
+	trackBuf []byte
 
 	// Track lifecycle callbacks
 	onTrackCreated func()
@@ -369,9 +370,11 @@ func (mx *Mixer) readFullLocked(p []byte) (peak float32, read, silence bool, err
 		mx.buf[i] = 0
 	}
 
-	// Create a temporary buffer for reading track data
-	// This prevents tracks from overwriting each other's data
-	trackBuf := make([]byte, len(p))
+	// Reuse track read buffer (allocated once, grown as needed).
+	if len(mx.trackBuf) < len(p) {
+		mx.trackBuf = make([]byte, len(p))
+	}
+	trackBuf := mx.trackBuf[:len(p)]
 	trackI16 := unsafe.Slice((*int16)(unsafe.Pointer(&trackBuf[0])), len(trackBuf)/2)
 
 	var prev *TrackCtrl

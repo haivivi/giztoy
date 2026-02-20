@@ -100,7 +100,7 @@ impl HttpClient {
         method: &str,
         path: &str,
         body: Option<T>,
-    ) -> Result<impl Stream<Item = Result<Bytes>>>
+    ) -> Result<impl Stream<Item = Result<Bytes>> + use<T>>
     where
         T: Serialize,
     {

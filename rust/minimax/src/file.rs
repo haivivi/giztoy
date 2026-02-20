@@ -113,6 +113,33 @@ impl FileService {
         Ok(())
     }
 
+    /// Downloads a file's content as a byte stream.
+    ///
+    /// Returns a stream of bytes that can be consumed incrementally.
+    /// This corresponds to Go's `Download() → io.ReadCloser`.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use futures::StreamExt;
+    ///
+    /// let mut stream = client.file().download("file-id").await?;
+    /// let mut data = Vec::new();
+    /// while let Some(chunk) = stream.next().await {
+    ///     data.extend_from_slice(&chunk?);
+    /// }
+    /// std::fs::write("output.mp3", &data)?;
+    /// ```
+    pub async fn download(
+        &self,
+        file_id: &str,
+    ) -> Result<impl futures::Stream<Item = Result<bytes::Bytes>>> {
+        let path = format!("/v1/files/retrieve_content?file_id={}", file_id);
+        self.http
+            .request_stream::<()>("GET", &path, None)
+            .await
+    }
+
     /// Gets a download URL for a file.
     pub async fn get_download_url(&self, file_id: &str) -> Result<String> {
         let path = format!("/v1/files/retrieve?file_id={}", file_id);

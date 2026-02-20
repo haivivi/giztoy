@@ -1,8 +1,7 @@
 # Rust workspace root BUILD file
 #
-# This workspace contains three crates:
+# This workspace contains:
 #   - //rust/minimax:giztoy_minimax - MiniMax SDK library
-#   - //rust/cli:giztoy_cli - CLI utilities library
 #   - //rust/cmd/minimax:minimax - MiniMax CLI binary
 
 package(default_visibility = ["//visibility:public"])
@@ -17,12 +16,6 @@ alias(
 alias(
     name = "giztoy_minimax",
     actual = "//rust/minimax:giztoy_minimax",
-)
-
-# Convenience alias for the CLI library
-alias(
-    name = "giztoy_cli",
-    actual = "//rust/cli:giztoy_cli",
 )
 
 # Phase B: inference + voiceprint

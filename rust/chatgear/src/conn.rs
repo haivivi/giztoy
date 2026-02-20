@@ -26,6 +26,31 @@ impl From<std::io::Error> for ConnError {
     }
 }
 
+/// An opus frame with its associated timestamp.
+#[derive(Debug, Clone)]
+pub struct StampedOpusFrame {
+    /// Timestamp of the frame (milliseconds since epoch).
+    pub timestamp_ms: i64,
+    /// Raw opus frame bytes.
+    pub frame: Vec<u8>,
+}
+
+impl StampedOpusFrame {
+    /// Creates a new stamped opus frame.
+    pub fn new(timestamp_ms: i64, frame: Vec<u8>) -> Self {
+        Self { timestamp_ms, frame }
+    }
+
+    /// Creates a stamped opus frame with the current time.
+    pub fn now(frame: Vec<u8>) -> Self {
+        let timestamp_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+        Self { timestamp_ms, frame }
+    }
+}
+
 // =============================================================================
 // Uplink: Client -> Server
 // =============================================================================
@@ -34,7 +59,7 @@ impl From<std::io::Error> for ConnError {
 #[async_trait]
 pub trait UplinkTx: Send + Sync {
     /// Sends a stamped opus frame to the server.
-    async fn send_opus_frames(&self, stamped_frame: &[u8]) -> Result<(), ConnError>;
+    async fn send_opus_frame(&self, frame: &StampedOpusFrame) -> Result<(), ConnError>;
 
     /// Sends a state event to the server.
     async fn send_state(&self, state: &GearStateEvent) -> Result<(), ConnError>;
@@ -51,7 +76,7 @@ pub trait UplinkTx: Send + Sync {
 pub trait UplinkRx: Send + Sync {
     /// Receives the next opus frame from the client.
     /// Returns Ok(None) when the connection is closed normally.
-    async fn recv_opus_frame(&self) -> Result<Option<Vec<u8>>, ConnError>;
+    async fn recv_opus_frame(&self) -> Result<Option<StampedOpusFrame>, ConnError>;
 
     /// Receives the next state event from the client.
     /// Returns Ok(None) when the connection is closed normally.
@@ -60,6 +85,9 @@ pub trait UplinkRx: Send + Sync {
     /// Receives the next stats event from the client.
     /// Returns Ok(None) when the connection is closed normally.
     async fn recv_stats(&self) -> Result<Option<GearStatsEvent>, ConnError>;
+
+    /// Returns the latest stats event from the client, if any.
+    async fn latest_stats(&self) -> Option<GearStatsEvent>;
 
     /// Closes the receiver.
     async fn close(&self) -> Result<(), ConnError>;
@@ -81,7 +109,7 @@ pub struct OpusEncodeOptions {
 #[async_trait]
 pub trait DownlinkTx: Send + Sync {
     /// Sends a stamped opus frame to the client.
-    async fn send_opus_frames(&self, stamped_frame: &[u8]) -> Result<(), ConnError>;
+    async fn send_opus_frame(&self, frame: &StampedOpusFrame) -> Result<(), ConnError>;
 
     /// Sends a command event to the client.
     async fn send_command(&self, cmd: &SessionCommandEvent) -> Result<(), ConnError>;
@@ -95,7 +123,7 @@ pub trait DownlinkTx: Send + Sync {
 pub trait DownlinkRx: Send + Sync {
     /// Receives the next opus frame from the server.
     /// Returns Ok(None) when the connection is closed normally.
-    async fn recv_opus_frame(&self) -> Result<Option<Vec<u8>>, ConnError>;
+    async fn recv_opus_frame(&self) -> Result<Option<StampedOpusFrame>, ConnError>;
 
     /// Receives the next command from the server.
     /// Returns Ok(None) when the connection is closed normally.

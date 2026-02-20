@@ -9,7 +9,7 @@ members = [
     "doubaospeech",
     "openai-realtime",
     "mqtt0",
-    "cli",
+
     "jsontime",
     "encoding",
     "trie",
@@ -47,7 +47,7 @@ giztoy-minimax = { path = "minimax" }
 giztoy-doubaospeech = { path = "doubaospeech" }
 giztoy-mqtt0 = { path = "mqtt0" }
 giztoy-openai-realtime = { path = "openai-realtime" }
-giztoy-cli = { path = "cli" }
+
 giztoy-jsontime = { path = "jsontime" }
 giztoy-encoding = { path = "encoding" }
 giztoy-trie = { path = "trie" }

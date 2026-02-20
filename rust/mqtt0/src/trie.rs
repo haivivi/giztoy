@@ -343,6 +343,50 @@ impl<T> TrieNode<T> {
         false
     }
 
+    /// Update values at the given pattern using a callback.
+    ///
+    /// The callback receives a mutable reference to the values vector
+    /// and can modify it in place.
+    pub fn update<F>(&mut self, pattern: &str, f: F) -> Result<()>
+    where
+        F: FnOnce(&mut Vec<T>),
+    {
+        if pattern.is_empty() {
+            f(&mut self.values);
+            return Ok(());
+        }
+
+        let (first, subseq) = match pattern.find('/') {
+            None => (pattern, ""),
+            Some(idx) => (&pattern[..idx], &pattern[idx + 1..]),
+        };
+
+        match first {
+            "+" => {
+                if self.match_any.is_none() {
+                    self.match_any = Some(Box::new(TrieNode::new()));
+                }
+                self.match_any.as_mut().unwrap().update(subseq, f)
+            }
+            "#" => {
+                if !subseq.is_empty() {
+                    return Err(Error::InvalidConfig(
+                        "# must be the last segment".to_string(),
+                    ));
+                }
+                if self.match_all.is_none() {
+                    self.match_all = Some(Box::new(TrieNode::new()));
+                }
+                f(&mut self.match_all.as_mut().unwrap().values);
+                Ok(())
+            }
+            _ => {
+                let child = self.children.entry(first.to_string()).or_default();
+                child.update(subseq, f)
+            }
+        }
+    }
+
     /// Add a value to this node.
     pub fn add_value(&mut self, value: T) {
         self.values.push(value);
@@ -432,6 +476,17 @@ impl<T> Trie<T> {
         self.root.write().remove(pattern, predicate)
     }
 
+    /// Update values at the given pattern using a callback.
+    ///
+    /// The callback receives a mutable reference to the values vector
+    /// and can modify it in place.
+    pub fn update<F>(&self, pattern: &str, f: F) -> Result<()>
+    where
+        F: FnOnce(&mut Vec<T>),
+    {
+        self.root.write().update(pattern, f)
+    }
+
     /// Execute a function with mutable access to the root node.
     pub fn with_mut<F, R>(&self, f: F) -> R
     where
@@ -504,6 +559,35 @@ mod tests {
         let trie: Trie<String> = Trie::new();
         let result = trie.insert("device/#/state", "invalid".to_string());
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update() {
+        let trie: Trie<String> = Trie::new();
+        trie.insert("device/+/state", "handler1".to_string())
+            .unwrap();
+
+        // Update values at the pattern
+        trie.update("device/+/state", |values| {
+            values.push("handler_updated".to_string());
+        })
+        .unwrap();
+
+        let values = trie.get("device/gear-001/state");
+        assert_eq!(values.len(), 2);
+        assert_eq!(values[0], "handler1");
+        assert_eq!(values[1], "handler_updated");
+
+        // Update to clear values
+        trie.update("device/+/state", |values| {
+            values.clear();
+            values.push("replaced".to_string());
+        })
+        .unwrap();
+
+        let values = trie.get("device/gear-001/state");
+        assert_eq!(values.len(), 1);
+        assert_eq!(values[0], "replaced");
     }
 
     #[test]
