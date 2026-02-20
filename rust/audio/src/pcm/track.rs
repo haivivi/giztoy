@@ -191,23 +191,24 @@ pub(crate) struct TrackInput {
 }
 
 impl TrackInput {
-    pub fn new(format: Format, output_format: Format, rb: Arc<TrackRingBuf>) -> Self {
+    pub fn new(format: Format, output_format: Format, rb: Arc<TrackRingBuf>) -> Result<Self, String> {
         let needs_resample = format.sample_rate != output_format.sample_rate;
         let in_channels = format.channels() as usize;
         let resampler = if needs_resample {
             let ratio = output_format.sample_rate as f64 / format.sample_rate as f64;
-            SincFixedOut::<f32>::new(
+            Some(SincFixedOut::<f32>::new(
                 ratio,
                 2.0,
                 make_sinc_params(),
                 RESAMPLE_CHUNK_SIZE,
                 in_channels,
-            ).ok()
+            ).map_err(|e| format!("failed to create resampler ({}Hz → {}Hz): {}",
+                format.sample_rate, output_format.sample_rate, e))?)
         } else {
             None
         };
 
-        Self {
+        Ok(Self {
             format,
             output_format,
             rb,
@@ -215,7 +216,7 @@ impl TrackInput {
             accum: vec![Vec::new(); in_channels],
             raw_buf: Vec::new(),
             rb_eof: false,
-        }
+        })
     }
 
     /// Reads data from this input, resampling if necessary.
@@ -483,11 +484,13 @@ impl InternalTrack {
 
     /// Adds a new input with its format and ring buffer.
     /// A resampler is created automatically if the input format differs
-    /// from the track's output format.
-    pub fn add_input(&self, format: Format, rb: Arc<TrackRingBuf>) {
-        let input = TrackInput::new(format, self.output_format, rb);
+    /// from the track's output format. Returns an error if the resampler
+    /// cannot be created (e.g. invalid sample rate).
+    pub fn add_input(&self, format: Format, rb: Arc<TrackRingBuf>) -> Result<(), String> {
+        let input = TrackInput::new(format, self.output_format, rb)?;
         self.inputs.lock().unwrap().push(input);
         self.notify_mixer.notify_all();
+        Ok(())
     }
 
     /// Reads a full chunk from the track in the output format.

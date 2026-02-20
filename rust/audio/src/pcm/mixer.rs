@@ -176,7 +176,7 @@ impl Mixer {
             ));
         }
 
-        let inner = Arc::new(TrackCtrlInner::new(self.clone(), opts.label));
+        let inner = Arc::new(TrackCtrlInner::new(self.clone(), opts.label)?);
         state.tracks.push(inner.clone());
 
         // Notify readers that a new track is available
@@ -473,18 +473,17 @@ struct TrackCtrlInner {
 }
 
 impl TrackCtrlInner {
-    fn new(mixer: Arc<Mixer>, label: Option<String>) -> Self {
+    fn new(mixer: Arc<Mixer>, label: Option<String>) -> io::Result<Self> {
         let notify = mixer.notify.clone();
         let output = mixer.output;
         let track = super::track::InternalTrack::new(output, notify.clone());
 
-        // Create the default input ring buffer (10 seconds capacity).
-        // Sized for the output format since the default input matches output.
         let buf_size = output.bytes_rate() as usize * 10;
         let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
-        track.add_input(output, rb.clone());
+        track.add_input(output, rb.clone())
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
-        Self {
+        Ok(Self {
             mixer,
             label,
             gain: AtomicF32::new(1.0),
@@ -492,7 +491,7 @@ impl TrackCtrlInner {
             fade_out_ms: AtomicI64::new(0),
             track,
             current_rb: Mutex::new(Some(rb)),
-        }
+        })
     }
 
     fn write(&self, data: &[u8]) -> io::Result<usize> {
@@ -515,9 +514,8 @@ impl TrackCtrlInner {
 
     /// Creates a new input with its own ring buffer.
     /// Closes the previous input and returns the new ring buffer.
-    fn new_input(&self, format: Format) -> Arc<super::track::TrackRingBuf> {
-        // Buffer sized for input format — ring buffer stores raw input data,
-        // resampling happens on the read side.
+    /// Returns an error if the resampler cannot be created.
+    fn new_input(&self, format: Format) -> io::Result<Arc<super::track::TrackRingBuf>> {
         let buf_size = format.bytes_rate() as usize * 10;
         let notify = self.mixer.notify.clone();
         let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
@@ -531,8 +529,9 @@ impl TrackCtrlInner {
             *current = Some(rb.clone());
         }
 
-        self.track.add_input(format, rb.clone());
-        rb
+        self.track.add_input(format, rb.clone())
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        Ok(rb)
     }
 
     /// Reads a full chunk using readFull semantics (zero-fill).
@@ -575,12 +574,14 @@ impl Track {
     /// The previous input is closed and will be drained by the mixer.
     /// If the input format differs from the mixer's output format, resampling
     /// is performed lazily on the read side.
-    pub fn input(&self, format: Format) -> TrackWriter {
-        let rb = self.inner.new_input(format);
-        TrackWriter {
+    ///
+    /// Returns an error if the resampler cannot be created for the given format.
+    pub fn input(&self, format: Format) -> io::Result<TrackWriter> {
+        let rb = self.inner.new_input(format)?;
+        Ok(TrackWriter {
             rb,
             input_format: format,
-        }
+        })
     }
 
     /// Writes an audio chunk to the track.
@@ -1394,7 +1395,7 @@ mod tests {
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
         let wave = generate_sine_i16(440.0, 16000, 200, 0.8);
-        let tw = track.input(Format::L16Mono16K);
+        let tw = track.input(Format::L16Mono16K).unwrap();
         let h = std::thread::spawn(move || {
             tw.write_bytes(&wave).unwrap();
             tw.close_write();
@@ -1417,7 +1418,7 @@ mod tests {
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
         let wave = generate_sine_i16(440.0, 48000, 200, 0.8);
-        let tw = track.input(Format::L16Mono48K);
+        let tw = track.input(Format::L16Mono48K).unwrap();
         let h = std::thread::spawn(move || {
             tw.write_bytes(&wave).unwrap();
             tw.close_write();
@@ -1440,7 +1441,7 @@ mod tests {
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
         let wave = generate_sine_i16(440.0, 24000, 200, 0.8);
-        let tw = track.input(Format::L16Mono24K);
+        let tw = track.input(Format::L16Mono24K).unwrap();
         let h = std::thread::spawn(move || {
             tw.write_bytes(&wave).unwrap();
             tw.close_write();
@@ -1463,7 +1464,7 @@ mod tests {
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
         let wave = generate_sine_i16(440.0, 44100, 200, 0.8);
-        let tw = track.input(Format::L16Mono44K);
+        let tw = track.input(Format::L16Mono44K).unwrap();
         let h = std::thread::spawn(move || {
             tw.write_bytes(&wave).unwrap();
             tw.close_write();
@@ -1516,7 +1517,7 @@ mod tests {
         let wave_a = generate_sine_i16(440.0, 16000, 200, 0.5);
         let wave_b = generate_sine_i16(880.0, 24000, 200, 0.5);
 
-        let tw_b = track_b.input(Format::L16Mono24K);
+        let tw_b = track_b.input(Format::L16Mono24K).unwrap();
 
         let h_a = std::thread::spawn(move || {
             track_a.write_bytes(&wave_a).unwrap();
@@ -1547,7 +1548,7 @@ mod tests {
         let silence_16k: Vec<u8> = vec![0u8; 3200];
         let silence_48k: Vec<u8> = vec![0u8; 9600];
 
-        let tw_b = track_b.input(Format::L16Mono48K);
+        let tw_b = track_b.input(Format::L16Mono48K).unwrap();
 
         let h_a = std::thread::spawn(move || {
             track_a.write_bytes(&silence_16k).unwrap();
@@ -1580,11 +1581,11 @@ mod tests {
         let wave_48k = generate_sine_i16(880.0, 48000, 100, 0.7);
 
         let h = std::thread::spawn(move || {
-            let tw1 = track.input(Format::L16Mono24K);
+            let tw1 = track.input(Format::L16Mono24K).unwrap();
             tw1.write_bytes(&wave_24k).unwrap();
             tw1.close_write();
 
-            let tw2 = track.input(Format::L16Mono48K);
+            let tw2 = track.input(Format::L16Mono48K).unwrap();
             tw2.write_bytes(&wave_48k).unwrap();
             tw2.close_write();
 
@@ -1622,7 +1623,7 @@ mod tests {
         let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
-        let tw = track.input(Format::L16Mono48K);
+        let tw = track.input(Format::L16Mono48K).unwrap();
         let n = tw.write_bytes(&[]).unwrap();
         assert_eq!(n, 0);
 
@@ -1641,7 +1642,7 @@ mod tests {
         let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
-        let tw = track.input(Format::L16Mono48K);
+        let tw = track.input(Format::L16Mono48K).unwrap();
         let n = tw.write_bytes(&[0x01, 0x02, 0x03]).unwrap();
         assert_eq!(n, 2, "should truncate to frame boundary");
 
@@ -1676,7 +1677,7 @@ mod tests {
         for (i, &fmt) in formats.iter().enumerate() {
             let (track, ctrl) = mixer.create_track(None).unwrap();
             let wave = generate_sine_i16(freqs[i], fmt.sample_rate(), 200, 0.3);
-            let tw = track.input(fmt);
+            let tw = track.input(fmt).unwrap();
             handles.push(std::thread::spawn(move || {
                 tw.write_bytes(&wave).unwrap();
                 tw.close_write();
@@ -1703,7 +1704,7 @@ mod tests {
 
         let wave_a = generate_sine_i16(440.0, 48000, 500, 0.5);
         let wave_b = generate_sine_i16(880.0, 16000, 500, 0.5);
-        let tw_a = track_a.input(Format::L16Mono48K);
+        let tw_a = track_a.input(Format::L16Mono48K).unwrap();
 
         let h_a = std::thread::spawn(move || {
             tw_a.write_bytes(&wave_a[..wave_a.len() / 2]).unwrap();
@@ -1731,7 +1732,7 @@ mod tests {
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
         let wave = generate_sine_i16(440.0, 48000, 500, 0.8);
-        let tw = track.input(Format::L16Mono48K);
+        let tw = track.input(Format::L16Mono48K).unwrap();
         let h = std::thread::spawn(move || {
             tw.write_bytes(&wave).unwrap();
             tw.close_write();
@@ -1754,7 +1755,7 @@ mod tests {
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
         let wave = generate_sine_i16(440.0, 48000, 300, 0.9);
-        let tw = track.input(Format::L16Mono48K);
+        let tw = track.input(Format::L16Mono48K).unwrap();
         let h = std::thread::spawn(move || {
             tw.write_bytes(&wave).unwrap();
             tw.close_write();
@@ -1776,7 +1777,7 @@ mod tests {
         let (track, ctrl) = mixer.create_track(None).unwrap();
 
         let silence: Vec<u8> = vec![0u8; 48000 * 2];
-        let tw = track.input(Format::L16Mono48K);
+        let tw = track.input(Format::L16Mono48K).unwrap();
         let h = std::thread::spawn(move || {
             tw.write_bytes(&silence).unwrap();
             tw.close_write();
@@ -1801,7 +1802,7 @@ mod tests {
 
         // 2 seconds at 48kHz → resample to 16kHz
         let wave = generate_sine_i16(440.0, 48000, 2000, 0.7);
-        let tw = track.input(Format::L16Mono48K);
+        let tw = track.input(Format::L16Mono48K).unwrap();
         let h = std::thread::spawn(move || {
             tw.write_bytes(&wave).unwrap();
             tw.close_write();
