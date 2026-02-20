@@ -44,7 +44,9 @@ pub fn split(
                 }
                 Ok(None) => break,
                 Err(e) => {
-                    let _ = matched_tx.send(Err(e.to_string())).await;
+                    let msg = e.to_string();
+                    let _ = matched_tx.send(Err(msg.clone())).await;
+                    let _ = rest_tx.send(Err(msg)).await;
                     break;
                 }
             }

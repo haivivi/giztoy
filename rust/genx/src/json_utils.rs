@@ -20,12 +20,13 @@ pub fn unmarshal_json<T: serde::de::DeserializeOwned>(data: &[u8]) -> Result<T, 
 
 fn repair_json(s: &str) -> String {
     let mut result = String::with_capacity(s.len());
-    let mut in_string = false;
+    let mut string_quote: Option<char> = None; // which quote opened the current string
     let mut escape_next = false;
     let chars: Vec<char> = s.chars().collect();
 
     for i in 0..chars.len() {
         let ch = chars[i];
+        let in_string = string_quote.is_some();
 
         if escape_next {
             result.push(ch);
@@ -39,19 +40,31 @@ fn repair_json(s: &str) -> String {
             continue;
         }
 
-        if ch == '"' {
-            in_string = !in_string;
+        if ch == '"' && string_quote == Some('"') {
+            string_quote = None;
             result.push(ch);
             continue;
         }
 
-        if !in_string && ch == '\'' {
+        if ch == '"' && !in_string {
+            string_quote = Some('"');
+            result.push(ch);
+            continue;
+        }
+
+        if ch == '\'' && string_quote == Some('\'') {
+            string_quote = None;
+            result.push('"');
+            continue;
+        }
+
+        if ch == '\'' && !in_string {
+            string_quote = Some('\'');
             result.push('"');
             continue;
         }
 
         if !in_string && ch == ',' {
-            // Skip trailing commas before } or ]
             let rest = chars[i + 1..].iter().collect::<String>();
             let trimmed = rest.trim_start();
             if trimmed.starts_with('}') || trimmed.starts_with(']') {
@@ -119,7 +132,26 @@ mod tests {
     #[test]
     fn t4_5_truncated_json() {
         let result: Result<serde_json::Value, _> = unmarshal_json(br#"{"name": "hel"#);
-        // Truncated JSON may or may not be repairable; we just ensure no panic
         let _ = result;
+    }
+
+    #[test]
+    fn t4_6_single_quote_with_comma_in_value() {
+        #[derive(Deserialize, Debug, PartialEq)]
+        struct T {
+            k: String,
+        }
+        let result: T = unmarshal_json(b"{'k': 'a, }'}").unwrap();
+        assert_eq!(result.k, "a, }");
+    }
+
+    #[test]
+    fn t4_7_double_quote_with_single_inside() {
+        #[derive(Deserialize, Debug, PartialEq)]
+        struct T {
+            k: String,
+        }
+        let result: T = unmarshal_json(br#"{"k": "it's fine"}"#).unwrap();
+        assert_eq!(result.k, "it's fine");
     }
 }
