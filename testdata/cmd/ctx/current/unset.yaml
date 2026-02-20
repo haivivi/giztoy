@@ -1,0 +1,5 @@
+# Test: ctx current fails when no context is set
+steps:
+  - args: [ctx, current]
+    exit_code: 1
+    stderr_contains: "no current context"

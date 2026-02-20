@@ -1,0 +1,6 @@
+kind: doubaospeech/voice/train
+cred: doubaospeech:test
+speaker_id: my_custom_voice
+audio_urls:
+  - https://example.com/sample1.wav
+language: zh-CN

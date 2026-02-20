@@ -1,0 +1,4 @@
+---
+kind: genx/profiler
+name: qwen/prof
+cred: openai:qwen

@@ -1,0 +1,9 @@
+kind: memory/add
+persona: cat_girl
+text: 和小明聊了恐龙，他最喜欢霸王龙
+labels:
+  - "person:小明"
+  - "topic:恐龙"
+keywords:
+  - 恐龙
+  - 霸王龙

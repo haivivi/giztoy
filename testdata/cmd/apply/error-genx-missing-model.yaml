@@ -1,0 +1,3 @@
+kind: genx/generator
+name: test
+cred: openai:qwen

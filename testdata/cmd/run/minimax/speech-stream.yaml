@@ -1,0 +1,7 @@
+kind: minimax/speech/stream
+cred: minimax:cn
+model: speech-2.6-hd
+text: 这是流式语音合成测试。
+voice_id: female-shaonv
+format: mp3
+output: /tmp/giztoy-minimax-speech-stream.mp3

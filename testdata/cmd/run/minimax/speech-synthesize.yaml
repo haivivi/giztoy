@@ -1,0 +1,8 @@
+kind: minimax/speech/synthesize
+cred: minimax:cn
+model: speech-2.6-hd
+text: 你好，这是一段测试语音合成。
+voice_id: female-shaonv
+format: mp3
+sample_rate: 32000
+output: /tmp/giztoy-minimax-speech.mp3

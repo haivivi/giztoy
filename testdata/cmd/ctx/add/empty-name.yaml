@@ -1,0 +1,5 @@
+# Test: ctx add fails for empty name
+steps:
+  - args: [ctx, add, ""]
+    exit_code: 1
+    stderr_contains: "cannot be empty"

@@ -1,0 +1,5 @@
+kind: minimax/video/i2v
+cred: minimax:cn
+model: I2V-01
+first_frame_image: https://example.com/test.jpg
+prompt: Smooth camera pan

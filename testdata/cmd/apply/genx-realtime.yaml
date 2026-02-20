@@ -1,0 +1,6 @@
+---
+kind: genx/realtime
+name: doubao/realtime
+cred: doubaospeech:test
+voice: zh_female_cancan
+model: speech-dialog

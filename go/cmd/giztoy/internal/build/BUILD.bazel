@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "build",
-    srcs = ["version.go"],
-    importpath = "github.com/haivivi/giztoy/go/cmd/giztoy/internal/build",
-    visibility = ["//go/cmd/giztoy:__subpackages__"],
-)

@@ -1,0 +1,7 @@
+kind: doubaospeech/tts/v1/synthesize
+cred: doubaospeech:test
+text: 你好，这是V1测试。
+voice_type: zh_female_cancan
+encoding: mp3
+cluster: volcano_tts
+output: /tmp/giztoy-doubao-tts-v1.mp3

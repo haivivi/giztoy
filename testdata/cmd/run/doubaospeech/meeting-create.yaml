@@ -1,0 +1,5 @@
+kind: doubaospeech/meeting/create
+cred: doubaospeech:test
+audio_url: https://example.com/meeting.mp3
+language: zh-CN
+speaker_count: 3

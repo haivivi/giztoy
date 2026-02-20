@@ -1,0 +1,4 @@
+---
+kind: genx/segmentor
+name: qwen/seg
+cred: openai:qwen

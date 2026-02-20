@@ -1,0 +1,6 @@
+kind: minimax/video/t2v
+cred: minimax:cn
+model: MiniMax-Hailuo-2.3
+prompt: A cat playing with a ball in a sunny garden
+duration: 6
+resolution: 1080P

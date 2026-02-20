@@ -1,0 +1,5 @@
+kind: memory/relation/add
+persona: cat_girl
+from: "person:小明"
+to: "topic:恐龙"
+rel_type: likes

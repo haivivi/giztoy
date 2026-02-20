@@ -1,0 +1,4 @@
+kind: genx/tts
+name: minimax/shaonv
+text: 你好，这是一段测试语音。
+output: /tmp/giztoy-test-tts.mp3

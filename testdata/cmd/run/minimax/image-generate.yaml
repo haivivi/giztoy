@@ -1,0 +1,6 @@
+kind: minimax/image/generate
+cred: minimax:cn
+model: image-01
+prompt: A beautiful sunset over mountains
+aspect_ratio: "16:9"
+n: 1

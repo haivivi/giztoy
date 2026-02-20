@@ -1,0 +1,9 @@
+kind: minimax/music/generate
+cred: minimax:cn
+model: music-2.0
+prompt: Pop music, upbeat, suitable for summer
+lyrics: |
+  [Verse]
+  Walking down the street
+  Feeling the summer heat
+output: /tmp/giztoy-minimax-music.mp3

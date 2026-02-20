@@ -1,0 +1,3 @@
+kind: memory/entity/get
+persona: cat_girl
+label: "person:小明"

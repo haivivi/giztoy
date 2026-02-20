@@ -1,0 +1,4 @@
+kind: minimax/file/upload
+cred: minimax:cn
+file_path: testdata/doubaospeech/test_speech.mp3
+purpose: voice_clone

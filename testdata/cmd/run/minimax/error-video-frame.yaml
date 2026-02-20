@@ -1,0 +1,6 @@
+kind: minimax/video/frame
+cred: minimax:cn
+model: I2V-01
+first_frame_image: https://image.pollinations.ai/prompt/a%20cat%20sitting
+last_frame_image: https://image.pollinations.ai/prompt/a%20cat%20standing
+prompt: Smooth transition from sitting to standing

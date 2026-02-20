@@ -1,0 +1,9 @@
+kind: minimax/text/chat
+cred: minimax:cn
+model: MiniMax-M2.1
+messages:
+  - role: system
+    content: You are a helpful assistant.
+  - role: user
+    content: Hello, who are you?
+max_tokens: 100

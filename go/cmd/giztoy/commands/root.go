@@ -1,99 +1,91 @@
 package commands
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"os"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
-	"github.com/haivivi/giztoy/go/cmd/giztoy/internal/config"
+	"github.com/haivivi/giztoy/go/pkg/cortex"
+	"github.com/haivivi/giztoy/go/pkg/kv"
 )
 
 var (
-	// Global flags
-	verbose bool
-
-	// Global configuration (loaded at init time)
-	globalConfig *config.Config
+	verbose      bool
+	formatOutput string
+	outputFile   string
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "giztoy",
 	Short: "Unified CLI for giztoy AI services",
-	Long: `giztoy - A unified command line interface for AI services.
+	Long: `giztoy — A unified command line interface for AI services.
 
-Supported services:
-  minimax    MiniMax API (text, speech, video, image, music, voice, file)
-  doubao     Doubao Speech API (tts, asr, voice, realtime, meeting, ...)
-  dashscope  DashScope API (omni multimodal chat)
-  cortex     Cortex server (bridges devices with AI transformers)
-  gear       Chatgear device simulator
+Commands:
+  ctx       Context configuration management (file-based bootstrap)
+  apply     Declare and write resources (creds, genx configs)
+  list      List resources by prefix
+  get       Get a resource by full name
+  delete    Delete a resource by full name
+  run       Execute a task (TTS, chat, ASR, etc.)
+  version   Version information
 
-Configuration is stored in the OS config directory:
-  macOS:   ~/Library/Application Support/giztoy/
-  Linux:   ~/.config/giztoy/
-  Windows: %AppData%/giztoy/
-
-Use 'giztoy config' to manage contexts and service configurations.
+Resource kinds:
+  creds/openai, creds/genai, creds/minimax, creds/doubaospeech, creds/dashscope
+  genx/generator, genx/tts, genx/asr, genx/realtime, genx/segmentor, genx/profiler
 
 Examples:
-  # Create a context and configure a service
-  giztoy config add-context dev
-  giztoy config set dev minimax api_key YOUR_KEY
-
-  # Use the current context for subcommands
-  giztoy config use-context dev
-  giztoy minimax text chat -f chat.yaml
-
-  # Or specify context on the subcommand
-  giztoy minimax -c dev speech synthesize -f request.yaml`,
+  giztoy ctx add dev && giztoy ctx use dev
+  giztoy ctx config set kv badger:///tmp/dev
+  giztoy apply -f setup.yaml
+  giztoy list creds:*
+  giztoy get creds:openai:qwen
+  giztoy run -f task.yaml`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
 
-// Execute runs the root command.
 func Execute() error {
 	return rootCmd.Execute()
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
-
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().StringVar(&formatOutput, "format", "table", "output format: table, json, yaml, name")
+	rootCmd.PersistentFlags().StringVarP(&outputFile, "o", "o", "", "output file path")
 }
 
-// configLoadErr stores the error from config.Load() for deferred reporting.
-var configLoadErr error
+// testKVOverride is set during tests to share a KV instance across commands.
+var testKVOverride kv.Store
 
-func initConfig() {
-	cfg, err := config.Load()
+// openCortex creates a Cortex instance from the current ctx config.
+func openCortex(ctx context.Context) (*cortex.Cortex, error) {
+	store, err := openStore()
 	if err != nil {
-		// Store error for deferred reporting — commands that need config
-		// will get a clear error via GetConfig(). This avoids failing
-		// non-config commands like 'giztoy version'.
-		configLoadErr = err
-		return
+		return nil, err
 	}
-	globalConfig = cfg
+	var opts []cortex.Option
+	if testKVOverride != nil {
+		opts = append(opts, cortex.WithKV(testKVOverride))
+	}
+	return cortex.New(ctx, store, opts...)
 }
 
-// GetConfig returns the global configuration.
-// Returns an error if the config could not be loaded (e.g., HOME not set).
-func GetConfig() (*config.Config, error) {
-	if globalConfig == nil {
-		if configLoadErr != nil {
-			return nil, fmt.Errorf("config not available: %w", configLoadErr)
-		}
-		// Try loading again (e.g., dir was created since init).
-		cfg, err := config.Load()
-		if err != nil {
-			return nil, fmt.Errorf("config not available: %w", err)
-		}
-		globalConfig = cfg
-	}
-	return globalConfig, nil
+func printJSON(v any) error {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(v)
 }
 
-// IsVerbose returns whether verbose mode is enabled.
-func IsVerbose() bool {
-	return verbose
+func printVerbose(format string, args ...any) {
+	if verbose {
+		fmt.Fprintf(os.Stderr, format+"\n", args...)
+	}
+}
+
+func newTabWriter() *tabwriter.Writer {
+	return tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 }

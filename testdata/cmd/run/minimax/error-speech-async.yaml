@@ -1,0 +1,5 @@
+kind: minimax/speech/async
+cred: minimax:cn
+model: speech-2.6-hd
+text: 这是一段异步长文本语音合成测试。异步合成模式适用于需要处理大量文本的场景，支持最长一百万字符的文本输入。系统会自动将文本分段处理，最终合并为完整的音频文件。用户可以通过任务ID查询合成进度和下载结果。
+voice_id: female-shaonv

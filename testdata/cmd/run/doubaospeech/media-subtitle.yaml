@@ -1,0 +1,5 @@
+kind: doubaospeech/media/subtitle
+cred: doubaospeech:test
+media_url: https://example.com/video.mp4
+language: zh-CN
+format: srt

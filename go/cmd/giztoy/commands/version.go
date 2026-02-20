@@ -5,23 +5,23 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
-
-	"github.com/haivivi/giztoy/go/cmd/giztoy/internal/build"
 )
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show version information",
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(build.String())
-		if IsVerbose() {
-			fmt.Printf("  go:     %s\n", runtime.Version())
-			if cfg, err := GetConfig(); err == nil {
-				fmt.Printf("  config: %s\n", cfg.Dir)
-			} else {
-				fmt.Printf("  config: (unavailable: %v)\n", err)
-			}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		info := map[string]any{
+			"version": "dev",
+			"go":      runtime.Version(),
+			"os":      runtime.GOOS,
+			"arch":    runtime.GOARCH,
 		}
+		if formatOutput == "json" {
+			return printJSON(info)
+		}
+		fmt.Printf("giztoy dev (%s %s/%s)\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
+		return nil
 	},
 }
 

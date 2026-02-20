@@ -1,0 +1,9 @@
+# voice-clone requires a valid file_id from a prior file upload.
+# This test validates the handler runs without crash; the API will reject
+# the invalid file_id with a meaningful error.
+kind: minimax/voice/clone
+cred: minimax:cn
+file_id: 0
+voice_id: giztoy-e2e-clone-test
+model: speech-02-hd
+text: 这是一段声音克隆测试文本。

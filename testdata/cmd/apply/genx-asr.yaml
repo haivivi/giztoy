@@ -1,0 +1,7 @@
+---
+kind: genx/asr
+name: doubao/sauc
+cred: doubaospeech:test
+format: pcm
+sample_rate: 16000
+language: zh-CN

@@ -1,0 +1,4 @@
+kind: genx/generator
+name: test
+cred: nocolon
+model: m

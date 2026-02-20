@@ -1,0 +1,5 @@
+kind: genx/generator
+name: test
+cred: openai:qwen
+model: m
+max_tokens: -1

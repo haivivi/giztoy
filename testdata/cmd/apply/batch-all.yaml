@@ -1,0 +1,54 @@
+# Complete setup: creds + genx definitions
+---
+kind: creds/openai
+name: qwen
+api_key: "${DASHSCOPE_API_KEY}"
+base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+---
+kind: creds/openai
+name: deepseek
+api_key: "${DEEPSEEK_API_KEY}"
+base_url: https://api.deepseek.com/v1
+---
+kind: creds/minimax
+name: cn
+api_key: "${MINIMAX_API_KEY}"
+base_url: https://api.minimaxi.com
+---
+kind: creds/doubaospeech
+name: test
+app_id: "${DOUBAO_APP_ID}"
+token: "${DOUBAO_TOKEN}"
+---
+kind: creds/dashscope
+name: default
+api_key: "${DASHSCOPE_API_KEY}"
+---
+kind: creds/genai
+name: default
+api_key: "${GOOGLE_API_KEY}"
+---
+kind: genx/generator
+name: qwen/turbo
+cred: openai:qwen
+model: qwen-turbo-latest
+max_tokens: 2048
+---
+kind: genx/generator
+name: deepseek/chat
+cred: openai:deepseek
+model: deepseek-chat
+---
+kind: genx/tts
+name: minimax/shaonv
+cred: minimax:cn
+voice_id: female-shaonv
+---
+kind: genx/tts
+name: doubao/xiaohe
+cred: doubaospeech:test
+voice_id: zh_female_xiaohe_uranus_bigtts
+---
+kind: genx/asr
+name: doubao/sauc
+cred: doubaospeech:test

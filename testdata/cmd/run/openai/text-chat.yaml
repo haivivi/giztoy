@@ -1,0 +1,6 @@
+kind: openai/text/chat
+cred: openai:qwen
+model: qwen-turbo-latest
+messages:
+  - role: user
+    content: Hello, respond with exactly one word.

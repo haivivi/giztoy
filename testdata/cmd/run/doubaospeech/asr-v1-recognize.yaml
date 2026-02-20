@@ -1,0 +1,4 @@
+kind: doubaospeech/asr/v1/recognize
+cred: doubaospeech:test
+audio: testdata/doubaospeech/test_speech.mp3
+format: mp3

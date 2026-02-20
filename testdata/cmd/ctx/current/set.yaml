@@ -1,0 +1,13 @@
+# Test: ctx current shows the active context
+steps:
+  - args: [ctx, add, dev]
+    exit_code: 0
+  - args: [ctx, use, dev]
+    exit_code: 0
+  - args: [ctx, current]
+    exit_code: 0
+    stdout_exact: "dev\n"
+  - args: [ctx, current, --json]
+    exit_code: 0
+    stdout_json:
+      current: dev

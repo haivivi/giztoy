@@ -1,0 +1,18 @@
+# Test: ctx list shows multiple contexts with current marker
+steps:
+  - args: [ctx, add, dev]
+    exit_code: 0
+  - args: [ctx, add, prod]
+    exit_code: 0
+  - args: [ctx, use, dev]
+    exit_code: 0
+  - args: [ctx, list]
+    exit_code: 0
+    stdout_contains: "* dev"
+  - args: [ctx, list, --json]
+    exit_code: 0
+    stdout_json:
+      - name: dev
+        current: true
+      - name: prod
+        current: false

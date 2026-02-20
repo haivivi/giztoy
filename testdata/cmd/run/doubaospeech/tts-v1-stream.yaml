@@ -1,0 +1,7 @@
+kind: doubaospeech/tts/v1/stream
+cred: doubaospeech:test
+text: 这是V1流式合成测试。
+voice_type: zh_female_cancan
+encoding: mp3
+cluster: volcano_tts
+output: /tmp/giztoy-doubao-tts-v1-stream.mp3

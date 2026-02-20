@@ -1,0 +1,7 @@
+# Test: ctx add fails for duplicate name
+steps:
+  - args: [ctx, add, dev]
+    exit_code: 0
+  - args: [ctx, add, dev]
+    exit_code: 1
+    stderr_contains: "already exists"

@@ -1,0 +1,6 @@
+kind: minimax/text/chat-stream
+cred: minimax:cn
+model: MiniMax-M2.1
+messages:
+  - role: user
+    content: Count from 1 to 3.

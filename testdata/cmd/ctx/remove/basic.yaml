@@ -1,0 +1,10 @@
+# Test: ctx remove deletes a context
+steps:
+  - args: [ctx, add, staging]
+    exit_code: 0
+  - args: [ctx, remove, staging]
+    exit_code: 0
+    stdout_contains: "removed"
+  - args: [ctx, list]
+    exit_code: 0
+    stdout_contains: "No contexts"

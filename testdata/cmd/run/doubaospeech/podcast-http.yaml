@@ -1,0 +1,7 @@
+kind: doubaospeech/podcast/http/submit
+cred: doubaospeech:test
+script:
+  - speaker: zh_male_dayixiansheng
+    text: 大家好，今天我们讨论AI话题。
+  - speaker: zh_female_mizaitongxue
+    text: 是的，AI发展非常快。

@@ -1,0 +1,4 @@
+kind: memory/search
+persona: cat_girl
+text: 恐龙
+limit: 5
