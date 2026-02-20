@@ -10,5 +10,8 @@ description = "Audio processing utilities for PCM data"
 thiserror.workspace = true
 rubato.workspace = true
 
+[build-dependencies]
+cc = "1"
+
 [dev-dependencies]
 tokio-test.workspace = true

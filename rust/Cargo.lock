@@ -1039,6 +1039,7 @@ dependencies = [
 name = "giztoy-audio"
 version = "0.1.0"
 dependencies = [
+ "cc",
  "rubato",
  "thiserror 2.0.18",
  "tokio-test",

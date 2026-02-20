@@ -475,12 +475,14 @@ struct TrackCtrlInner {
 impl TrackCtrlInner {
     fn new(mixer: Arc<Mixer>, label: Option<String>) -> Self {
         let notify = mixer.notify.clone();
-        let track = super::track::InternalTrack::new(notify.clone());
+        let output = mixer.output;
+        let track = super::track::InternalTrack::new(output, notify.clone());
 
-        // Create the default input ring buffer (10 seconds capacity)
-        let buf_size = mixer.output.bytes_rate() as usize * 10;
+        // Create the default input ring buffer (10 seconds capacity).
+        // Sized for the output format since the default input matches output.
+        let buf_size = output.bytes_rate() as usize * 10;
         let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
-        track.add_input(mixer.output, rb.clone());
+        track.add_input(output, rb.clone());
 
         Self {
             mixer,
@@ -514,8 +516,9 @@ impl TrackCtrlInner {
     /// Creates a new input with its own ring buffer.
     /// Closes the previous input and returns the new ring buffer.
     fn new_input(&self, format: Format) -> Arc<super::track::TrackRingBuf> {
-        // Buffer sized for output format because TrackWriter resamples before writing.
-        let buf_size = self.mixer.output.bytes_rate() as usize * 10;
+        // Buffer sized for input format — ring buffer stores raw input data,
+        // resampling happens on the read side.
+        let buf_size = format.bytes_rate() as usize * 10;
         let notify = self.mixer.notify.clone();
         let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
 
@@ -566,18 +569,17 @@ pub struct Track {
 }
 
 impl Track {
-    /// Creates a `TrackWriter` that accepts audio in a different format
-    /// and auto-resamples to the mixer's output format.
+    /// Creates a `TrackWriter` that accepts audio in a different format.
     ///
     /// Each call creates a new input with its own independent ring buffer.
     /// The previous input is closed and will be drained by the mixer.
-    /// If the input format matches the mixer's output format, no resampling occurs.
+    /// If the input format differs from the mixer's output format, resampling
+    /// is performed lazily on the read side.
     pub fn input(&self, format: Format) -> TrackWriter {
         let rb = self.inner.new_input(format);
         TrackWriter {
             rb,
             input_format: format,
-            output_format: self.inner.mixer.output,
         }
     }
 
@@ -603,12 +605,12 @@ impl Track {
 /// A format-aware writer for a track with its own independent ring buffer.
 ///
 /// Created by `Track::input(format)`. Each TrackWriter has its own ring buffer,
-/// so multiple writers don't block each other. If the input format differs from
-/// the mixer's output format, data is resampled before writing.
+/// so multiple writers don't block each other. Data is written in the input
+/// format; resampling to the mixer's output format happens lazily on the
+/// read side (inside `InternalTrack::read_full`).
 pub struct TrackWriter {
     rb: Arc<super::track::TrackRingBuf>,
     input_format: Format,
-    output_format: Format,
 }
 
 impl TrackWriter {
@@ -619,59 +621,17 @@ impl TrackWriter {
 
     /// Writes raw PCM bytes in the input format.
     ///
-    /// If resampling is needed, the data is resampled to the mixer's output
-    /// format before being written to this writer's ring buffer.
-    ///
-    /// Note: the current resampler treats all samples as a flat array and
-    /// does not handle stereo (interleaved L/R) correctly. This is fine for
-    /// the current mono-only usage in chatgear/genx. Stereo support would
-    /// require per-channel interpolation.
+    /// Data is stored as-is in the ring buffer. Resampling to the mixer's
+    /// output format is performed lazily when the mixer reads.
     pub fn write_bytes(&self, data: &[u8]) -> io::Result<usize> {
-        // PCM16: 2 bytes per sample. Truncate to even boundary so we never
-        // silently drop a trailing byte while claiming it was consumed.
-        let usable = data.len() & !1;
+        let frame_size = self.input_format.sample_bytes();
+        let usable = data.len() / frame_size * frame_size;
         if usable == 0 {
             return Ok(0);
         }
         let data = &data[..usable];
 
-        if self.input_format == self.output_format {
-            self.rb.write(data)
-                .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
-            return Ok(usable);
-        }
-
-        // Resample: convert input samples to output sample rate
-        let in_rate = self.input_format.sample_rate() as f64;
-        let out_rate = self.output_format.sample_rate() as f64;
-        let ratio = out_rate / in_rate;
-
-        let in_samples: Vec<i16> = data
-            .chunks_exact(2)
-            .map(|b| i16::from_le_bytes([b[0], b[1]]))
-            .collect();
-
-        let out_len = (in_samples.len() as f64 * ratio).ceil() as usize;
-        let mut out_bytes = Vec::with_capacity(out_len * 2);
-
-        for i in 0..out_len {
-            let src_pos = i as f64 / ratio;
-            let src_idx = src_pos as usize;
-            let frac = src_pos - src_idx as f64;
-
-            let sample = if src_idx + 1 < in_samples.len() {
-                let a = in_samples[src_idx] as f64;
-                let b = in_samples[src_idx + 1] as f64;
-                (a + (b - a) * frac) as i16
-            } else if src_idx < in_samples.len() {
-                in_samples[src_idx]
-            } else {
-                0
-            };
-            out_bytes.extend_from_slice(&sample.to_le_bytes());
-        }
-
-        self.rb.write(&out_bytes)
+        self.rb.write(data)
             .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
         Ok(usable)
     }
