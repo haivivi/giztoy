@@ -21,7 +21,7 @@ pub enum LuauCoStatus {
 }
 
 #[link(name = "luau_wrapper")]
-extern "C" {
+unsafe extern "C" {
     // State management
     pub fn luau_new() -> *mut LuauState;
     pub fn luau_close(L: *mut LuauState);

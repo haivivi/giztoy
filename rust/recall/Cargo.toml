@@ -7,6 +7,9 @@ authors.workspace = true
 
 [dependencies]
 chrono = { workspace = true }
+giztoy-embed = { workspace = true }
+giztoy-graph = { workspace = true }
+giztoy-vecstore = { workspace = true }
 rmp-serde = "1"
 serde = { workspace = true }
 thiserror = { workspace = true }
