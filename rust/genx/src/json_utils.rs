@@ -29,14 +29,30 @@ fn repair_json(s: &str) -> String {
         let in_string = string_quote.is_some();
 
         if escape_next {
-            result.push(ch);
             escape_next = false;
+            if string_quote == Some('\'') && ch == '\'' {
+                // \' inside single-quoted string: single quotes don't need
+                // escaping in double-quoted JSON, so just emit '
+                // (the backslash was not pushed — see below)
+                result.push('\'');
+            } else if string_quote == Some('\'') {
+                // other escapes inside single-quoted string: emit backslash + char
+                result.push('\\');
+                result.push(ch);
+            } else {
+                result.push(ch);
+            }
             continue;
         }
 
         if ch == '\\' && in_string {
-            result.push(ch);
-            escape_next = true;
+            if string_quote == Some('\'') {
+                // In single-quoted string: defer backslash to escape_next handler
+                escape_next = true;
+            } else {
+                result.push(ch);
+                escape_next = true;
+            }
             continue;
         }
 
@@ -158,6 +174,27 @@ mod tests {
         }
         let result: T = unmarshal_json(br#"{"k": "it's fine"}"#).unwrap();
         assert_eq!(result.k, "it's fine");
+    }
+
+    #[test]
+    fn t4_9_escaped_single_quote_in_single_quoted_string() {
+        #[derive(Deserialize, Debug, PartialEq)]
+        struct T {
+            k: String,
+        }
+        // {'k': 'it\'s fine'} → {"k": "it's fine"}
+        let result: T = unmarshal_json(b"{'k': 'it\\'s fine'}").unwrap();
+        assert_eq!(result.k, "it's fine");
+    }
+
+    #[test]
+    fn t4_10_escaped_single_quote_apostrophe() {
+        #[derive(Deserialize, Debug, PartialEq)]
+        struct T {
+            name: String,
+        }
+        let result: T = unmarshal_json(b"{'name': 'O\\'Brien'}").unwrap();
+        assert_eq!(result.name, "O'Brien");
     }
 
     #[test]
