@@ -182,24 +182,26 @@ pub(crate) struct TrackInput {
     pub output_format: Format,
     pub rb: Arc<TrackRingBuf>,
     resampler: Option<SincFixedOut<f32>>,
-    /// Accumulator for input frames read from ring buffer (f32 per-channel).
-    input_buf: Vec<Vec<f32>>,
+    /// Accumulated input frames (f32 per-channel) waiting for the resampler.
+    accum: Vec<Vec<f32>>,
     /// Reusable byte buffer for reading raw PCM from ring buffer.
     raw_buf: Vec<u8>,
+    /// Whether the ring buffer has reached EOF.
+    rb_eof: bool,
 }
 
 impl TrackInput {
     pub fn new(format: Format, output_format: Format, rb: Arc<TrackRingBuf>) -> Self {
         let needs_resample = format.sample_rate != output_format.sample_rate;
+        let in_channels = format.channels() as usize;
         let resampler = if needs_resample {
-            let channels = format.channels() as usize;
             let ratio = output_format.sample_rate as f64 / format.sample_rate as f64;
             SincFixedOut::<f32>::new(
                 ratio,
                 2.0,
                 make_sinc_params(),
                 RESAMPLE_CHUNK_SIZE,
-                channels,
+                in_channels,
             ).ok()
         } else {
             None
@@ -210,8 +212,9 @@ impl TrackInput {
             output_format,
             rb,
             resampler,
-            input_buf: Vec::new(),
+            accum: vec![Vec::new(); in_channels],
             raw_buf: Vec::new(),
+            rb_eof: false,
         }
     }
 
@@ -230,89 +233,110 @@ impl TrackInput {
     }
 
     /// Read with sample rate conversion via SincFixedOut.
+    ///
+    /// Accumulates input frames from the ring buffer until we have enough
+    /// for the resampler, then processes and returns output. Never zero-pads
+    /// real data — if not enough input is available, returns Empty.
     fn read_resampled(&mut self, buf: &mut [u8]) -> ReadResult {
-        let resampler = self.resampler.as_mut().unwrap();
         let in_channels = self.format.channels() as usize;
         let out_channels = self.output_format.channels() as usize;
 
-        let frames_needed = resampler.input_frames_next();
-        let in_bytes_needed = frames_needed * in_channels * 2;
-
-        if self.raw_buf.len() < in_bytes_needed {
-            self.raw_buf.resize(in_bytes_needed, 0);
+        // Pull data from ring buffer into accumulator
+        if !self.rb_eof {
+            self.pull_from_ringbuf();
         }
 
-        match self.rb.read(&mut self.raw_buf[..in_bytes_needed]) {
-            ReadResult::Empty => return ReadResult::Empty,
-            ReadResult::Error(e) => return ReadResult::Error(e),
-            ReadResult::Eof => {
-                return self.flush_resampler(buf);
+        let frames_needed = self.resampler.as_ref().unwrap().input_frames_next();
+        let accum_frames = if self.accum.is_empty() { 0 } else { self.accum[0].len() };
+
+        if accum_frames >= frames_needed {
+            // Have enough — extract exactly frames_needed and process
+            let mut input: Vec<Vec<f32>> = Vec::with_capacity(in_channels);
+            for ch in 0..in_channels {
+                let rest = self.accum[ch].split_off(frames_needed);
+                input.push(std::mem::replace(&mut self.accum[ch], rest));
             }
-            ReadResult::Data(n) => {
-                let frames_read = n / (in_channels * 2);
-                if frames_read == 0 {
-                    return ReadResult::Empty;
-                }
 
-                // Convert i16 LE bytes → f32 per-channel
-                self.input_buf.clear();
-                self.input_buf.resize(in_channels, Vec::new());
-                for ch in &mut self.input_buf {
-                    ch.clear();
-                    ch.reserve(frames_read);
-                }
+            let resampler = self.resampler.as_mut().unwrap();
+            let output = match resampler.process(&input, None) {
+                Ok(out) => out,
+                Err(_) => return ReadResult::Empty,
+            };
 
-                for frame in 0..frames_read {
-                    for ch in 0..in_channels {
-                        let offset = (frame * in_channels + ch) * 2;
-                        let sample = i16::from_le_bytes([
-                            self.raw_buf[offset],
-                            self.raw_buf[offset + 1],
-                        ]);
-                        self.input_buf[ch].push(sample as f32 / 32768.0);
-                    }
-                }
+            let output_frames = if output.is_empty() { 0 } else { output[0].len() };
+            if output_frames == 0 {
+                return ReadResult::Empty;
+            }
+            return self.write_output_to_buf(&output, output_frames, out_channels, buf);
+        }
 
-                // Pad if fewer frames than needed
-                for ch in 0..in_channels {
-                    while self.input_buf[ch].len() < frames_needed {
-                        self.input_buf[ch].push(0.0);
-                    }
-                }
-
-                let output = match resampler.process(&self.input_buf, None) {
+        if self.rb_eof {
+            // Not enough frames and ring buffer is done — flush resampler
+            if accum_frames > 0 {
+                let input = std::mem::take(&mut self.accum);
+                let resampler = self.resampler.as_mut().unwrap();
+                let output = match resampler.process_partial(Some(&input), None) {
                     Ok(out) => out,
-                    Err(_) => return ReadResult::Empty,
+                    Err(_) => return ReadResult::Eof,
                 };
-
                 let output_frames = if output.is_empty() { 0 } else { output[0].len() };
-                if output_frames == 0 {
-                    return ReadResult::Empty;
+                if output_frames > 0 {
+                    return self.write_output_to_buf(&output, output_frames, out_channels, buf);
                 }
-
-                self.write_output_to_buf(&output, output_frames, out_channels, buf)
             }
-        }
-    }
 
-    /// Flush remaining frames from the resampler when input reaches EOF.
-    fn flush_resampler(&mut self, buf: &mut [u8]) -> ReadResult {
-        let resampler = self.resampler.as_mut().unwrap();
-        let out_channels = self.output_format.channels() as usize;
-
-        let output = match resampler.process_partial::<Vec<f32>>(None, None) {
-            Ok(out) => out,
-            _ => return ReadResult::Eof,
-        };
-
-        let output_frames = if output.is_empty() { 0 } else { output[0].len() };
-        if output_frames == 0 {
+            // Try flushing resampler's internal delay
+            let resampler = self.resampler.as_mut().unwrap();
+            let output = match resampler.process_partial::<Vec<f32>>(None, None) {
+                Ok(out) => out,
+                Err(_) => return ReadResult::Eof,
+            };
+            let output_frames = if output.is_empty() { 0 } else { output[0].len() };
+            if output_frames > 0 {
+                return match self.write_output_to_buf(&output, output_frames, out_channels, buf) {
+                    ReadResult::Data(n) => ReadResult::Data(n),
+                    _ => ReadResult::Eof,
+                };
+            }
             return ReadResult::Eof;
         }
 
-        match self.write_output_to_buf(&output, output_frames, out_channels, buf) {
-            ReadResult::Data(n) => ReadResult::Data(n),
-            _ => ReadResult::Eof,
+        // Not enough data yet and ring buffer still open
+        ReadResult::Empty
+    }
+
+    /// Pull available data from ring buffer into the f32 accumulator.
+    fn pull_from_ringbuf(&mut self) {
+        let in_channels = self.format.channels() as usize;
+        let read_size = self.format.bytes_rate() as usize / 10; // ~100ms worth
+        if self.raw_buf.len() < read_size {
+            self.raw_buf.resize(read_size, 0);
+        }
+
+        loop {
+            match self.rb.read(&mut self.raw_buf[..read_size]) {
+                ReadResult::Data(n) => {
+                    let frame_bytes = in_channels * 2;
+                    let frames_read = n / frame_bytes;
+                    for frame in 0..frames_read {
+                        for ch in 0..in_channels {
+                            let offset = (frame * in_channels + ch) * 2;
+                            let sample = i16::from_le_bytes([
+                                self.raw_buf[offset],
+                                self.raw_buf[offset + 1],
+                            ]);
+                            self.accum[ch].push(sample as f32 / 32768.0);
+                        }
+                    }
+                }
+                ReadResult::Eof => {
+                    self.rb_eof = true;
+                    break;
+                }
+                ReadResult::Empty | ReadResult::Error(_) => {
+                    break;
+                }
+            }
         }
     }
 
@@ -416,7 +440,16 @@ impl TrackInput {
     }
 
     pub fn is_eof(&self) -> bool {
-        self.rb.is_eof()
+        if !self.rb.is_eof() {
+            return false;
+        }
+        if self.resampler.is_some() {
+            let accum_frames = if self.accum.is_empty() { 0 } else { self.accum[0].len() };
+            if accum_frames > 0 {
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -454,6 +487,7 @@ impl InternalTrack {
     pub fn add_input(&self, format: Format, rb: Arc<TrackRingBuf>) {
         let input = TrackInput::new(format, self.output_format, rb);
         self.inputs.lock().unwrap().push(input);
+        self.notify_mixer.notify_all();
     }
 
     /// Reads a full chunk from the track in the output format.
@@ -461,6 +495,7 @@ impl InternalTrack {
     ///
     /// Data is pulled through the head input's resampler (if present)
     /// to convert from input format to output format on demand.
+    /// Loops to fill the entire buffer, matching Go's readFull semantics.
     ///
     /// Returns (bytes_read, is_done):
     /// - bytes_read > 0: data was read (possibly zero-filled at the end)
@@ -473,13 +508,24 @@ impl InternalTrack {
         }
 
         let mut inputs = self.inputs.lock().unwrap();
+        let mut filled = 0usize;
 
         while !inputs.is_empty() {
-            match inputs[0].read(buf) {
-                ReadResult::Data(_n) => {
-                    return (buf.len(), false);
+            if filled >= buf.len() {
+                break;
+            }
+
+            match inputs[0].read(&mut buf[filled..]) {
+                ReadResult::Data(n) => {
+                    filled += n;
+                    if filled >= buf.len() {
+                        return (buf.len(), false);
+                    }
                 }
                 ReadResult::Empty => {
+                    if filled > 0 {
+                        return (buf.len(), false);
+                    }
                     return (0, false);
                 }
                 ReadResult::Eof => {
@@ -491,6 +537,10 @@ impl InternalTrack {
                     continue;
                 }
             }
+        }
+
+        if filled > 0 {
+            return (buf.len(), false);
         }
 
         if self.close_write.load(Ordering::SeqCst) {

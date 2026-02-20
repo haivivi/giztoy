@@ -1314,4 +1314,533 @@ mod tests {
         // fade-out close: close_write on main thread, fade thread adjusts
         // gain, auto_close terminates when track is done.
     }
+
+    // ========================================================================
+    // Resample tests (T1–T10)
+    // ========================================================================
+
+    fn read_all_from_mixer(mixer: &Mixer) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut buf = [0u8; 1920];
+        loop {
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => out.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+        out
+    }
+
+    fn to_i16_samples(bytes: &[u8]) -> Vec<i16> {
+        bytes
+            .chunks_exact(2)
+            .map(|b| i16::from_le_bytes([b[0], b[1]]))
+            .collect()
+    }
+
+    fn generate_sine_i16(freq: f64, sample_rate: u32, duration_ms: u32, amplitude: f64) -> Vec<u8> {
+        let samples = (sample_rate as u64 * duration_ms as u64 / 1000) as usize;
+        let mut data = Vec::with_capacity(samples * 2);
+        for i in 0..samples {
+            let t = i as f64 / sample_rate as f64;
+            let value = (2.0 * std::f64::consts::PI * freq * t).sin() * amplitude;
+            let sample = (value * 32767.0).clamp(-32768.0, 32767.0) as i16;
+            data.extend_from_slice(&sample.to_le_bytes());
+        }
+        data
+    }
+
+    /// Estimate fundamental frequency via zero-crossing rate.
+    /// Skips the first 10% and last 10% to avoid resampler startup delay
+    /// and trailing artifacts.
+    fn estimate_freq_zcr(samples: &[i16], sample_rate: u32) -> f64 {
+        if samples.len() < 40 {
+            return 0.0;
+        }
+        let skip = samples.len() / 10;
+        let analysis = &samples[skip..samples.len() - skip];
+        if analysis.len() < 4 {
+            return 0.0;
+        }
+        let mut crossings = 0u32;
+        for w in analysis.windows(2) {
+            if (w[0] >= 0 && w[1] < 0) || (w[0] < 0 && w[1] >= 0) {
+                crossings += 1;
+            }
+        }
+        let duration = analysis.len() as f64 / sample_rate as f64;
+        crossings as f64 / (2.0 * duration)
+    }
+
+    /// RMS amplitude of samples normalized to [-1, 1].
+    fn rms(samples: &[i16]) -> f64 {
+        if samples.is_empty() {
+            return 0.0;
+        }
+        let sum: f64 = samples.iter().map(|&s| {
+            let f = s as f64 / 32768.0;
+            f * f
+        }).sum();
+        (sum / samples.len() as f64).sqrt()
+    }
+
+    // -- T1: Basic resample correctness --
+
+    #[test]
+    fn t1_1_upsample_16k_to_24k() {
+        let mixer = Mixer::new(Format::L16Mono24K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let wave = generate_sine_i16(440.0, 16000, 200, 0.8);
+        let tw = track.input(Format::L16Mono16K);
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "should produce output");
+        let freq = estimate_freq_zcr(&samples, 24000);
+        let deviation = (freq - 440.0).abs() / 440.0;
+        assert!(deviation < 0.05, "freq should be ~440Hz, got {:.1}Hz ({:.1}% off)", freq, deviation * 100.0);
+    }
+
+    #[test]
+    fn t1_2_downsample_48k_to_16k() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let wave = generate_sine_i16(440.0, 48000, 200, 0.8);
+        let tw = track.input(Format::L16Mono48K);
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "should produce output");
+        let freq = estimate_freq_zcr(&samples, 16000);
+        let deviation = (freq - 440.0).abs() / 440.0;
+        assert!(deviation < 0.05, "freq should be ~440Hz, got {:.1}Hz ({:.1}% off)", freq, deviation * 100.0);
+    }
+
+    #[test]
+    fn t1_3_downsample_24k_to_16k() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let wave = generate_sine_i16(440.0, 24000, 200, 0.8);
+        let tw = track.input(Format::L16Mono24K);
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "should produce output");
+        let freq = estimate_freq_zcr(&samples, 16000);
+        let deviation = (freq - 440.0).abs() / 440.0;
+        assert!(deviation < 0.05, "freq should be ~440Hz, got {:.1}Hz ({:.1}% off)", freq, deviation * 100.0);
+    }
+
+    #[test]
+    fn t1_4_downsample_44k_to_16k() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let wave = generate_sine_i16(440.0, 44100, 200, 0.8);
+        let tw = track.input(Format::L16Mono44K);
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "should produce output");
+        let freq = estimate_freq_zcr(&samples, 16000);
+        let deviation = (freq - 440.0).abs() / 440.0;
+        assert!(deviation < 0.05, "freq should be ~440Hz, got {:.1}Hz ({:.1}% off)", freq, deviation * 100.0);
+    }
+
+    // -- T2: Passthrough (no resample) --
+
+    #[test]
+    fn t2_1_passthrough_same_format() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let data: Vec<u8> = (0..1600).flat_map(|_| 5000i16.to_le_bytes()).collect();
+        let h = std::thread::spawn(move || {
+            track.write_bytes(&data).unwrap();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero: Vec<&i16> = samples.iter().filter(|&&s| s != 0).collect();
+        assert!(!non_zero.is_empty(), "should have audio");
+        for &s in &non_zero {
+            assert!((*s - 5000).abs() < 50, "passthrough should preserve value, got {}", s);
+        }
+    }
+
+    // -- T4: Multi-track mixed formats --
+
+    #[test]
+    fn t4_1_two_tracks_different_rates() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let (track_a, ctrl_a) = mixer.create_track(None).unwrap();
+        let (track_b, ctrl_b) = mixer.create_track(None).unwrap();
+
+        let wave_a = generate_sine_i16(440.0, 16000, 200, 0.5);
+        let wave_b = generate_sine_i16(880.0, 24000, 200, 0.5);
+
+        let tw_b = track_b.input(Format::L16Mono24K);
+
+        let h_a = std::thread::spawn(move || {
+            track_a.write_bytes(&wave_a).unwrap();
+            ctrl_a.close_write();
+        });
+        let h_b = std::thread::spawn(move || {
+            tw_b.write_bytes(&wave_b).unwrap();
+            tw_b.close_write();
+            ctrl_b.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h_a.join().unwrap();
+        h_b.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "should have mixed audio from both tracks");
+    }
+
+    #[test]
+    fn t4_4_all_silence_no_noise() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let (track_a, ctrl_a) = mixer.create_track(None).unwrap();
+        let (track_b, ctrl_b) = mixer.create_track(None).unwrap();
+
+        let silence_16k: Vec<u8> = vec![0u8; 3200];
+        let silence_48k: Vec<u8> = vec![0u8; 9600];
+
+        let tw_b = track_b.input(Format::L16Mono48K);
+
+        let h_a = std::thread::spawn(move || {
+            track_a.write_bytes(&silence_16k).unwrap();
+            ctrl_a.close_write();
+        });
+        let h_b = std::thread::spawn(move || {
+            tw_b.write_bytes(&silence_48k).unwrap();
+            tw_b.close_write();
+            ctrl_b.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h_a.join().unwrap();
+        h_b.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero = samples.iter().filter(|&&s| s.abs() > 1).count();
+        assert_eq!(non_zero, 0, "silence resample should produce silence (got {} non-zero samples)", non_zero);
+    }
+
+    // -- T5: Sequential format switch --
+
+    #[test]
+    fn t5_1_switch_format_mid_stream() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave_24k = generate_sine_i16(440.0, 24000, 100, 0.7);
+        let wave_48k = generate_sine_i16(880.0, 48000, 100, 0.7);
+
+        let h = std::thread::spawn(move || {
+            let tw1 = track.input(Format::L16Mono24K);
+            tw1.write_bytes(&wave_24k).unwrap();
+            tw1.close_write();
+
+            let tw2 = track.input(Format::L16Mono48K);
+            tw2.write_bytes(&wave_48k).unwrap();
+            tw2.close_write();
+
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        // Read with timeout to avoid hang
+        let mut out = Vec::new();
+        let mut buf = [0u8; 1920];
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            if std::time::Instant::now() > deadline {
+                break;
+            }
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => out.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&out);
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "should have audio from both format segments");
+    }
+
+    // -- T6: Edge cases --
+
+    #[test]
+    fn t6_3_write_zero_bytes() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let tw = track.input(Format::L16Mono48K);
+        let n = tw.write_bytes(&[]).unwrap();
+        assert_eq!(n, 0);
+
+        let wave = generate_sine_i16(440.0, 48000, 50, 0.5);
+        tw.write_bytes(&wave).unwrap();
+        tw.close_write();
+        ctrl.close_write();
+
+        let mixed = read_all_from_mixer(&mixer);
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "should still work after empty write");
+    }
+
+    #[test]
+    fn t6_4_write_odd_bytes() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let tw = track.input(Format::L16Mono48K);
+        let n = tw.write_bytes(&[0x01, 0x02, 0x03]).unwrap();
+        assert_eq!(n, 2, "should truncate to frame boundary");
+
+        tw.close_write();
+        ctrl.close_write();
+        let _ = read_all_from_mixer(&mixer);
+    }
+
+    #[test]
+    fn t6_9_create_track_close_without_write() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (_track, ctrl) = mixer.create_track(None).unwrap();
+        ctrl.close_write();
+        let mixed = read_all_from_mixer(&mixer);
+        assert!(mixed.is_empty() || to_i16_samples(&mixed).iter().all(|&s| s == 0));
+    }
+
+    // -- T7: Concurrency --
+
+    #[test]
+    fn t7_1_four_tracks_different_rates() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let formats = [
+            Format::L16Mono16K,
+            Format::L16Mono24K,
+            Format::L16Mono44K,
+            Format::L16Mono48K,
+        ];
+        let freqs = [440.0, 550.0, 660.0, 880.0];
+
+        let mut handles = Vec::new();
+        for (i, &fmt) in formats.iter().enumerate() {
+            let (track, ctrl) = mixer.create_track(None).unwrap();
+            let wave = generate_sine_i16(freqs[i], fmt.sample_rate(), 200, 0.3);
+            let tw = track.input(fmt);
+            handles.push(std::thread::spawn(move || {
+                tw.write_bytes(&wave).unwrap();
+                tw.close_write();
+                ctrl.close_write();
+            }));
+        }
+
+        let mixed = read_all_from_mixer(&mixer);
+        for h in handles {
+            h.join().unwrap();
+        }
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "should have mixed audio from all 4 rates");
+    }
+
+    #[test]
+    fn t7_3_close_track_mid_stream() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let (track_a, ctrl_a) = mixer.create_track(None).unwrap();
+        let (track_b, ctrl_b) = mixer.create_track(None).unwrap();
+
+        let wave_a = generate_sine_i16(440.0, 48000, 500, 0.5);
+        let wave_b = generate_sine_i16(880.0, 16000, 500, 0.5);
+        let tw_a = track_a.input(Format::L16Mono48K);
+
+        let h_a = std::thread::spawn(move || {
+            tw_a.write_bytes(&wave_a[..wave_a.len() / 2]).unwrap();
+            ctrl_a.close();
+        });
+        let h_b = std::thread::spawn(move || {
+            track_b.write_bytes(&wave_b).unwrap();
+            ctrl_b.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h_a.join().unwrap();
+        h_b.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "track B should still produce output after track A closes");
+    }
+
+    // -- T8: Signal quality --
+
+    #[test]
+    fn t8_1_freq_preservation_48k_to_16k() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let wave = generate_sine_i16(440.0, 48000, 500, 0.8);
+        let tw = track.input(Format::L16Mono48K);
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(samples.len() > 100, "need enough samples for frequency analysis");
+        let freq = estimate_freq_zcr(&samples, 16000);
+        let deviation = (freq - 440.0).abs() / 440.0;
+        assert!(deviation < 0.02, "freq deviation should be < 2%, got {:.2}% (freq={:.1}Hz)", deviation * 100.0, freq);
+    }
+
+    #[test]
+    fn t8_4_no_clipping_on_resample() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let wave = generate_sine_i16(440.0, 48000, 300, 0.9);
+        let tw = track.input(Format::L16Mono48K);
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let peak = samples.iter().map(|s| s.abs()).max().unwrap_or(0);
+        let peak_f = peak as f64 / 32767.0;
+        assert!(peak_f <= 1.0, "should not clip (peak={:.3})", peak_f);
+    }
+
+    #[test]
+    fn t8_6_silence_resample_no_noise() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let silence: Vec<u8> = vec![0u8; 48000 * 2];
+        let tw = track.input(Format::L16Mono48K);
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&silence).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let noise = samples.iter().filter(|&&s| s.abs() > 1).count();
+        assert_eq!(noise, 0, "silence through resampler should stay silent (got {} noisy samples)", noise);
+    }
+
+    // -- T10: Long running --
+
+    #[test]
+    fn t10_1_sustained_resample_no_drift() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        // 2 seconds at 48kHz → resample to 16kHz
+        let wave = generate_sine_i16(440.0, 48000, 2000, 0.7);
+        let tw = track.input(Format::L16Mono48K);
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        // Read with timeout since auto_close is off
+        let mut out = Vec::new();
+        let mut buf = [0u8; 1920];
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        loop {
+            if std::time::Instant::now() > deadline {
+                break;
+            }
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => out.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&out);
+        assert!(samples.len() > 8000, "2s at 48kHz should produce >0.5s at 16kHz (got {} samples)", samples.len());
+
+        // Compare frequency at 20% and 70% of the output to avoid startup delay
+        // and end-of-stream flush artifacts.
+        let seg_len = 3200;
+        if samples.len() > seg_len * 4 {
+            let start_offset = samples.len() / 5;
+            let end_offset = samples.len() * 7 / 10;
+            let freq_start = estimate_freq_zcr(&samples[start_offset..start_offset + seg_len], 16000);
+            let freq_end = estimate_freq_zcr(&samples[end_offset..end_offset + seg_len], 16000);
+            let drift = (freq_end - freq_start).abs() / 440.0;
+            assert!(drift < 0.05, "frequency should not drift (start={:.1}Hz end={:.1}Hz drift={:.2}%)",
+                freq_start, freq_end, drift * 100.0);
+        }
+    }
 }
