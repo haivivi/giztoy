@@ -32,7 +32,7 @@ func (tc *TrackCtrl) SetGainLinearTo(to float32, duration time.Duration) {
 	steps := int(duration / interval)
 	for i := range steps {
 		time.Sleep(interval)
-		tc.gain.Store(from + (to-from)*float32(i)/float32(steps))
+		tc.gain.Store(from + (to-from)*float32(i+1)/float32(steps))
 	}
 }
 

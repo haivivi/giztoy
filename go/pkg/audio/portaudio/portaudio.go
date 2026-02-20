@@ -210,11 +210,12 @@ func PrintDevices() error {
 
 // Stream represents an audio stream.
 type Stream struct {
-	stream     unsafe.Pointer
-	buffer     unsafe.Pointer
-	bufferSize int
-	closed     bool
-	mu         sync.Mutex
+	stream         unsafe.Pointer
+	buffer         unsafe.Pointer
+	bufferSize     int
+	outputChannels int
+	closed         bool
+	mu             sync.Mutex
 }
 
 // openStream opens a PortAudio stream with the given parameters.
@@ -276,9 +277,10 @@ func openStream(inputChannels, outputChannels int, sampleRate float64, framesPer
 	bufferSize := framesPerBuffer * channels * 2 // int16 = 2 bytes
 
 	return &Stream{
-		stream:     paStream,
-		buffer:     C.malloc(C.size_t(bufferSize)),
-		bufferSize: bufferSize,
+		stream:         paStream,
+		buffer:         C.malloc(C.size_t(bufferSize)),
+		bufferSize:     bufferSize,
+		outputChannels: outputChannels,
 	}, nil
 }
 
@@ -341,6 +343,7 @@ func (s *Stream) Read(framesPerBuffer int) ([]int16, error) {
 }
 
 // Write writes audio samples to an output stream.
+// samples must be aligned to the channel count (len(samples) % channels == 0).
 func (s *Stream) Write(samples []int16) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -349,7 +352,14 @@ func (s *Stream) Write(samples []int16) error {
 		return errors.New("stream closed")
 	}
 
-	// Copy to C buffer
+	channels := s.outputChannels
+	if channels == 0 {
+		channels = 1
+	}
+	if len(samples)%channels != 0 {
+		return fmt.Errorf("portaudio: samples length %d not aligned to channel count %d", len(samples), channels)
+	}
+
 	C.memcpy(s.buffer, unsafe.Pointer(&samples[0]), C.size_t(len(samples)*2))
-	return paError(C.pa_write_stream(s.stream, s.buffer, C.ulong(len(samples))))
+	return paError(C.pa_write_stream(s.stream, s.buffer, C.ulong(len(samples)/channels)))
 }
