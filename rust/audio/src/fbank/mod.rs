@@ -88,7 +88,7 @@ impl Extractor {
             // Pre-emphasis + windowing
             for i in 0..cfg.window_size {
                 let mut s = pcm[start + i] as f64;
-                if i > 0 {
+                if start + i > 0 {
                     s -= cfg.pre_emphasis * pcm[start + i - 1] as f64;
                 }
                 frame[i] = s * self.window[i];
