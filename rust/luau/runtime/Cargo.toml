@@ -1,7 +1,7 @@
 [package]
 name = "giztoy-luau-runtime"
 version.workspace = true
-edition = "2021"
+edition.workspace = true
 license.workspace = true
 authors.workspace = true
 description = "Luau minimal runtime for giztoy"
