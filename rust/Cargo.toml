@@ -63,6 +63,9 @@ giztoy-vecstore = { path = "vecstore" }
 giztoy-embed = { path = "embed" }
 giztoy-recall = { path = "recall" }
 
+# OpenERP crates (Bazel resolves via module; cargo uses local path)
+openerp-kv = { path = "../../../openerp/main/rust/lib/kv" }
+
 # Time
 chrono = { version = "0.4", features = ["serde"] }
 
