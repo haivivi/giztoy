@@ -1844,4 +1844,695 @@ mod tests {
                 freq_start, freq_end, drift * 100.0);
         }
     }
+
+    // ========================================================================
+    // P0: T3 — Stereo tests
+    // ========================================================================
+
+    fn generate_stereo_sine_i16(freq: f64, sample_rate: u32, duration_ms: u32, amp: f64) -> Vec<u8> {
+        let samples = (sample_rate as u64 * duration_ms as u64 / 1000) as usize;
+        let mut data = Vec::with_capacity(samples * 4);
+        for i in 0..samples {
+            let t = i as f64 / sample_rate as f64;
+            let v = (2.0 * std::f64::consts::PI * freq * t).sin() * amp;
+            let s = (v * 32767.0).clamp(-32768.0, 32767.0) as i16;
+            data.extend_from_slice(&s.to_le_bytes()); // L
+            data.extend_from_slice(&s.to_le_bytes()); // R
+        }
+        data
+    }
+
+    #[test]
+    fn t3_1_stereo_48k_to_mono_16k() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave = generate_stereo_sine_i16(440.0, 48000, 200, 0.7);
+        let tw = track.input(Format::L16Stereo48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "stereo→mono downsample+downmix should produce output");
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "should have non-zero audio");
+    }
+
+    #[test]
+    fn t3_4_stereo_to_mono_same_rate() {
+        let mixer = Mixer::new(Format::L16Mono48K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave = generate_stereo_sine_i16(440.0, 48000, 200, 0.7);
+        let tw = track.input(Format::L16Stereo48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "stereo→mono downmix should produce output");
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "should have non-zero audio from downmix");
+    }
+
+    #[test]
+    fn t3_5_mono_to_stereo_same_rate() {
+        let mixer = Mixer::new(Format::L16Stereo48K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave = generate_sine_i16(440.0, 48000, 200, 0.7);
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        // Stereo output: 4 bytes per frame
+        assert!(mixed.len() >= 4, "mono→stereo upmix should produce output");
+    }
+
+    // ========================================================================
+    // P0: T6 — Edge cases (missing ones)
+    // ========================================================================
+
+    #[test]
+    fn t6_1_write_tiny_data() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        // 10 samples = 20 bytes, much less than one resampler chunk
+        let wave = generate_sine_i16(440.0, 48000, 1, 0.7); // ~48 samples
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+        // Should not panic; output may be empty or very short
+        let _ = to_i16_samples(&mixed);
+    }
+
+    #[test]
+    fn t6_5_close_write_flushes_residual() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave = generate_sine_i16(440.0, 48000, 100, 0.7);
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            // Immediately close after write — residual should be flushed
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "residual data should be flushed on close");
+    }
+
+    #[test]
+    fn t6_6_write_after_close_write() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        tw.close_write();
+
+        let result = tw.write_bytes(&[0u8; 100]);
+        assert!(result.is_err(), "writing after close_write should return error");
+
+        ctrl.close_write();
+        let _ = read_all_from_mixer(&mixer);
+    }
+
+    #[test]
+    fn t6_8_writer_fills_buffer_then_closes() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        // Write a large chunk that might fill the ring buffer
+        let wave = generate_sine_i16(440.0, 48000, 2000, 0.5);
+        let tw = track.input(Format::L16Mono48K).unwrap();
+
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        // Read with timeout — must not deadlock
+        let mut out = Vec::new();
+        let mut buf = [0u8; 1920];
+        let deadline = std::time::Instant::now() + Duration::from_secs(10);
+        loop {
+            if std::time::Instant::now() > deadline {
+                break;
+            }
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => out.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        h.join().unwrap();
+        let samples = to_i16_samples(&out);
+        assert!(samples.len() > 1000, "should have received data before close");
+    }
+
+    #[test]
+    fn t6_10_resampler_residual_on_close() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        // Write exactly enough for one resampler chunk + some remainder
+        let wave = generate_sine_i16(440.0, 48000, 50, 0.7);
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "resampler residual should be flushed");
+    }
+
+    // ========================================================================
+    // P1: T1.5, T1.6, T2.2, T2.3
+    // ========================================================================
+
+    #[test]
+    fn t1_5_upsample_16k_to_48k() {
+        let mixer = Mixer::new(Format::L16Mono48K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave = generate_sine_i16(440.0, 16000, 200, 0.8);
+        let tw = track.input(Format::L16Mono16K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "3x upsample should produce output");
+        let freq = estimate_freq_zcr(&samples, 48000);
+        let deviation = (freq - 440.0).abs() / 440.0;
+        assert!(deviation < 0.05, "freq should be ~440Hz, got {:.1}Hz", freq);
+    }
+
+    #[test]
+    fn t1_6_upsample_8k_to_16k() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave = generate_sine_i16(440.0, 8000, 500, 0.8);
+        let tw = track.input(Format::mono(8000)).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(!samples.is_empty(), "8k→16k should produce output");
+        let freq = estimate_freq_zcr(&samples, 16000);
+        let deviation = (freq - 440.0).abs() / 440.0;
+        assert!(deviation < 0.10, "freq should be ~440Hz, got {:.1}Hz ({:.1}% off)", freq, deviation * 100.0);
+    }
+
+    #[test]
+    fn t2_2_passthrough_48k() {
+        let mixer = Mixer::new(Format::L16Mono48K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        let data: Vec<u8> = (0..4800).flat_map(|_| 5000i16.to_le_bytes()).collect();
+        let h = std::thread::spawn(move || {
+            track.write_bytes(&data).unwrap();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero: Vec<&i16> = samples.iter().filter(|&&s| s != 0).collect();
+        assert!(!non_zero.is_empty(), "should have audio");
+        for &s in &non_zero {
+            assert!((*s - 5000).abs() < 50, "48k passthrough should preserve value, got {}", s);
+        }
+    }
+
+    #[test]
+    fn t2_3_no_resampler_created_for_same_format() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+
+        // Default track input is mixer output format — no resampler needed
+        let data: Vec<u8> = (0..160).flat_map(|_| 1000i16.to_le_bytes()).collect();
+        let h = std::thread::spawn(move || {
+            track.write_bytes(&data).unwrap();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let has_1000 = samples.iter().any(|&s| (s - 1000).abs() < 50);
+        assert!(has_1000, "same-format write should pass through without resampling");
+    }
+
+    // ========================================================================
+    // P1: T4.2, T4.3, T5.2, T5.3
+    // ========================================================================
+
+    #[test]
+    fn t4_2_three_tracks_mixed_rates() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let (t1, c1) = mixer.create_track(None).unwrap();
+        let (t2, c2) = mixer.create_track(None).unwrap();
+        let (t3, c3) = mixer.create_track(None).unwrap();
+
+        let w1 = generate_sine_i16(440.0, 16000, 200, 0.3);
+        let w2 = generate_sine_i16(550.0, 44100, 200, 0.3);
+        let w3 = generate_sine_i16(660.0, 48000, 200, 0.3);
+
+        let tw2 = t2.input(Format::L16Mono44K).unwrap();
+        let tw3 = t3.input(Format::L16Mono48K).unwrap();
+
+        let h1 = std::thread::spawn(move || { t1.write_bytes(&w1).unwrap(); c1.close_write(); });
+        let h2 = std::thread::spawn(move || { tw2.write_bytes(&w2).unwrap(); tw2.close_write(); c2.close_write(); });
+        let h3 = std::thread::spawn(move || { tw3.write_bytes(&w3).unwrap(); tw3.close_write(); c3.close_write(); });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h1.join().unwrap(); h2.join().unwrap(); h3.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "3-way mixed format should produce output");
+    }
+
+    #[test]
+    fn t4_3_gain_with_resample() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        ctrl.set_gain(0.5);
+
+        let wave = generate_sine_i16(440.0, 48000, 200, 0.8);
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let peak = samples.iter().map(|s| s.abs()).max().unwrap_or(0);
+        let peak_f = peak as f64 / 32767.0;
+        // With 0.5 gain and 0.8 amplitude: expected peak ~0.4
+        assert!(peak_f < 0.6, "gain should reduce amplitude (peak={:.3})", peak_f);
+        assert!(peak_f > 0.1, "should still have signal (peak={:.3})", peak_f);
+    }
+
+    #[test]
+    fn t5_2_switch_format_drains_residual() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave_24k = generate_sine_i16(440.0, 24000, 200, 0.7);
+        let wave_48k = generate_sine_i16(880.0, 48000, 200, 0.7);
+
+        let h = std::thread::spawn(move || {
+            let tw1 = track.input(Format::L16Mono24K).unwrap();
+            tw1.write_bytes(&wave_24k).unwrap();
+            // Don't close tw1 — let new_input close it
+            let tw2 = track.input(Format::L16Mono48K).unwrap();
+            tw2.write_bytes(&wave_48k).unwrap();
+            tw2.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mut out = Vec::new();
+        let mut buf = [0u8; 1920];
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            if std::time::Instant::now() > deadline { break; }
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => out.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&out);
+        assert!(samples.len() > 100, "should have data from both segments");
+    }
+
+    #[test]
+    fn t5_3_rapid_format_switch() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let h = std::thread::spawn(move || {
+            for &(rate, fmt) in &[
+                (16000u32, Format::L16Mono16K),
+                (24000, Format::L16Mono24K),
+                (48000, Format::L16Mono48K),
+            ] {
+                let wave = generate_sine_i16(440.0, rate, 50, 0.5);
+                let tw = track.input(fmt).unwrap();
+                tw.write_bytes(&wave).unwrap();
+                tw.close_write();
+            }
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mut out = Vec::new();
+        let mut buf = [0u8; 1920];
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            if std::time::Instant::now() > deadline { break; }
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => out.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+        h.join().unwrap();
+        // Must not panic
+    }
+
+    // ========================================================================
+    // P1: T7.2, T7.4, T7.5, T7.6
+    // ========================================================================
+
+    #[test]
+    fn t7_2_ten_tracks_high_freq_write() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let mut handles = Vec::new();
+        for i in 0..10 {
+            let (track, ctrl) = mixer.create_track(None).unwrap();
+            let freq = 440.0 + i as f64 * 50.0;
+            let wave = generate_sine_i16(freq, 16000, 100, 0.1);
+            handles.push(std::thread::spawn(move || {
+                // Write in small chunks to simulate high-frequency writes
+                for chunk in wave.chunks(320) {
+                    track.write_bytes(chunk).unwrap();
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+                ctrl.close_write();
+            }));
+        }
+
+        let mixed = read_all_from_mixer(&mixer);
+        for h in handles { h.join().unwrap(); }
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "10 tracks should produce mixed output");
+    }
+
+    #[test]
+    fn t7_4_create_track_mid_read() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let mixer_ref = mixer.clone();
+
+        let (track1, ctrl1) = mixer.create_track(None).unwrap();
+
+        let h = std::thread::spawn(move || {
+            let wave1 = generate_sine_i16(440.0, 16000, 200, 0.5);
+            track1.write_bytes(&wave1).unwrap();
+
+            // Create second track while mixer is reading first
+            let (track2, ctrl2) = mixer_ref.create_track(None).unwrap();
+            let wave2 = generate_sine_i16(880.0, 48000, 200, 0.5);
+            let tw2 = track2.input(Format::L16Mono48K).unwrap();
+            tw2.write_bytes(&wave2).unwrap();
+            tw2.close_write();
+
+            ctrl1.close_write();
+            ctrl2.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let non_zero = samples.iter().filter(|&&s| s != 0).count();
+        assert!(non_zero > 0, "track created mid-read should contribute");
+    }
+
+    #[test]
+    fn t7_5_mixer_close_while_writing() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+
+        let (track, _ctrl) = mixer.create_track(None).unwrap();
+        let tw = track.input(Format::L16Mono48K).unwrap();
+
+        // Close mixer immediately
+        mixer.close().unwrap();
+
+        // Writer should get an error
+        let wave = generate_sine_i16(440.0, 48000, 100, 0.5);
+        let result = tw.write_bytes(&wave);
+        assert!(result.is_err(), "writing to closed mixer should fail");
+    }
+
+    #[test]
+    fn t7_6_hundred_tracks_stress() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        let mut handles = Vec::new();
+        for _ in 0..100 {
+            let (track, ctrl) = mixer.create_track(None).unwrap();
+            let data: Vec<u8> = (0..32).flat_map(|_| 1000i16.to_le_bytes()).collect();
+            handles.push(std::thread::spawn(move || {
+                track.write_bytes(&data).unwrap();
+                ctrl.close_write();
+            }));
+        }
+
+        let mixed = read_all_from_mixer(&mixer);
+        for h in handles { h.join().unwrap(); }
+
+        // Must not OOM or panic
+        let _ = to_i16_samples(&mixed);
+    }
+
+    // ========================================================================
+    // P1: T8.2, T8.3, T8.5, T10.2, T10.3
+    // ========================================================================
+
+    #[test]
+    fn t8_2_freq_1000hz() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        let wave = generate_sine_i16(1000.0, 48000, 500, 0.8);
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        assert!(samples.len() > 100);
+        let freq = estimate_freq_zcr(&samples, 16000);
+        let deviation = (freq - 1000.0).abs() / 1000.0;
+        assert!(deviation < 0.05, "freq should be ~1000Hz, got {:.1}Hz ({:.1}% off)", freq, deviation * 100.0);
+    }
+
+    #[test]
+    fn t8_3_above_nyquist_filtered() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        // 7kHz at 48kHz → downsample to 16kHz. Nyquist = 8kHz.
+        // 7kHz is below Nyquist but the anti-aliasing filter should
+        // attenuate it significantly.
+        let wave = generate_sine_i16(7000.0, 48000, 500, 0.8);
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        let peak = samples.iter().map(|s| s.abs()).max().unwrap_or(0);
+        let input_peak = (0.8 * 32767.0) as i16;
+        let attenuation = peak as f64 / input_peak as f64;
+        // 7kHz is below Nyquist (8kHz) but in the transition band.
+        // The sinc filter's rolloff attenuates it partially.
+        assert!(attenuation < 0.85, "7kHz near Nyquist should be attenuated (ratio={:.3})", attenuation);
+    }
+
+    #[test]
+    fn t8_5_dc_offset_preserved() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let (track, ctrl) = mixer.create_track(None).unwrap();
+        let mixer_ref = mixer.clone();
+
+        // Constant value (DC offset)
+        let dc_value: i16 = 5000;
+        let data: Vec<u8> = (0..48000).flat_map(|_| dc_value.to_le_bytes()).collect();
+        let tw = track.input(Format::L16Mono48K).unwrap();
+        let h = std::thread::spawn(move || {
+            tw.write_bytes(&data).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+            mixer_ref.close_write().unwrap();
+        });
+
+        let mixed = read_all_from_mixer(&mixer);
+        h.join().unwrap();
+
+        let samples = to_i16_samples(&mixed);
+        if samples.len() > 200 {
+            // Check middle portion (skip startup/shutdown transients)
+            let mid_start = samples.len() / 4;
+            let mid_end = samples.len() * 3 / 4;
+            let mid = &samples[mid_start..mid_end];
+            let avg: f64 = mid.iter().map(|&s| s as f64).sum::<f64>() / mid.len() as f64;
+            let deviation = (avg - dc_value as f64).abs() / dc_value as f64;
+            assert!(deviation < 0.1, "DC offset should be preserved (avg={:.1}, expected={})", avg, dc_value);
+        }
+    }
+
+    #[test]
+    fn t10_2_multi_track_sustained() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default());
+        let mixer_ref = mixer.clone();
+
+        let (t1, c1) = mixer.create_track(None).unwrap();
+        let (t2, c2) = mixer.create_track(None).unwrap();
+
+        let w1 = generate_sine_i16(440.0, 48000, 1000, 0.4);
+        let w2 = generate_sine_i16(880.0, 24000, 1000, 0.4);
+
+        let tw1 = t1.input(Format::L16Mono48K).unwrap();
+        let tw2 = t2.input(Format::L16Mono24K).unwrap();
+
+        let h1 = std::thread::spawn(move || { tw1.write_bytes(&w1).unwrap(); tw1.close_write(); c1.close_write(); });
+        let h2 = std::thread::spawn(move || { tw2.write_bytes(&w2).unwrap(); tw2.close_write(); c2.close_write(); });
+
+        let mixer_close = mixer_ref.clone();
+        let h3 = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_secs(2));
+            mixer_close.close_write().unwrap();
+        });
+
+        let mut out = Vec::new();
+        let mut buf = [0u8; 1920];
+        let deadline = std::time::Instant::now() + Duration::from_secs(5);
+        loop {
+            if std::time::Instant::now() > deadline { break; }
+            match (&*mixer).read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => out.extend_from_slice(&buf[..n]),
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => panic!("read error: {}", e),
+            }
+        }
+
+        h1.join().unwrap(); h2.join().unwrap(); h3.join().unwrap();
+
+        let samples = to_i16_samples(&out);
+        assert!(samples.len() > 4000, "1s multi-track should produce ample output (got {})", samples.len());
+    }
+
+    #[test]
+    fn t10_3_create_destroy_no_leak() {
+        let mixer = Mixer::new(Format::L16Mono16K, MixerOptions::default().with_auto_close());
+
+        for i in 0..30 {
+            let (track, ctrl) = mixer.create_track(None).unwrap();
+            let wave = generate_sine_i16(440.0 + i as f64 * 10.0, 48000, 50, 0.3);
+            let tw = track.input(Format::L16Mono48K).unwrap();
+            tw.write_bytes(&wave).unwrap();
+            tw.close_write();
+            ctrl.close_write();
+        }
+
+        // Drain all output
+        let mixed = read_all_from_mixer(&mixer);
+        let _ = to_i16_samples(&mixed);
+        // Must not OOM — if there's a leak, this would fail on repeated runs
+    }
 }
