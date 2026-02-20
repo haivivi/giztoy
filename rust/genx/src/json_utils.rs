@@ -65,13 +65,18 @@ fn repair_json(s: &str) -> String {
         }
 
         if !in_string && ch == ',' {
-            let rest = chars[i + 1..].iter().collect::<String>();
-            let trimmed = rest.trim_start();
-            if trimmed.starts_with('}') || trimmed.starts_with(']') {
+            let is_trailing = chars[i + 1..]
+                .iter()
+                .find(|c| !c.is_ascii_whitespace())
+                .is_some_and(|c| *c == '}' || *c == ']');
+            if is_trailing {
                 continue;
             }
         }
 
+        if string_quote == Some('\'') && ch == '"' {
+            result.push('\\');
+        }
         result.push(ch);
     }
 
@@ -153,5 +158,16 @@ mod tests {
         }
         let result: T = unmarshal_json(br#"{"k": "it's fine"}"#).unwrap();
         assert_eq!(result.k, "it's fine");
+    }
+
+    #[test]
+    fn t4_8_double_quote_inside_single_quoted_string() {
+        #[derive(Deserialize, Debug, PartialEq)]
+        struct T {
+            k: String,
+        }
+        // {'k': 'he said "hi"'} should become {"k": "he said \"hi\""}
+        let result: T = unmarshal_json(b"{'k': 'he said \"hi\"'}").unwrap();
+        assert_eq!(result.k, r#"he said "hi""#);
     }
 }

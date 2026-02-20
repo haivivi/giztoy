@@ -31,22 +31,36 @@ pub fn split(
     let (rest_tx, rest_rx) = mpsc::channel(100);
 
     tokio::spawn(async move {
+        let mut matched_tx = Some(matched_tx);
+        let mut rest_tx = Some(rest_tx);
+
         loop {
+            if matched_tx.is_none() && rest_tx.is_none() {
+                break;
+            }
             match input.next().await {
                 Ok(Some(chunk)) => {
                     if matcher(&chunk) {
-                        if matched_tx.send(Ok(chunk)).await.is_err() {
-                            break;
+                        if let Some(tx) = &matched_tx {
+                            if tx.send(Ok(chunk)).await.is_err() {
+                                matched_tx = None;
+                            }
                         }
-                    } else if rest_tx.send(Ok(chunk)).await.is_err() {
-                        break;
+                    } else if let Some(tx) = &rest_tx {
+                        if tx.send(Ok(chunk)).await.is_err() {
+                            rest_tx = None;
+                        }
                     }
                 }
                 Ok(None) => break,
                 Err(e) => {
                     let msg = e.to_string();
-                    let _ = matched_tx.send(Err(msg.clone())).await;
-                    let _ = rest_tx.send(Err(msg)).await;
+                    if let Some(tx) = &matched_tx {
+                        let _ = tx.send(Err(msg.clone())).await;
+                    }
+                    if let Some(tx) = &rest_tx {
+                        let _ = tx.send(Err(msg)).await;
+                    }
                     break;
                 }
             }
