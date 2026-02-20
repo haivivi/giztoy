@@ -144,10 +144,6 @@ impl TrackRingBuf {
         self.notify_mixer.notify_all();
     }
 
-    pub fn is_eof(&self) -> bool {
-        let inner = self.mu.lock().unwrap();
-        inner.close_write && (inner.tail - inner.head) == 0
-    }
 }
 
 pub(crate) enum ReadResult {
@@ -188,6 +184,8 @@ pub(crate) struct TrackInput {
     raw_buf: Vec<u8>,
     /// Whether the ring buffer has reached EOF.
     rb_eof: bool,
+    /// Whether the resampler's internal delay has been flushed.
+    delay_flushed: bool,
 }
 
 impl TrackInput {
@@ -216,6 +214,7 @@ impl TrackInput {
             accum: vec![Vec::new(); in_channels],
             raw_buf: Vec::new(),
             rb_eof: false,
+            delay_flushed: false,
         })
     }
 
@@ -272,13 +271,20 @@ impl TrackInput {
         }
 
         if self.rb_eof {
+            if self.delay_flushed {
+                return ReadResult::Eof;
+            }
+
             // Not enough frames and ring buffer is done — flush resampler
             if accum_frames > 0 {
                 let input = std::mem::take(&mut self.accum);
                 let resampler = self.resampler.as_mut().unwrap();
                 let output = match resampler.process_partial(Some(&input), None) {
                     Ok(out) => out,
-                    Err(_) => return ReadResult::Eof,
+                    Err(_) => {
+                        self.delay_flushed = true;
+                        return ReadResult::Eof;
+                    }
                 };
                 let output_frames = if output.is_empty() { 0 } else { output[0].len() };
                 if output_frames > 0 {
@@ -286,12 +292,16 @@ impl TrackInput {
                 }
             }
 
-            // Try flushing resampler's internal delay
+            // Flush resampler's internal delay (once)
             let resampler = self.resampler.as_mut().unwrap();
             let output = match resampler.process_partial::<Vec<f32>>(None, None) {
                 Ok(out) => out,
-                Err(_) => return ReadResult::Eof,
+                Err(_) => {
+                    self.delay_flushed = true;
+                    return ReadResult::Eof;
+                }
             };
+            self.delay_flushed = true;
             let output_frames = if output.is_empty() { 0 } else { output[0].len() };
             if output_frames > 0 {
                 return match self.write_output_to_buf(&output, output_frames, out_channels, buf) {
@@ -440,18 +450,6 @@ impl TrackInput {
         }
     }
 
-    pub fn is_eof(&self) -> bool {
-        if !self.rb.is_eof() {
-            return false;
-        }
-        if self.resampler.is_some() {
-            let accum_frames = if self.accum.is_empty() { 0 } else { self.accum[0].len() };
-            if accum_frames > 0 {
-                return false;
-            }
-        }
-        true
-    }
 }
 
 // ============================================================================
@@ -572,16 +570,6 @@ impl InternalTrack {
         self.notify_mixer.notify_all();
     }
 
-    pub fn is_done(&self) -> bool {
-        if self.close_err.lock().unwrap().is_some() {
-            return true;
-        }
-        if !self.close_write.load(Ordering::SeqCst) {
-            return false;
-        }
-        let inputs = self.inputs.lock().unwrap();
-        inputs.iter().all(|input| input.is_eof())
-    }
 }
 
 #[cfg(test)]
