@@ -623,7 +623,7 @@ impl TrackWriter {
     /// Data is stored as-is in the ring buffer. Resampling to the mixer's
     /// output format is performed lazily when the mixer reads.
     pub fn write_bytes(&self, data: &[u8]) -> io::Result<usize> {
-        let frame_size = self.input_format.sample_bytes();
+        let frame_size = self.input_format.frame_bytes();
         let usable = data.len() / frame_size * frame_size;
         if usable == 0 {
             return Ok(0);

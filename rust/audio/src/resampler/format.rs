@@ -44,10 +44,10 @@ impl Format {
         16
     }
 
-    /// Returns the number of bytes per sample frame.
+    /// Returns the number of bytes per frame (all channels).
     /// For 16-bit audio: 2 bytes for mono, 4 bytes for stereo.
     #[inline]
-    pub const fn sample_bytes(&self) -> usize {
+    pub const fn frame_bytes(&self) -> usize {
         if self.stereo { 4 } else { 2 }
     }
 
@@ -130,7 +130,7 @@ mod tests {
         assert_eq!(fmt.sample_rate, 16000);
         assert!(!fmt.stereo);
         assert_eq!(fmt.channels(), 1);
-        assert_eq!(fmt.sample_bytes(), 2);
+        assert_eq!(fmt.frame_bytes(), 2);
     }
 
     #[test]
@@ -139,7 +139,7 @@ mod tests {
         assert_eq!(fmt.sample_rate, 48000);
         assert!(fmt.stereo);
         assert_eq!(fmt.channels(), 2);
-        assert_eq!(fmt.sample_bytes(), 4);
+        assert_eq!(fmt.frame_bytes(), 4);
     }
 
     #[test]

@@ -124,7 +124,7 @@ impl<R: Read> Soxr<R> {
         Ok(Self {
             inner: Mutex::new(SoxrInner {
                 src_fmt,
-                src: SampleReader::new(src, src_fmt.sample_bytes()),
+                src: SampleReader::new(src, src_fmt.frame_bytes()),
                 dst_fmt,
                 read_buf: Vec::new(),
                 input_buf: vec![Vec::new(); num_channels],
@@ -156,7 +156,7 @@ impl<R: Read> Read for Soxr<R> {
 
         let mut inner = self.inner.lock().unwrap();
 
-        if buf.len() < inner.dst_fmt.sample_bytes() {
+        if buf.len() < inner.dst_fmt.frame_bytes() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 "buffer too small",
@@ -205,7 +205,7 @@ impl<R: Read> SoxrInner<R> {
         };
         
         // Read enough source data
-        let src_bytes_needed = frames_needed * self.src_fmt.sample_bytes();
+        let src_bytes_needed = frames_needed * self.src_fmt.frame_bytes();
         if self.read_buf.len() < src_bytes_needed {
             self.read_buf.resize(src_bytes_needed, 0);
         }
@@ -216,7 +216,7 @@ impl<R: Read> SoxrInner<R> {
         }
 
         // Convert i16 interleaved to f32 per-channel
-        let frames_read = bytes_read / self.dst_fmt.sample_bytes();
+        let frames_read = bytes_read / self.dst_fmt.frame_bytes();
         for ch in 0..num_channels {
             self.input_buf[ch].clear();
             self.input_buf[ch].reserve(frames_read);
