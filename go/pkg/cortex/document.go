@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 )
@@ -27,11 +28,10 @@ func (d *Document) Name() string {
 	return ""
 }
 
-// FullName returns the KV-style full name: "kind:...additional segments".
-// The exact format depends on the kind's schema KeyFunc.
-// This is a display helper; actual KV keys are computed by Schema.Key().
+// FullName returns the colon-separated full name compatible with get/delete/list.
+// Kind "/" is replaced with ":" so "creds/openai" + "qwen" → "creds:openai:qwen".
 func (d *Document) FullName() string {
-	return d.Kind + ":" + d.Name()
+	return strings.ReplaceAll(d.Kind, "/", ":") + ":" + d.Name()
 }
 
 // GetString returns a string field or empty string.

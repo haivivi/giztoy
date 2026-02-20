@@ -278,15 +278,20 @@ func runTestdata(ctx context.Context, c *cortex.Cortex, dir, filter string, avai
 
 		docs, err := cortex.ParseDocumentsFromFile(path)
 		if err != nil {
+			var r testResult
 			if isErrorCase {
-				results = append(results, testResult{File: "run/" + rel, Kind: "parse-error", Status: "pass", Elapsed: 0})
+				r = testResult{File: "run/" + rel, Kind: "parse-error", Status: "pass", Elapsed: 0}
 			} else {
-				results = append(results, testResult{File: "run/" + rel, Status: "fail", Error: "parse: " + err.Error()})
+				r = testResult{File: "run/" + rel, Status: "fail", Error: "parse: " + err.Error()}
 			}
+			results = append(results, r)
+			printResult(r)
 			return nil
 		}
 		if len(docs) != 1 {
-			results = append(results, testResult{File: "run/" + rel, Status: "fail", Error: "expected 1 document"})
+			r := testResult{File: "run/" + rel, Status: "fail", Error: "expected 1 document"}
+			results = append(results, r)
+			printResult(r)
 			return nil
 		}
 
@@ -296,7 +301,9 @@ func runTestdata(ctx context.Context, c *cortex.Cortex, dir, filter string, avai
 		if credRef != "" {
 			credService := strings.SplitN(credRef, ":", 2)[0]
 			if !available[credService] {
-				results = append(results, testResult{File: "run/" + rel, Kind: task.Kind, Status: "skip"})
+				r := testResult{File: "run/" + rel, Kind: task.Kind, Status: "skip"}
+				results = append(results, r)
+				printResult(r)
 				return nil
 			}
 		}

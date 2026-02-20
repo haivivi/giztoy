@@ -154,7 +154,7 @@ func TestListName(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("exit %d", code)
 	}
-	if !strings.Contains(stdout, "creds/openai:qwen") {
+	if !strings.Contains(stdout, "creds:openai:qwen") {
 		t.Fatalf("expected name format, got: %s", stdout)
 	}
 }
