@@ -16,8 +16,6 @@
 mod fft;
 mod mel;
 
-use std::f64::consts::PI;
-
 /// Configuration for mel filterbank extraction.
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -188,6 +186,7 @@ pub fn flatten(features: &[Vec<f32>]) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::f64::consts::PI;
 
     #[test]
     fn test_extract_sine_wave() {

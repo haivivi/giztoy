@@ -296,8 +296,9 @@ impl Stream {
             return Err(io::Error::new(io::ErrorKind::Other, "no output channels"));
         }
 
-        // Bounds check: buffer capacity is frames_per_buffer * output_channels
-        let buffer_capacity = self.config.frames_per_buffer * self.config.output_channels as usize;
+        // All validation before unsafe copy.
+        let channels = self.config.output_channels as usize;
+        let buffer_capacity = self.config.frames_per_buffer * channels;
         if samples.len() > buffer_capacity {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -308,16 +309,6 @@ impl Stream {
                 ),
             ));
         }
-
-        unsafe {
-            ptr::copy_nonoverlapping(
-                samples.as_ptr(),
-                self.buffer as *mut i16,
-                samples.len(),
-            );
-        }
-
-        let channels = self.config.output_channels as usize;
         if samples.len() % channels != 0 {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -327,6 +318,14 @@ impl Stream {
                     channels,
                 ),
             ));
+        }
+
+        unsafe {
+            ptr::copy_nonoverlapping(
+                samples.as_ptr(),
+                self.buffer as *mut i16,
+                samples.len(),
+            );
         }
 
         pa_check(unsafe {

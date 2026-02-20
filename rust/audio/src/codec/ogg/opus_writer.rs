@@ -75,6 +75,15 @@ impl<W: Write> OpusWriter<W> {
     /// The OpusTags page is deferred until the first `stream_write` call.
     /// Returns the serial number assigned to this stream.
     pub fn stream_begin(&mut self, sample_rate: u32, channels: u16) -> io::Result<i32> {
+        // RFC 3533: all BOS pages must precede any non-BOS pages.
+        // Reject new streams if any existing stream has written data.
+        if self.streams.values().any(|s| s.tags_written) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "cannot begin new stream after data has been written (RFC 3533)",
+            ));
+        }
+
         let serial_no = self.generate_serial_no();
         let mut stream = OpusStream {
             serial_no,
