@@ -520,7 +520,11 @@ impl TrackCtrlInner {
         let notify = self.mixer.notify.clone();
         let rb = Arc::new(super::track::TrackRingBuf::new(buf_size, notify));
 
-        // Close the previous input
+        // Register first — if resampler creation fails, old state is untouched.
+        self.track.add_input(format, rb.clone())
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+        // Only close the previous input after successful registration.
         {
             let mut current = self.current_rb.lock().unwrap();
             if let Some(old_rb) = current.take() {
@@ -529,8 +533,6 @@ impl TrackCtrlInner {
             *current = Some(rb.clone());
         }
 
-        self.track.add_input(format, rb.clone())
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         Ok(rb)
     }
 
