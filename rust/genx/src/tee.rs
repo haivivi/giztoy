@@ -1,0 +1,99 @@
+//! Stream tee — duplicate a Stream to a StreamBuilder.
+
+use async_trait::async_trait;
+
+use crate::error::{GenxError, Usage};
+use crate::stream::{Stream, StreamBuilder, StreamResult};
+use crate::types::MessageChunk;
+
+/// A Stream that reads from `src` and copies all chunks to `builder`.
+/// The original chunks pass through unchanged.
+pub struct TeeStream {
+    src: Box<dyn Stream>,
+    builder: StreamBuilder,
+}
+
+/// Create a tee: reads from `src`, copies to `builder`, returns chunks to caller.
+pub fn tee(src: Box<dyn Stream>, builder: StreamBuilder) -> TeeStream {
+    TeeStream { src, builder }
+}
+
+#[async_trait]
+impl Stream for TeeStream {
+    async fn next(&mut self) -> Result<Option<MessageChunk>, GenxError> {
+        match self.src.next().await {
+            Ok(Some(chunk)) => {
+                let _ = self.builder.add(&[chunk.clone()]);
+                Ok(Some(chunk))
+            }
+            Ok(None) => {
+                let _ = self.builder.done(Usage::default());
+                Ok(None)
+            }
+            Err(e) => {
+                let _ = self.builder.abort_with_message(e.to_string());
+                Err(e)
+            }
+        }
+    }
+
+    fn result(&self) -> Option<StreamResult> {
+        self.src.result()
+    }
+
+    async fn close(&mut self) -> Result<(), GenxError> {
+        self.src.close().await
+    }
+
+    async fn close_with_error(&mut self, error: GenxError) -> Result<(), GenxError> {
+        self.src.close_with_error(error).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::stream::{collect_text, StreamBuilder};
+    use crate::types::Role;
+
+    #[tokio::test]
+    async fn t7_1_tee_three_chunks() {
+        let src_builder = StreamBuilder::with_tools(64, vec![]);
+        src_builder
+            .add(&[
+                MessageChunk::text(Role::Model, "a"),
+                MessageChunk::text(Role::Model, "b"),
+                MessageChunk::text(Role::Model, "c"),
+            ])
+            .unwrap();
+        src_builder.done(Usage::default()).unwrap();
+
+        let copy_builder = StreamBuilder::with_tools(64, vec![]);
+        let mut copy_stream = copy_builder.stream();
+
+        let mut tee_stream = tee(Box::new(src_builder.stream()), copy_builder);
+
+        let main_text = collect_text(&mut tee_stream).await.unwrap();
+        assert_eq!(main_text, "abc");
+
+        let copy_text = collect_text(&mut copy_stream).await.unwrap();
+        assert_eq!(copy_text, "abc");
+    }
+
+    #[tokio::test]
+    async fn t7_2_tee_empty_stream() {
+        let src_builder = StreamBuilder::with_tools(64, vec![]);
+        src_builder.done(Usage::default()).unwrap();
+
+        let copy_builder = StreamBuilder::with_tools(64, vec![]);
+        let mut copy_stream = copy_builder.stream();
+
+        let mut tee_stream = tee(Box::new(src_builder.stream()), copy_builder);
+
+        let result = tee_stream.next().await.unwrap();
+        assert!(result.is_none());
+
+        let copy_result = copy_stream.next().await.unwrap();
+        assert!(copy_result.is_none());
+    }
+}

@@ -43,10 +43,19 @@
 pub mod context;
 pub mod error;
 pub mod gemini;
+pub mod generators;
+pub mod json_utils;
 pub mod r#match;
+pub mod modelcontexts;
 pub mod openai;
+pub mod profilers;
+pub mod segmentors;
 pub mod stream;
+pub mod stream_id;
+pub mod stream_utils;
+pub mod tee;
 pub mod tool;
+pub mod transformer;
 pub mod types;
 
 // Re-exports for convenience
@@ -56,9 +65,12 @@ pub use stream::{
     collect_text, collect_tool_calls, collect_tool_calls_streamed, Stream, StreamBuilder,
     StreamEvent, StreamImpl, StreamResult,
 };
+pub use stream_id::new_stream_id;
 pub use tool::{AnyTool, BoxFuture, FuncTool, SearchWebTool, Tool};
+pub use transformer::Transformer;
 pub use types::{
-    Blob, Contents, FuncCall, Message, MessageChunk, Part, Payload, Role, ToolCall, ToolResult,
+    Blob, Contents, FuncCall, Message, MessageChunk, Part, Payload, Role, StreamCtrl, ToolCall,
+    ToolResult,
 };
 
 use async_trait::async_trait;

@@ -285,7 +285,47 @@ impl Message {
     }
 }
 
+/// Stream control signals for routing and state.
+///
+/// Used by input/output modules to:
+///   - Route chunks to different streams via `stream_id`
+///   - Signal begin/end of a logical stream via `begin_of_stream`/`end_of_stream`
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct StreamCtrl {
+    /// Sub-stream identifier for mux/demux routing.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub stream_id: String,
+
+    /// Human-readable tag for debugging. Not used for routing or logic.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub label: String,
+
+    /// Marks the start of a logical stream.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub begin_of_stream: bool,
+
+    /// Marks the end of a logical stream.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub end_of_stream: bool,
+
+    /// Unix epoch time in milliseconds when this chunk was created.
+    #[serde(default, skip_serializing_if = "is_zero_i64")]
+    pub timestamp: i64,
+}
+
+fn is_false(v: &bool) -> bool {
+    !v
+}
+
+fn is_zero_i64(v: &i64) -> bool {
+    *v == 0
+}
+
 /// A chunk of a streaming message.
+///
+/// When a `MessageChunk` passes through a Transformer, the Transformer MUST:
+///   - Preserve `role`, `name`, `tool_call`, and `ctrl` fields unchanged
+///   - Only modify the `part` field (content payload)
 #[derive(Debug, Clone, PartialEq)]
 pub struct MessageChunk {
     /// Role of the message sender
@@ -296,6 +336,8 @@ pub struct MessageChunk {
     pub part: Option<Part>,
     /// Tool call (if any)
     pub tool_call: Option<ToolCall>,
+    /// Stream control signals (optional, for routing and state)
+    pub ctrl: Option<StreamCtrl>,
 }
 
 impl MessageChunk {
@@ -306,6 +348,7 @@ impl MessageChunk {
             name: None,
             part: Some(Part::Text(text.into())),
             tool_call: None,
+            ctrl: None,
         }
     }
 
@@ -316,6 +359,7 @@ impl MessageChunk {
             name: None,
             part: Some(Part::blob(mime_type, data)),
             tool_call: None,
+            ctrl: None,
         }
     }
 
@@ -326,6 +370,63 @@ impl MessageChunk {
             name: None,
             part: None,
             tool_call: Some(tool_call),
+            ctrl: None,
+        }
+    }
+
+    /// Returns true if this chunk is a begin-of-stream marker.
+    pub fn is_begin_of_stream(&self) -> bool {
+        self.ctrl.as_ref().is_some_and(|c| c.begin_of_stream)
+    }
+
+    /// Returns true if this chunk is an end-of-stream marker.
+    pub fn is_end_of_stream(&self) -> bool {
+        self.ctrl.as_ref().is_some_and(|c| c.end_of_stream)
+    }
+
+    /// Create a BOS marker with the given stream ID.
+    pub fn new_begin_of_stream(stream_id: impl Into<String>) -> Self {
+        Self {
+            role: Role::User,
+            name: None,
+            part: None,
+            tool_call: None,
+            ctrl: Some(StreamCtrl {
+                stream_id: stream_id.into(),
+                begin_of_stream: true,
+                ..Default::default()
+            }),
+        }
+    }
+
+    /// Create an EOS marker with the given MIME type.
+    pub fn new_end_of_stream(mime_type: impl Into<String>) -> Self {
+        Self {
+            role: Role::User,
+            name: None,
+            part: Some(Part::Blob(Blob {
+                mime_type: mime_type.into(),
+                data: Vec::new(),
+            })),
+            tool_call: None,
+            ctrl: Some(StreamCtrl {
+                end_of_stream: true,
+                ..Default::default()
+            }),
+        }
+    }
+
+    /// Create a text EOS marker.
+    pub fn new_text_end_of_stream() -> Self {
+        Self {
+            role: Role::User,
+            name: None,
+            part: Some(Part::Text(String::new())),
+            tool_call: None,
+            ctrl: Some(StreamCtrl {
+                end_of_stream: true,
+                ..Default::default()
+            }),
         }
     }
 
@@ -391,5 +492,127 @@ mod tests {
         let result = ToolResult::from_value("call_123", &Result { success: true }).unwrap();
         assert_eq!(result.id, "call_123");
         assert!(result.result.contains("true"));
+    }
+
+    // T1: StreamCtrl tests
+
+    #[test]
+    fn t1_1_stream_ctrl_default_zero_values() {
+        let ctrl = StreamCtrl::default();
+        assert_eq!(ctrl.stream_id, "");
+        assert_eq!(ctrl.label, "");
+        assert!(!ctrl.begin_of_stream);
+        assert!(!ctrl.end_of_stream);
+        assert_eq!(ctrl.timestamp, 0);
+    }
+
+    #[test]
+    fn t1_2_no_ctrl_not_bos_eos() {
+        let chunk = MessageChunk::text(Role::Model, "hello");
+        assert!(!chunk.is_begin_of_stream());
+        assert!(!chunk.is_end_of_stream());
+    }
+
+    #[test]
+    fn t1_3_bos_ctrl() {
+        let mut chunk = MessageChunk::text(Role::Model, "hello");
+        chunk.ctrl = Some(StreamCtrl {
+            begin_of_stream: true,
+            ..Default::default()
+        });
+        assert!(chunk.is_begin_of_stream());
+        assert!(!chunk.is_end_of_stream());
+    }
+
+    #[test]
+    fn t1_4_eos_ctrl() {
+        let mut chunk = MessageChunk::text(Role::Model, "hello");
+        chunk.ctrl = Some(StreamCtrl {
+            end_of_stream: true,
+            ..Default::default()
+        });
+        assert!(!chunk.is_begin_of_stream());
+        assert!(chunk.is_end_of_stream());
+    }
+
+    #[test]
+    fn t1_5_new_begin_of_stream() {
+        let chunk = MessageChunk::new_begin_of_stream("s1");
+        let ctrl = chunk.ctrl.as_ref().unwrap();
+        assert_eq!(ctrl.stream_id, "s1");
+        assert!(ctrl.begin_of_stream);
+        assert!(!ctrl.end_of_stream);
+    }
+
+    #[test]
+    fn t1_6_new_end_of_stream_blob() {
+        let chunk = MessageChunk::new_end_of_stream("audio/pcm");
+        assert!(chunk.is_end_of_stream());
+        let part = chunk.part.unwrap();
+        let blob = part.as_blob().unwrap();
+        assert_eq!(blob.mime_type, "audio/pcm");
+        assert!(blob.data.is_empty());
+    }
+
+    #[test]
+    fn t1_7_new_text_end_of_stream() {
+        let chunk = MessageChunk::new_text_end_of_stream();
+        assert!(chunk.is_end_of_stream());
+        let part = chunk.part.unwrap();
+        assert_eq!(part.as_text(), Some(""));
+    }
+
+    #[test]
+    fn t1_8_stream_ctrl_clone_eq() {
+        let ctrl = StreamCtrl {
+            stream_id: "abc".into(),
+            label: "test".into(),
+            begin_of_stream: true,
+            end_of_stream: false,
+            timestamp: 12345,
+        };
+        let cloned = ctrl.clone();
+        assert_eq!(ctrl, cloned);
+    }
+
+    #[test]
+    fn t1_9_message_chunk_clone_with_ctrl() {
+        let mut chunk = MessageChunk::text(Role::Model, "hello");
+        chunk.ctrl = Some(StreamCtrl {
+            stream_id: "s1".into(),
+            begin_of_stream: true,
+            ..Default::default()
+        });
+        let cloned = chunk.clone();
+        assert_eq!(chunk, cloned);
+        assert!(cloned.ctrl.is_some());
+        assert_eq!(cloned.ctrl.unwrap().stream_id, "s1");
+    }
+
+    #[test]
+    fn t1_stream_ctrl_json_roundtrip() {
+        let ctrl = StreamCtrl {
+            stream_id: "abc123".into(),
+            label: "debug".into(),
+            begin_of_stream: true,
+            end_of_stream: false,
+            timestamp: 1700000000000,
+        };
+        let json = serde_json::to_string(&ctrl).unwrap();
+        let parsed: StreamCtrl = serde_json::from_str(&json).unwrap();
+        assert_eq!(ctrl, parsed);
+    }
+
+    #[test]
+    fn t1_stream_ctrl_json_skip_defaults() {
+        let ctrl = StreamCtrl {
+            stream_id: "abc".into(),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&ctrl).unwrap();
+        assert!(!json.contains("label"));
+        assert!(!json.contains("begin_of_stream"));
+        assert!(!json.contains("end_of_stream"));
+        assert!(!json.contains("timestamp"));
     }
 }
