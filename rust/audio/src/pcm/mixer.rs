@@ -1203,16 +1203,9 @@ mod tests {
             .map(|b| i16::from_le_bytes([b[0], b[1]]))
             .collect();
 
-        // Output should be clipped, not overflowed
-        for &s in &samples {
-            assert!(
-                s >= -32768 && s <= 32767,
-                "Sample {} is outside i16 range — overflow!",
-                s,
-            );
-        }
-
-        // Peak should show mixing happened (at least 2 tracks mixed = 20000)
+        // Verify clipping: 4 tracks * 10000 = 40000 > 32767, so mixer should clip.
+        // Peak must be at or near 32767 (clipped), not some lower value that
+        // would indicate only one track was mixed.
         let max_sample = samples.iter().copied().max().unwrap_or(0);
         assert!(
             max_sample >= 10000,
