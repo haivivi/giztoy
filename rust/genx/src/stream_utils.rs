@@ -358,6 +358,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn t8_5_composite_seq_empty_in_middle() {
+        let s1 = make_text_stream(&["a"]);
+        let s2 = make_text_stream(&[]); // empty stream
+        let s3 = make_text_stream(&["b"]);
+
+        let mut combined = composite_seq(vec![s1, s2, s3]);
+
+        let mut texts = Vec::new();
+        let mut eos_count = 0;
+        while let Ok(Some(chunk)) = combined.next().await {
+            if chunk.is_end_of_stream() {
+                eos_count += 1;
+            } else if let Some(t) = chunk.part.as_ref().and_then(|p| p.as_text()) {
+                texts.push(t.to_string());
+            }
+        }
+        assert_eq!(texts, vec!["a", "b"]);
+        // EoS after s1 (has content), s2 is empty (no EoS emitted for empty),
+        // but composite_seq emits EoS after every non-last stream that had content
+        assert!(eos_count >= 1); // At least after s1
+    }
+
+    #[tokio::test]
     async fn t8_6_merge_sequential() {
         let s1 = make_text_stream(&["a", "b"]);
         let s2 = make_text_stream(&["c", "d"]);

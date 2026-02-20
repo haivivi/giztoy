@@ -35,24 +35,24 @@ type Input struct {
 	// Messages is the conversation text to compress.
 	// Each element is a line of dialogue (e.g., "user: 你好", "assistant: 你好呀").
 	// Plain text, no dependency on memory.Message.
-	Messages []string
+	Messages []string `json:"messages"`
 
 	// Schema is an optional hint describing entity types and expected attributes.
 	// When provided, the LLM is guided to extract entities matching this schema,
 	// but it can still discover entities beyond the schema.
-	Schema *Schema
+	Schema *Schema `json:"schema,omitempty"`
 }
 
 // Result is the output of a [Segmentor].
 type Result struct {
 	// Segment is the compressed conversation fragment.
-	Segment SegmentOutput
+	Segment SegmentOutput `json:"segment"`
 
 	// Entities are the entities mentioned or discovered in the conversation.
-	Entities []EntityOutput
+	Entities []EntityOutput `json:"entities"`
 
 	// Relations are the relations between entities.
-	Relations []RelationOutput
+	Relations []RelationOutput `json:"relations"`
 }
 
 // SegmentOutput is a compressed conversation fragment.

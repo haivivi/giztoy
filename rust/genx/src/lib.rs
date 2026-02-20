@@ -58,6 +58,17 @@ pub mod tool;
 pub mod transformer;
 pub mod types;
 
+// Phase 4-6: not yet implemented, tracked in docs/rust-genx.md
+//
+// Phase 4 (modelloader): config file parsing + segmentor/profiler/generator registration
+//   Priority P1 — memory's LLMCompressor needs config loading
+//
+// Phase 5 (transformers): 9 Stream→Stream transformers (TTS/ASR/realtime/voiceprint/codec/mux)
+//   Priority P2 — cortex dependency, largest work item
+//
+// Phase 6 (input/opus): real-time opus audio input (StampedFrame, JitterBuffer)
+//   Priority P2 — cortex real-time audio dependency
+
 // Re-exports for convenience
 pub use context::{ModelContext, ModelContextBuilder, ModelParams, MultiModelContext, Prompt};
 pub use error::{GenxError, State, Status, Usage};

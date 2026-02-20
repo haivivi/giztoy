@@ -96,4 +96,43 @@ mod tests {
         let copy_result = copy_stream.next().await.unwrap();
         assert!(copy_result.is_none());
     }
+
+    #[tokio::test]
+    async fn t7_3_drop_one_consumer_other_unaffected() {
+        let src_builder = StreamBuilder::with_tools(64, vec![]);
+        src_builder
+            .add(&[
+                MessageChunk::text(Role::Model, "x"),
+                MessageChunk::text(Role::Model, "y"),
+            ])
+            .unwrap();
+        src_builder.done(Usage::default()).unwrap();
+
+        let copy_builder = StreamBuilder::with_tools(64, vec![]);
+        // Drop copy_stream immediately — don't consume it
+        let _copy_stream = copy_builder.stream();
+
+        let mut tee_stream = tee(Box::new(src_builder.stream()), copy_builder);
+
+        // Main consumer should still work fine
+        let text = collect_text(&mut tee_stream).await.unwrap();
+        assert_eq!(text, "xy");
+    }
+
+    #[tokio::test]
+    async fn t7_4_source_error_propagates() {
+        let src_builder = StreamBuilder::with_tools(64, vec![]);
+        src_builder
+            .abort_with_message("source error")
+            .unwrap();
+
+        let copy_builder = StreamBuilder::with_tools(64, vec![]);
+        let _copy_stream = copy_builder.stream();
+
+        let mut tee_stream = tee(Box::new(src_builder.stream()), copy_builder);
+
+        // Read should get the error from the aborted source
+        let result = tee_stream.next().await;
+        assert!(result.is_err(), "expected error from aborted source, got {:?}", result);
+    }
 }

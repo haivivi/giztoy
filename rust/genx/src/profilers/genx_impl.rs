@@ -184,4 +184,57 @@ mod tests {
             relations: vec![],
         };
     }
+
+    #[test]
+    fn t12_golden_parse_mock_response() {
+        let data = std::fs::read_to_string(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../testdata/genx/profilers/mock_llm_response.json"),
+        )
+        .unwrap();
+
+        let prof = GenXProfiler::new(ProfilerConfig {
+            generator: "test".into(),
+            prompt_version: None,
+        });
+        let result = prof.parse_result(&data).unwrap();
+        assert_eq!(result.schema_changes.len(), 1);
+        assert_eq!(result.schema_changes[0].entity_type, "person");
+        assert_eq!(result.schema_changes[0].field, "school");
+        assert_eq!(result.schema_changes[0].action, "add");
+        assert!(result.profile_updates.contains_key("person:小明"));
+        assert_eq!(result.relations.len(), 1);
+        assert_eq!(result.relations[0].rel_type, "attends");
+    }
+
+    #[test]
+    fn t12_golden_expected_result_roundtrip() {
+        let data = std::fs::read_to_string(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../testdata/genx/profilers/expected_result.json"),
+        )
+        .unwrap();
+
+        let result: ProfilerResult = serde_json::from_str(&data).unwrap();
+        assert_eq!(result.schema_changes.len(), 1);
+        assert_eq!(result.profile_updates.len(), 1);
+        assert_eq!(result.relations.len(), 1);
+
+        let json = serde_json::to_string(&result).unwrap();
+        let reparsed: ProfilerResult = serde_json::from_str(&json).unwrap();
+        assert_eq!(result, reparsed);
+    }
+
+    #[test]
+    fn t12_golden_input_deserialization() {
+        let data = std::fs::read_to_string(
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../../testdata/genx/profilers/input.json"),
+        )
+        .unwrap();
+
+        let input: ProfilerInput = serde_json::from_str(&data).unwrap();
+        assert_eq!(input.messages.len(), 3);
+        assert_eq!(input.extracted.segment.summary, "小明和用户聊了恐龙，小明最喜欢霸王龙，小明5岁");
+        assert!(input.schema.is_some());
+        assert!(input.profiles.is_some());
+        assert_eq!(input.profiles.as_ref().unwrap().len(), 1);
+    }
 }

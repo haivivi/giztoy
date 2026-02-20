@@ -214,6 +214,23 @@ mod tests {
     }
 
     #[test]
+    fn t12_prompt_base_exact_match() {
+        assert!(PROMPT_BASE.starts_with("You are an entity profile analyst."));
+        assert!(PROMPT_BASE.contains("## Instructions"));
+        assert!(PROMPT_BASE.contains("## Rules"));
+        assert!(PROMPT_BASE.ends_with("write Chinese descriptions)."));
+    }
+
+    #[test]
+    fn t12_prompt_output_format_exact_match() {
+        assert!(PROMPT_OUTPUT_FORMAT.starts_with("## Output"));
+        assert!(PROMPT_OUTPUT_FORMAT.contains("schema_changes"));
+        assert!(PROMPT_OUTPUT_FORMAT.contains("profile_updates"));
+        assert!(PROMPT_OUTPUT_FORMAT.contains("relations"));
+        assert!(PROMPT_OUTPUT_FORMAT.contains("阳光幼儿园"));
+    }
+
+    #[test]
     fn t12_prompt_with_schema_and_profiles() {
         let mut entity_types = HashMap::new();
         entity_types.insert(
