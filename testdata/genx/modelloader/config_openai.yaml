@@ -1,0 +1,12 @@
+kind: openai
+api_key: "$OPENAI_API_KEY"
+models:
+  - name: openai/gpt4
+    model: gpt-4o-mini
+    support_tool_calls: true
+    use_system_role: true
+  - name: openai/gpt4o
+    model: gpt-4o
+    support_json_output: true
+    support_tool_calls: true
+    use_system_role: true

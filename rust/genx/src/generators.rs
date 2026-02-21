@@ -14,6 +14,7 @@ use crate::Generator;
 
 /// Generator multiplexer that routes requests to registered generators
 /// based on pattern matching.
+#[derive(Clone)]
 pub struct Mux {
     routes: HashMap<String, Arc<dyn Generator>>,
 }

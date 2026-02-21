@@ -44,9 +44,11 @@ pub mod context;
 pub mod error;
 pub mod gemini;
 pub mod generators;
+pub mod input;
 pub mod json_utils;
 pub mod r#match;
 pub mod modelcontexts;
+pub mod modelloader;
 pub mod openai;
 pub mod profilers;
 pub mod segmentors;
@@ -56,18 +58,8 @@ pub mod stream_utils;
 pub mod tee;
 pub mod tool;
 pub mod transformer;
+pub mod transformers;
 pub mod types;
-
-// Phase 4-6: not yet implemented, tracked in docs/rust-genx.md
-//
-// Phase 4 (modelloader): config file parsing + segmentor/profiler/generator registration
-//   Priority P1 — memory's LLMCompressor needs config loading
-//
-// Phase 5 (transformers): 9 Stream→Stream transformers (TTS/ASR/realtime/voiceprint/codec/mux)
-//   Priority P2 — cortex dependency, largest work item
-//
-// Phase 6 (input/opus): real-time opus audio input (StampedFrame, JitterBuffer)
-//   Priority P2 — cortex real-time audio dependency
 
 // Re-exports for convenience
 pub use context::{ModelContext, ModelContextBuilder, ModelParams, MultiModelContext, Prompt};
