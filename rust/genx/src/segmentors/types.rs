@@ -3,9 +3,20 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::error::GenxError;
+
+/// Deserialize a value that may be JSON `null` into `Default::default()`.
+/// Handles both missing fields (`#[serde(default)]`) and explicit `null`
+/// (which Go's `json.Marshal` emits for nil slices/maps).
+pub(crate) fn null_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Default + Deserialize<'de>,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
 
 /// Compresses conversation messages into a structured segment
 /// with entity and relation extraction.
@@ -27,7 +38,9 @@ pub struct SegmentorInput {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SegmentorResult {
     pub segment: SegmentOutput,
+    #[serde(default, deserialize_with = "null_default")]
     pub entities: Vec<EntityOutput>,
+    #[serde(default, deserialize_with = "null_default")]
     pub relations: Vec<RelationOutput>,
 }
 
@@ -35,9 +48,9 @@ pub struct SegmentorResult {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SegmentOutput {
     pub summary: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_default")]
     pub keywords: Vec<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_default")]
     pub labels: Vec<String>,
 }
 
@@ -45,7 +58,7 @@ pub struct SegmentOutput {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct EntityOutput {
     pub label: String,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, deserialize_with = "null_default", skip_serializing_if = "HashMap::is_empty")]
     pub attrs: HashMap<String, serde_json::Value>,
 }
 
@@ -151,6 +164,21 @@ entity_types:
         };
         let json = serde_json::to_string(&entity).unwrap();
         assert!(!json.contains("attrs"));
+    }
+
+    #[test]
+    fn t9_5_null_collections_from_go() {
+        let json = r#"{
+            "segment": {"summary": "test", "keywords": null, "labels": null},
+            "entities": null,
+            "relations": null
+        }"#;
+        let result: SegmentorResult = serde_json::from_str(json).unwrap();
+        assert_eq!(result.segment.summary, "test");
+        assert!(result.segment.keywords.is_empty());
+        assert!(result.segment.labels.is_empty());
+        assert!(result.entities.is_empty());
+        assert!(result.relations.is_empty());
     }
 
     #[test]

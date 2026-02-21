@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 use crate::error::GenxError;
+use crate::segmentors::types::null_default;
 use crate::segmentors::{AttrDef, RelationOutput, Schema, SegmentorResult};
 
 /// Evolves entity profile schemas and updates profiles.
@@ -29,11 +30,11 @@ pub struct ProfilerInput {
 /// Output of a Profiler.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProfilerResult {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_default")]
     pub schema_changes: Vec<SchemaChange>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_default")]
     pub profile_updates: HashMap<String, HashMap<String, serde_json::Value>>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_default")]
     pub relations: Vec<RelationOutput>,
 }
 
@@ -86,6 +87,19 @@ mod tests {
         let json = serde_json::to_string(&result).unwrap();
         let parsed: ProfilerResult = serde_json::from_str(&json).unwrap();
         assert_eq!(result, parsed);
+    }
+
+    #[test]
+    fn t12_null_collections_from_go() {
+        let json = r#"{
+            "schema_changes": null,
+            "profile_updates": null,
+            "relations": null
+        }"#;
+        let result: ProfilerResult = serde_json::from_str(json).unwrap();
+        assert!(result.schema_changes.is_empty());
+        assert!(result.profile_updates.is_empty());
+        assert!(result.relations.is_empty());
     }
 
     #[test]

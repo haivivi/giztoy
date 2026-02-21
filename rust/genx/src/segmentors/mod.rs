@@ -4,7 +4,7 @@
 mod genx_impl;
 mod mux;
 mod prompt;
-mod types;
+pub(crate) mod types;
 
 pub use genx_impl::GenXSegmentor;
 pub use mux::SegmentorMux;
