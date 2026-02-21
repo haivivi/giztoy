@@ -1508,6 +1508,10 @@ async fn tb4_10_personas_isolation() {
     }
 }
 
+/// Relaxed performance test using redb on tempdir.
+/// redb scan on filesystem is ~50x slower than in-memory KV, so we use
+/// a 5s threshold here. See tb5_recall_performance_strict for the <100ms
+/// target that applies with an in-memory KV store.
 #[tokio::test]
 async fn tb5_recall_performance_1000_segments() {
     let h = new_test_host();
@@ -1539,6 +1543,49 @@ async fn tb5_recall_performance_1000_segments() {
     assert!(
         elapsed.as_millis() < 5000,
         "recall should complete in reasonable time, took {}ms",
+        elapsed.as_millis()
+    );
+}
+
+/// Strict performance test: recall over 1000 segments must complete in <100ms.
+/// Uses the same redb store (no in-memory KV available in Rust yet).
+/// Run with: cargo test -- --ignored tb5_recall_performance_strict
+///
+/// This test is #[ignore]'d because redb on tmpfs can't reliably hit 100ms.
+/// When an in-memory KVStore implementation is available, un-ignore this
+/// and replace new_test_store() with the in-memory version.
+#[tokio::test]
+#[ignore]
+async fn tb5_recall_performance_strict() {
+    let h = new_test_host();
+    let m = h.open("p1");
+
+    for i in 0..1000 {
+        m.store_segment(
+            SegmentInput {
+                summary: format!("segment {i} about topic {}", i % 10),
+                keywords: vec![format!("topic{}", i % 10)],
+                labels: vec![format!("label{}", i % 5)],
+            },
+            giztoy_recall::bucket_1h(),
+        )
+        .await
+        .unwrap();
+    }
+
+    let start = std::time::Instant::now();
+    let result = m.recall(RecallQuery {
+        labels: vec!["label0".into()],
+        text: "topic0".into(),
+        hops: 0,
+        limit: 10,
+    }).await.unwrap();
+    let elapsed = start.elapsed();
+
+    assert!(!result.segments.is_empty());
+    assert!(
+        elapsed.as_millis() < 100,
+        "strict: recall should complete in <100ms, took {}ms",
         elapsed.as_millis()
     );
 }
