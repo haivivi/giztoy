@@ -1,0 +1,46 @@
+{
+  "messages": [
+    "user: 今天和小明聊了恐龙",
+    "assistant: 小明最喜欢霸王龙",
+    "user: 他说他5岁了，在阳光幼儿园上学"
+  ],
+  "extracted": {
+    "segment": {
+      "summary": "小明和用户聊了恐龙，小明最喜欢霸王龙，小明5岁",
+      "keywords": ["恐龙", "霸王龙", "小明"],
+      "labels": ["person:小明", "topic:恐龙"]
+    },
+    "entities": [
+      {
+        "label": "person:小明",
+        "attrs": {"age": "5", "favorite_dinosaur": "霸王龙"}
+      },
+      {
+        "label": "topic:恐龙"
+      }
+    ],
+    "relations": [
+      {
+        "from": "person:小明",
+        "to": "topic:恐龙",
+        "rel_type": "likes"
+      }
+    ]
+  },
+  "schema": {
+    "entity_types": {
+      "person": {
+        "desc": "A person",
+        "attrs": {
+          "age": {"type": "string", "desc": "Age of the person"},
+          "name": {"type": "string", "desc": "Full name"}
+        }
+      }
+    }
+  },
+  "profiles": {
+    "person:小明": {
+      "age": "5"
+    }
+  }
+}

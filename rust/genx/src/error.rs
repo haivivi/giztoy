@@ -277,4 +277,39 @@ mod tests {
         };
         assert_eq!(err.status(), Status::Error);
     }
+
+    #[test]
+    fn t_err_truncated() {
+        let usage = Usage::with_counts(50, 0, 100);
+        let state = State::truncated(usage.clone());
+        assert_eq!(state.status(), Status::Truncated);
+        assert_eq!(state.usage().generated_token_count, 100);
+        let err = state.into_error();
+        assert!(matches!(err, GenxError::Truncated(_)));
+    }
+
+    #[test]
+    fn t_err_unexpected_status() {
+        let usage = Usage::new();
+        let state = State::error(usage, "unexpected failure");
+        assert_eq!(state.status(), Status::Error);
+        assert!(state.to_string().contains("unexpected failure"));
+    }
+
+    #[test]
+    fn t_err_done() {
+        let err = GenxError::Done(Usage::with_counts(10, 0, 5));
+        assert!(err.is_done());
+        assert_eq!(err.status(), Status::Done);
+        assert_eq!(err.usage().unwrap().prompt_token_count, 10);
+    }
+
+    #[test]
+    fn t_usage_cached_content() {
+        let usage = Usage::with_counts(200, 150, 50);
+        assert_eq!(usage.cached_content_token_count, 150);
+        assert_eq!(usage.total(), 250);
+        let display = usage.to_string();
+        assert!(display.contains("150"));
+    }
 }

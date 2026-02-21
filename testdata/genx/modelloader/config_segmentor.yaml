@@ -1,0 +1,5 @@
+schema: openai/chat/v1
+type: segmentor
+models:
+  - name: seg/default
+    model: openai/gpt4

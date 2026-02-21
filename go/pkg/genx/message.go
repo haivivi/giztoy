@@ -56,27 +56,27 @@ type StreamCtrl struct {
 	// StreamID is a sub-stream identifier for mux/demux routing.
 	// When set, output modules can route chunks to different destinations
 	// based on this identifier combined with Role and MIME type.
-	StreamID string
+	StreamID string `json:"stream_id,omitempty"`
 
 	// Label is an optional human-readable tag for debugging.
 	// Not used for routing or logic, only for logging/tracing.
-	Label string
+	Label string `json:"label,omitempty"`
 
 	// BeginOfStream marks the start of a logical stream.
 	// When a transformer emits a BOS marker, downstream can initialize state
 	// and potentially interrupt previous streams with different StreamIDs.
-	BeginOfStream bool
+	BeginOfStream bool `json:"begin_of_stream,omitempty"`
 
 	// EndOfStream marks the end of a logical stream.
 	// When a transformer receives an EOS marker matching its input type,
 	// it should finish current processing and emit an EOS with its output type.
 	// The Part field should have the same MIME type as other outputs from the transformer.
-	EndOfStream bool
+	EndOfStream bool `json:"end_of_stream,omitempty"`
 
 	// Timestamp is the Unix epoch time in milliseconds when this chunk was created.
 	// Used for packet loss detection and timing synchronization in real-time streams.
 	// When set, receivers can detect gaps in the stream by comparing timestamps.
-	Timestamp int64
+	Timestamp int64 `json:"timestamp,omitempty"`
 }
 
 // IsBeginOfStream returns true if this chunk is a begin-of-stream marker.

@@ -105,6 +105,7 @@ minijinja = "2"
 regex = "1"
 
 # Utilities
+getrandom = "0.3"
 hex = "0.4"
 base64 = "0.22"
 futures = "0.3"

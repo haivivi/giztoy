@@ -234,8 +234,8 @@ impl<T: Clone> Buffer<T> {
 
         // Read from the front of the buffer (FIFO) - O(1) per element with VecDeque
         let n = std::cmp::min(buf.len(), state.buf.len());
-        for i in 0..n {
-            buf[i] = state.buf.pop_front().unwrap();
+        for item in buf.iter_mut().take(n) {
+            *item = state.buf.pop_front().unwrap();
         }
         Ok(n)
     }

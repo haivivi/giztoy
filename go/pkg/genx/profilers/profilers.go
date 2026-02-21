@@ -44,38 +44,38 @@ type Input struct {
 	// Messages is the original conversation text (same as segmentor input).
 	// Provided so the profiler can reference the full context when
 	// deciding on profile updates and schema changes.
-	Messages []string
+	Messages []string `json:"messages"`
 
 	// Extracted is the output from a [segmentors.Segmentor].
 	// Contains the segment summary, extracted entities, and relations.
-	Extracted *segmentors.Result
+	Extracted *segmentors.Result `json:"extracted"`
 
 	// Schema is the current entity type schema.
 	// The profiler may propose additions or modifications to this schema.
 	// Can be nil if no schema exists yet.
-	Schema *segmentors.Schema
+	Schema *segmentors.Schema `json:"schema,omitempty"`
 
 	// Profiles contains the current profile data for known entities.
 	// Keyed by entity label (e.g., "person:小明") → attribute map.
 	// Can be nil for first-time processing.
-	Profiles map[string]map[string]any
+	Profiles map[string]map[string]any `json:"profiles,omitempty"`
 }
 
 // Result is the output of a [Profiler].
 type Result struct {
 	// SchemaChanges are proposed modifications to the entity type schema.
 	// The caller decides whether to accept these changes.
-	SchemaChanges []SchemaChange
+	SchemaChanges []SchemaChange `json:"schema_changes"`
 
 	// ProfileUpdates contains updated profile data for entities.
 	// Keyed by entity label → attribute map.
 	// Values are the new/updated attributes (not a full replacement;
 	// the caller should merge with existing profiles).
-	ProfileUpdates map[string]map[string]any
+	ProfileUpdates map[string]map[string]any `json:"profile_updates"`
 
 	// Relations are additional relations discovered during profile analysis
 	// that the segmentor may have missed.
-	Relations []segmentors.RelationOutput
+	Relations []segmentors.RelationOutput `json:"relations"`
 }
 
 // SchemaChange proposes a modification to the entity type schema.

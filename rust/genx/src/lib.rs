@@ -43,10 +43,22 @@
 pub mod context;
 pub mod error;
 pub mod gemini;
+pub mod generators;
+pub mod input;
+pub mod json_utils;
 pub mod r#match;
+pub mod modelcontexts;
+pub mod modelloader;
 pub mod openai;
+pub mod profilers;
+pub mod segmentors;
 pub mod stream;
+pub mod stream_id;
+pub mod stream_utils;
+pub mod tee;
 pub mod tool;
+pub mod transformer;
+pub mod transformers;
 pub mod types;
 
 // Re-exports for convenience
@@ -56,9 +68,12 @@ pub use stream::{
     collect_text, collect_tool_calls, collect_tool_calls_streamed, Stream, StreamBuilder,
     StreamEvent, StreamImpl, StreamResult,
 };
+pub use stream_id::new_stream_id;
 pub use tool::{AnyTool, BoxFuture, FuncTool, SearchWebTool, Tool};
+pub use transformer::Transformer;
 pub use types::{
-    Blob, Contents, FuncCall, Message, MessageChunk, Part, Payload, Role, ToolCall, ToolResult,
+    Blob, Contents, FuncCall, Message, MessageChunk, Part, Payload, Role, StreamCtrl, ToolCall,
+    ToolResult,
 };
 
 use async_trait::async_trait;
@@ -245,25 +260,63 @@ mod tests {
 
     #[test]
     fn test_full_workflow() {
-        // Test the full workflow without actual API calls
         let mut builder = ModelContextBuilder::new();
-
-        // Add system prompt
         builder.prompt_text("system", "You are a helpful assistant.");
-
-        // Add user message
         builder.user_text("user", "What's the weather?");
-
-        // Add a tool
-        let tool = FuncTool::new::<TestArgs>("search", "Search the web");
-        builder.add_tool(tool);
-
-        // Build context
+        builder.add_tool(FuncTool::new::<TestArgs>("search", "Search the web"));
         let ctx = builder.build();
-
-        // Verify context
         assert_eq!(ctx.prompts().count(), 1);
         assert_eq!(ctx.messages().count(), 1);
         assert_eq!(ctx.tools().count(), 1);
+    }
+
+    #[test]
+    fn t_usage_string() {
+        let usage = Usage::with_counts(100, 10, 50);
+        let s = usage.to_string();
+        assert!(s.contains("100"));
+        assert!(s.contains("50"));
+    }
+
+    #[test]
+    fn t_inspect_search_web_tool() {
+        let tool = SearchWebTool;
+        let output = inspect_tool(&tool);
+        assert!(output.contains("search_web"));
+    }
+
+    #[test]
+    fn t_inspect_message_blob() {
+        let msg = Message::new(Role::User, Payload::blob("image/png", vec![1, 2, 3]));
+        let output = inspect_message(&msg);
+        assert!(output.contains("image/png"));
+        assert!(output.contains("[3 bytes]"));
+    }
+
+    #[test]
+    fn t_inspect_message_tool_call() {
+        let msg = Message::tool_call(ToolCall::new(
+            "call_1",
+            FuncCall::new("search", r#"{"q":"rust"}"#),
+        ));
+        let output = inspect_message(&msg);
+        assert!(output.contains("call_1"));
+        assert!(output.contains("search"));
+    }
+
+    #[test]
+    fn t_inspect_unknown_tool() {
+        // SearchWebTool is the "other" variant — verify inspect doesn't panic
+        let tool = SearchWebTool;
+        let output = inspect_tool(&tool);
+        assert!(!output.is_empty());
+    }
+
+    #[test]
+    fn t_inspect_message_tool_result() {
+        let msg = Message::tool_result(ToolResult::new("call_1", "result data"));
+        let output = inspect_message(&msg);
+        assert!(output.contains("call_1"));
+        assert!(output.contains("result data"));
     }
 }

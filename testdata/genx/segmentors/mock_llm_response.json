@@ -1,0 +1,27 @@
+{
+  "segment": {
+    "summary": "小明和用户聊了恐龙，小明最喜欢霸王龙，小明5岁",
+    "keywords": ["恐龙", "霸王龙", "小明"],
+    "labels": ["person:小明", "topic:恐龙"]
+  },
+  "entities": [
+    {
+      "label": "person:小明",
+      "attrs": [
+        {"key": "age", "value": "5"},
+        {"key": "favorite_dinosaur", "value": "霸王龙"}
+      ]
+    },
+    {
+      "label": "topic:恐龙",
+      "attrs": []
+    }
+  ],
+  "relations": [
+    {
+      "from": "person:小明",
+      "to": "topic:恐龙",
+      "rel_type": "likes"
+    }
+  ]
+}
