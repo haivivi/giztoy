@@ -11,19 +11,17 @@ pub fn build_prompt(input: &ProfilerInput) -> String {
     let mut sb = String::new();
     sb.push_str(PROMPT_BASE);
 
-    if let Some(schema) = &input.schema {
-        if !schema.entity_types.is_empty() {
+    if let Some(schema) = &input.schema
+        && !schema.entity_types.is_empty() {
             sb.push_str("\n\n");
             sb.push_str(&build_schema_section(schema));
         }
-    }
 
-    if let Some(profiles) = &input.profiles {
-        if !profiles.is_empty() {
+    if let Some(profiles) = &input.profiles
+        && !profiles.is_empty() {
             sb.push_str("\n\n");
             sb.push_str(&build_profiles_section(profiles));
         }
-    }
 
     sb.push_str("\n\n");
     sb.push_str(&build_extracted_section(&input.extracted));

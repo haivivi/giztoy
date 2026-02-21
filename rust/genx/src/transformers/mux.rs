@@ -51,9 +51,7 @@ impl TransformerMux {
     ) -> Result<(), GenxError> {
         let pattern = pattern.into();
         self.tts_routes.insert(pattern.clone(), t.clone());
-        if !self.routes.contains_key(&pattern) {
-            self.routes.insert(pattern, t);
-        }
+        self.routes.entry(pattern).or_insert(t);
         Ok(())
     }
 
@@ -65,9 +63,7 @@ impl TransformerMux {
     ) -> Result<(), GenxError> {
         let pattern = pattern.into();
         self.asr_routes.insert(pattern.clone(), t.clone());
-        if !self.routes.contains_key(&pattern) {
-            self.routes.insert(pattern, t);
-        }
+        self.routes.entry(pattern).or_insert(t);
         Ok(())
     }
 

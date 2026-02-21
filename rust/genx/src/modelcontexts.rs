@@ -130,4 +130,31 @@ mod tests {
         assert_eq!(pa[0].text, "alpha");
         assert_eq!(pb[0].text, "beta");
     }
+
+    #[tokio::test]
+    async fn t6_handle_func() {
+        let mut mux = Mux::new();
+        mux.handle(
+            "fn_test",
+            Arc::new(ModelContextProviderFn(|_pattern: &str| {
+                let mut b = ModelContextBuilder::new();
+                b.prompt_text("system", "from fn");
+                Ok(Box::new(b.build()) as Box<dyn ModelContext>)
+            })),
+        )
+        .unwrap();
+        let ctx = mux.model_context("fn_test").await.unwrap();
+        let prompts: Vec<&Prompt> = ctx.prompts().collect();
+        assert_eq!(prompts[0].text, "from fn");
+    }
+
+    #[tokio::test]
+    async fn t6_overwrite_allowed() {
+        let mut mux = Mux::new();
+        mux.handle("x", Arc::new(StaticProvider { text: "v1".into() })).unwrap();
+        mux.handle("x", Arc::new(StaticProvider { text: "v2".into() })).unwrap();
+        let ctx = mux.model_context("x").await.unwrap();
+        let p: Vec<&Prompt> = ctx.prompts().collect();
+        assert_eq!(p[0].text, "v2");
+    }
 }

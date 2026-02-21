@@ -150,15 +150,14 @@ impl ModelContextBuilder {
     /// Add a prompt.
     pub fn add_prompt(&mut self, prompt: Prompt) -> &mut Self {
         // Merge with last prompt if same name
-        if let Some(last) = self.prompts.last_mut() {
-            if last.name == prompt.name {
+        if let Some(last) = self.prompts.last_mut()
+            && last.name == prompt.name {
                 if !last.text.is_empty() {
                     last.text.push('\n');
                 }
                 last.text.push_str(&prompt.text);
                 return self;
             }
-        }
         self.prompts.push(prompt);
         self
     }
@@ -171,16 +170,13 @@ impl ModelContextBuilder {
     /// Add a message.
     pub fn add_message(&mut self, msg: Message) -> &mut Self {
         // Try to merge with last message if same role/name and both are contents
-        if let Some(last) = self.messages.last_mut() {
-            if let (Payload::Contents(last_contents), Payload::Contents(new_contents)) =
+        if let Some(last) = self.messages.last_mut()
+            && let (Payload::Contents(last_contents), Payload::Contents(new_contents)) =
                 (&mut last.payload, &msg.payload)
-            {
-                if last.role == msg.role && last.name == msg.name {
+                && last.role == msg.role && last.name == msg.name {
                     last_contents.extend(new_contents.clone());
                     return self;
                 }
-            }
-        }
         self.messages.push(msg);
         self
     }
@@ -459,5 +455,108 @@ mod tests {
         assert_eq!(messages.len(), 2);
         assert!(messages[0].payload.is_tool_call());
         assert!(messages[1].payload.is_tool_result());
+    }
+
+    #[test]
+    fn t_ctx_add_prompt_empty_initial() {
+        let mut b = ModelContextBuilder::new();
+        b.prompt_text("system", "");
+        b.prompt_text("system", "Hello");
+        let ctx = b.build();
+        let prompts: Vec<_> = ctx.prompts().collect();
+        assert_eq!(prompts.len(), 1);
+        // Empty initial + merge = just "Hello" (no leading newline since initial is empty)
+        assert_eq!(prompts[0].text, "Hello");
+    }
+
+    #[test]
+    fn t_ctx_add_message_different_role() {
+        let mut b = ModelContextBuilder::new();
+        b.user_text("u", "Hello");
+        b.model_text("m", "Hi");
+        let ctx = b.build();
+        assert_eq!(ctx.messages().count(), 2);
+    }
+
+    #[test]
+    fn t_ctx_add_message_non_contents() {
+        let mut b = ModelContextBuilder::new();
+        b.user_text("u", "Hello");
+        b.tool_call("m", "call_1", "search", "{}");
+        let ctx = b.build();
+        let msgs: Vec<_> = ctx.messages().collect();
+        assert_eq!(msgs.len(), 2);
+        assert!(msgs[1].payload.is_tool_call());
+    }
+
+    #[test]
+    fn t_ctx_set_cot() {
+        let mut b = ModelContextBuilder::new();
+        b.set_cot(vec!["think step 1".into(), "think step 2".into()]);
+        let ctx = b.build();
+        let cots: Vec<_> = ctx.cots().collect();
+        assert_eq!(cots.len(), 2);
+        assert_eq!(cots[0], "think step 1");
+    }
+
+    #[test]
+    fn t_ctx_user_blob() {
+        let mut b = ModelContextBuilder::new();
+        b.user_blob("u", "image/png", vec![1, 2, 3]);
+        let ctx = b.build();
+        let msgs: Vec<_> = ctx.messages().collect();
+        assert_eq!(msgs.len(), 1);
+        if let Payload::Contents(parts) = &msgs[0].payload {
+            assert!(parts[0].is_blob());
+        } else {
+            panic!("expected contents");
+        }
+    }
+
+    #[test]
+    fn t_ctx_model_text() {
+        let mut b = ModelContextBuilder::new();
+        b.model_text("assistant", "I can help");
+        let ctx = b.build();
+        let msgs: Vec<_> = ctx.messages().collect();
+        assert_eq!(msgs[0].role, Role::Model);
+    }
+
+    #[test]
+    fn t_ctx_model_blob() {
+        let mut b = ModelContextBuilder::new();
+        b.model_blob("assistant", "audio/mp3", vec![4, 5, 6]);
+        let ctx = b.build();
+        let msgs: Vec<_> = ctx.messages().collect();
+        assert_eq!(msgs[0].role, Role::Model);
+    }
+
+    #[test]
+    fn t_ctx_empty_builder() {
+        let b = ModelContextBuilder::new();
+        let ctx = b.build();
+        assert_eq!(ctx.prompts().count(), 0);
+        assert_eq!(ctx.messages().count(), 0);
+        assert_eq!(ctx.tools().count(), 0);
+        assert_eq!(ctx.cots().count(), 0);
+        assert!(ctx.params().is_none());
+    }
+
+    #[test]
+    fn t_ctx_params() {
+        let mut b = ModelContextBuilder::new();
+        b.set_params(ModelParams::new().with_max_tokens(1000).with_temperature(0.5));
+        let ctx = b.build();
+        let params = ctx.params().unwrap();
+        assert_eq!(params.max_tokens, Some(1000));
+        assert_eq!(params.temperature, Some(0.5));
+    }
+
+    #[test]
+    fn t_ctx_find_func_tool() {
+        let mut b = ModelContextBuilder::new();
+        b.add_tool(FuncTool::new::<TestArgs>("search", "Search"));
+        assert!(b.find_func_tool("search").is_some());
+        assert!(b.find_func_tool("missing").is_none());
     }
 }

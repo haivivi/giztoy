@@ -343,4 +343,30 @@ mod tests {
         assert_eq!(call.id, "call_123");
         assert_eq!(call.func_call.name, "test");
     }
+
+    #[test]
+    fn t_func_tool_new_func_call() {
+        let tool = FuncTool::new::<TestArgs>("search", "Search");
+        let call = tool.new_func_call(r#"{"name": "hello"}"#);
+        assert_eq!(call.name, "search");
+        assert_eq!(call.arguments, r#"{"name": "hello"}"#);
+    }
+
+    #[tokio::test]
+    async fn t_func_tool_invoke_malformed_json() {
+        let tool = FuncTool::with_handler::<TestArgs, _, _>(
+            "test", "Test",
+            |_args: TestArgs| async move { Ok("ok".into()) },
+        );
+        let result = tool.invoke("not json").await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn t_search_web_tool_is_tool() {
+        let tool = SearchWebTool;
+        assert_eq!(tool.name(), "search_web");
+        let any: AnyTool = tool.into();
+        assert_eq!(any.name(), "search_web");
+    }
 }

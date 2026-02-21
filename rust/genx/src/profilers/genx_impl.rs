@@ -172,6 +172,16 @@ mod tests {
     }
 
     #[test]
+    fn t_profiler_parse_nil_call() {
+        let prof = GenXProfiler::new(ProfilerConfig {
+            generator: "test".into(),
+            prompt_version: None,
+        });
+        let result = prof.parse_result("");
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn t12_profilers_uses_segmentors_types() {
         use crate::segmentors::{SegmentOutput, SegmentorResult};
         let _result = SegmentorResult {

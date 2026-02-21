@@ -524,4 +524,147 @@ mod tests {
             desc: None,
         }
     }
+
+    #[test]
+    fn t13_expand_env_empty() {
+        assert_eq!(expand_env(""), "");
+    }
+
+    #[test]
+    fn t13_expand_env_plain() {
+        assert_eq!(expand_env("plain-value"), "plain-value");
+    }
+
+    #[test]
+    fn t13_expand_env_var() {
+        unsafe { std::env::set_var("_GENX_TEST_KEY", "secret123") };
+        assert_eq!(expand_env("$_GENX_TEST_KEY"), "secret123");
+        unsafe { std::env::remove_var("_GENX_TEST_KEY") };
+    }
+
+    #[test]
+    fn t13_expand_env_braces() {
+        unsafe { std::env::set_var("_GENX_TEST_KEY2", "val2") };
+        assert_eq!(expand_env("${_GENX_TEST_KEY2}"), "val2");
+        unsafe { std::env::remove_var("_GENX_TEST_KEY2") };
+    }
+
+    #[test]
+    fn t13_expand_env_unset() {
+        assert_eq!(expand_env("$_GENX_NONEXISTENT_VAR_12345"), "");
+    }
+
+    #[test]
+    fn t13_unsupported_extension() {
+        let tmp = std::env::temp_dir().join("test_config.txt");
+        std::fs::write(&tmp, "data").unwrap();
+        let result = parse_config(&tmp);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("unsupported"));
+        let _ = std::fs::remove_file(&tmp);
+    }
+
+    #[test]
+    fn t13_unknown_type() {
+        let cfg = ConfigFile {
+            schema: Some("openai/chat/v1".into()),
+            type_: Some("unknown_type".into()),
+            api_key: Some("key".into()),
+            ..default_config()
+        };
+        let mut muxes = MuxSet::new();
+        let err = register_config(cfg, &mut muxes).unwrap_err();
+        assert!(err.to_string().contains("unknown type"));
+    }
+
+    #[test]
+    fn t13_segmentor_missing_model() {
+        let mut muxes = MuxSet::new();
+        let gen_cfg = ConfigFile {
+            kind: Some("openai".into()),
+            api_key: Some("key".into()),
+            models: vec![Entry { name: "g".into(), model: "m".into(), ..default_entry() }],
+            ..default_config()
+        };
+        register_config(gen_cfg, &mut muxes).unwrap();
+
+        let cfg = ConfigFile {
+            schema: Some("openai/chat/v1".into()),
+            type_: Some("segmentor".into()),
+            models: vec![Entry { name: "seg".into(), model: "".into(), ..default_entry() }],
+            ..default_config()
+        };
+        let err = register_config(cfg, &mut muxes).unwrap_err();
+        assert!(err.to_string().contains("missing model"));
+    }
+
+    #[test]
+    fn t13_profiler_missing_name() {
+        let mut muxes = MuxSet::new();
+        let gen_cfg = ConfigFile {
+            kind: Some("openai".into()),
+            api_key: Some("key".into()),
+            models: vec![Entry { name: "g".into(), model: "m".into(), ..default_entry() }],
+            ..default_config()
+        };
+        register_config(gen_cfg, &mut muxes).unwrap();
+
+        let cfg = ConfigFile {
+            schema: Some("openai/chat/v1".into()),
+            type_: Some("profiler".into()),
+            models: vec![Entry { name: "".into(), model: "g".into(), ..default_entry() }],
+            ..default_config()
+        };
+        let err = register_config(cfg, &mut muxes).unwrap_err();
+        assert!(err.to_string().contains("missing name"));
+    }
+
+    #[test]
+    fn t13_voice_entry_fields() {
+        let yaml = r#"{"name": "tts/test", "voice_id": "zh_female", "desc": "test voice", "cluster": "cn"}"#;
+        let ve: VoiceEntry = serde_json::from_str(yaml).unwrap();
+        assert_eq!(ve.name, "tts/test");
+        assert_eq!(ve.voice_id, "zh_female");
+        assert_eq!(ve.desc.as_deref(), Some("test voice"));
+        assert_eq!(ve.cluster.as_deref(), Some("cn"));
+    }
+
+    #[test]
+    fn t13_entry_fields() {
+        let json = r#"{
+            "name": "test",
+            "model": "gpt-4",
+            "support_json_output": true,
+            "support_tool_calls": true,
+            "use_system_role": true,
+            "voice": "zh_female",
+            "resource_id": "res_123"
+        }"#;
+        let e: Entry = serde_json::from_str(json).unwrap();
+        assert_eq!(e.name, "test");
+        assert!(e.support_json_output);
+        assert!(e.support_tool_calls);
+        assert!(e.use_system_role);
+        assert_eq!(e.voice.as_deref(), Some("zh_female"));
+        assert_eq!(e.resource_id.as_deref(), Some("res_123"));
+    }
+
+    #[test]
+    fn t13_parse_segmentor_yaml() {
+        let Some(path) = testdata_path("modelloader/config_segmentor.yaml") else { return };
+        let cfg = parse_config(&path).unwrap();
+        assert_eq!(cfg.schema.as_deref(), Some("openai/chat/v1"));
+        assert_eq!(cfg.type_.as_deref(), Some("segmentor"));
+        assert!(!cfg.models.is_empty());
+    }
+
+    #[test]
+    fn t13_no_schema_no_kind() {
+        let cfg = ConfigFile {
+            ..default_config()
+        };
+        let mut muxes = MuxSet::new();
+        let err = register_config(cfg, &mut muxes).unwrap_err();
+        assert!(err.to_string().contains("neither schema nor kind"));
+    }
 }

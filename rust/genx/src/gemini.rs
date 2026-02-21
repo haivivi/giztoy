@@ -110,15 +110,14 @@ impl GeminiGenerator {
             };
 
             // Flush previous content if role changes
-            if current_role.is_some() && current_role != Some(role) {
-                if !current_parts.is_empty() {
+            if current_role.is_some() && current_role != Some(role)
+                && !current_parts.is_empty() {
                     contents.push(json!({
                         "role": current_role.unwrap(),
                         "parts": current_parts,
                     }));
                     current_parts = Vec::new();
                 }
-            }
             current_role = Some(role);
 
             match &msg.payload {
@@ -169,14 +168,13 @@ impl GeminiGenerator {
         }
 
         // Flush remaining content
-        if !current_parts.is_empty() {
-            if let Some(role) = current_role {
+        if !current_parts.is_empty()
+            && let Some(role) = current_role {
                 contents.push(json!({
                     "role": role,
                     "parts": current_parts,
                 }));
             }
-        }
 
         let params = ctx.params().or(self.config.generate_params.as_ref());
 

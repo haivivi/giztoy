@@ -615,4 +615,38 @@ mod tests {
         assert!(!json.contains("end_of_stream"));
         assert!(!json.contains("timestamp"));
     }
+
+    #[test]
+    fn t_text_clone() {
+        let original = Part::text("hello world");
+        let cloned = original.clone();
+        assert_eq!(original, cloned);
+    }
+
+    #[test]
+    fn t_blob_clone() {
+        let original = Part::blob("image/png", vec![1, 2, 3, 4, 5]);
+        let cloned = original.clone();
+        assert_eq!(original, cloned);
+        // Deep copy: modify original data check
+        if let Part::Blob(mut b) = original {
+            b.data[0] = 99;
+            if let Part::Blob(cb) = &cloned {
+                assert_ne!(cb.data[0], 99);
+            }
+        }
+    }
+
+    #[test]
+    fn t_message_chunk_clone_with_blob() {
+        let chunk = MessageChunk::blob(Role::Model, "audio/mp3", vec![10, 20, 30]);
+        let cloned = chunk.clone();
+        assert_eq!(chunk, cloned);
+        if let Some(Part::Blob(b)) = &cloned.part {
+            assert_eq!(b.mime_type, "audio/mp3");
+            assert_eq!(b.data, vec![10, 20, 30]);
+        } else {
+            panic!("expected Blob part");
+        }
+    }
 }

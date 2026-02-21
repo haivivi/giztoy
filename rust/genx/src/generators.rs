@@ -170,4 +170,26 @@ mod tests {
         assert_eq!(call_a.name, "alpha");
         assert_eq!(call_b.name, "beta");
     }
+
+    #[tokio::test]
+    async fn t5_generate_stream_through_mux() {
+        let mut mux = Mux::new();
+        mux.handle("test", Arc::new(MockGenerator { name: "test".into() }))
+            .unwrap();
+        let ctx = ModelContextBuilder::new().build();
+        let result = mux.generate_stream("test", &ctx).await;
+        // MockGenerator returns error from generate_stream
+        assert!(result.is_err());
+        assert!(result.err().unwrap().to_string().contains("mock: test"));
+    }
+
+    #[tokio::test]
+    async fn t5_invoke_through_mux() {
+        let mut mux = Mux::new();
+        mux.handle("test", Arc::new(MockGenerator { name: "test".into() }))
+            .unwrap();
+        let ctx = ModelContextBuilder::new().build();
+        let (_, call) = mux.invoke("test", &ctx, &FuncTool::new::<()>("f", "d")).await.unwrap();
+        assert_eq!(call.name, "test");
+    }
 }

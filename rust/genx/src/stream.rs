@@ -451,11 +451,10 @@ pub async fn collect_text(stream: &mut dyn Stream) -> Result<String, GenxError> 
     let mut text = String::new();
 
     while let Some(chunk) = stream.next().await? {
-        if let Some(part) = &chunk.part {
-            if let Some(t) = part.as_text() {
+        if let Some(part) = &chunk.part
+            && let Some(t) = part.as_text() {
                 text.push_str(t);
             }
-        }
     }
 
     Ok(text)
@@ -488,11 +487,10 @@ pub async fn collect_tool_calls_streamed(
 
     while let Some(chunk) = stream.next().await? {
         // Collect text content
-        if let Some(part) = &chunk.part {
-            if let Some(t) = part.as_text() {
+        if let Some(part) = &chunk.part
+            && let Some(t) = part.as_text() {
                 text_content.push_str(t);
             }
-        }
 
         // Collect tool calls with index-based accumulation
         if let Some(tc) = chunk.tool_call {
@@ -525,6 +523,7 @@ pub async fn collect_tool_calls_streamed(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::context::ModelContextBuilder;
     use crate::types::{Part, Role};
 
     #[test]
@@ -601,17 +600,109 @@ mod tests {
         builder.done(Usage::with_counts(5, 0, 1)).unwrap();
 
         let mut stream = builder.stream();
-
-        // Result should be None before exhausting stream
         assert!(stream.result().is_none());
-
-        // Exhaust stream
         while stream.next().await.unwrap().is_some() {}
 
-        // Result should be available now
         let result = stream.result().expect("result should be available");
         assert_eq!(result.status, Status::Done);
         assert_eq!(result.usage.prompt_token_count, 5);
         assert_eq!(result.usage.generated_token_count, 1);
+    }
+
+    #[test]
+    fn t_status_constants() {
+        assert_ne!(Status::Ok, Status::Done);
+        assert_ne!(Status::Done, Status::Truncated);
+        assert_ne!(Status::Truncated, Status::Blocked);
+        assert_ne!(Status::Blocked, Status::Error);
+    }
+
+    #[tokio::test]
+    async fn t_stream_builder_no_tools() {
+        let builder = StreamBuilder::new(&ModelContextBuilder::new().build(), 32);
+        builder.add(&[MessageChunk::text(Role::Model, "hi")]).unwrap();
+        builder.done(Usage::default()).unwrap();
+        let mut s = builder.stream();
+        let c = s.next().await.unwrap().unwrap();
+        assert_eq!(c.part.unwrap().as_text(), Some("hi"));
+    }
+
+    #[tokio::test]
+    async fn t_stream_builder_done_signal() {
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.done(Usage::with_counts(10, 0, 5)).unwrap();
+        let mut s = builder.stream();
+        assert!(s.next().await.unwrap().is_none());
+        let r = s.result().unwrap();
+        assert_eq!(r.status, Status::Done);
+    }
+
+    #[tokio::test]
+    async fn t_stream_builder_truncated() {
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.truncated(Usage::with_counts(10, 0, 100)).unwrap();
+        let mut s = builder.stream();
+        let err = s.next().await.unwrap_err();
+        assert!(matches!(err, GenxError::Truncated(_)));
+    }
+
+    #[tokio::test]
+    async fn t_stream_builder_blocked() {
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.blocked(Usage::default(), "content filter").unwrap();
+        let mut s = builder.stream();
+        let err = s.next().await.unwrap_err();
+        assert!(matches!(err, GenxError::Blocked { .. }));
+    }
+
+    #[tokio::test]
+    async fn t_stream_builder_unexpected() {
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.unexpected(Usage::default(), "server error").unwrap();
+        let mut s = builder.stream();
+        let err = s.next().await.unwrap_err();
+        assert!(matches!(err, GenxError::Generation { .. }));
+    }
+
+    #[tokio::test]
+    async fn t_stream_builder_abort() {
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.abort_with_message("fatal").unwrap();
+        let mut s = builder.stream();
+        let err = s.next().await.unwrap_err();
+        assert!(err.to_string().contains("fatal"));
+    }
+
+    #[tokio::test]
+    async fn t_stream_impl_close() {
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.add(&[MessageChunk::text(Role::Model, "x")]).unwrap();
+        builder.done(Usage::default()).unwrap();
+        let mut s = builder.stream();
+        s.close().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn t_stream_impl_close_with_error() {
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.add(&[MessageChunk::text(Role::Model, "x")]).unwrap();
+        builder.done(Usage::default()).unwrap();
+        let mut s = builder.stream();
+        s.close_with_error(GenxError::Other(anyhow::anyhow!("test")))
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn t_stream_builder_add_with_tool_call() {
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.add(&[MessageChunk::tool_call(
+            Role::Model,
+            ToolCall::new("call_1", crate::types::FuncCall::new("search", "{}")),
+        )]).unwrap();
+        builder.done(Usage::default()).unwrap();
+        let mut s = builder.stream();
+        let c = s.next().await.unwrap().unwrap();
+        assert!(c.tool_call.is_some());
     }
 }

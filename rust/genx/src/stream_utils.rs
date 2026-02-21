@@ -41,16 +41,14 @@ pub fn split(
             match input.next().await {
                 Ok(Some(chunk)) => {
                     if matcher(&chunk) {
-                        if let Some(tx) = &matched_tx {
-                            if tx.send(Ok(chunk)).await.is_err() {
+                        if let Some(tx) = &matched_tx
+                            && tx.send(Ok(chunk)).await.is_err() {
                                 matched_tx = None;
                             }
-                        }
-                    } else if let Some(tx) = &rest_tx {
-                        if tx.send(Ok(chunk)).await.is_err() {
+                    } else if let Some(tx) = &rest_tx
+                        && tx.send(Ok(chunk)).await.is_err() {
                             rest_tx = None;
                         }
-                    }
                 }
                 Ok(None) => break,
                 Err(e) => {

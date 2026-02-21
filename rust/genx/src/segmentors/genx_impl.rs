@@ -219,4 +219,38 @@ mod tests {
         assert!(result.entities.is_empty());
         assert!(result.relations.is_empty());
     }
+
+    #[test]
+    fn t_segmentor_model() {
+        let seg = GenXSegmentor::new(SegmentorConfig {
+            generator: "qwen/turbo".into(),
+            prompt_version: None,
+        });
+        assert_eq!(seg.model(), "qwen/turbo");
+    }
+
+    #[tokio::test]
+    async fn t_segmentor_invoke_error() {
+        let seg = GenXSegmentor::new(SegmentorConfig {
+            generator: "missing".into(),
+            prompt_version: None,
+        });
+        let input = SegmentorInput {
+            messages: vec!["user: test".into()],
+            schema: None,
+        };
+        let err = seg.process(input).await.unwrap_err();
+        assert!(err.to_string().contains("no generator mux"));
+    }
+
+    #[test]
+    fn t_segmentor_parse_nil_call() {
+        let seg = GenXSegmentor::new(SegmentorConfig {
+            generator: "test".into(),
+            prompt_version: None,
+        });
+        // Empty string = not valid JSON
+        let result = seg.parse_result("");
+        assert!(result.is_err());
+    }
 }

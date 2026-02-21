@@ -5,12 +5,11 @@ use super::types::{format_schema_section, Schema, SegmentorInput};
 pub fn build_prompt(input: &SegmentorInput) -> String {
     let mut sb = String::new();
     sb.push_str(PROMPT_BASE);
-    if let Some(schema) = &input.schema {
-        if !schema.entity_types.is_empty() {
+    if let Some(schema) = &input.schema
+        && !schema.entity_types.is_empty() {
             sb.push_str("\n\n");
             sb.push_str(&build_schema_hint(schema));
         }
-    }
     sb.push_str("\n\n");
     sb.push_str(PROMPT_OUTPUT_FORMAT);
     sb
