@@ -144,9 +144,11 @@ impl Default for MuxSet {
 }
 
 /// Load all config files from a directory and register to the MuxSet.
+/// Uses two-pass loading: first pass registers generators, second pass
+/// registers segmentors/profilers (which reference generators).
 /// Skips files with missing credentials. Returns registered model names.
 pub fn load_from_dir(dir: &Path, muxes: &mut MuxSet) -> Result<Vec<String>, GenxError> {
-    let mut names = Vec::new();
+    let mut configs = Vec::new();
 
     let entries = std::fs::read_dir(dir)
         .map_err(|e| GenxError::Other(anyhow::anyhow!("read dir {}: {}", dir.display(), e)))?;
@@ -166,8 +168,32 @@ pub fn load_from_dir(dir: &Path, muxes: &mut MuxSet) -> Result<Vec<String>, Genx
         if ext != "json" && ext != "yaml" && ext != "yml" {
             continue;
         }
+        configs.push(parse_config(&path)?);
+    }
 
-        let cfg = parse_config(&path)?;
+    let mut names = Vec::new();
+
+    // Pass 1: register generators only
+    for cfg in &configs {
+        let is_generator = cfg.kind.is_some()
+            || cfg.type_.as_deref() == Some("generator");
+        if !is_generator {
+            continue;
+        }
+        match register_config(cfg.clone(), muxes) {
+            Ok(file_names) => names.extend(file_names),
+            Err(e) if e.to_string().contains("is required") => continue,
+            Err(e) => return Err(e),
+        }
+    }
+
+    // Pass 2: register segmentors, profilers, and other types
+    for cfg in configs {
+        let is_generator = cfg.kind.is_some()
+            || cfg.type_.as_deref() == Some("generator");
+        if is_generator {
+            continue;
+        }
         match register_config(cfg, muxes) {
             Ok(file_names) => names.extend(file_names),
             Err(e) if e.to_string().contains("is required") => continue,

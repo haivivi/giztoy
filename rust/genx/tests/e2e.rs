@@ -2,7 +2,6 @@
 //! Run with: DASHSCOPE_API_KEY=... cargo test -p giztoy-genx --test e2e -- --ignored
 
 use std::path::Path;
-use std::sync::Arc;
 
 use giztoy_genx::modelloader::{load_from_dir, MuxSet};
 use giztoy_genx::segmentors::{Schema, SegmentorInput, SegmentorResult};
@@ -39,13 +38,13 @@ fn load_muxes() -> Option<MuxSet> {
     }
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore]
 async fn e2e_generator_dashscope() {
     let muxes = load_muxes().expect("DASHSCOPE_API_KEY required");
 
     let mut mcb = ModelContextBuilder::new();
-    mcb.prompt_text("system", "你是一个助手");
+    mcb.prompt_text("system", "你是一个助手。用一句话回答。");
     mcb.user_text("user", "你好");
     let ctx = mcb.build();
 
@@ -55,11 +54,19 @@ async fn e2e_generator_dashscope() {
         .await
         .expect("generate_stream failed");
 
-    let text = collect_text(&mut *stream).await.expect("collect_text failed");
+    let text = tokio::time::timeout(
+        std::time::Duration::from_secs(30),
+        collect_text(&mut *stream),
+    )
+    .await
+    .expect("generator timed out after 30s")
+    .expect("collect_text failed");
+
     assert!(!text.is_empty(), "response should not be empty");
+    eprintln!("generator response: {}", text);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore]
 async fn e2e_segmentor_dashscope() {
     let muxes = load_muxes().expect("DASHSCOPE_API_KEY required");
@@ -90,7 +97,7 @@ async fn e2e_segmentor_dashscope() {
     assert!(result.relations.len() >= 1);
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore]
 async fn e2e_profiler_dashscope() {
     let muxes = load_muxes().expect("DASHSCOPE_API_KEY required");

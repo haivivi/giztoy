@@ -335,106 +335,74 @@ impl Generator for OpenAIGenerator {
             let mut buffer = String::new();
             let mut final_usage = Usage::default();
 
-            while let Some(chunk_result) = stream.next().await {
-                match chunk_result {
-                    Ok(bytes) => {
-                        buffer.push_str(&String::from_utf8_lossy(&bytes));
-
-                        // Process complete SSE events
-                        while let Some(pos) = buffer.find("\n\n") {
-                            let event = buffer[..pos].to_string();
-                            buffer = buffer[pos + 2..].to_string();
-
-                            for line in event.lines() {
-                                if let Some(data) = line.strip_prefix("data: ") {
-                                    if data == "[DONE]" {
-                                        let _ = builder_clone.done(final_usage);
-                                        return;
+            let process_events = |buffer: &mut String, builder: &StreamBuilder, final_usage: &mut Usage| -> Option<()> {
+                // Process complete SSE events (separated by \n\n or standalone \n)
+                while let Some(pos) = buffer.find('\n') {
+                    let line = buffer[..pos].trim().to_string();
+                    buffer.drain(..pos + 1);
+                    // Skip empty lines (SSE event separator)
+                    if line.is_empty() {
+                        continue;
+                    }
+                    if let Some(data) = line.strip_prefix("data: ").or_else(|| line.strip_prefix("data:")) {
+                        let data = data.trim();
+                        if data == "[DONE]" {
+                            let _ = builder.done(final_usage.clone());
+                            return Some(());
+                        }
+                        if let Ok(json) = serde_json::from_str::<Value>(data) {
+                            let usage = Self::parse_usage(&json);
+                            if usage.prompt_token_count > 0 || usage.generated_token_count > 0 {
+                                *final_usage = usage;
+                            }
+                            if let Some(choices) = json["choices"].as_array() {
+                                for choice in choices {
+                                    if let Some(content) = choice["delta"]["content"].as_str() {
+                                        let _ = builder.add(&[MessageChunk::text(Role::Model, content)]);
                                     }
-
-                                    if let Ok(json) = serde_json::from_str::<Value>(data) {
-                                        // Parse usage from streaming response (if available)
-                                        let usage = Self::parse_usage(&json);
-                                        if usage.prompt_token_count > 0
-                                            || usage.generated_token_count > 0
-                                        {
-                                            final_usage = usage;
+                                    if let Some(tool_calls) = choice["delta"]["tool_calls"].as_array() {
+                                        for tc in tool_calls {
+                                            let index = tc["index"].as_i64().unwrap_or(0);
+                                            let id = tc["id"].as_str().unwrap_or("").to_string();
+                                            let name = tc["function"]["name"].as_str().unwrap_or("").to_string();
+                                            let arguments = tc["function"]["arguments"].as_str().unwrap_or("").to_string();
+                                            let _ = builder.add(&[MessageChunk::tool_call(
+                                                Role::Model,
+                                                ToolCall::with_index(id, index, FuncCall { name, arguments }),
+                                            )]);
                                         }
-
-                                        if let Some(choices) = json["choices"].as_array() {
-                                            for choice in choices {
-                                                // Handle text content
-                                                if let Some(content) =
-                                                    choice["delta"]["content"].as_str()
-                                                {
-                                                    let _ = builder_clone.add(&[
-                                                        MessageChunk::text(Role::Model, content),
-                                                    ]);
-                                                }
-
-                                                // Handle streaming tool calls
-                                                if let Some(tool_calls) =
-                                                    choice["delta"]["tool_calls"].as_array()
-                                                {
-                                                    for tc in tool_calls {
-                                                        let index =
-                                                            tc["index"].as_i64().unwrap_or(0);
-                                                        let id = tc["id"]
-                                                            .as_str()
-                                                            .unwrap_or("")
-                                                            .to_string();
-                                                        let name = tc["function"]["name"]
-                                                            .as_str()
-                                                            .unwrap_or("")
-                                                            .to_string();
-                                                        let arguments = tc["function"]["arguments"]
-                                                            .as_str()
-                                                            .unwrap_or("")
-                                                            .to_string();
-
-                                                        let _ = builder_clone.add(&[
-                                                            MessageChunk::tool_call(
-                                                                Role::Model,
-                                                                ToolCall::with_index(
-                                                                    id,
-                                                                    index,
-                                                                    FuncCall { name, arguments },
-                                                                ),
-                                                            ),
-                                                        ]);
-                                                    }
-                                                }
-
-                                                // Check finish reason
-                                                if let Some(reason) =
-                                                    choice["finish_reason"].as_str()
-                                                {
-                                                    match reason {
-                                                        "stop" | "tool_calls" => {
-                                                            let _ =
-                                                                builder_clone.done(final_usage);
-                                                            return;
-                                                        }
-                                                        "length" => {
-                                                            let _ = builder_clone
-                                                                .truncated(final_usage);
-                                                            return;
-                                                        }
-                                                        "content_filter" => {
-                                                            let _ = builder_clone.blocked(
-                                                                final_usage,
-                                                                "content_filter",
-                                                            );
-                                                            return;
-                                                        }
-                                                        _ => {}
-                                                    }
-                                                }
+                                    }
+                                    if let Some(reason) = choice["finish_reason"].as_str() {
+                                        match reason {
+                                            "stop" | "tool_calls" => {
+                                                let _ = builder.done(final_usage.clone());
+                                                return Some(());
                                             }
+                                            "length" => {
+                                                let _ = builder.truncated(final_usage.clone());
+                                                return Some(());
+                                            }
+                                            "content_filter" => {
+                                                let _ = builder.blocked(final_usage.clone(), "content_filter");
+                                                return Some(());
+                                            }
+                                            _ => {}
                                         }
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+                None
+            };
+
+            while let Some(chunk_result) = stream.next().await {
+                match chunk_result {
+                    Ok(bytes) => {
+                        buffer.push_str(&String::from_utf8_lossy(&bytes));
+                        if process_events(&mut buffer, &builder_clone, &mut final_usage).is_some() {
+                            return;
                         }
                     }
                     Err(e) => {
@@ -447,6 +415,9 @@ impl Generator for OpenAIGenerator {
                 }
             }
 
+            // Process any remaining buffer after stream ends
+            buffer.push('\n');
+            process_events(&mut buffer, &builder_clone, &mut final_usage);
             let _ = builder_clone.done(final_usage);
         });
 

@@ -345,6 +345,7 @@ impl<T: Clone> BlockBuffer<T> {
         // Read as much as possible
         let n = std::cmp::min(buf.len(), state.count);
         let capacity = state.buf.len();
+        #[allow(clippy::needless_range_loop)]
         for i in 0..n {
             let head = state.head;
             buf[i] = state.buf[head].take().unwrap();
