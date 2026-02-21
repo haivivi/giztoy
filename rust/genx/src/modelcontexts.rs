@@ -157,4 +157,35 @@ mod tests {
         let p: Vec<&Prompt> = ctx.prompts().collect();
         assert_eq!(p[0].text, "v2");
     }
+
+    #[tokio::test]
+    async fn t6_model_context_through_mux() {
+        let mut mux = Mux::new();
+        mux.handle("test/ctx", Arc::new(StaticProvider { text: "via mux".into() })).unwrap();
+        let ctx = mux.model_context("test/ctx").await.unwrap();
+        let prompts: Vec<&Prompt> = ctx.prompts().collect();
+        assert_eq!(prompts.len(), 1);
+        assert_eq!(prompts[0].text, "via mux");
+        // Unregistered pattern
+        assert!(mux.model_context("unregistered").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn t6_provider_error() {
+        struct ErrorProvider;
+
+        #[async_trait]
+        impl ModelContextProvider for ErrorProvider {
+            async fn model_context(&self, _: &str) -> Result<Box<dyn ModelContext>, GenxError> {
+                Err(GenxError::Other(anyhow::anyhow!("provider failed")))
+            }
+        }
+
+        let mut mux = Mux::new();
+        mux.handle("err", Arc::new(ErrorProvider)).unwrap();
+        let result = mux.model_context("err").await;
+        assert!(result.is_err());
+        let err = result.err().unwrap();
+        assert!(err.to_string().contains("provider failed"));
+    }
 }

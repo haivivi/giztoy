@@ -249,8 +249,68 @@ mod tests {
             generator: "test".into(),
             prompt_version: None,
         });
-        // Empty string = not valid JSON
         let result = seg.parse_result("");
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn t_segmentor_process_mock_generator() {
+        use crate::generators::Mux as GeneratorMux;
+        use crate::context::ModelContext;
+        use crate::stream::Stream;
+
+        struct MockGen { response: String }
+
+        #[async_trait::async_trait]
+        impl crate::Generator for MockGen {
+            async fn generate_stream(&self, _: &str, _: &dyn ModelContext)
+                -> Result<Box<dyn Stream>, crate::GenxError> { unimplemented!() }
+            async fn invoke(&self, _: &str, _: &dyn ModelContext, tool: &crate::FuncTool)
+                -> Result<(crate::Usage, crate::types::FuncCall), crate::GenxError> {
+                use crate::tool::Tool;
+                Ok((crate::Usage::default(), crate::types::FuncCall::new(tool.name(), &self.response)))
+            }
+        }
+
+        let mock_json = r#"{
+            "segment": {
+                "summary": "小明和爸爸聊了恐龙",
+                "keywords": ["恐龙", "霸王龙", "小明"],
+                "labels": ["person:小明", "person:爸爸", "topic:恐龙"]
+            },
+            "entities": [
+                {"label": "person:小明", "attrs": [{"key": "age", "value": "5"}, {"key": "favorite_dinosaur", "value": "霸王龙"}]},
+                {"label": "person:爸爸", "attrs": []},
+                {"label": "topic:恐龙", "attrs": [{"key": "category", "value": "古生物"}]}
+            ],
+            "relations": [
+                {"from": "person:小明", "to": "topic:恐龙", "rel_type": "likes"},
+                {"from": "person:爸爸", "to": "person:小明", "rel_type": "parent"}
+            ]
+        }"#;
+
+        let mut gen_mux = GeneratorMux::new();
+        gen_mux.handle("mock/gen", std::sync::Arc::new(MockGen { response: mock_json.into() })).unwrap();
+
+        let seg = GenXSegmentor::with_mux(
+            SegmentorConfig { generator: "mock/gen".into(), prompt_version: None },
+            std::sync::Arc::new(gen_mux),
+        );
+
+        let input = SegmentorInput {
+            messages: vec!["user: 今天和小明聊了恐龙".into(), "assistant: 小明最喜欢霸王龙".into()],
+            schema: None,
+        };
+
+        let result = seg.process(input).await.unwrap();
+
+        assert!(!result.segment.summary.is_empty());
+        assert_eq!(result.segment.keywords.len(), 3);
+        assert_eq!(result.segment.labels.len(), 3);
+        assert_eq!(result.entities.len(), 3);
+        let xiaoming = result.entities.iter().find(|e| e.label == "person:小明").unwrap();
+        assert_eq!(xiaoming.attrs.get("favorite_dinosaur"), Some(&serde_json::Value::String("霸王龙".into())));
+        assert_eq!(result.relations.len(), 2);
+        assert!(result.relations.iter().any(|r| r.from == "person:小明" && r.to == "topic:恐龙" && r.rel_type == "likes"));
     }
 }

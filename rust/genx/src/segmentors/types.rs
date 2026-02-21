@@ -66,10 +66,11 @@ pub struct SegmentorInput {
 /// Output of a Segmentor.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SegmentorResult {
+    #[serde(alias = "Segment")]
     pub segment: SegmentOutput,
-    #[serde(default, deserialize_with = "null_default")]
+    #[serde(alias = "Entities", default, deserialize_with = "null_default")]
     pub entities: Vec<EntityOutput>,
-    #[serde(default, deserialize_with = "null_default")]
+    #[serde(alias = "Relations", default, deserialize_with = "null_default")]
     pub relations: Vec<RelationOutput>,
 }
 

@@ -1,0 +1,10 @@
+# Profiler model configuration.
+# References a generator pattern that must be registered first
+# (e.g., from dashscope.yaml above).
+schema: "genx/profiler/v1"
+type: "profiler"
+models:
+  - name: "prof/qwen-turbo"
+    model: "qwen/turbo"
+  - name: "prof/qwen-plus"
+    model: "qwen/plus"

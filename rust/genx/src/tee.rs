@@ -23,7 +23,7 @@ impl Stream for TeeStream {
     async fn next(&mut self) -> Result<Option<MessageChunk>, GenxError> {
         match self.src.next().await {
             Ok(Some(chunk)) => {
-                let _ = self.builder.add(&[chunk.clone()]);
+                let _ = self.builder.add(std::slice::from_ref(&chunk));
                 Ok(Some(chunk))
             }
             Ok(None) => {

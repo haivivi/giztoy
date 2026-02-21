@@ -257,6 +257,69 @@ mod tests {
         assert!(msg.contains("no generator mux"), "error should mention missing mux: {}", msg);
     }
 
+    #[tokio::test]
+    async fn t_profiler_process_mock_generator() {
+        use crate::generators::Mux as GeneratorMux;
+        use crate::context::ModelContext;
+        use crate::stream::Stream;
+        use crate::segmentors::{SegmentOutput, SegmentorResult, EntityOutput, RelationOutput as SegRelation};
+
+        struct MockGen { response: String }
+
+        #[async_trait::async_trait]
+        impl crate::Generator for MockGen {
+            async fn generate_stream(&self, _: &str, _: &dyn ModelContext)
+                -> Result<Box<dyn Stream>, crate::GenxError> { unimplemented!() }
+            async fn invoke(&self, _: &str, _: &dyn ModelContext, tool: &crate::FuncTool)
+                -> Result<(crate::Usage, crate::types::FuncCall), crate::GenxError> {
+                use crate::tool::Tool;
+                Ok((crate::Usage::default(), crate::types::FuncCall::new(tool.name(), &self.response)))
+            }
+        }
+
+        let mock_json = r#"{
+            "schema_changes": [{"entity_type": "person", "field": "school", "def": {"type": "string", "desc": "学校名称"}, "action": "add"}],
+            "profile_updates": {"person:小明": {"age": 5, "favorite_dinosaur": "霸王龙", "school": "阳光幼儿园"}},
+            "relations": [{"from": "person:小明", "to": "place:阳光幼儿园", "rel_type": "attends"}]
+        }"#;
+
+        let mut gen_mux = GeneratorMux::new();
+        gen_mux.handle("mock/gen", std::sync::Arc::new(MockGen { response: mock_json.into() })).unwrap();
+
+        let prof = GenXProfiler::with_mux(
+            ProfilerConfig { generator: "mock/gen".into(), prompt_version: None },
+            std::sync::Arc::new(gen_mux),
+        );
+
+        let input = ProfilerInput {
+            messages: vec!["user: 小明今天在幼儿园学了恐龙知识".into()],
+            extracted: SegmentorResult {
+                segment: SegmentOutput { summary: "test".into(), keywords: vec![], labels: vec![] },
+                entities: vec![EntityOutput { label: "person:小明".into(), attrs: HashMap::new() }],
+                relations: vec![SegRelation { from: "person:小明".into(), to: "topic:恐龙".into(), rel_type: "likes".into() }],
+            },
+            schema: None,
+            profiles: Some({
+                let mut m = HashMap::new();
+                let mut p = HashMap::new();
+                p.insert("age".into(), serde_json::json!(5));
+                m.insert("person:小明".into(), p);
+                m
+            }),
+        };
+
+        let result = prof.process(input).await.unwrap();
+
+        assert_eq!(result.schema_changes.len(), 1);
+        assert_eq!(result.schema_changes[0].entity_type, "person");
+        assert_eq!(result.schema_changes[0].field, "school");
+        assert_eq!(result.schema_changes[0].action, "add");
+        assert_eq!(result.profile_updates.len(), 1);
+        assert_eq!(result.profile_updates["person:小明"]["school"], "阳光幼儿园");
+        assert_eq!(result.relations.len(), 1);
+        assert_eq!(result.relations[0].rel_type, "attends");
+    }
+
     #[test]
     fn t12_golden_input_deserialization() {
         let Some(path) = testdata_path("profilers/input.json") else { return };

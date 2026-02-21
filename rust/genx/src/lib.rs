@@ -305,6 +305,14 @@ mod tests {
     }
 
     #[test]
+    fn t_inspect_unknown_tool() {
+        // SearchWebTool is the "other" variant — verify inspect doesn't panic
+        let tool = SearchWebTool;
+        let output = inspect_tool(&tool);
+        assert!(!output.is_empty());
+    }
+
+    #[test]
     fn t_inspect_message_tool_result() {
         let msg = Message::tool_result(ToolResult::new("call_1", "result data"));
         let output = inspect_message(&msg);

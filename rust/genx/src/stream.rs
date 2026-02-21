@@ -178,6 +178,7 @@ pub trait Stream: Send + Sync {
 /// This is used by generator implementations to produce streaming output.
 pub struct StreamBuilder {
     buffer: BlockBuffer<StreamEvent>,
+    #[allow(dead_code)]
     func_tools: HashMap<String, Arc<FuncTool>>,
     result: Arc<Mutex<Option<StreamResult>>>,
     done: Arc<AtomicBool>,
@@ -691,6 +692,21 @@ mod tests {
         s.close_with_error(GenxError::Other(anyhow::anyhow!("test")))
             .await
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn t_stream_builder_add_unknown_tool() {
+        // ToolCall with name not in any registered tools — should not panic
+        let builder = StreamBuilder::with_tools(32, vec![]);
+        builder.add(&[MessageChunk::tool_call(
+            Role::Model,
+            ToolCall::new("call_99", crate::types::FuncCall::new("nonexistent_tool", "{}")),
+        )]).unwrap();
+        builder.done(Usage::default()).unwrap();
+        let mut s = builder.stream();
+        let c = s.next().await.unwrap().unwrap();
+        assert!(c.tool_call.is_some());
+        assert_eq!(c.tool_call.unwrap().func_call.name, "nonexistent_tool");
     }
 
     #[tokio::test]
