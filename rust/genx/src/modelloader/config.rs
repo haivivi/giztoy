@@ -88,12 +88,22 @@ pub struct VoiceEntry {
 }
 
 /// Expand environment variable references in a string.
-/// Supports `$VAR` and `${VAR}` formats.
+/// Supports `$VAR` and `${VAR}` formats. `$$` is treated as escaped `$`.
+/// Matches Go's `os.ExpandEnv` behavior for the common cases.
 fn expand_env(s: &str) -> String {
     if s.is_empty() || !s.starts_with('$') {
         return s.to_string();
     }
-    let var_name = s.trim_start_matches('$').trim_matches(|c| c == '{' || c == '}');
+    // $$ → literal $
+    if s.starts_with("$$") {
+        return format!("${}", &s[2..]);
+    }
+    // ${VAR} → strip ${ and }
+    if let Some(inner) = s.strip_prefix("${").and_then(|r| r.strip_suffix('}')) {
+        return std::env::var(inner).unwrap_or_default();
+    }
+    // $VAR → strip leading $
+    let var_name = &s[1..];
     std::env::var(var_name).unwrap_or_default()
 }
 
@@ -147,13 +157,8 @@ impl Default for MuxSet {
     }
 }
 
-/// Load all config files from a directory and register to the MuxSet.
-/// Uses two-pass loading: first pass registers generators, second pass
-/// registers segmentors/profilers (which reference generators).
-/// Skips files with missing credentials. Returns registered model names.
-pub fn load_from_dir(dir: &Path, muxes: &mut MuxSet) -> Result<Vec<String>, GenxError> {
-    let mut configs = Vec::new();
-
+/// Recursively collect config files from a directory (matching Go's filepath.WalkDir).
+fn walk_config_files(dir: &Path, configs: &mut Vec<ConfigFile>) -> Result<(), GenxError> {
     let entries = std::fs::read_dir(dir)
         .map_err(|e| GenxError::Other(anyhow::anyhow!("read dir {}: {}", dir.display(), e)))?;
 
@@ -162,6 +167,7 @@ pub fn load_from_dir(dir: &Path, muxes: &mut MuxSet) -> Result<Vec<String>, Genx
             .map_err(|e| GenxError::Other(anyhow::anyhow!("dir entry: {}", e)))?;
         let path = entry.path();
         if path.is_dir() {
+            walk_config_files(&path, configs)?;
             continue;
         }
         let ext = path
@@ -174,6 +180,16 @@ pub fn load_from_dir(dir: &Path, muxes: &mut MuxSet) -> Result<Vec<String>, Genx
         }
         configs.push(parse_config(&path)?);
     }
+    Ok(())
+}
+
+/// Load all config files from a directory recursively and register to the MuxSet.
+/// Uses two-pass loading: first pass registers generators, second pass
+/// registers segmentors/profilers (which reference generators).
+/// Skips files with missing credentials. Returns registered model names.
+pub fn load_from_dir(dir: &Path, muxes: &mut MuxSet) -> Result<Vec<String>, GenxError> {
+    let mut configs = Vec::new();
+    walk_config_files(dir, &mut configs)?;
 
     let mut names = Vec::new();
 
