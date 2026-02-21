@@ -1,12 +1,14 @@
-//! Track system for the mixer with independent ring buffers.
+//! Track system for the mixer with independent ring buffers and read-side resampling.
 //!
 //! Each track has a queue of `TrackInput`s, each with its own ring buffer
-//! (and optional resampler). The mixer pulls fixed-size chunks from each
-//! track; if a track has insufficient data, the remainder is zero-filled.
+//! and optional `SincFixedOut` resampler. The ring buffer stores raw input-format
+//! data; when the mixer reads, data is pulled through the resampler (if present)
+//! to produce output-format samples on demand (lazy read-side resample).
 //!
 //! This matches the Go implementation in `go/pkg/audio/pcm/track.go`.
 
 use super::format::Format;
+use rubato::{Resampler, SincFixedOut, SincInterpolationParameters, SincInterpolationType, WindowFunction};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 
@@ -142,10 +144,6 @@ impl TrackRingBuf {
         self.notify_mixer.notify_all();
     }
 
-    pub fn is_eof(&self) -> bool {
-        let inner = self.mu.lock().unwrap();
-        inner.close_write && (inner.tail - inner.head) == 0
-    }
 }
 
 pub(crate) enum ReadResult {
@@ -156,13 +154,302 @@ pub(crate) enum ReadResult {
 }
 
 // ============================================================================
-// TrackInput — a single input writer with its own ring buffer
+// TrackInput — a single input writer with its own ring buffer + resampler
 // ============================================================================
 
-/// A single audio input source for a track, with its own ring buffer.
+const SINC_LEN: usize = 128;
+const OVERSAMPLING_FACTOR: usize = 128;
+const RESAMPLE_CHUNK_SIZE: usize = 480;
+
+fn make_sinc_params() -> SincInterpolationParameters {
+    SincInterpolationParameters {
+        sinc_len: SINC_LEN,
+        f_cutoff: rubato::calculate_cutoff(SINC_LEN, WindowFunction::BlackmanHarris2),
+        interpolation: SincInterpolationType::Cubic,
+        oversampling_factor: OVERSAMPLING_FACTOR,
+        window: WindowFunction::BlackmanHarris2,
+    }
+}
+
+/// A single audio input source for a track, with its own ring buffer
+/// and optional read-side resampler.
 pub(crate) struct TrackInput {
     pub format: Format,
+    pub output_format: Format,
     pub rb: Arc<TrackRingBuf>,
+    resampler: Option<SincFixedOut<f32>>,
+    /// Accumulated input frames (f32 per-channel) waiting for the resampler.
+    accum: Vec<Vec<f32>>,
+    /// Reusable byte buffer for reading raw PCM from ring buffer.
+    raw_buf: Vec<u8>,
+    /// Whether the ring buffer has reached EOF.
+    rb_eof: bool,
+    /// Whether the resampler's internal delay has been flushed.
+    delay_flushed: bool,
+}
+
+impl TrackInput {
+    pub fn new(format: Format, output_format: Format, rb: Arc<TrackRingBuf>) -> Result<Self, String> {
+        let needs_resample = format.sample_rate != output_format.sample_rate;
+        let in_channels = format.channels() as usize;
+        let resampler = if needs_resample {
+            let ratio = output_format.sample_rate as f64 / format.sample_rate as f64;
+            Some(SincFixedOut::<f32>::new(
+                ratio,
+                2.0,
+                make_sinc_params(),
+                RESAMPLE_CHUNK_SIZE,
+                in_channels,
+            ).map_err(|e| format!("failed to create resampler ({}Hz → {}Hz): {}",
+                format.sample_rate, output_format.sample_rate, e))?)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            format,
+            output_format,
+            rb,
+            resampler,
+            accum: vec![Vec::new(); in_channels],
+            raw_buf: Vec::new(),
+            rb_eof: false,
+            delay_flushed: false,
+        })
+    }
+
+    /// Reads data from this input, resampling if necessary.
+    /// The output buffer `buf` must be in output_format (pre-zeroed by caller).
+    ///
+    /// Returns ReadResult indicating data availability.
+    pub fn read(&mut self, buf: &mut [u8]) -> ReadResult {
+        if self.resampler.is_some() {
+            self.read_resampled(buf)
+        } else if self.format.channels() != self.output_format.channels() {
+            self.read_channel_convert(buf)
+        } else {
+            self.rb.read(buf)
+        }
+    }
+
+    /// Read with sample rate conversion via SincFixedOut.
+    ///
+    /// Accumulates input frames from the ring buffer until we have enough
+    /// for the resampler, then processes and returns output. Never zero-pads
+    /// real data — if not enough input is available, returns Empty.
+    fn read_resampled(&mut self, buf: &mut [u8]) -> ReadResult {
+        let in_channels = self.format.channels() as usize;
+        let out_channels = self.output_format.channels() as usize;
+
+        // Pull data from ring buffer into accumulator
+        if !self.rb_eof {
+            self.pull_from_ringbuf();
+        }
+
+        let frames_needed = self.resampler.as_ref().unwrap().input_frames_next();
+        let accum_frames = if self.accum.is_empty() { 0 } else { self.accum[0].len() };
+
+        if accum_frames >= frames_needed {
+            // Have enough — extract exactly frames_needed and process
+            let mut input: Vec<Vec<f32>> = Vec::with_capacity(in_channels);
+            for ch in 0..in_channels {
+                let rest = self.accum[ch].split_off(frames_needed);
+                input.push(std::mem::replace(&mut self.accum[ch], rest));
+            }
+
+            let resampler = self.resampler.as_mut().unwrap();
+            let output = match resampler.process(&input, None) {
+                Ok(out) => out,
+                Err(e) => return ReadResult::Error(format!("resampler process: {}", e)),
+            };
+
+            let output_frames = if output.is_empty() { 0 } else { output[0].len() };
+            if output_frames == 0 {
+                return ReadResult::Empty;
+            }
+            return self.write_output_to_buf(&output, output_frames, out_channels, buf);
+        }
+
+        if self.rb_eof {
+            if self.delay_flushed {
+                return ReadResult::Eof;
+            }
+
+            // Not enough frames and ring buffer is done — flush resampler
+            if accum_frames > 0 {
+                let input = std::mem::take(&mut self.accum);
+                let resampler = self.resampler.as_mut().unwrap();
+                let output = match resampler.process_partial(Some(&input), None) {
+                    Ok(out) => out,
+                    Err(_) => {
+                        self.delay_flushed = true;
+                        return ReadResult::Eof;
+                    }
+                };
+                let output_frames = if output.is_empty() { 0 } else { output[0].len() };
+                if output_frames > 0 {
+                    return self.write_output_to_buf(&output, output_frames, out_channels, buf);
+                }
+            }
+
+            // Flush resampler's internal delay (once)
+            let resampler = self.resampler.as_mut().unwrap();
+            let output = match resampler.process_partial::<Vec<f32>>(None, None) {
+                Ok(out) => out,
+                Err(_) => {
+                    self.delay_flushed = true;
+                    return ReadResult::Eof;
+                }
+            };
+            self.delay_flushed = true;
+            let output_frames = if output.is_empty() { 0 } else { output[0].len() };
+            if output_frames > 0 {
+                return match self.write_output_to_buf(&output, output_frames, out_channels, buf) {
+                    ReadResult::Data(n) => ReadResult::Data(n),
+                    _ => ReadResult::Eof,
+                };
+            }
+            return ReadResult::Eof;
+        }
+
+        // Not enough data yet and ring buffer still open
+        ReadResult::Empty
+    }
+
+    /// Pull available data from ring buffer into the f32 accumulator.
+    fn pull_from_ringbuf(&mut self) {
+        let in_channels = self.format.channels() as usize;
+        let read_size = self.format.bytes_rate() as usize / 10; // ~100ms worth
+        if self.raw_buf.len() < read_size {
+            self.raw_buf.resize(read_size, 0);
+        }
+
+        loop {
+            match self.rb.read(&mut self.raw_buf[..read_size]) {
+                ReadResult::Data(n) => {
+                    let frame_bytes = in_channels * 2;
+                    let frames_read = n / frame_bytes;
+                    for frame in 0..frames_read {
+                        for ch in 0..in_channels {
+                            let offset = (frame * in_channels + ch) * 2;
+                            let sample = i16::from_le_bytes([
+                                self.raw_buf[offset],
+                                self.raw_buf[offset + 1],
+                            ]);
+                            self.accum[ch].push(sample as f32 / 32768.0);
+                        }
+                    }
+                }
+                ReadResult::Eof => {
+                    self.rb_eof = true;
+                    break;
+                }
+                ReadResult::Empty | ReadResult::Error(_) => {
+                    break;
+                }
+            }
+        }
+    }
+
+    /// Convert resampler f32 per-channel output to i16 LE bytes in buf.
+    /// Handles channel conversion (mono↔stereo) between resampler output
+    /// and mixer output format.
+    fn write_output_to_buf(
+        &self,
+        output: &[Vec<f32>],
+        output_frames: usize,
+        out_channels: usize,
+        buf: &mut [u8],
+    ) -> ReadResult {
+        let resampler_channels = output.len();
+        let max_frames = buf.len() / (out_channels * 2);
+        let frames_to_write = output_frames.min(max_frames);
+
+        let mut written = 0;
+        for frame in 0..frames_to_write {
+            for ch in 0..out_channels {
+                let sample_f32 = if resampler_channels == 1 && out_channels == 2 {
+                    // Mono → stereo: duplicate
+                    output[0][frame]
+                } else if resampler_channels == 2 && out_channels == 1 {
+                    // Stereo → mono: average
+                    (output[0][frame] + output[1][frame]) * 0.5
+                } else {
+                    output[ch.min(resampler_channels - 1)][frame]
+                };
+
+                let sample = (sample_f32 * 32767.0).clamp(-32768.0, 32767.0) as i16;
+                let offset = written;
+                if offset + 1 < buf.len() {
+                    let bytes = sample.to_le_bytes();
+                    buf[offset] = bytes[0];
+                    buf[offset + 1] = bytes[1];
+                }
+                written += 2;
+            }
+        }
+
+        if written > 0 {
+            ReadResult::Data(written)
+        } else {
+            ReadResult::Empty
+        }
+    }
+
+    /// Read with channel conversion only (no sample rate change).
+    fn read_channel_convert(&mut self, buf: &mut [u8]) -> ReadResult {
+        let in_ch = self.format.channels() as usize;
+        let out_ch = self.output_format.channels() as usize;
+
+        if in_ch == 2 && out_ch == 1 {
+            // Stereo → mono: read double, downmix
+            let stereo_len = buf.len() * 2;
+            if self.raw_buf.len() < stereo_len {
+                self.raw_buf.resize(stereo_len, 0);
+            }
+            match self.rb.read(&mut self.raw_buf[..stereo_len]) {
+                ReadResult::Data(n) => {
+                    let frames = n / 4;
+                    for i in 0..frames {
+                        let j = i * 4;
+                        let l = i16::from_le_bytes([self.raw_buf[j], self.raw_buf[j + 1]]);
+                        let r = i16::from_le_bytes([self.raw_buf[j + 2], self.raw_buf[j + 3]]);
+                        let m = ((l as i32 + r as i32) / 2) as i16;
+                        let bytes = m.to_le_bytes();
+                        buf[i * 2] = bytes[0];
+                        buf[i * 2 + 1] = bytes[1];
+                    }
+                    ReadResult::Data(frames * 2)
+                }
+                other => other,
+            }
+        } else if in_ch == 1 && out_ch == 2 {
+            // Mono → stereo: read half, duplicate
+            let mono_len = buf.len() / 2;
+            if self.raw_buf.len() < mono_len {
+                self.raw_buf.resize(mono_len, 0);
+            }
+            match self.rb.read(&mut self.raw_buf[..mono_len]) {
+                ReadResult::Data(n) => {
+                    let samples = n / 2;
+                    for i in (0..samples).rev() {
+                        let s0 = self.raw_buf[i * 2];
+                        let s1 = self.raw_buf[i * 2 + 1];
+                        let j = i * 4;
+                        buf[j] = s0;
+                        buf[j + 1] = s1;
+                        buf[j + 2] = s0;
+                        buf[j + 3] = s1;
+                    }
+                    ReadResult::Data(samples * 4)
+                }
+                other => other,
+            }
+        } else {
+            self.rb.read(buf)
+        }
+    }
+
 }
 
 // ============================================================================
@@ -172,8 +459,10 @@ pub(crate) struct TrackInput {
 /// Internal track state managed by the mixer.
 ///
 /// Holds a queue of TrackInputs. The mixer reads from the head input;
-/// when it returns EOF, the next input is activated.
+/// when it returns EOF, the next input is activated. Each input may have
+/// its own resampler for read-side lazy sample rate conversion.
 pub(crate) struct InternalTrack {
+    pub output_format: Format,
     pub inputs: Mutex<Vec<TrackInput>>,
     pub close_write: AtomicBool,
     pub close_err: Mutex<Option<String>>,
@@ -181,8 +470,9 @@ pub(crate) struct InternalTrack {
 }
 
 impl InternalTrack {
-    pub fn new(notify_mixer: Arc<Condvar>) -> Self {
+    pub fn new(output_format: Format, notify_mixer: Arc<Condvar>) -> Self {
         Self {
+            output_format,
             inputs: Mutex::new(Vec::new()),
             close_write: AtomicBool::new(false),
             close_err: Mutex::new(None),
@@ -191,37 +481,52 @@ impl InternalTrack {
     }
 
     /// Adds a new input with its format and ring buffer.
-    pub fn add_input(&self, format: Format, rb: Arc<TrackRingBuf>) {
-        self.inputs.lock().unwrap().push(TrackInput { format, rb });
+    /// A resampler is created automatically if the input format differs
+    /// from the track's output format. Returns an error if the resampler
+    /// cannot be created (e.g. invalid sample rate).
+    pub fn add_input(&self, format: Format, rb: Arc<TrackRingBuf>) -> Result<(), String> {
+        let input = TrackInput::new(format, self.output_format, rb)?;
+        self.inputs.lock().unwrap().push(input);
+        self.notify_mixer.notify_all();
+        Ok(())
     }
 
-    /// Reads a full chunk from the track. Zero-fills if not enough data.
+    /// Reads a full chunk from the track in the output format.
+    /// Zero-fills if not enough data.
     ///
-    /// This is the key function: it reads from the head input's ring buffer.
-    /// If the head input returns EOF, it moves to the next one.
-    /// If no data is available from any input, the buffer is left zeroed.
+    /// Data is pulled through the head input's resampler (if present)
+    /// to convert from input format to output format on demand.
+    /// Loops to fill the entire buffer, matching Go's readFull semantics.
     ///
     /// Returns (bytes_read, is_done):
     /// - bytes_read > 0: data was read (possibly zero-filled at the end)
     /// - is_done: true if all inputs are exhausted and write is closed
     pub fn read_full(&self, buf: &mut [u8]) -> (usize, bool) {
-        // Pre-zero the buffer for zero-fill semantics
         buf.fill(0);
 
-        if let Some(ref e) = *self.close_err.lock().unwrap() {
+        if self.close_err.lock().unwrap().is_some() {
             return (0, true);
         }
 
         let mut inputs = self.inputs.lock().unwrap();
+        let mut filled = 0usize;
 
         while !inputs.is_empty() {
-            match inputs[0].rb.read(buf) {
-                ReadResult::Data(_n) => {
-                    // Got data (rest of buf is already zeroed). Return full chunk.
-                    return (buf.len(), false);
+            if filled >= buf.len() {
+                break;
+            }
+
+            match inputs[0].read(&mut buf[filled..]) {
+                ReadResult::Data(n) => {
+                    filled += n;
+                    if filled >= buf.len() {
+                        return (buf.len(), false);
+                    }
                 }
                 ReadResult::Empty => {
-                    // No data yet from this input. Return zeroed buffer.
+                    if filled > 0 {
+                        return (buf.len(), false);
+                    }
                     return (0, false);
                 }
                 ReadResult::Eof => {
@@ -235,10 +540,14 @@ impl InternalTrack {
             }
         }
 
+        if filled > 0 {
+            return (buf.len(), false);
+        }
+
         if self.close_write.load(Ordering::SeqCst) {
-            (0, true) // All inputs exhausted, track done
+            (0, true)
         } else {
-            (0, false) // No inputs yet
+            (0, false)
         }
     }
 
@@ -261,16 +570,6 @@ impl InternalTrack {
         self.notify_mixer.notify_all();
     }
 
-    pub fn is_done(&self) -> bool {
-        if self.close_err.lock().unwrap().is_some() {
-            return true;
-        }
-        if !self.close_write.load(Ordering::SeqCst) {
-            return false;
-        }
-        let inputs = self.inputs.lock().unwrap();
-        inputs.iter().all(|input| input.rb.is_eof())
-    }
 }
 
 #[cfg(test)]
@@ -331,24 +630,20 @@ mod tests {
     #[test]
     fn test_internal_track_read_full_zero_fill() {
         let notify = Arc::new(Condvar::new());
-        let track = InternalTrack::new(notify.clone());
+        let track = InternalTrack::new(Format::L16Mono16K, notify.clone());
 
         let rb = Arc::new(TrackRingBuf::new(1000, notify));
-        // Write only 4 bytes (2 samples)
         rb.write(&[0x10, 0x00, 0x20, 0x00]).unwrap();
         track.add_input(Format::L16Mono16K, rb);
 
-        // Read 10 bytes — should get 4 real + 6 zeros
         let mut buf = vec![0xFFu8; 10];
         let (n, done) = track.read_full(&mut buf);
         assert_eq!(n, 10, "read_full should return full buffer size");
         assert!(!done);
-        // First 4 bytes are real data
         assert_eq!(buf[0], 0x10);
         assert_eq!(buf[1], 0x00);
         assert_eq!(buf[2], 0x20);
         assert_eq!(buf[3], 0x00);
-        // Rest should be zero-filled
         for &b in &buf[4..] {
             assert_eq!(b, 0, "remaining bytes should be zero-filled");
         }
@@ -357,15 +652,13 @@ mod tests {
     #[test]
     fn test_internal_track_sequential_inputs() {
         let notify = Arc::new(Condvar::new());
-        let track = InternalTrack::new(notify.clone());
+        let track = InternalTrack::new(Format::L16Mono16K, notify.clone());
 
-        // Input 1: writes [1,0, 2,0]
         let rb1 = Arc::new(TrackRingBuf::new(100, notify.clone()));
         rb1.write(&[1, 0, 2, 0]).unwrap();
         rb1.close_write();
         track.add_input(Format::L16Mono16K, rb1);
 
-        // Input 2: writes [3,0, 4,0]
         let rb2 = Arc::new(TrackRingBuf::new(100, notify.clone()));
         rb2.write(&[3, 0, 4, 0]).unwrap();
         rb2.close_write();
@@ -373,19 +666,16 @@ mod tests {
 
         track.close_write();
 
-        // First read should get input 1
         let mut buf = [0u8; 4];
         let (n, done) = track.read_full(&mut buf);
         assert_eq!(n, 4);
         assert!(!done);
         assert_eq!(buf, [1, 0, 2, 0]);
 
-        // Input 1 is EOF, should switch to input 2
         let (n, done) = track.read_full(&mut buf);
         assert_eq!(n, 4);
         assert_eq!(buf, [3, 0, 4, 0]);
 
-        // Both inputs exhausted
         let (_, done) = track.read_full(&mut buf);
         assert!(done);
     }
