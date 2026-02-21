@@ -1179,6 +1179,7 @@ dependencies = [
 name = "giztoy-graph"
 version = "0.1.0"
 dependencies = [
+ "openerp-kv",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
@@ -1219,6 +1220,25 @@ dependencies = [
  "giztoy-luau",
  "reqwest",
  "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "giztoy-memory"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "giztoy-embed",
+ "giztoy-graph",
+ "giztoy-recall",
+ "giztoy-vecstore",
+ "openerp-kv",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
  "tokio",
 ]
 
@@ -1312,6 +1332,7 @@ dependencies = [
  "giztoy-embed",
  "giztoy-graph",
  "giztoy-vecstore",
+ "openerp-kv",
  "rmp-serde",
  "serde",
  "tempfile",
@@ -2121,6 +2142,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
+name = "openerp-kv"
+version = "0.1.0"
+dependencies = [
+ "redb",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
 name = "openssl-probe"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2531,6 +2561,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f821338fddb99d089116342c46e9f1fbf3828dba077674613e734e01d6ea8677"
 dependencies = [
  "rustfft",
+]
+
+[[package]]
+name = "redb"
+version = "2.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8eca1e9d98d5a7e9002d0013e18d5a9b000aee942eb134883a82f06ebffb6c01"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

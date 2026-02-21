@@ -1,18 +1,22 @@
 [package]
-name = "giztoy-recall"
+name = "giztoy-memory"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 
 [dependencies]
-chrono = { workspace = true }
 giztoy-embed = { workspace = true }
 giztoy-graph = { workspace = true }
+giztoy-recall = { workspace = true }
 giztoy-vecstore = { workspace = true }
 openerp-kv = { workspace = true }
-rmp-serde = "1"
+
+async-trait = { workspace = true }
+chrono = { workspace = true }
+rmp-serde = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]

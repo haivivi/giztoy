@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use crate::error::RecallError;
 use crate::index::RecallIndex;
-use crate::keys::{segment_key, segment_prefix, sid_key};
-use crate::types::{ScoredSegment, SearchQuery, Segment};
+use crate::keys::{bucket_prefix, parse_sid_value, segment_key, segment_prefix, sid_key, sid_value};
+use crate::types::{Bucket, ScoredSegment, SearchQuery, Segment};
 
 /// Score fusion weights for combining search signals.
 const WEIGHT_VECTOR: f64 = 0.5;
@@ -13,34 +13,32 @@ const WEIGHT_LABEL: f64 = 0.2;
 impl RecallIndex {
     /// Persist a segment in the index.
     ///
-    /// Stores segment data (msgpack), writes sid reverse index, and optionally
-    /// indexes the vector if embedder + vec are configured.
+    /// The segment's bucket field determines which bucket it is stored in.
+    /// If bucket is empty, it defaults to "1h".
     pub async fn store_segment(&self, seg: &Segment) -> Result<(), RecallError> {
+        let bucket = if seg.bucket.is_empty() { Bucket::BUCKET_1H } else { &seg.bucket };
+
         let data = rmp_serde::to_vec_named(seg)
             .map_err(|e| RecallError::Serialization(e.to_string()))?;
 
-        let seg_k = segment_key(&self.prefix, seg.timestamp);
+        let seg_k = segment_key(&self.prefix, bucket, seg.timestamp);
         let sid_k = sid_key(&self.prefix, &seg.id);
-        let ts_bytes = seg.timestamp.to_string();
+        let sid_v = sid_value(bucket, seg.timestamp);
 
-        // Check if this ID already exists with a different timestamp.
-        let old_ts = self.lookup_segment_ts(&seg.id);
+        let old_loc = self.lookup_segment_loc(&seg.id);
 
-        // Write new segment + sid atomically.
         self.store.batch_set(&[
             (seg_k.as_str(), data.as_slice()),
-            (sid_k.as_str(), ts_bytes.as_bytes()),
+            (sid_k.as_str(), sid_v.as_bytes()),
         ])?;
 
-        // Delete old segment key if timestamp changed.
-        if let Ok(ts) = old_ts {
-            if ts != seg.timestamp {
-                let old_key = segment_key(&self.prefix, ts);
+        if let Ok((old_bucket, old_ts)) = old_loc {
+            if old_ts != seg.timestamp || old_bucket != bucket {
+                let old_key = segment_key(&self.prefix, &old_bucket, old_ts);
                 let _ = self.store.delete(&old_key);
             }
         }
 
-        // Index vector if both embedder and vec are available.
         if let (Some(embedder), Some(vec)) = (&self.embedder, &self.vec) {
             let embedding = embedder.embed(&seg.summary).await?;
             vec.insert(&seg.id, &embedding)?;
@@ -51,12 +49,12 @@ impl RecallIndex {
 
     /// Remove a segment by ID.
     pub fn delete_segment(&self, id: &str) -> Result<(), RecallError> {
-        let ts = match self.lookup_segment_ts(id) {
-            Ok(ts) => ts,
-            Err(_) => return Ok(()), // not found is not an error
+        let (bucket, ts) = match self.lookup_segment_loc(id) {
+            Ok(loc) => loc,
+            Err(_) => return Ok(()),
         };
 
-        let seg_k = segment_key(&self.prefix, ts);
+        let seg_k = segment_key(&self.prefix, &bucket, ts);
         let sid_k = sid_key(&self.prefix, id);
         self.store.batch_delete(&[seg_k.as_str(), sid_k.as_str()])?;
 
@@ -68,12 +66,12 @@ impl RecallIndex {
 
     /// Retrieve a segment by ID. Returns None if not found.
     pub fn get_segment(&self, id: &str) -> Result<Option<Segment>, RecallError> {
-        let ts = match self.lookup_segment_ts(id) {
-            Ok(ts) => ts,
+        let (bucket, ts) = match self.lookup_segment_loc(id) {
+            Ok(loc) => loc,
             Err(_) => return Ok(None),
         };
 
-        let data = match self.store.get(&segment_key(&self.prefix, ts))? {
+        let data = match self.store.get(&segment_key(&self.prefix, &bucket, ts))? {
             Some(data) => data,
             None => return Ok(None),
         };
@@ -83,7 +81,7 @@ impl RecallIndex {
         Ok(Some(seg))
     }
 
-    /// Return the n most recent segments, newest first.
+    /// Return the n most recent segments across all buckets, newest first.
     pub fn recent_segments(&self, n: usize) -> Result<Vec<Segment>, RecallError> {
         if n == 0 {
             return Ok(vec![]);
@@ -99,28 +97,53 @@ impl RecallIndex {
             }
         }
 
-        // KV scan is ascending; reverse for newest first.
-        all.reverse();
+        all.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
         all.truncate(n);
         Ok(all)
     }
 
+    /// Return all segments in a specific bucket, ordered by timestamp ascending.
+    pub fn bucket_segments(&self, bucket: &Bucket) -> Result<Vec<Segment>, RecallError> {
+        let prefix = bucket_prefix(&self.prefix, bucket.as_str());
+        let entries = self.store.scan(&prefix)?;
+
+        let mut segments = Vec::new();
+        for (_key, value) in entries {
+            if let Ok(seg) = rmp_serde::from_slice::<Segment>(&value) {
+                segments.push(seg);
+            }
+        }
+        Ok(segments)
+    }
+
+    /// Return segment count and total summary char count in a bucket.
+    pub fn bucket_stats(&self, bucket: &Bucket) -> Result<(usize, usize), RecallError> {
+        let prefix = bucket_prefix(&self.prefix, bucket.as_str());
+        let entries = self.store.scan(&prefix)?;
+
+        let mut count = 0;
+        let mut chars = 0;
+        for (_key, value) in entries {
+            if let Ok(seg) = rmp_serde::from_slice::<Segment>(&value) {
+                count += 1;
+                chars += seg.summary.len();
+            }
+        }
+        Ok((count, chars))
+    }
+
     /// Search segments using multi-signal scoring.
-    ///
-    /// Score = 0.5 * vector_similarity + 0.3 * keyword_overlap + 0.2 * label_overlap
     pub async fn search_segments(
         &self,
         q: &SearchQuery,
     ) -> Result<Vec<ScoredSegment>, RecallError> {
         let limit = if q.limit == 0 { 10 } else { q.limit };
 
-        // Load all segments with time + label filtering.
         let segments = self.load_segments(q)?;
         if segments.is_empty() {
             return Ok(vec![]);
         }
 
-        // Vector scores.
         let mut vec_scores = std::collections::HashMap::new();
         if let (Some(embedder), Some(vec)) = (&self.embedder, &self.vec) {
             if !q.text.is_empty() && vec.len() > 0 {
@@ -134,14 +157,12 @@ impl RecallIndex {
             }
         }
 
-        // Keyword and label preparation.
         let query_terms = tokenize(&q.text);
         let label_set: HashSet<&str> = q.labels.iter().map(|s| s.as_str()).collect();
         let has_vec = !vec_scores.is_empty();
         let has_keywords = !query_terms.is_empty();
         let has_labels = !label_set.is_empty();
 
-        // Score each segment.
         let mut scored = Vec::new();
         for seg in segments {
             let mut score = 0.0;
@@ -170,7 +191,6 @@ impl RecallIndex {
             });
         }
 
-        // Sort by score desc, then timestamp desc.
         scored.sort_by(|a, b| {
             b.score
                 .partial_cmp(&a.score)
@@ -211,14 +231,11 @@ impl RecallIndex {
         Ok(segments)
     }
 
-    fn lookup_segment_ts(&self, id: &str) -> Result<i64, RecallError> {
+    fn lookup_segment_loc(&self, id: &str) -> Result<(String, i64), RecallError> {
         let key = sid_key(&self.prefix, id);
         match self.store.get(&key)? {
             Some(data) => {
-                let s = String::from_utf8(data)
-                    .map_err(|e| RecallError::Serialization(e.to_string()))?;
-                s.parse::<i64>()
-                    .map_err(|e| RecallError::Serialization(e.to_string()))
+                parse_sid_value(&data).map_err(|e| RecallError::Serialization(e))
             }
             None => Err(RecallError::Storage("not found".into())),
         }
@@ -245,7 +262,6 @@ fn label_score(seg_labels: &[String], query_label_set: &HashSet<&str>) -> f64 {
     hits as f64 / seg_labels.len() as f64
 }
 
-/// Tokenize: lowercase + split whitespace + dedup.
 fn tokenize(text: &str) -> Vec<String> {
     if text.is_empty() {
         return vec![];
