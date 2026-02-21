@@ -7,6 +7,35 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::error::GenxError;
 
+/// Format a Schema's entity types and attributes into a markdown section.
+/// Used by both segmentors and profilers prompt builders.
+pub(crate) fn format_schema_section(schema: &Schema, header: &str, intro: &str) -> String {
+    let mut sb = String::new();
+    sb.push_str(&format!("## {}\n\n", header));
+    sb.push_str(intro);
+    sb.push_str("\n\n");
+
+    let mut types: Vec<_> = schema.entity_types.iter().collect();
+    types.sort_by_key(|(k, _)| (*k).clone());
+
+    for (prefix, es) in types {
+        sb.push_str(&format!("### {}\n", prefix));
+        if !es.desc.is_empty() {
+            sb.push_str(&format!("{}\n", es.desc));
+        }
+        if !es.attrs.is_empty() {
+            sb.push_str("Attributes:\n");
+            let mut attrs: Vec<_> = es.attrs.iter().collect();
+            attrs.sort_by_key(|(k, _)| (*k).clone());
+            for (name, attr) in attrs {
+                sb.push_str(&format!("- `{}` ({}): {}\n", name, attr.type_, attr.desc));
+            }
+        }
+        sb.push('\n');
+    }
+    sb
+}
+
 /// Deserialize a value that may be JSON `null` into `Default::default()`.
 /// Handles both missing fields (`#[serde(default)]`) and explicit `null`
 /// (which Go's `json.Marshal` emits for nil slices/maps).

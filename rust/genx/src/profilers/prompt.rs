@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use crate::segmentors::types::format_schema_section;
 use crate::segmentors::{Schema, SegmentorResult};
 
 use super::types::ProfilerInput;
@@ -37,30 +38,11 @@ pub fn build_conversation_text(messages: &[String]) -> String {
 }
 
 fn build_schema_section(schema: &Schema) -> String {
-    let mut sb = String::new();
-    sb.push_str("## Current Entity Schema\n\n");
-    sb.push_str("These are the currently defined entity types and their attributes.\n");
-    sb.push_str("You may propose new fields or modifications.\n\n");
-
-    let mut types: Vec<_> = schema.entity_types.iter().collect();
-    types.sort_by_key(|(k, _)| (*k).clone());
-
-    for (prefix, es) in types {
-        sb.push_str(&format!("### {}\n", prefix));
-        if !es.desc.is_empty() {
-            sb.push_str(&format!("{}\n", es.desc));
-        }
-        if !es.attrs.is_empty() {
-            sb.push_str("Attributes:\n");
-            let mut attrs: Vec<_> = es.attrs.iter().collect();
-            attrs.sort_by_key(|(k, _)| (*k).clone());
-            for (name, attr) in attrs {
-                sb.push_str(&format!("- `{}` ({}): {}\n", name, attr.type_, attr.desc));
-            }
-        }
-        sb.push('\n');
-    }
-    sb
+    format_schema_section(
+        schema,
+        "Current Entity Schema",
+        "These are the currently defined entity types and their attributes.\nYou may propose new fields or modifications.",
+    )
 }
 
 fn build_profiles_section(

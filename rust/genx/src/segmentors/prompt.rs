@@ -1,6 +1,6 @@
 //! LLM prompt construction for segmentors.
 
-use super::types::{Schema, SegmentorInput};
+use super::types::{format_schema_section, Schema, SegmentorInput};
 
 pub fn build_prompt(input: &SegmentorInput) -> String {
     let mut sb = String::new();
@@ -21,32 +21,12 @@ pub fn build_conversation_text(messages: &[String]) -> String {
 }
 
 fn build_schema_hint(schema: &Schema) -> String {
-    let mut sb = String::new();
-    sb.push_str("## Entity Schema Hint\n\n");
-    sb.push_str(
+    format_schema_section(
+        schema,
+        "Entity Schema Hint",
         "The following entity types and attributes are expected. \
-         Use these as guidance, but you may also discover entities and attributes beyond this schema.\n\n",
-    );
-
-    let mut types: Vec<_> = schema.entity_types.iter().collect();
-    types.sort_by_key(|(k, _)| (*k).clone());
-
-    for (prefix, es) in types {
-        sb.push_str(&format!("### {}\n", prefix));
-        if !es.desc.is_empty() {
-            sb.push_str(&format!("{}\n", es.desc));
-        }
-        if !es.attrs.is_empty() {
-            sb.push_str("Attributes:\n");
-            let mut attrs: Vec<_> = es.attrs.iter().collect();
-            attrs.sort_by_key(|(k, _)| (*k).clone());
-            for (name, attr) in attrs {
-                sb.push_str(&format!("- `{}` ({}): {}\n", name, attr.type_, attr.desc));
-            }
-        }
-        sb.push('\n');
-    }
-    sb
+         Use these as guidance, but you may also discover entities and attributes beyond this schema.",
+    )
 }
 
 const PROMPT_BASE: &str = r#"You are a conversation segmentor. Your task is to compress a conversation into a structured segment, extracting entities and relations.

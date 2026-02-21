@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -139,13 +140,13 @@ func TestGolden_PromptBasic(t *testing.T) {
 		t.Errorf("prompt too short: %d chars", len(prompt))
 	}
 	// Verify key sections present
-	if !contains(prompt, "conversation segmentor") {
+	if !strings.Contains(prompt, "conversation segmentor") {
 		t.Error("prompt should contain 'conversation segmentor'")
 	}
-	if !contains(prompt, "## Output") {
+	if !strings.Contains(prompt, "## Output") {
 		t.Error("prompt should contain '## Output'")
 	}
-	if contains(prompt, "Entity Schema Hint") {
+	if strings.Contains(prompt, "Entity Schema Hint") {
 		t.Error("basic prompt should not contain schema hint")
 	}
 }
@@ -168,26 +169,13 @@ func TestGolden_PromptWithSchema(t *testing.T) {
 	}
 
 	prompt := buildPrompt(input)
-	if !contains(prompt, "Entity Schema Hint") {
+	if !strings.Contains(prompt, "Entity Schema Hint") {
 		t.Error("prompt should contain schema hint")
 	}
-	if !contains(prompt, "### person") {
+	if !strings.Contains(prompt, "### person") {
 		t.Error("prompt should contain person schema")
 	}
-	if !contains(prompt, "`age`") {
+	if !strings.Contains(prompt, "`age`") {
 		t.Error("prompt should contain age attribute")
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsStr(s, substr))
-}
-
-func containsStr(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
