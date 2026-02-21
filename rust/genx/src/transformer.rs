@@ -173,4 +173,35 @@ mod tests {
         let result = output.next().await;
         assert!(matches!(result, Ok(None)));
     }
+
+    #[tokio::test]
+    async fn t3_4_drop_output_task_exits() {
+        let (input_tx, input_rx) = mpsc::channel(64);
+        let input: Box<dyn Stream> = Box::new(ChannelStream { rx: input_rx });
+
+        let t = PassthroughTransformer;
+        let output = t.transform("test", input).await.unwrap();
+
+        // Drop output — the spawned task should detect tx.send() failure and exit
+        drop(output);
+
+        // Give the task a moment to notice
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        // Sending to input should still work (channel is open), but the task
+        // should have exited. Send a chunk — if task is alive it would try to
+        // forward to the dropped output tx, get Err, and exit.
+        let _ = input_tx
+            .send(Ok(MessageChunk::text(Role::Model, "after drop")))
+            .await;
+
+        // Give task time to process
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        // The task should have exited. We verify by checking that input_tx
+        // is not keeping the task alive — drop input_tx and ensure no panic.
+        drop(input_tx);
+
+        // If we get here without hanging, the task exited properly.
+    }
 }

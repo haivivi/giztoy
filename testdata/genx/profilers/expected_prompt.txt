@@ -1,0 +1,88 @@
+You are an entity profile analyst. Your task is to update entity profiles and evolve the entity schema based on conversation content and previously extracted metadata.
+
+## Instructions
+
+1. Review the original conversation and the segmentor's extracted metadata.
+2. For each entity, determine what profile attributes should be updated based on this conversation.
+   - Only update attributes that have new or changed information.
+   - Preserve existing profile values unless the conversation explicitly contradicts them.
+3. If you discover attributes that don't fit the current schema, propose schema changes.
+   - Only propose "add" for genuinely new and useful fields.
+   - Only propose "modify" if the type or description needs updating.
+4. If you discover additional relations not captured by the segmentor, include them.
+
+## Rules
+
+- Profile updates should be factual observations from this conversation.
+- Schema changes should be conservative — only propose fields that are likely to be useful across multiple conversations.
+- Entity labels must match those from the extracted metadata (format: "type:name").
+- Match the language of the conversation (if Chinese, write Chinese descriptions).
+
+## Current Entity Schema
+
+These are the currently defined entity types and their attributes.
+You may propose new fields or modifications.
+
+### person
+A person
+Attributes:
+- `age` (string): Age of the person
+- `name` (string): Full name
+
+
+
+## Existing Entity Profiles
+
+These are the current profiles. Update them with new information from the conversation.
+
+### person:小明
+{
+  "age": "5"
+}
+
+
+
+## Extracted Metadata (from segmentor)
+
+The segmentor has already extracted the following. Use this as the basis for profile updates.
+
+### Segment Summary
+小明和用户聊了恐龙，小明最喜欢霸王龙，小明5岁
+
+### Entities
+- person:小明: {"age":"5","favorite_dinosaur":"霸王龙"}
+- topic:恐龙
+
+### Relations
+- person:小明 -[likes]-> topic:恐龙
+
+
+
+## Output
+
+Call the provided function with the analysis result. The argument must be a JSON object with this structure:
+
+{
+  "schema_changes": [
+    {
+      "entity_type": "person",
+      "field": "school",
+      "def": {"type": "string", "desc": "学校名称"},
+      "action": "add"
+    }
+  ],
+  "profile_updates": {
+    "person:小明": {
+      "age": 5,
+      "favorite_dinosaur": "霸王龙",
+      "school": "阳光幼儿园"
+    }
+  },
+  "relations": [
+    {
+      "from": "person:小明",
+      "to": "place:阳光幼儿园",
+      "rel_type": "attends"
+    }
+  ]
+}

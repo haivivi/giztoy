@@ -80,9 +80,12 @@ fn build_profiles_section(
         sb.push_str(&format!("### {}\n", label));
         if attrs.is_empty() {
             sb.push_str("(no attributes yet)\n");
-        } else if let Ok(json) = serde_json::to_string_pretty(attrs) {
-            sb.push_str(&json);
-            sb.push('\n');
+        } else {
+            let sorted: std::collections::BTreeMap<_, _> = attrs.iter().collect();
+            if let Ok(json) = serde_json::to_string_pretty(&sorted) {
+                sb.push_str(&json);
+                sb.push('\n');
+            }
         }
         sb.push('\n');
     }
@@ -105,7 +108,8 @@ fn build_extracted_section(extracted: &SegmentorResult) -> String {
         for e in &extracted.entities {
             sb.push_str(&format!("- {}", e.label));
             if !e.attrs.is_empty() {
-                if let Ok(json) = serde_json::to_string(&e.attrs) {
+                let sorted: std::collections::BTreeMap<_, _> = e.attrs.iter().collect();
+                if let Ok(json) = serde_json::to_string(&sorted) {
                     sb.push_str(&format!(": {}", json));
                 }
             }
@@ -228,6 +232,29 @@ mod tests {
         assert!(PROMPT_OUTPUT_FORMAT.contains("profile_updates"));
         assert!(PROMPT_OUTPUT_FORMAT.contains("relations"));
         assert!(PROMPT_OUTPUT_FORMAT.contains("阳光幼儿园"));
+    }
+
+    fn testdata_path(rel: &str) -> Option<std::path::PathBuf> {
+        let cargo_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let path = cargo_dir.join("../../testdata/genx").join(rel);
+        if path.exists() { Some(path) } else { None }
+    }
+
+    #[test]
+    fn t12_prompt_golden_file() {
+        let Some(input_path) = testdata_path("profilers/input.json") else { return };
+        let golden_path = input_path.parent().unwrap().join("expected_prompt.txt");
+
+        let data = std::fs::read_to_string(&input_path).unwrap();
+        let input: ProfilerInput = serde_json::from_str(&data).unwrap();
+        let prompt = build_prompt(&input);
+
+        if golden_path.exists() {
+            let expected = std::fs::read_to_string(&golden_path).unwrap();
+            assert_eq!(prompt, expected, "prompt does not match golden file");
+        } else {
+            std::fs::write(&golden_path, &prompt).unwrap();
+        }
     }
 
     #[test]

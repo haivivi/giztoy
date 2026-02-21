@@ -154,4 +154,45 @@ mod tests {
         let text = build_conversation_text(&messages);
         assert_eq!(text, "user: 你好\nassistant: 你好呀");
     }
+
+    fn testdata_path(rel: &str) -> Option<std::path::PathBuf> {
+        let cargo_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let path = cargo_dir.join("../../testdata/genx").join(rel);
+        if path.exists() { Some(path) } else { None }
+    }
+
+    #[test]
+    fn t10_4_prompt_basic_golden_file() {
+        let Some(input_path) = testdata_path("segmentors/input_basic.json") else { return };
+        let golden_path = input_path.parent().unwrap().join("expected_prompt_basic.txt");
+
+        let data = std::fs::read_to_string(&input_path).unwrap();
+        let input: SegmentorInput = serde_json::from_str(&data).unwrap();
+        let prompt = build_prompt(&input);
+
+        if golden_path.exists() {
+            let expected = std::fs::read_to_string(&golden_path).unwrap();
+            assert_eq!(prompt, expected, "prompt does not match golden file");
+        } else {
+            // Generate golden file on first run
+            std::fs::write(&golden_path, &prompt).unwrap();
+        }
+    }
+
+    #[test]
+    fn t10_4_prompt_schema_golden_file() {
+        let Some(input_path) = testdata_path("segmentors/input_with_schema.json") else { return };
+        let golden_path = input_path.parent().unwrap().join("expected_prompt_schema.txt");
+
+        let data = std::fs::read_to_string(&input_path).unwrap();
+        let input: SegmentorInput = serde_json::from_str(&data).unwrap();
+        let prompt = build_prompt(&input);
+
+        if golden_path.exists() {
+            let expected = std::fs::read_to_string(&golden_path).unwrap();
+            assert_eq!(prompt, expected, "prompt does not match golden file");
+        } else {
+            std::fs::write(&golden_path, &prompt).unwrap();
+        }
+    }
 }

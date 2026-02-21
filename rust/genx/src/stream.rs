@@ -284,17 +284,7 @@ impl StreamBuilder {
     /// Add message chunks to the stream.
     pub fn add(&self, chunks: &[MessageChunk]) -> Result<(), giztoy_buffer::BufferError> {
         for chunk in chunks {
-            let mut chunk = chunk.clone();
-
-            // Link tool calls to their definitions
-            if let Some(ref mut tool_call) = chunk.tool_call {
-                if let Some(tool) = self.func_tools.get(&tool_call.func_call.name) {
-                    // Tool is available - we could attach metadata here if needed
-                    let _ = tool; // silence unused warning
-                }
-            }
-
-            self.buffer.write(&[StreamEvent::chunk(chunk)])?;
+            self.buffer.write(&[StreamEvent::chunk(chunk.clone())])?;
         }
         Ok(())
     }

@@ -225,6 +225,28 @@ mod tests {
         assert_eq!(result, reparsed);
     }
 
+    #[tokio::test]
+    async fn t12_no_mux_returns_clear_error() {
+        let prof = GenXProfiler::new(ProfilerConfig {
+            generator: "nonexistent/model".into(),
+            prompt_version: None,
+        });
+        use crate::segmentors::{SegmentOutput, SegmentorResult};
+        let input = ProfilerInput {
+            messages: vec!["user: test".into()],
+            extracted: SegmentorResult {
+                segment: SegmentOutput { summary: "test".into(), keywords: vec![], labels: vec![] },
+                entities: vec![],
+                relations: vec![],
+            },
+            schema: None,
+            profiles: None,
+        };
+        let err = prof.process(input).await.unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("no generator mux"), "error should mention missing mux: {}", msg);
+    }
+
     #[test]
     fn t12_golden_input_deserialization() {
         let Some(path) = testdata_path("profilers/input.json") else { return };

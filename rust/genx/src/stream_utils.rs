@@ -74,7 +74,9 @@ pub fn split(
 }
 
 /// Combine multiple streams sequentially.
-/// After each stream ends (except the last), an EoS marker is emitted.
+/// After each stream ends (except the last), an EoS marker is emitted
+/// with the MIME type of the last Part seen. If a stream contains only
+/// ToolCall chunks (no Part), no EoS is emitted for it (matches Go behavior).
 pub fn composite_seq(streams: Vec<Box<dyn Stream>>) -> Box<dyn Stream> {
     if streams.is_empty() {
         return Box::new(EmptyStream);
@@ -141,6 +143,8 @@ pub fn merge(streams: Vec<Box<dyn Stream>>) -> Box<dyn Stream> {
 }
 
 /// Merge multiple streams by interleaving chunks round-robin.
+/// Note: this polls streams sequentially — if stream[0] blocks,
+/// stream[1] waits. This matches Go's MergeInterleaved behavior.
 pub fn merge_interleaved(streams: Vec<Box<dyn Stream>>) -> Box<dyn Stream> {
     if streams.is_empty() {
         return Box::new(EmptyStream);
@@ -183,6 +187,13 @@ pub fn merge_interleaved(streams: Vec<Box<dyn Stream>>) -> Box<dyn Stream> {
     Box::new(ChannelStream { rx })
 }
 
+/// Channel-based stream used by split/composite_seq/merge_interleaved.
+///
+/// Errors are transported as strings because GenxError is not Clone.
+/// This loses the original error variant (e.g. Blocked, Truncated)
+/// but preserves the message. This is acceptable for stream routing
+/// utilities — LLM-level errors (Blocked/Truncated) are not expected
+/// to originate from chunk routing.
 struct ChannelStream {
     rx: mpsc::Receiver<Result<MessageChunk, String>>,
 }
@@ -414,6 +425,38 @@ mod tests {
         let mut merged = merge(vec![s1, s2]);
         let text = collect_text(&mut *merged).await.unwrap();
         assert_eq!(text, "xyz");
+    }
+
+    #[tokio::test]
+    async fn t8_9_split_matched_consumer_drop_rest_survives() {
+        let input = make_mixed_stream(); // 3 text + 2 audio
+        let (matched, mut rest) = split(input, mime_type_matcher("audio/".into()));
+
+        // Drop matched consumer immediately
+        drop(matched);
+
+        // Rest consumer should still receive all its chunks (text ones)
+        let mut rest_count = 0;
+        while let Ok(Some(_)) = rest.next().await {
+            rest_count += 1;
+        }
+        assert_eq!(rest_count, 3);
+    }
+
+    #[tokio::test]
+    async fn t8_10_split_rest_consumer_drop_matched_survives() {
+        let input = make_mixed_stream(); // 3 text + 2 audio
+        let (mut matched, rest) = split(input, mime_type_matcher("audio/".into()));
+
+        // Drop rest consumer immediately
+        drop(rest);
+
+        // Matched consumer should still receive all its chunks (audio ones)
+        let mut matched_count = 0;
+        while let Ok(Some(_)) = matched.next().await {
+            matched_count += 1;
+        }
+        assert_eq!(matched_count, 2);
     }
 
     #[tokio::test]

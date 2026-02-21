@@ -97,7 +97,8 @@ impl FuncTool {
         T: JsonSchema,
     {
         let schema = schemars::schema_for!(T);
-        let argument = serde_json::to_value(&schema).unwrap_or_default();
+        let argument = serde_json::to_value(&schema)
+            .expect("FuncTool schema serialization must not fail; check the JsonSchema derive");
 
         Self {
             name: name.into(),
@@ -141,7 +142,8 @@ impl FuncTool {
     {
         let handler = Arc::new(handler);
         let schema = schemars::schema_for!(T);
-        let argument = serde_json::to_value(&schema).unwrap_or_default();
+        let argument = serde_json::to_value(&schema)
+            .expect("FuncTool schema serialization must not fail; check the JsonSchema derive");
 
         Self {
             name: name.into(),
