@@ -42,10 +42,12 @@ impl Stream for TeeStream {
     }
 
     async fn close(&mut self) -> Result<(), GenxError> {
+        let _ = self.builder.done(Usage::default());
         self.src.close().await
     }
 
     async fn close_with_error(&mut self, error: GenxError) -> Result<(), GenxError> {
+        let _ = self.builder.abort_with_message(error.to_string());
         self.src.close_with_error(error).await
     }
 }
