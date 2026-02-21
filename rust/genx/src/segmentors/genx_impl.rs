@@ -54,27 +54,34 @@ struct ExtractRelation {
 /// GenX segmentor — calls an LLM Generator to extract segments.
 pub struct GenXSegmentor {
     generator_pattern: String,
-    mux: Option<Arc<GeneratorMux>>,
+    generator: Option<Arc<dyn Generator>>,
 }
 
 impl GenXSegmentor {
     pub fn new(cfg: SegmentorConfig) -> Self {
         Self {
             generator_pattern: cfg.generator,
-            mux: None,
+            generator: None,
         }
     }
 
     pub fn with_mux(cfg: SegmentorConfig, mux: Arc<GeneratorMux>) -> Self {
         Self {
             generator_pattern: cfg.generator,
-            mux: Some(mux),
+            generator: Some(mux),
+        }
+    }
+
+    pub fn with_generator(cfg: SegmentorConfig, generator: Arc<dyn Generator>) -> Self {
+        Self {
+            generator_pattern: cfg.generator,
+            generator: Some(generator),
         }
     }
 
     fn get_generator(&self) -> Result<&dyn Generator, GenxError> {
-        match &self.mux {
-            Some(mux) => Ok(mux.as_ref()),
+        match &self.generator {
+            Some(g) => Ok(g.as_ref()),
             None => Err(GenxError::Other(anyhow::anyhow!(
                 "segmentors: no generator mux configured"
             ))),

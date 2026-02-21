@@ -50,6 +50,8 @@ async fn e2e_generator_dashscope() {
 
     let mut stream = muxes
         .generators
+        .read()
+        .unwrap()
         .generate_stream("qwen/turbo", &ctx)
         .await
         .expect("generate_stream failed");

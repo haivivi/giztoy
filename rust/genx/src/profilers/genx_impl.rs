@@ -47,27 +47,34 @@ struct ProfileRelation {
 /// GenX profiler — calls an LLM Generator for profile analysis.
 pub struct GenXProfiler {
     generator_pattern: String,
-    mux: Option<Arc<GeneratorMux>>,
+    generator: Option<Arc<dyn Generator>>,
 }
 
 impl GenXProfiler {
     pub fn new(cfg: ProfilerConfig) -> Self {
         Self {
             generator_pattern: cfg.generator,
-            mux: None,
+            generator: None,
         }
     }
 
     pub fn with_mux(cfg: ProfilerConfig, mux: Arc<GeneratorMux>) -> Self {
         Self {
             generator_pattern: cfg.generator,
-            mux: Some(mux),
+            generator: Some(mux),
+        }
+    }
+
+    pub fn with_generator(cfg: ProfilerConfig, generator: Arc<dyn Generator>) -> Self {
+        Self {
+            generator_pattern: cfg.generator,
+            generator: Some(generator),
         }
     }
 
     fn get_generator(&self) -> Result<&dyn Generator, GenxError> {
-        match &self.mux {
-            Some(mux) => Ok(mux.as_ref()),
+        match &self.generator {
+            Some(g) => Ok(g.as_ref()),
             None => Err(GenxError::Other(anyhow::anyhow!(
                 "profilers: no generator mux configured"
             ))),

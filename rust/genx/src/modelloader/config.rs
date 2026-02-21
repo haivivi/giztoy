@@ -121,8 +121,12 @@ pub fn parse_config(path: &Path) -> Result<ConfigFile, GenxError> {
 }
 
 /// Mux collection for registering models.
+///
+/// `generators` is wrapped in `Arc<std::sync::RwLock>` so segmentors/profilers
+/// share the same instance (matching Go's shared-pointer semantics). Generators
+/// registered after segmentor/profiler creation are immediately visible.
 pub struct MuxSet {
-    pub generators: GeneratorMux,
+    pub generators: Arc<std::sync::RwLock<GeneratorMux>>,
     pub segmentors: SegmentorMux,
     pub profilers: ProfilerMux,
 }
@@ -130,7 +134,7 @@ pub struct MuxSet {
 impl MuxSet {
     pub fn new() -> Self {
         Self {
-            generators: GeneratorMux::new(),
+            generators: Arc::new(std::sync::RwLock::new(GeneratorMux::new())),
             segmentors: SegmentorMux::new(),
             profilers: ProfilerMux::new(),
         }
@@ -225,7 +229,7 @@ pub fn register_config(
 
     if let Some(ref kind) = cfg.kind {
         return match kind.to_lowercase().as_str() {
-            "openai" => register_openai(&cfg, &mut muxes.generators),
+            "openai" => register_openai(&cfg, &muxes.generators),
             _ => Err(GenxError::Other(anyhow::anyhow!("unknown kind: {}", kind))),
         };
     }
@@ -248,15 +252,15 @@ fn register_by_schema(
                 .next()
                 .unwrap_or("");
             match provider {
-                "openai" => register_openai(cfg, &mut muxes.generators),
+                "openai" => register_openai(cfg, &muxes.generators),
                 _ => Err(GenxError::Other(anyhow::anyhow!(
                     "unknown generator provider: {}",
                     provider
                 ))),
             }
         }
-        "segmentor" => register_segmentors(cfg, &mut muxes.segmentors, &muxes.generators),
-        "profiler" => register_profilers(cfg, &mut muxes.profilers, &muxes.generators),
+        "segmentor" => register_segmentors(cfg, &mut muxes.segmentors, Arc::clone(&muxes.generators)),
+        "profiler" => register_profilers(cfg, &mut muxes.profilers, Arc::clone(&muxes.generators)),
         _ => Err(GenxError::Other(anyhow::anyhow!(
             "unknown type: {}",
             type_
@@ -266,7 +270,7 @@ fn register_by_schema(
 
 fn register_openai(
     cfg: &ConfigFile,
-    gen_mux: &mut GeneratorMux,
+    gen_mux: &Arc<std::sync::RwLock<GeneratorMux>>,
 ) -> Result<Vec<String>, GenxError> {
     let api_key = cfg
         .api_key
@@ -291,16 +295,46 @@ fn register_openai(
             config.base_url = base_url.clone();
         }
 
-        gen_mux.handle(&m.name, Arc::new(OpenAIGenerator::new(config)))?;
+        gen_mux.write().unwrap().handle(&m.name, Arc::new(OpenAIGenerator::new(config)))?;
         names.push(m.name.clone());
     }
     Ok(names)
 }
 
+/// Wrapper that implements Generator by delegating to a shared RwLock<GeneratorMux>.
+/// This ensures segmentors/profilers always see the latest registered generators.
+///
+/// The RwLock is acquired, the target generator is looked up and cloned (Arc),
+/// then the lock is released before the async call. This avoids holding the lock
+/// across await points.
+struct SharedGeneratorMux(Arc<std::sync::RwLock<GeneratorMux>>);
+
+#[async_trait::async_trait]
+impl crate::Generator for SharedGeneratorMux {
+    async fn generate_stream(
+        &self,
+        model: &str,
+        ctx: &dyn crate::context::ModelContext,
+    ) -> Result<Box<dyn crate::stream::Stream>, GenxError> {
+        let mux = self.0.read().unwrap().clone();
+        mux.generate_stream(model, ctx).await
+    }
+
+    async fn invoke(
+        &self,
+        model: &str,
+        ctx: &dyn crate::context::ModelContext,
+        tool: &crate::tool::FuncTool,
+    ) -> Result<(crate::error::Usage, crate::types::FuncCall), GenxError> {
+        let mux = self.0.read().unwrap().clone();
+        mux.invoke(model, ctx, tool).await
+    }
+}
+
 fn register_segmentors(
     cfg: &ConfigFile,
     seg_mux: &mut SegmentorMux,
-    gen_mux: &GeneratorMux,
+    gen_mux: Arc<std::sync::RwLock<GeneratorMux>>,
 ) -> Result<Vec<String>, GenxError> {
     let mut names = Vec::new();
     for m in &cfg.models {
@@ -318,12 +352,12 @@ fn register_segmentors(
             m.model.clone()
         };
 
-        let seg = GenXSegmentor::with_mux(
+        let seg = GenXSegmentor::with_generator(
             SegmentorConfig {
                 generator,
                 prompt_version: None,
             },
-            Arc::new(gen_mux.clone()),
+            Arc::new(SharedGeneratorMux(Arc::clone(&gen_mux))),
         );
         seg_mux.handle(&m.name, Arc::new(seg))?;
         names.push(m.name.clone());
@@ -334,7 +368,7 @@ fn register_segmentors(
 fn register_profilers(
     cfg: &ConfigFile,
     prof_mux: &mut ProfilerMux,
-    gen_mux: &GeneratorMux,
+    gen_mux: Arc<std::sync::RwLock<GeneratorMux>>,
 ) -> Result<Vec<String>, GenxError> {
     let mut names = Vec::new();
     for m in &cfg.models {
@@ -352,12 +386,12 @@ fn register_profilers(
             m.model.clone()
         };
 
-        let prof = GenXProfiler::with_mux(
+        let prof = GenXProfiler::with_generator(
             ProfilerConfig {
                 generator,
                 prompt_version: None,
             },
-            Arc::new(gen_mux.clone()),
+            Arc::new(SharedGeneratorMux(Arc::clone(&gen_mux))),
         );
         prof_mux.handle(&m.name, Arc::new(prof))?;
         names.push(m.name.clone());
