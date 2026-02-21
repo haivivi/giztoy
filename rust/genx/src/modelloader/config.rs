@@ -177,10 +177,13 @@ pub fn load_from_dir(dir: &Path, muxes: &mut MuxSet) -> Result<Vec<String>, Genx
 
     let mut names = Vec::new();
 
-    // Pass 1: register generators only
+    // Pass 1: register generators (kind-based legacy OR schema+type=generator)
     for cfg in &configs {
-        let is_generator = cfg.kind.is_some()
-            || cfg.type_.as_deref() == Some("generator");
+        let is_generator = match (&cfg.schema, cfg.type_.as_deref()) {
+            (Some(_), Some("generator")) => true,
+            (None, _) if cfg.kind.is_some() => true, // legacy kind-based = always generator
+            _ => false,
+        };
         if !is_generator {
             continue;
         }
@@ -191,10 +194,13 @@ pub fn load_from_dir(dir: &Path, muxes: &mut MuxSet) -> Result<Vec<String>, Genx
         }
     }
 
-    // Pass 2: register segmentors, profilers, and other types
+    // Pass 2: register segmentors, profilers, and other non-generator types
     for cfg in configs {
-        let is_generator = cfg.kind.is_some()
-            || cfg.type_.as_deref() == Some("generator");
+        let is_generator = match (&cfg.schema, cfg.type_.as_deref()) {
+            (Some(_), Some("generator")) => true,
+            (None, _) if cfg.kind.is_some() => true,
+            _ => false,
+        };
         if is_generator {
             continue;
         }
@@ -286,14 +292,17 @@ fn register_openai(
             )));
         }
 
-        let mut config = OpenAIConfig {
+        let config = OpenAIConfig {
             api_key: api_key.to_string(),
+            base_url: cfg.base_url.clone().unwrap_or_else(|| "https://api.openai.com/v1".to_string()),
             model: m.model.clone(),
-            ..Default::default()
+            support_json_output: m.support_json_output,
+            support_tool_calls: m.support_tool_calls,
+            support_text_only: m.support_text_only,
+            use_system_role: m.use_system_role,
+            generate_params: m.generate_params.clone(),
+            invoke_params: m.invoke_params.clone(),
         };
-        if let Some(ref base_url) = cfg.base_url {
-            config.base_url = base_url.clone();
-        }
 
         gen_mux.write().unwrap().handle(&m.name, Arc::new(OpenAIGenerator::new(config)))?;
         names.push(m.name.clone());
