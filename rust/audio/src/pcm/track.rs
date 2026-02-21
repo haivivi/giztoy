@@ -260,7 +260,7 @@ impl TrackInput {
             let resampler = self.resampler.as_mut().unwrap();
             let output = match resampler.process(&input, None) {
                 Ok(out) => out,
-                Err(_) => return ReadResult::Empty,
+                Err(e) => return ReadResult::Error(format!("resampler process: {}", e)),
             };
 
             let output_frames = if output.is_empty() { 0 } else { output[0].len() };
