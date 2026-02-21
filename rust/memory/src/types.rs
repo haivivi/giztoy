@@ -11,8 +11,9 @@ use crate::error::MemoryError;
 // Message: conversation message
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Role {
+    #[default]
     #[serde(rename = "user")]
     User,
     #[serde(rename = "model")]
@@ -33,7 +34,7 @@ impl std::fmt::Display for Role {
 
 /// A single conversation turn stored in short-term memory.
 /// Msgpack field tags match Go for cross-language compatibility.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Message {
     #[serde(rename = "role")]
     pub role: Role,
@@ -65,6 +66,7 @@ pub struct Message {
 // ---------------------------------------------------------------------------
 
 /// Parameters for [Memory::recall].
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecallQuery {
     pub labels: Vec<String>,
     pub text: String,

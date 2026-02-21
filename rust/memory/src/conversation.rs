@@ -148,10 +148,11 @@ impl<'m> Conversation<'m> {
         let remaining = store.scan(&prefix)?;
         let mut latest_user_ts: i64 = 0;
         for (_, value) in &remaining {
-            if let Ok(msg) = rmp_serde::from_slice::<Message>(value) {
-                if msg.role == Role::User && msg.timestamp > latest_user_ts {
-                    latest_user_ts = msg.timestamp;
-                }
+            if let Ok(msg) = rmp_serde::from_slice::<Message>(value)
+                && msg.role == Role::User
+                && msg.timestamp > latest_user_ts
+            {
+                latest_user_ts = msg.timestamp;
             }
         }
 
@@ -191,12 +192,6 @@ impl<'m> Conversation<'m> {
         }
 
         Ok(())
-    }
-
-    /// Reset compression counters (called after clear from compress pipeline).
-    pub(crate) fn reset_pending(&mut self) {
-        self.pending_chars = 0;
-        self.pending_msgs = 0;
     }
 
     fn scan_messages(&self) -> Result<Vec<Message>, MemoryError> {

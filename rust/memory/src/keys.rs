@@ -16,7 +16,6 @@
 /// {mid}:g:e:{label}                 → Entity
 /// {mid}:g:r:{from}:{type}:{to}     → Relation
 /// ```
-
 /// Base KV prefix for a memory ID. Format: "mem:{mid}"
 pub fn mem_prefix(mid: &str) -> String {
     format!("mem:{mid}")
