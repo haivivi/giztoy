@@ -4,4 +4,4 @@ pub mod kvgraph;
 
 pub use error::GraphError;
 pub use graph::{Entity, Graph, Relation};
-pub use kvgraph::KVGraph;
+pub use kvgraph::{DEFAULT_SEPARATOR, KVGraph};

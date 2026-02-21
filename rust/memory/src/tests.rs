@@ -15,10 +15,9 @@ use crate::types::{
 // Mock compressor
 // ---------------------------------------------------------------------------
 
-// Note: Rust KVGraph uses ':' as a hardcoded separator, so entity labels
-// cannot contain ':'. We use underscores instead (e.g. "person_ming").
-// Go tests use 0x1F separator to allow "person:小明", but the Rust graph
-// doesn't support configurable separators yet.
+/// Test separator: ASCII Unit Separator (0x1F) allows natural colon-namespaced
+/// labels like "person:小明", matching Go's test configuration.
+const TEST_SEP: char = '\x1F';
 
 struct MockCompressor;
 
@@ -35,7 +34,7 @@ impl Compressor for MockCompressor {
             segments: vec![SegmentInput {
                 summary: summary.clone(),
                 keywords: vec!["test".into()],
-                labels: vec!["person_test".into()],
+                labels: vec!["person:test".into()],
             }],
             summary: format!("compressed: {summary}"),
         })
@@ -44,7 +43,7 @@ impl Compressor for MockCompressor {
     async fn extract_entities(&self, _msgs: &[Message]) -> Result<EntityUpdate, MemoryError> {
         Ok(EntityUpdate {
             entities: vec![EntityInput {
-                label: "person_test".into(),
+                label: "person:test".into(),
                 attrs: HashMap::from([("compressed".into(), serde_json::json!(true))]),
             }],
             relations: vec![],
@@ -57,7 +56,7 @@ impl Compressor for MockCompressor {
             segments: vec![SegmentInput {
                 summary: combined.clone(),
                 keywords: vec!["compacted".into()],
-                labels: vec!["person_test".into()],
+                labels: vec!["person:test".into()],
             }],
             summary: combined,
         })
@@ -100,6 +99,7 @@ fn new_test_host() -> Host {
         embedder: None,
         compressor: None,
         compress_policy: CompressPolicy::disabled(),
+        separator: TEST_SEP,
     })
     .unwrap()
 }
@@ -112,6 +112,7 @@ fn new_test_host_with_compressor() -> Host {
         embedder: None,
         compressor: Some(Arc::new(MockCompressor)),
         compress_policy: CompressPolicy { max_chars: 100, max_messages: 5 },
+        separator: TEST_SEP,
     })
     .unwrap()
 }
@@ -124,6 +125,7 @@ fn new_test_host_with_failing_compressor() -> Host {
         embedder: None,
         compressor: Some(Arc::new(FailingCompressor)),
         compress_policy: CompressPolicy { max_chars: 100, max_messages: 5 },
+        separator: TEST_SEP,
     })
     .unwrap()
 }
@@ -502,6 +504,7 @@ async fn tc14_auto_compress_plus_compact_cascade() {
         embedder: None,
         compressor: Some(Arc::new(MockCompressor)),
         compress_policy: CompressPolicy { max_chars: 50, max_messages: 3 },
+        separator: TEST_SEP,
     })
     .unwrap();
 
@@ -531,7 +534,7 @@ async fn tm1_store_segment_and_recall() {
         SegmentInput {
             summary: "talked about dinosaurs".into(),
             keywords: vec!["dinosaurs".into()],
-            labels: vec!["person_ming".into()],
+            labels: vec!["person:小明".into()],
         },
         giztoy_recall::bucket_1h(),
     )
@@ -575,7 +578,7 @@ async fn tm3_recall_with_labels() {
         SegmentInput {
             summary: "dino chat".into(),
             keywords: vec!["dinosaurs".into()],
-            labels: vec!["person_ming".into()],
+            labels: vec!["person:小明".into()],
         },
         giztoy_recall::bucket_1h(),
     )
@@ -586,7 +589,7 @@ async fn tm3_recall_with_labels() {
         SegmentInput {
             summary: "cooking session".into(),
             keywords: vec!["cooking".into()],
-            labels: vec!["person_mom".into()],
+            labels: vec!["person:妈妈".into()],
         },
         giztoy_recall::bucket_1h(),
     )
@@ -594,14 +597,14 @@ async fn tm3_recall_with_labels() {
     .unwrap();
 
     let result = m.recall(RecallQuery {
-        labels: vec!["person_ming".into()],
+        labels: vec!["person:小明".into()],
         text: String::new(),
         hops: 0,
         limit: 10,
     }).await.unwrap();
 
     assert!(
-        result.segments.iter().any(|s| s.labels.contains(&"person_ming".into())),
+        result.segments.iter().any(|s| s.labels.contains(&"person:小明".into())),
         "should find segment with matching label"
     );
 }
@@ -670,22 +673,22 @@ async fn tm6_apply_entity_update_creates() {
 
     m.apply_entity_update(&EntityUpdate {
         entities: vec![EntityInput {
-            label: "person_ming".into(),
+            label: "person:小明".into(),
             attrs: HashMap::from([("age".into(), serde_json::json!(5))]),
         }],
         relations: vec![RelationInput {
-            from: "person_ming".into(),
-            to: "person_hong".into(),
+            from: "person:小明".into(),
+            to: "person:小红".into(),
             rel_type: "sibling".into(),
         }],
     })
     .unwrap();
 
-    let ent = m.graph().get_entity("person_ming").unwrap();
+    let ent = m.graph().get_entity("person:小明").unwrap();
     assert!(ent.is_some());
     assert_eq!(ent.unwrap().attrs["age"], serde_json::json!(5));
 
-    let rels = m.graph().relations("person_ming").unwrap();
+    let rels = m.graph().relations("person:小明").unwrap();
     assert_eq!(rels.len(), 1);
     assert_eq!(rels[0].rel_type, "sibling");
 }
@@ -697,7 +700,7 @@ async fn tm7_apply_entity_update_merges() {
 
     m.apply_entity_update(&EntityUpdate {
         entities: vec![EntityInput {
-            label: "person_ming".into(),
+            label: "person:小明".into(),
             attrs: HashMap::from([("age".into(), serde_json::json!(5))]),
         }],
         relations: vec![],
@@ -706,14 +709,14 @@ async fn tm7_apply_entity_update_merges() {
 
     m.apply_entity_update(&EntityUpdate {
         entities: vec![EntityInput {
-            label: "person_ming".into(),
+            label: "person:小明".into(),
             attrs: HashMap::from([("hobby".into(), serde_json::json!("dinosaurs"))]),
         }],
         relations: vec![],
     })
     .unwrap();
 
-    let ent = m.graph().get_entity("person_ming").unwrap().unwrap();
+    let ent = m.graph().get_entity("person:小明").unwrap().unwrap();
     assert_eq!(ent.attrs["age"], serde_json::json!(5));
     assert_eq!(ent.attrs["hobby"], serde_json::json!("dinosaurs"));
 }
@@ -734,7 +737,7 @@ async fn tm8_compress_pipeline() {
     let segs = m.index().recent_segments(10).unwrap();
     assert!(!segs.is_empty(), "segments should exist after compress");
 
-    let ent = m.graph().get_entity("person_test").unwrap();
+    let ent = m.graph().get_entity("person:test").unwrap();
     assert!(ent.is_some(), "entity should be created by compress");
 }
 
@@ -758,6 +761,7 @@ async fn tm10_compact_bucket_cascade() {
         embedder: None,
         compressor: Some(Arc::new(MockCompressor)),
         compress_policy: CompressPolicy { max_chars: 50, max_messages: 3 },
+        separator: TEST_SEP,
     })
     .unwrap();
     let m = host.open("p1");
@@ -802,7 +806,7 @@ async fn tl2_extract_entities_returns_update() {
     let msgs = vec![user_msg("hello")];
     let update = c.extract_entities(&msgs).await.unwrap();
     assert_eq!(update.entities.len(), 1);
-    assert_eq!(update.entities[0].label, "person_test");
+    assert_eq!(update.entities[0].label, "person:test");
 }
 
 #[tokio::test]
@@ -930,7 +934,7 @@ fn ts3_message_model_roundtrip() {
 #[test]
 fn ts4_recall_query_json_roundtrip() {
     let q = RecallQuery {
-        labels: vec!["person_ming".into()],
+        labels: vec!["person:小明".into()],
         text: "dinosaurs".into(),
         hops: 2,
         limit: 10,
@@ -946,12 +950,12 @@ fn ts4_recall_query_json_roundtrip() {
 fn ts5_entity_update_json_roundtrip() {
     let update = EntityUpdate {
         entities: vec![EntityInput {
-            label: "person_ming".into(),
+            label: "person:小明".into(),
             attrs: HashMap::from([("age".into(), serde_json::json!(5))]),
         }],
         relations: vec![RelationInput {
-            from: "person_ming".into(),
-            to: "person_hong".into(),
+            from: "person:小明".into(),
+            to: "person:小红".into(),
             rel_type: "sibling".into(),
         }],
     };
@@ -960,7 +964,7 @@ fn ts5_entity_update_json_roundtrip() {
     let decoded: EntityUpdate = serde_json::from_str(&json).unwrap();
 
     assert_eq!(decoded.entities.len(), 1);
-    assert_eq!(decoded.entities[0].label, "person_ming");
+    assert_eq!(decoded.entities[0].label, "person:小明");
     assert_eq!(decoded.relations.len(), 1);
 }
 
@@ -999,7 +1003,7 @@ async fn ti1_full_flow_append_and_recall() {
         SegmentInput {
             summary: "conversation summary about dinosaurs".into(),
             keywords: vec!["dinosaurs".into(), "conversation".into()],
-            labels: vec!["person_ming".into()],
+            labels: vec!["person:小明".into()],
         },
         giztoy_recall::bucket_1h(),
     )
@@ -1064,8 +1068,8 @@ async fn ti4_entity_from_compress_recall_with_graph() {
 
     m.compress(&conv, None).await.unwrap();
 
-    // The mock compressor creates "person_test" entity.
-    let ent = m.graph().get_entity("person_test").unwrap();
+    // The mock compressor creates "person:test" entity.
+    let ent = m.graph().get_entity("person:test").unwrap();
     assert!(ent.is_some());
 }
 
@@ -1211,7 +1215,7 @@ fn tx5_kv_key_encoding_consistency() {
 async fn te1_single_person() {
     let h = new_test_host_with_compressor();
     let m = h.open("p1");
-    let mut conv = m.open_conversation("c1", &["person_ming".into()]);
+    let mut conv = m.open_conversation("c1", &["person:小明".into()]);
 
     let msgs = vec![
         ("user", "你好呀"),
@@ -1233,7 +1237,7 @@ async fn te1_single_person() {
 
     m.compress(&conv, None).await.unwrap();
 
-    let ent = m.graph().get_entity("person_test").unwrap();
+    let ent = m.graph().get_entity("person:test").unwrap();
     assert!(ent.is_some(), "TE.1: entity should be created");
 }
 
@@ -1244,21 +1248,21 @@ async fn te2_two_siblings() {
 
     m.apply_entity_update(&EntityUpdate {
         entities: vec![
-            EntityInput { label: "person_ming".into(), attrs: HashMap::from([("age".into(), serde_json::json!(5))]) },
-            EntityInput { label: "person_hong".into(), attrs: HashMap::from([("age".into(), serde_json::json!(3))]) },
+            EntityInput { label: "person:小明".into(), attrs: HashMap::from([("age".into(), serde_json::json!(5))]) },
+            EntityInput { label: "person:小红".into(), attrs: HashMap::from([("age".into(), serde_json::json!(3))]) },
         ],
         relations: vec![RelationInput {
-            from: "person_ming".into(),
-            to: "person_hong".into(),
+            from: "person:小明".into(),
+            to: "person:小红".into(),
             rel_type: "sibling".into(),
         }],
     })
     .unwrap();
 
-    let ents = m.graph().list_entities("person_").unwrap();
+    let ents = m.graph().list_entities("person:").unwrap();
     assert!(ents.len() >= 2, "TE.2: should have at least 2 entities");
 
-    let rels = m.graph().relations("person_ming").unwrap();
+    let rels = m.graph().relations("person:小明").unwrap();
     assert!(rels.len() >= 1, "TE.2: should have sibling relation");
 }
 
@@ -1269,14 +1273,14 @@ async fn te3_work_chat_english() {
 
     m.apply_entity_update(&EntityUpdate {
         entities: vec![EntityInput {
-            label: "person_Alice".into(),
+            label: "person:Alice".into(),
             attrs: HashMap::from([("role".into(), serde_json::json!("engineer"))]),
         }],
         relations: vec![],
     })
     .unwrap();
 
-    let ent = m.graph().get_entity("person_Alice").unwrap();
+    let ent = m.graph().get_entity("person:Alice").unwrap();
     assert!(ent.is_some(), "TE.3: should have person:Alice");
 }
 
@@ -1287,9 +1291,9 @@ async fn te4_cooking_multiple_people() {
 
     m.apply_entity_update(&EntityUpdate {
         entities: vec![
-            EntityInput { label: "person_mom".into(), attrs: HashMap::new() },
-            EntityInput { label: "person_ming".into(), attrs: HashMap::new() },
-            EntityInput { label: "topic_cooking".into(), attrs: HashMap::new() },
+            EntityInput { label: "person:妈妈".into(), attrs: HashMap::new() },
+            EntityInput { label: "person:小明".into(), attrs: HashMap::new() },
+            EntityInput { label: "topic:cooking".into(), attrs: HashMap::new() },
         ],
         relations: vec![],
     })
@@ -1306,14 +1310,14 @@ async fn te5_family_week_100msg() {
 
     m.apply_entity_update(&EntityUpdate {
         entities: vec![
-            EntityInput { label: "person_ming".into(), attrs: HashMap::from([("age".into(), serde_json::json!(5))]) },
-            EntityInput { label: "person_hong".into(), attrs: HashMap::from([("age".into(), serde_json::json!(3))]) },
-            EntityInput { label: "person_mom".into(), attrs: HashMap::new() },
-            EntityInput { label: "person_dad".into(), attrs: HashMap::new() },
+            EntityInput { label: "person:小明".into(), attrs: HashMap::from([("age".into(), serde_json::json!(5))]) },
+            EntityInput { label: "person:小红".into(), attrs: HashMap::from([("age".into(), serde_json::json!(3))]) },
+            EntityInput { label: "person:妈妈".into(), attrs: HashMap::new() },
+            EntityInput { label: "person:爸爸".into(), attrs: HashMap::new() },
         ],
         relations: vec![
-            RelationInput { from: "person_ming".into(), to: "person_hong".into(), rel_type: "sibling".into() },
-            RelationInput { from: "person_mom".into(), to: "person_ming".into(), rel_type: "parent".into() },
+            RelationInput { from: "person:小明".into(), to: "person:小红".into(), rel_type: "sibling".into() },
+            RelationInput { from: "person:妈妈".into(), to: "person:小明".into(), rel_type: "parent".into() },
         ],
     })
     .unwrap();
@@ -1324,7 +1328,7 @@ async fn te5_family_week_100msg() {
             SegmentInput {
                 summary: format!("family session {i} about dinosaurs and activities"),
                 keywords: vec!["dinosaurs".into(), "family".into()],
-                labels: vec!["person_ming".into()],
+                labels: vec!["person:小明".into()],
             },
             giztoy_recall::bucket_1h(),
         )
@@ -1332,10 +1336,10 @@ async fn te5_family_week_100msg() {
         .unwrap();
     }
 
-    let ents = m.graph().list_entities("person_").unwrap();
+    let ents = m.graph().list_entities("person:").unwrap();
     assert!(ents.len() >= 4, "TE.5: should have >= 4 entities");
 
-    let rels = m.graph().relations("person_ming").unwrap();
+    let rels = m.graph().relations("person:小明").unwrap();
     assert!(rels.len() >= 2, "TE.5: should have >= 2 relations");
 
     let segs = m.index().recent_segments(100).unwrap();
@@ -1348,7 +1352,7 @@ async fn te6_topic_drift_100msg() {
     let m = h.open("p1");
 
     m.apply_entity_update(&EntityUpdate {
-        entities: vec![EntityInput { label: "person_user1".into(), attrs: HashMap::new() }],
+        entities: vec![EntityInput { label: "person:user1".into(), attrs: HashMap::new() }],
         relations: vec![],
     })
     .unwrap();
@@ -1358,7 +1362,7 @@ async fn te6_topic_drift_100msg() {
             SegmentInput {
                 summary: format!("topic session {i} drifting from A to B"),
                 keywords: vec!["topic_a".into(), "topic_b".into()],
-                labels: vec!["person_user1".into()],
+                labels: vec!["person:user1".into()],
             },
             giztoy_recall::bucket_1h(),
         )
@@ -1380,8 +1384,8 @@ async fn te7_corrections() {
 
     m.apply_entity_update(&EntityUpdate {
         entities: vec![
-            EntityInput { label: "person_ming".into(), attrs: HashMap::from([("favorite_food".into(), serde_json::json!("pizza"))]) },
-            EntityInput { label: "person_hong".into(), attrs: HashMap::new() },
+            EntityInput { label: "person:小明".into(), attrs: HashMap::from([("favorite_food".into(), serde_json::json!("pizza"))]) },
+            EntityInput { label: "person:小红".into(), attrs: HashMap::new() },
         ],
         relations: vec![],
     })
@@ -1390,14 +1394,14 @@ async fn te7_corrections() {
     // Correction: update favorite food.
     m.apply_entity_update(&EntityUpdate {
         entities: vec![EntityInput {
-            label: "person_ming".into(),
+            label: "person:小明".into(),
             attrs: HashMap::from([("favorite_food".into(), serde_json::json!("sushi"))]),
         }],
         relations: vec![],
     })
     .unwrap();
 
-    let ent = m.graph().get_entity("person_ming").unwrap().unwrap();
+    let ent = m.graph().get_entity("person:小明").unwrap().unwrap();
     assert_eq!(ent.attrs["favorite_food"], serde_json::json!("sushi"), "TE.7: correction should update attribute");
 }
 
@@ -1426,6 +1430,7 @@ async fn tb2_100_segments_compact() {
         embedder: None,
         compressor: Some(Arc::new(MockCompressor)),
         compress_policy: CompressPolicy { max_chars: 500, max_messages: 10 },
+        separator: TEST_SEP,
     })
     .unwrap();
     let m = host.open("p1");

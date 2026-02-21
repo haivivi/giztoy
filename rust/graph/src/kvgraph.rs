@@ -6,38 +6,56 @@ use serde_json::Value;
 use crate::error::GraphError;
 use crate::graph::{Entity, Graph, Relation};
 
+/// Default KV key separator.
+pub const DEFAULT_SEPARATOR: char = ':';
+
 /// KV key layout (relative to the configured prefix):
 ///
 /// ```text
-/// {prefix}:e:{label}                  -> JSON-encoded Entity.Attrs
-/// {prefix}:r:{from}:{relType}:{to}   -> empty (forward index)
-/// {prefix}:ri:{to}:{relType}:{from}  -> empty (reverse index)
+/// {prefix}{sep}e{sep}{label}                        -> JSON-encoded Entity.Attrs
+/// {prefix}{sep}r{sep}{from}{sep}{relType}{sep}{to}  -> empty (forward index)
+/// {prefix}{sep}ri{sep}{to}{sep}{relType}{sep}{from} -> empty (reverse index)
 /// ```
 ///
-/// This layout is byte-identical to Go's `graph.KVGraph`.
+/// The separator defaults to ':' but can be configured (e.g. '\x1F')
+/// to allow labels containing ':' such as "person:小明".
 pub struct KVGraph {
     store: Box<dyn KVStore>,
     prefix: String,
+    sep: char,
 }
 
-const SEPARATOR: char = ':';
-
 impl KVGraph {
-    /// Create a new KVGraph using the given store and key prefix.
+    /// Create a new KVGraph using the given store, key prefix, and separator.
     ///
-    /// The prefix is prepended to all keys with `:` separator,
-    /// e.g. prefix = `"mem:123:g"` results in entity keys like
-    /// `"mem:123:g:e:Alice"`.
+    /// The separator is used between key segments. Labels must not contain
+    /// the separator character. Use `'\x1F'` (ASCII Unit Separator) to allow
+    /// colon-namespaced labels like "person:小明".
+    ///
+    /// Pass `DEFAULT_SEPARATOR` (`:`) for the default behavior.
     pub fn new(store: Box<dyn KVStore>, prefix: &str) -> Self {
         Self {
             store,
             prefix: prefix.to_string(),
+            sep: DEFAULT_SEPARATOR,
         }
     }
 
+    /// Create a KVGraph with a custom separator.
+    pub fn with_separator(store: Box<dyn KVStore>, prefix: &str, sep: char) -> Self {
+        Self {
+            store,
+            prefix: prefix.to_string(),
+            sep,
+        }
+    }
+
+    /// Return the separator used by this graph.
+    pub fn separator(&self) -> char { self.sep }
+
     fn validate_segments(&self, segs: &[&str]) -> Result<(), GraphError> {
         for s in segs {
-            if s.contains(SEPARATOR) {
+            if s.contains(self.sep) {
                 return Err(GraphError::InvalidLabel(s.to_string()));
             }
         }
@@ -47,52 +65,50 @@ impl KVGraph {
     // --- key helpers ---
 
     fn entity_key(&self, label: &str) -> String {
-        format!("{}:e:{}", self.prefix, label)
+        format!("{}{s}e{s}{}", self.prefix, label, s = self.sep)
     }
 
     fn entity_prefix(&self) -> String {
-        format!("{}:e:", self.prefix)
+        format!("{}{s}e{s}", self.prefix, s = self.sep)
     }
 
     fn fwd_key(&self, from: &str, rel_type: &str, to: &str) -> String {
-        format!("{}:r:{}:{}:{}", self.prefix, from, rel_type, to)
+        format!("{}{s}r{s}{}{s}{}{s}{}", self.prefix, from, rel_type, to, s = self.sep)
     }
 
     fn fwd_prefix(&self, from: &str) -> String {
-        format!("{}:r:{}:", self.prefix, from)
+        format!("{}{s}r{s}{}{s}", self.prefix, from, s = self.sep)
     }
 
     fn rev_key(&self, to: &str, rel_type: &str, from: &str) -> String {
-        format!("{}:ri:{}:{}:{}", self.prefix, to, rel_type, from)
+        format!("{}{s}ri{s}{}{s}{}{s}{}", self.prefix, to, rel_type, from, s = self.sep)
     }
 
     fn rev_prefix(&self, to: &str) -> String {
-        format!("{}:ri:{}:", self.prefix, to)
+        format!("{}{s}ri{s}{}{s}", self.prefix, to, s = self.sep)
     }
 
-    /// Parse a forward relation key into (from, rel_type, to).
-    /// Key format: `{prefix}:r:{from}:{relType}:{to}`
     fn parse_fwd_key(&self, key: &str) -> Option<(String, String, String)> {
-        let rest = key.strip_prefix(&format!("{}:r:", self.prefix))?;
-        let mut parts = rest.splitn(3, SEPARATOR);
+        let pfx = format!("{}{s}r{s}", self.prefix, s = self.sep);
+        let rest = key.strip_prefix(&pfx)?;
+        let mut parts = rest.splitn(3, self.sep);
         let from = parts.next()?.to_string();
         let rel_type = parts.next()?.to_string();
         let to = parts.next()?.to_string();
-        if to.contains(SEPARATOR) {
-            return None; // malformed
+        if to.contains(self.sep) {
+            return None;
         }
         Some((from, rel_type, to))
     }
 
-    /// Parse a reverse relation key into (to, rel_type, from).
-    /// Key format: `{prefix}:ri:{to}:{relType}:{from}`
     fn parse_rev_key(&self, key: &str) -> Option<(String, String, String)> {
-        let rest = key.strip_prefix(&format!("{}:ri:", self.prefix))?;
-        let mut parts = rest.splitn(3, SEPARATOR);
+        let pfx = format!("{}{s}ri{s}", self.prefix, s = self.sep);
+        let rest = key.strip_prefix(&pfx)?;
+        let mut parts = rest.splitn(3, self.sep);
         let to = parts.next()?.to_string();
         let rel_type = parts.next()?.to_string();
         let from = parts.next()?.to_string();
-        if from.contains(SEPARATOR) {
+        if from.contains(self.sep) {
             return None;
         }
         Some((to, rel_type, from))

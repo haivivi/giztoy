@@ -28,6 +28,11 @@ pub struct HostConfig {
 
     /// Controls when auto-compression triggers.
     pub compress_policy: CompressPolicy,
+
+    /// KV key separator byte for the graph layer. Labels must not contain
+    /// this character. Default ':' forbids colon in labels. Use '\x1F'
+    /// (ASCII Unit Separator) for natural labels like "person:小明".
+    pub separator: char,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -44,6 +49,7 @@ pub struct Host {
     embedder: Option<Arc<dyn Embedder>>,
     compressor: Option<Arc<dyn Compressor>>,
     policy: CompressPolicy,
+    separator: char,
 
     memories: Mutex<HashMap<String, ()>>,
 }
@@ -60,12 +66,19 @@ impl Host {
             policy = CompressPolicy::default();
         }
 
+        let separator = if cfg.separator == '\0' {
+            giztoy_graph::DEFAULT_SEPARATOR
+        } else {
+            cfg.separator
+        };
+
         Ok(Self {
             store: cfg.store,
             vec: cfg.vec,
             embedder: cfg.embedder,
             compressor: cfg.compressor,
             policy,
+            separator,
             memories: Mutex::new(HashMap::new()),
         })
     }
@@ -77,7 +90,7 @@ impl Host {
 
         let prefix = mem_prefix(id);
 
-        let index = RecallIndex::new(
+        let index = RecallIndex::with_separator(
             Box::new(SharedStore(Arc::clone(&self.store))),
             Box::new(SharedStore(Arc::clone(&self.store))),
             self.embedder.as_ref().map(|e| -> Box<dyn Embedder> {
@@ -87,6 +100,7 @@ impl Host {
                 Box::new(SharedVecIndex(Arc::clone(v)))
             }),
             prefix,
+            self.separator,
         );
 
         Memory::new(

@@ -41,6 +41,26 @@ impl RecallIndex {
         }
     }
 
+    /// Create a RecallIndex with a custom graph separator.
+    /// Use `'\x1F'` to allow colon-namespaced labels like "person:小明".
+    pub fn with_separator(
+        store: Box<dyn KVStore>,
+        graph_store: Box<dyn KVStore>,
+        embedder: Option<Box<dyn Embedder>>,
+        vec_index: Option<Box<dyn VecIndex>>,
+        prefix: String,
+        separator: char,
+    ) -> Self {
+        let gprefix = graph_prefix(&prefix);
+        Self {
+            store,
+            embedder,
+            vec: vec_index,
+            graph: KVGraph::with_separator(graph_store, &gprefix, separator),
+            prefix,
+        }
+    }
+
     /// Return a reference to the entity-relation graph.
     pub fn graph(&self) -> &dyn Graph {
         &self.graph
