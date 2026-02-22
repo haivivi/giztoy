@@ -88,23 +88,75 @@ pub struct VoiceEntry {
 }
 
 /// Expand environment variable references in a string.
-/// Supports `$VAR` and `${VAR}` formats. `$$` is treated as escaped `$`.
-/// Matches Go's `os.ExpandEnv` behavior for the common cases.
+///
+/// Implements Go `os.Expand` / POSIX shell expansion semantics:
+///   - `$$` → literal `$`
+///   - `${VAR}` → value of environment variable VAR
+///   - `$VAR` → value of environment variable VAR
+///     (identifier = `[a-zA-Z_][a-zA-Z0-9_]*`)
+///   - All other characters are preserved literally
+///
+/// Examples:
+///   - `"$HOME/data"` → `"/Users/idy/data"`
+///   - `"${API_KEY}"` → `"sk-xxx"`
+///   - `"price: $$5"` → `"price: $5"`
+///   - `"plain text"` → `"plain text"`
 fn expand_env(s: &str) -> String {
-    if s.is_empty() || !s.starts_with('$') {
-        return s.to_string();
+    let bytes = s.as_bytes();
+    let mut result = String::with_capacity(s.len());
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if bytes[i] != b'$' {
+            result.push(bytes[i] as char);
+            i += 1;
+            continue;
+        }
+
+        // Found '$'
+        i += 1;
+        if i >= bytes.len() {
+            result.push('$');
+            break;
+        }
+
+        // $$ → literal $
+        if bytes[i] == b'$' {
+            result.push('$');
+            i += 1;
+            continue;
+        }
+
+        // ${VAR}
+        if bytes[i] == b'{' {
+            i += 1;
+            let start = i;
+            while i < bytes.len() && bytes[i] != b'}' {
+                i += 1;
+            }
+            let var_name = &s[start..i];
+            result.push_str(&std::env::var(var_name).unwrap_or_default());
+            if i < bytes.len() {
+                i += 1; // skip '}'
+            }
+            continue;
+        }
+
+        // $VAR — identifier: [a-zA-Z_][a-zA-Z0-9_]*
+        let start = i;
+        if i < bytes.len() && (bytes[i].is_ascii_alphabetic() || bytes[i] == b'_') {
+            i += 1;
+            while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_') {
+                i += 1;
+            }
+            let var_name = &s[start..i];
+            result.push_str(&std::env::var(var_name).unwrap_or_default());
+        } else {
+            result.push('$');
+        }
     }
-    // $$ → literal $
-    if s.starts_with("$$") {
-        return format!("${}", &s[2..]);
-    }
-    // ${VAR} → strip ${ and }
-    if let Some(inner) = s.strip_prefix("${").and_then(|r| r.strip_suffix('}')) {
-        return std::env::var(inner).unwrap_or_default();
-    }
-    // $VAR → strip leading $
-    let var_name = &s[1..];
-    std::env::var(var_name).unwrap_or_default()
+
+    result
 }
 
 /// Parse a config file from a path (YAML or JSON).
@@ -329,9 +381,9 @@ fn register_openai(
 /// Wrapper that implements Generator by delegating to a shared RwLock<GeneratorMux>.
 /// This ensures segmentors/profilers always see the latest registered generators.
 ///
-/// The RwLock is acquired, the target generator is looked up and cloned (Arc),
-/// then the lock is released before the async call. This avoids holding the lock
-/// across await points.
+/// On each call: acquires read lock → looks up target generator → clones its Arc
+/// → releases lock → calls the generator. Only the target Arc is cloned (O(1)),
+/// not the entire HashMap.
 struct SharedGeneratorMux(Arc<std::sync::RwLock<GeneratorMux>>);
 
 #[async_trait::async_trait]
@@ -341,8 +393,8 @@ impl crate::Generator for SharedGeneratorMux {
         model: &str,
         ctx: &dyn crate::context::ModelContext,
     ) -> Result<Box<dyn crate::stream::Stream>, GenxError> {
-        let mux = self.0.read().unwrap().clone();
-        mux.generate_stream(model, ctx).await
+        let target = self.0.read().unwrap().get_arc(model)?;
+        target.generate_stream(model, ctx).await
     }
 
     async fn invoke(
@@ -351,8 +403,8 @@ impl crate::Generator for SharedGeneratorMux {
         ctx: &dyn crate::context::ModelContext,
         tool: &crate::tool::FuncTool,
     ) -> Result<(crate::error::Usage, crate::types::FuncCall), GenxError> {
-        let mux = self.0.read().unwrap().clone();
-        mux.invoke(model, ctx, tool).await
+        let target = self.0.read().unwrap().get_arc(model)?;
+        target.invoke(model, ctx, tool).await
     }
 }
 
@@ -637,6 +689,36 @@ mod tests {
     #[test]
     fn t13_expand_env_unset() {
         assert_eq!(expand_env("$_GENX_NONEXISTENT_VAR_12345"), "");
+    }
+
+    #[test]
+    fn t13_expand_env_dollar_dollar() {
+        assert_eq!(expand_env("$$"), "$");
+        assert_eq!(expand_env("price: $$5"), "price: $5");
+    }
+
+    #[test]
+    fn t13_expand_env_braces_with_suffix() {
+        unsafe { std::env::set_var("_GENX_TEST_KEY3", "http://api") };
+        assert_eq!(expand_env("${_GENX_TEST_KEY3}/v1"), "http://api/v1");
+        unsafe { std::env::remove_var("_GENX_TEST_KEY3") };
+    }
+
+    #[test]
+    fn t13_expand_env_var_with_suffix() {
+        unsafe { std::env::set_var("_GENX_TEST_HOME", "/home/user") };
+        assert_eq!(expand_env("$_GENX_TEST_HOME/data"), "/home/user/data");
+        unsafe { std::env::remove_var("_GENX_TEST_HOME") };
+    }
+
+    #[test]
+    fn t13_expand_env_no_dollar() {
+        assert_eq!(expand_env("just plain text"), "just plain text");
+    }
+
+    #[test]
+    fn t13_expand_env_trailing_dollar() {
+        assert_eq!(expand_env("end$"), "end$");
     }
 
     #[test]

@@ -51,6 +51,16 @@ impl Mux {
                 GenxError::Other(anyhow::anyhow!("generator not found for {}", pattern))
             })
     }
+
+    /// Get a cloned Arc to the generator for the given pattern.
+    pub fn get_arc(&self, pattern: &str) -> Result<Arc<dyn Generator>, GenxError> {
+        self.routes
+            .get(pattern)
+            .cloned()
+            .ok_or_else(|| {
+                GenxError::Other(anyhow::anyhow!("generator not found for {}", pattern))
+            })
+    }
 }
 
 impl Default for Mux {
