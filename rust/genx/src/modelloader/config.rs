@@ -102,41 +102,40 @@ pub struct VoiceEntry {
 ///   - `"price: $$5"` → `"price: $5"`
 ///   - `"plain text"` → `"plain text"`
 fn expand_env(s: &str) -> String {
-    let bytes = s.as_bytes();
+    let chars: Vec<char> = s.chars().collect();
     let mut result = String::with_capacity(s.len());
     let mut i = 0;
 
-    while i < bytes.len() {
-        if bytes[i] != b'$' {
-            result.push(bytes[i] as char);
+    while i < chars.len() {
+        if chars[i] != '$' {
+            result.push(chars[i]);
             i += 1;
             continue;
         }
 
-        // Found '$'
         i += 1;
-        if i >= bytes.len() {
+        if i >= chars.len() {
             result.push('$');
             break;
         }
 
         // $$ → literal $
-        if bytes[i] == b'$' {
+        if chars[i] == '$' {
             result.push('$');
             i += 1;
             continue;
         }
 
         // ${VAR}
-        if bytes[i] == b'{' {
+        if chars[i] == '{' {
             i += 1;
             let start = i;
-            while i < bytes.len() && bytes[i] != b'}' {
+            while i < chars.len() && chars[i] != '}' {
                 i += 1;
             }
-            let var_name = &s[start..i];
-            result.push_str(&std::env::var(var_name).unwrap_or_default());
-            if i < bytes.len() {
+            let var_name: String = chars[start..i].iter().collect();
+            result.push_str(&std::env::var(&var_name).unwrap_or_default());
+            if i < chars.len() {
                 i += 1; // skip '}'
             }
             continue;
@@ -144,13 +143,13 @@ fn expand_env(s: &str) -> String {
 
         // $VAR — identifier: [a-zA-Z_][a-zA-Z0-9_]*
         let start = i;
-        if i < bytes.len() && (bytes[i].is_ascii_alphabetic() || bytes[i] == b'_') {
+        if i < chars.len() && (chars[i].is_ascii_alphabetic() || chars[i] == '_') {
             i += 1;
-            while i < bytes.len() && (bytes[i].is_ascii_alphanumeric() || bytes[i] == b'_') {
+            while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
                 i += 1;
             }
-            let var_name = &s[start..i];
-            result.push_str(&std::env::var(var_name).unwrap_or_default());
+            let var_name: String = chars[start..i].iter().collect();
+            result.push_str(&std::env::var(&var_name).unwrap_or_default());
         } else {
             result.push('$');
         }
