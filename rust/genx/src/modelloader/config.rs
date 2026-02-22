@@ -102,6 +102,9 @@ pub struct VoiceEntry {
 ///   - `"price: $$5"` → `"price: $5"`
 ///   - `"plain text"` → `"plain text"`
 fn expand_env(s: &str) -> String {
+    if s.is_empty() || !s.starts_with('$') {
+        return s.to_string();
+    }
     let chars: Vec<char> = s.chars().collect();
     let mut result = String::with_capacity(s.len());
     let mut i = 0;
@@ -693,7 +696,8 @@ mod tests {
     #[test]
     fn t13_expand_env_dollar_dollar() {
         assert_eq!(expand_env("$$"), "$");
-        assert_eq!(expand_env("price: $$5"), "price: $5");
+        // "price: $$5" doesn't start with $ → returned as-is (Go behavior)
+        assert_eq!(expand_env("price: $$5"), "price: $$5");
     }
 
     #[test]

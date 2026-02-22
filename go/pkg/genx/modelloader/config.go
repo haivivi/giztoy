@@ -253,7 +253,7 @@ func registerOpenAI(cfg ConfigFile) ([]string, error) {
 		if m.Name == "" || m.Model == "" {
 			return nil, fmt.Errorf("model entry missing name or model")
 		}
-		generators.Handle(m.Name, &genx.OpenAIGenerator{
+		if err := generators.Handle(m.Name, &genx.OpenAIGenerator{
 			Client:            &client,
 			Model:             m.Model,
 			GenerateParams:    m.GenerateParams,
@@ -263,7 +263,9 @@ func registerOpenAI(cfg ConfigFile) ([]string, error) {
 			SupportTextOnly:   m.SupportTextOnly,
 			UseSystemRole:     m.UseSystemRole,
 			ExtraFields:       m.ExtraFields,
-		})
+		}); err != nil {
+			return nil, fmt.Errorf("register generator %q: %w", m.Name, err)
+		}
 		names = append(names, m.Name)
 	}
 	return names, nil
@@ -285,12 +287,14 @@ func registerGemini(cfg ConfigFile) ([]string, error) {
 		if m.Name == "" || m.Model == "" {
 			return nil, fmt.Errorf("model entry missing name or model")
 		}
-		generators.Handle(m.Name, &genx.GeminiGenerator{
+		if err := generators.Handle(m.Name, &genx.GeminiGenerator{
 			Client:         client,
 			Model:          m.Model,
 			GenerateParams: m.GenerateParams,
 			InvokeParams:   m.InvokeParams,
-		})
+		}); err != nil {
+			return nil, fmt.Errorf("register generator %q: %w", m.Name, err)
+		}
 		names = append(names, m.Name)
 	}
 	return names, nil
