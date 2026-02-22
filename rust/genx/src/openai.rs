@@ -65,6 +65,9 @@ pub struct OpenAIConfig {
     /// Default invoke parameters
     #[serde(default)]
     pub invoke_params: Option<ModelParams>,
+    /// Extra fields to include in API requests
+    #[serde(default)]
+    pub extra_fields: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
 fn default_base_url() -> String {
@@ -87,6 +90,7 @@ impl Default for OpenAIConfig {
             use_system_role: true,
             generate_params: None,
             invoke_params: None,
+            extra_fields: None,
         }
     }
 }

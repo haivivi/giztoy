@@ -87,24 +87,33 @@ pub struct VoiceEntry {
     pub cluster: Option<String>,
 }
 
-/// Expand environment variable references in a string.
+/// Expand environment variable references in a config value.
 ///
-/// Implements Go `os.Expand` / POSIX shell expansion semantics:
-///   - `$$` → literal `$`
-///   - `${VAR}` → value of environment variable VAR
-///   - `$VAR` → value of environment variable VAR
-///     (identifier = `[a-zA-Z_][a-zA-Z0-9_]*`)
-///   - All other characters are preserved literally
+/// Matches Go's `modelloader.expandEnv` behavior exactly:
+///   - If the string does not start with `$`, return it unchanged
+///   - If it starts with `$`, apply Go `os.ExpandEnv` semantics
 ///
-/// Examples:
-///   - `"$HOME/data"` → `"/Users/idy/data"`
-///   - `"${API_KEY}"` → `"sk-xxx"`
-///   - `"price: $$5"` → `"price: $5"`
-///   - `"plain text"` → `"plain text"`
+/// This means config values are either literal or env-var references:
+///   - `"$HOME"` → value of HOME
+///   - `"${API_KEY}"` → value of API_KEY
+///   - `"$HOME/data"` → value of HOME + "/data"
+///   - `"sk-plain-key"` → unchanged (no $ prefix)
+///   - `"sk-abc$HOME"` → unchanged ($ not at start)
 fn expand_env(s: &str) -> String {
     if s.is_empty() || !s.starts_with('$') {
         return s.to_string();
     }
+    os_expand_env(s)
+}
+
+/// Implements Go `os.ExpandEnv` — expands `$VAR` and `${VAR}` anywhere in the string.
+///
+/// Go semantics (verified against Go 1.25 os.ExpandEnv):
+///   - `$name` → env var (name = longest run of `[a-zA-Z0-9_]`)
+///   - `${name}` → env var
+///   - `$$` → empty string (expands the empty-named var, which is always unset)
+///   - trailing `$` → literal `$`
+fn os_expand_env(s: &str) -> String {
     let chars: Vec<char> = s.chars().collect();
     let mut result = String::with_capacity(s.len());
     let mut i = 0;
@@ -118,15 +127,9 @@ fn expand_env(s: &str) -> String {
 
         i += 1;
         if i >= chars.len() {
+            // Trailing $ with nothing after → literal $
             result.push('$');
             break;
-        }
-
-        // $$ → literal $
-        if chars[i] == '$' {
-            result.push('$');
-            i += 1;
-            continue;
         }
 
         // ${VAR}
@@ -139,22 +142,24 @@ fn expand_env(s: &str) -> String {
             let var_name: String = chars[start..i].iter().collect();
             result.push_str(&std::env::var(&var_name).unwrap_or_default());
             if i < chars.len() {
-                i += 1; // skip '}'
+                i += 1;
             }
             continue;
         }
 
-        // $VAR — identifier: [a-zA-Z_][a-zA-Z0-9_]*
-        let start = i;
-        if i < chars.len() && (chars[i].is_ascii_alphabetic() || chars[i] == '_') {
-            i += 1;
+        // $name — name is longest run of [a-zA-Z0-9_]
+        if chars[i].is_ascii_alphanumeric() || chars[i] == '_' {
+            let start = i;
             while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
                 i += 1;
             }
             let var_name: String = chars[start..i].iter().collect();
             result.push_str(&std::env::var(&var_name).unwrap_or_default());
         } else {
-            result.push('$');
+            // Go: $$ or $<non-ident> → empty var name, consumes the char after $
+            // e.g. $$ → "", $$HOME → "" + "HOME"
+            i += 1;
+            result.push_str(&std::env::var("").unwrap_or_default());
         }
     }
 
@@ -372,6 +377,7 @@ fn register_openai(
             use_system_role: m.use_system_role,
             generate_params: m.generate_params.clone(),
             invoke_params: m.invoke_params.clone(),
+            extra_fields: m.extra_fields.clone(),
         };
 
         gen_mux.write().unwrap().handle(&m.name, Arc::new(OpenAIGenerator::new(config)))?;
@@ -664,64 +670,59 @@ mod tests {
         }
     }
 
+    /// Golden test matrix matching Go's modelloader.expandEnv behavior.
+    /// Verified against: `go run /tmp/test_expand2.go` with Go 1.25.
     #[test]
-    fn t13_expand_env_empty() {
-        assert_eq!(expand_env(""), "");
+    fn t13_expand_env_golden_matrix() {
+        unsafe {
+            std::env::set_var("_GX_HOME", "/home/user");
+            std::env::set_var("_GX_API_KEY", "sk-123");
+        }
+
+        // (input, expected) — each pair matches Go expandEnv output
+        let cases: &[(&str, &str)] = &[
+            ("", ""),
+            ("plain text", "plain text"),
+            ("$_GX_HOME", "/home/user"),
+            ("${_GX_HOME}", "/home/user"),
+            ("$_GX_HOME/data", "/home/user/data"),
+            ("${_GX_HOME}/data", "/home/user/data"),
+            ("$$", ""),                                  // Go: $$ = empty var name → ""
+            ("$$_GX_HOME", "_GX_HOME"),                  // Go: $$ → "" then "_GX_HOME" literal
+            ("price: $$5", "price: $$5"),                // doesn't start with $ → unchanged
+            ("sk-abc$_GX_HOME-xyz", "sk-abc$_GX_HOME-xyz"), // doesn't start with $ → unchanged
+            ("$_GX_UNSET_VAR_99999", ""),                // unset var → ""
+            ("end$", "end$"),                            // doesn't start with $ → unchanged
+            ("$", "$"),                                  // lone $ at end → literal
+            ("${_GX_API_KEY}", "sk-123"),
+            ("prefix${_GX_API_KEY}suffix", "prefix${_GX_API_KEY}suffix"), // doesn't start with $
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(
+                expand_env(input), *expected,
+                "expand_env({:?}) should be {:?}", input, expected,
+            );
+        }
+
+        unsafe {
+            std::env::remove_var("_GX_HOME");
+            std::env::remove_var("_GX_API_KEY");
+        }
     }
 
+    /// Test os_expand_env directly (full-string expansion without prefix guard).
     #[test]
-    fn t13_expand_env_plain() {
-        assert_eq!(expand_env("plain-value"), "plain-value");
-    }
+    fn t13_os_expand_env_full_string() {
+        unsafe { std::env::set_var("_GX_V", "val") };
 
-    #[test]
-    fn t13_expand_env_var() {
-        unsafe { std::env::set_var("_GENX_TEST_KEY", "secret123") };
-        assert_eq!(expand_env("$_GENX_TEST_KEY"), "secret123");
-        unsafe { std::env::remove_var("_GENX_TEST_KEY") };
-    }
+        assert_eq!(os_expand_env("mid$_GX_V/end"), "midval/end");
+        assert_eq!(os_expand_env("${_GX_V}!"), "val!");
+        assert_eq!(os_expand_env("$$"), "");
+        assert_eq!(os_expand_env("$"), "$");
+        assert_eq!(os_expand_env("no vars"), "no vars");
 
-    #[test]
-    fn t13_expand_env_braces() {
-        unsafe { std::env::set_var("_GENX_TEST_KEY2", "val2") };
-        assert_eq!(expand_env("${_GENX_TEST_KEY2}"), "val2");
-        unsafe { std::env::remove_var("_GENX_TEST_KEY2") };
-    }
-
-    #[test]
-    fn t13_expand_env_unset() {
-        assert_eq!(expand_env("$_GENX_NONEXISTENT_VAR_12345"), "");
-    }
-
-    #[test]
-    fn t13_expand_env_dollar_dollar() {
-        assert_eq!(expand_env("$$"), "$");
-        // "price: $$5" doesn't start with $ → returned as-is (Go behavior)
-        assert_eq!(expand_env("price: $$5"), "price: $$5");
-    }
-
-    #[test]
-    fn t13_expand_env_braces_with_suffix() {
-        unsafe { std::env::set_var("_GENX_TEST_KEY3", "http://api") };
-        assert_eq!(expand_env("${_GENX_TEST_KEY3}/v1"), "http://api/v1");
-        unsafe { std::env::remove_var("_GENX_TEST_KEY3") };
-    }
-
-    #[test]
-    fn t13_expand_env_var_with_suffix() {
-        unsafe { std::env::set_var("_GENX_TEST_HOME", "/home/user") };
-        assert_eq!(expand_env("$_GENX_TEST_HOME/data"), "/home/user/data");
-        unsafe { std::env::remove_var("_GENX_TEST_HOME") };
-    }
-
-    #[test]
-    fn t13_expand_env_no_dollar() {
-        assert_eq!(expand_env("just plain text"), "just plain text");
-    }
-
-    #[test]
-    fn t13_expand_env_trailing_dollar() {
-        assert_eq!(expand_env("end$"), "end$");
+        unsafe { std::env::remove_var("_GX_V") };
     }
 
     #[test]
