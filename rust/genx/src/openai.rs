@@ -277,6 +277,13 @@ impl OpenAIGenerator {
             }
         }
 
+        // Merge extra fields (provider-specific extensions)
+        if let Some(ref extra) = self.config.extra_fields {
+            for (key, value) in extra {
+                body[key] = value.clone();
+            }
+        }
+
         body
     }
 
@@ -469,6 +476,13 @@ impl Generator for OpenAIGenerator {
             }
             if let Some(top_p) = p.top_p {
                 body["top_p"] = json!(top_p);
+            }
+        }
+
+        // Merge extra fields (provider-specific extensions)
+        if let Some(ref extra) = self.config.extra_fields {
+            for (key, value) in extra {
+                body[key] = value.clone();
             }
         }
 
