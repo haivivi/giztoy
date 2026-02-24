@@ -106,12 +106,22 @@ fn expand_env(s: &str) -> String {
     os_expand_env(s)
 }
 
+/// Returns true if `c` is a Go shell-special variable character.
+///
+/// Go's `os.Expand` treats these as single-character variable names that
+/// consume the character after `$`. Matches Go's `isShellSpecialVar`:
+///   digits 0-9, and `$`, `-`, `!`, `?`, `#`, `@`, `*`
+fn is_shell_special(c: char) -> bool {
+    matches!(c, '0'..='9' | '$' | '-' | '!' | '?' | '#' | '@' | '*')
+}
+
 /// Implements Go `os.ExpandEnv` — expands `$VAR` and `${VAR}` anywhere in the string.
 ///
 /// Go semantics (verified against Go 1.25 os.ExpandEnv):
-///   - `$name` → env var (name = longest run of `[a-zA-Z0-9_]`)
+///   - `$name` → env var (name = longest run of `[a-zA-Z_][a-zA-Z0-9_]*`)
 ///   - `${name}` → env var
-///   - `$$` → empty string (expands the empty-named var, which is always unset)
+///   - `$0`..`$9`, `$$`, `$-`, `$!`, `$?`, `$#`, `$@`, `$*` → single-char shell var
+///   - `$.`, `$,`, `$/`, `$+`, `$=`, `$ ` → literal `$` (char preserved)
 ///   - trailing `$` → literal `$`
 fn os_expand_env(s: &str) -> String {
     let chars: Vec<char> = s.chars().collect();
@@ -147,19 +157,27 @@ fn os_expand_env(s: &str) -> String {
             continue;
         }
 
-        // $name — name is longest run of [a-zA-Z0-9_]
-        if chars[i].is_ascii_alphanumeric() || chars[i] == '_' {
+        // $name — name is longest run of [a-zA-Z_][a-zA-Z0-9_]*
+        // Note: Go treats leading digits as shell special vars (single char),
+        // not as identifier starts. So $0abc → expand "0" then literal "abc".
+        if chars[i].is_ascii_alphabetic() || chars[i] == '_' {
             let start = i;
             while i < chars.len() && (chars[i].is_ascii_alphanumeric() || chars[i] == '_') {
                 i += 1;
             }
             let var_name: String = chars[start..i].iter().collect();
             result.push_str(&std::env::var(&var_name).unwrap_or_default());
-        } else {
-            // Go: $$ or $<non-ident> → empty var name, consumes the char after $
-            // e.g. $$ → "", $$HOME → "" + "HOME"
+        } else if is_shell_special(chars[i]) {
+            // Go shell special vars: single-char names like $0..$9, $$, $-, $!, $?, $#, $@, $*
+            // These consume the character after $ and expand as a single-char var name.
+            let var_name = chars[i].to_string();
             i += 1;
-            result.push_str(&std::env::var("").unwrap_or_default());
+            result.push_str(&std::env::var(&var_name).unwrap_or_default());
+        } else {
+            // Non-identifier, non-shell-special char (e.g. `.`, `,`, `/`, `+`, `=`, space)
+            // Go does NOT consume the char — $ is treated as literal.
+            result.push('$');
+            // Do not advance i — the char will be processed in the next iteration.
         }
     }
 
@@ -711,18 +729,63 @@ mod tests {
         }
     }
 
-    /// Test os_expand_env directly (full-string expansion without prefix guard).
+    /// Test os_expand_env directly — exhaustive golden matrix verified against Go 1.25.
+    ///
+    /// Each case was produced by running `os.ExpandEnv(input)` in Go and recording
+    /// the output. The Rust implementation must match byte-for-byte.
+    ///
+    /// Uses `_GX_OE_*` env vars (distinct from `_GX_HOME`/`_GX_API_KEY` in expand_env
+    /// test) to avoid parallel test env var races.
     #[test]
     fn t13_os_expand_env_full_string() {
-        unsafe { std::env::set_var("_GX_V", "val") };
+        unsafe {
+            std::env::set_var("_GX_OE_V", "val");
+            std::env::set_var("_GX_OE_H", "/home/user");
+        }
 
-        assert_eq!(os_expand_env("mid$_GX_V/end"), "midval/end");
-        assert_eq!(os_expand_env("${_GX_V}!"), "val!");
-        assert_eq!(os_expand_env("$$"), "");
-        assert_eq!(os_expand_env("$"), "$");
-        assert_eq!(os_expand_env("no vars"), "no vars");
+        // (input, expected_from_go, description)
+        let cases: &[(&str, &str, &str)] = &[
+            // Normal identifier expansion
+            ("mid$_GX_OE_V/end", "midval/end", "var in middle"),
+            ("${_GX_OE_V}!", "val!", "braced var + suffix"),
+            ("$_GX_OE_H/data", "/home/user/data", "var + slash suffix"),
 
-        unsafe { std::env::remove_var("_GX_V") };
+            // Trailing / lone dollar
+            ("$", "$", "lone dollar"),
+            ("no vars", "no vars", "no dollar sign"),
+
+            // Shell special vars (single-char, consumed)
+            ("$$", "", "double dollar → empty var"),
+            ("$$_GX_OE_H", "_GX_OE_H", "$$ → empty, then literal _GX_OE_H"),
+            ("$-abc", "abc", "dash is shell special, consumed"),
+            ("$!abc", "abc", "bang is shell special, consumed"),
+            ("$?abc", "abc", "question is shell special, consumed"),
+            ("$#abc", "abc", "hash is shell special, consumed"),
+            ("$@abc", "abc", "at is shell special, consumed"),
+            ("$*abc", "abc", "star is shell special, consumed"),
+            ("$0abc", "abc", "digit 0 is shell special, consumed"),
+            ("$9xyz", "xyz", "digit 9 is shell special, consumed"),
+
+            // Non-identifier, non-shell-special chars (NOT consumed, $ becomes literal)
+            ("$.abc", "$.abc", "dot: not consumed, $ literal"),
+            ("$,abc", "$,abc", "comma: not consumed, $ literal"),
+            ("$/abc", "$/abc", "slash: not consumed, $ literal"),
+            ("$ abc", "$ abc", "space: not consumed, $ literal"),
+            ("$+abc", "$+abc", "plus: not consumed, $ literal"),
+            ("$=abc", "$=abc", "equals: not consumed, $ literal"),
+        ];
+
+        for (input, expected, desc) in cases {
+            assert_eq!(
+                os_expand_env(input), *expected,
+                "os_expand_env({:?}) — {}", input, desc,
+            );
+        }
+
+        unsafe {
+            std::env::remove_var("_GX_OE_V");
+            std::env::remove_var("_GX_OE_H");
+        }
     }
 
     #[test]
