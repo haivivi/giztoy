@@ -361,46 +361,52 @@ impl Generator for OpenAIGenerator {
                             let _ = builder.done(final_usage.clone());
                             return Some(());
                         }
-                        if let Ok(json) = serde_json::from_str::<Value>(data) {
-                            let usage = Self::parse_usage(&json);
-                            if usage.prompt_token_count > 0 || usage.generated_token_count > 0 {
-                                *final_usage = usage;
-                            }
-                            if let Some(choices) = json["choices"].as_array() {
-                                for choice in choices {
-                                    if let Some(content) = choice["delta"]["content"].as_str() {
-                                        let _ = builder.add(&[MessageChunk::text(Role::Model, content)]);
-                                    }
-                                    if let Some(tool_calls) = choice["delta"]["tool_calls"].as_array() {
-                                        for tc in tool_calls {
-                                            let index = tc["index"].as_i64().unwrap_or(0);
-                                            let id = tc["id"].as_str().unwrap_or("").to_string();
-                                            let name = tc["function"]["name"].as_str().unwrap_or("").to_string();
-                                            let arguments = tc["function"]["arguments"].as_str().unwrap_or("").to_string();
-                                            let _ = builder.add(&[MessageChunk::tool_call(
-                                                Role::Model,
-                                                ToolCall::with_index(id, index, FuncCall { name, arguments }),
-                                            )]);
+                        match serde_json::from_str::<Value>(data) {
+                            Ok(json) => {
+                                let usage = Self::parse_usage(&json);
+                                if usage.prompt_token_count > 0 || usage.generated_token_count > 0 {
+                                    *final_usage = usage;
+                                }
+                                if let Some(choices) = json["choices"].as_array() {
+                                    for choice in choices {
+                                        if let Some(content) = choice["delta"]["content"].as_str() {
+                                            let _ = builder.add(&[MessageChunk::text(Role::Model, content)]);
                                         }
-                                    }
-                                    if let Some(reason) = choice["finish_reason"].as_str() {
-                                        match reason {
-                                            "stop" | "tool_calls" => {
-                                                let _ = builder.done(final_usage.clone());
-                                                return Some(());
+                                        if let Some(tool_calls) = choice["delta"]["tool_calls"].as_array() {
+                                            for tc in tool_calls {
+                                                let index = tc["index"].as_i64().unwrap_or(0);
+                                                let id = tc["id"].as_str().unwrap_or("").to_string();
+                                                let name = tc["function"]["name"].as_str().unwrap_or("").to_string();
+                                                let arguments = tc["function"]["arguments"].as_str().unwrap_or("").to_string();
+                                                let _ = builder.add(&[MessageChunk::tool_call(
+                                                    Role::Model,
+                                                    ToolCall::with_index(id, index, FuncCall { name, arguments }),
+                                                )]);
                                             }
-                                            "length" => {
-                                                let _ = builder.truncated(final_usage.clone());
-                                                return Some(());
+                                        }
+                                        if let Some(reason) = choice["finish_reason"].as_str() {
+                                            match reason {
+                                                "stop" | "tool_calls" => {
+                                                    let _ = builder.done(final_usage.clone());
+                                                    return Some(());
+                                                }
+                                                "length" => {
+                                                    let _ = builder.truncated(final_usage.clone());
+                                                    return Some(());
+                                                }
+                                                "content_filter" => {
+                                                    let _ = builder.blocked(final_usage.clone(), "content_filter");
+                                                    return Some(());
+                                                }
+                                                _ => {}
                                             }
-                                            "content_filter" => {
-                                                let _ = builder.blocked(final_usage.clone(), "content_filter");
-                                                return Some(());
-                                            }
-                                            _ => {}
                                         }
                                     }
                                 }
+                            }
+                            Err(e) => {
+                                let _ = builder.abort_with_message(format!("Malformed SSE JSON: {}", e));
+                                return Some(());
                             }
                         }
                     }

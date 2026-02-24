@@ -398,7 +398,7 @@ fn register_openai(
             extra_fields: m.extra_fields.clone(),
         };
 
-        gen_mux.write().unwrap().handle(&m.name, Arc::new(OpenAIGenerator::new(config)))?;
+        gen_mux.write().unwrap_or_else(|e| e.into_inner()).handle(&m.name, Arc::new(OpenAIGenerator::new(config)))?;
         names.push(m.name.clone());
     }
     Ok(names)
@@ -419,7 +419,7 @@ impl crate::Generator for SharedGeneratorMux {
         model: &str,
         ctx: &dyn crate::context::ModelContext,
     ) -> Result<Box<dyn crate::stream::Stream>, GenxError> {
-        let target = self.0.read().unwrap().get_arc(model)?;
+        let target = self.0.read().unwrap_or_else(|e| e.into_inner()).get_arc(model)?;
         target.generate_stream(model, ctx).await
     }
 
@@ -429,7 +429,7 @@ impl crate::Generator for SharedGeneratorMux {
         ctx: &dyn crate::context::ModelContext,
         tool: &crate::tool::FuncTool,
     ) -> Result<(crate::error::Usage, crate::types::FuncCall), GenxError> {
-        let target = self.0.read().unwrap().get_arc(model)?;
+        let target = self.0.read().unwrap_or_else(|e| e.into_inner()).get_arc(model)?;
         target.invoke(model, ctx, tool).await
     }
 }

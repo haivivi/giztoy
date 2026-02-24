@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 
-use crate::error::{GenxError, Usage};
+use crate::error::GenxError;
 use crate::stream::{Stream, StreamBuilder, StreamResult};
 use crate::types::MessageChunk;
 
@@ -27,7 +27,8 @@ impl Stream for TeeStream {
                 Ok(Some(chunk))
             }
             Ok(None) => {
-                let _ = self.builder.done(Usage::default());
+                let usage = self.src.result().map(|r| r.usage).unwrap_or_default();
+                let _ = self.builder.done(usage);
                 Ok(None)
             }
             Err(e) => {
@@ -42,7 +43,8 @@ impl Stream for TeeStream {
     }
 
     async fn close(&mut self) -> Result<(), GenxError> {
-        let _ = self.builder.done(Usage::default());
+        let usage = self.src.result().map(|r| r.usage).unwrap_or_default();
+        let _ = self.builder.done(usage);
         self.src.close().await
     }
 
@@ -68,7 +70,9 @@ mod tests {
                 MessageChunk::text(Role::Model, "c"),
             ])
             .unwrap();
-        src_builder.done(Usage::default()).unwrap();
+        let mut expected_usage = Usage::default();
+        expected_usage.generated_token_count = 3;
+        src_builder.done(expected_usage).unwrap();
 
         let copy_builder = StreamBuilder::with_tools(64, vec![]);
         let mut copy_stream = copy_builder.stream();
@@ -77,9 +81,11 @@ mod tests {
 
         let main_text = collect_text(&mut tee_stream).await.unwrap();
         assert_eq!(main_text, "abc");
+        assert_eq!(tee_stream.result().unwrap().usage.generated_token_count, 3);
 
         let copy_text = collect_text(&mut copy_stream).await.unwrap();
         assert_eq!(copy_text, "abc");
+        assert_eq!(copy_stream.result().unwrap().usage.generated_token_count, 3);
     }
 
     #[tokio::test]
