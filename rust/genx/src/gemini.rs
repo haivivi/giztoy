@@ -109,15 +109,15 @@ impl GeminiGenerator {
                 Role::Tool => "user", // Tool results come from user side in Gemini
             };
 
-            // Flush previous content if role changes
-            if current_role.is_some() && current_role != Some(role) {
-                if !current_parts.is_empty() {
-                    contents.push(json!({
-                        "role": current_role.unwrap(),
-                        "parts": current_parts,
-                    }));
-                    current_parts = Vec::new();
-                }
+            if let Some(prev_role) = &current_role
+                && *prev_role != role
+                && !current_parts.is_empty()
+            {
+                contents.push(json!({
+                    "role": prev_role,
+                    "parts": current_parts,
+                }));
+                current_parts = Vec::new();
             }
             current_role = Some(role);
 
@@ -169,14 +169,13 @@ impl GeminiGenerator {
         }
 
         // Flush remaining content
-        if !current_parts.is_empty() {
-            if let Some(role) = current_role {
+        if !current_parts.is_empty()
+            && let Some(role) = current_role {
                 contents.push(json!({
                     "role": role,
                     "parts": current_parts,
                 }));
             }
-        }
 
         let params = ctx.params().or(self.config.generate_params.as_ref());
 

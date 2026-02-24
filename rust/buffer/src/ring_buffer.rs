@@ -267,6 +267,7 @@ impl<T: Clone> RingBuffer<T> {
         let available = state.tail.wrapping_sub(state.head).min(capacity);
         let n = std::cmp::min(buf.len(), available);
 
+        #[allow(clippy::needless_range_loop)]
         for i in 0..n {
             let head_idx = state.head % capacity;
             buf[i] = state.buf[head_idx].take().unwrap();

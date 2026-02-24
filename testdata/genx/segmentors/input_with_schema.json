@@ -1,0 +1,21 @@
+{
+  "messages": [
+    "user: 今天和小明聊了恐龙",
+    "assistant: 小明最喜欢霸王龙",
+    "user: 他说他5岁了"
+  ],
+  "schema": {
+    "entity_types": {
+      "person": {
+        "desc": "A person",
+        "attrs": {
+          "age": {"type": "string", "desc": "Age of the person"},
+          "name": {"type": "string", "desc": "Full name"}
+        }
+      },
+      "topic": {
+        "desc": "A topic of discussion"
+      }
+    }
+  }
+}

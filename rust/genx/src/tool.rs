@@ -35,6 +35,8 @@ pub trait Tool: Send + Sync {
     }
 }
 
+type InvokeFn = Arc<dyn Fn(String) -> BoxFuture<'static, anyhow::Result<String>> + Send + Sync>;
+
 /// A function tool with JSON Schema parameter definition.
 pub struct FuncTool {
     /// Name of the tool
@@ -44,7 +46,7 @@ pub struct FuncTool {
     /// JSON Schema for the argument (stored as JSON value)
     pub argument: JsonValue,
     /// The invoke function (if set)
-    invoke_fn: Option<Arc<dyn Fn(String) -> BoxFuture<'static, anyhow::Result<String>> + Send + Sync>>,
+    invoke_fn: Option<InvokeFn>,
 }
 
 impl std::fmt::Debug for FuncTool {
@@ -97,7 +99,8 @@ impl FuncTool {
         T: JsonSchema,
     {
         let schema = schemars::schema_for!(T);
-        let argument = serde_json::to_value(&schema).unwrap_or_default();
+        let argument = serde_json::to_value(&schema)
+            .expect("FuncTool schema serialization must not fail; check the JsonSchema derive");
 
         Self {
             name: name.into(),
@@ -141,7 +144,8 @@ impl FuncTool {
     {
         let handler = Arc::new(handler);
         let schema = schemars::schema_for!(T);
-        let argument = serde_json::to_value(&schema).unwrap_or_default();
+        let argument = serde_json::to_value(&schema)
+            .expect("FuncTool schema serialization must not fail; check the JsonSchema derive");
 
         Self {
             name: name.into(),
@@ -340,5 +344,41 @@ mod tests {
 
         assert_eq!(call.id, "call_123");
         assert_eq!(call.func_call.name, "test");
+    }
+
+    #[test]
+    fn t_func_tool_new_func_call() {
+        let tool = FuncTool::new::<TestArgs>("search", "Search");
+        let call = tool.new_func_call(r#"{"name": "hello"}"#);
+        assert_eq!(call.name, "search");
+        assert_eq!(call.arguments, r#"{"name": "hello"}"#);
+    }
+
+    #[tokio::test]
+    async fn t_func_tool_invoke_malformed_json() {
+        let tool = FuncTool::with_handler::<TestArgs, _, _>(
+            "test", "Test",
+            |_args: TestArgs| async move { Ok("ok".into()) },
+        );
+        let result = tool.invoke("not json").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn t_func_call_invoke_no_tool() {
+        // FuncTool without handler — invoke should return error
+        let tool = FuncTool::new::<TestArgs>("no_handler", "No handler");
+        assert!(!tool.has_invoke());
+        let result = tool.invoke(r#"{"name": "test"}"#).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("No invoke handler"));
+    }
+
+    #[test]
+    fn t_search_web_tool_is_tool() {
+        let tool = SearchWebTool;
+        assert_eq!(tool.name(), "search_web");
+        let any: AnyTool = tool.into();
+        assert_eq!(any.name(), "search_web");
     }
 }

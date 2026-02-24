@@ -1,0 +1,46 @@
+{
+  "Segment": {
+    "summary": "和家长聊了小明在阳光幼儿园学恐龙知识的事，小明5岁快6岁了，最喜欢霸王龙，生日想要恐龙模型。还聊到妹妹小红3岁喜欢画画，想要画画工具做礼物。",
+    "keywords": ["恐龙", "霸王龙", "幼儿园", "生日", "礼物", "画画"],
+    "labels": ["person:小明", "person:小红", "topic:恐龙", "place:阳光幼儿园"]
+  },
+  "Entities": [
+    {
+      "label": "person:小明",
+      "attrs": {
+        "age": 5,
+        "school": "阳光幼儿园",
+        "favorite_dinosaur": "霸王龙",
+        "birthday_wish": "恐龙模型"
+      }
+    },
+    {
+      "label": "person:小红",
+      "attrs": {
+        "age": 3,
+        "relation_to_xiaoming": "妹妹",
+        "favorite_things": ["画画"],
+        "birthday_wish": "画画工具"
+      }
+    },
+    {
+      "label": "topic:恐龙",
+      "attrs": {
+        "category": "动物/古生物",
+        "mentioned_species": ["霸王龙", "翼龙", "三角龙"]
+      }
+    },
+    {
+      "label": "place:阳光幼儿园",
+      "attrs": {
+        "type": "学校"
+      }
+    }
+  ],
+  "Relations": [
+    {"from": "person:小明", "to": "topic:恐龙", "rel_type": "likes"},
+    {"from": "person:小明", "to": "place:阳光幼儿园", "rel_type": "attends"},
+    {"from": "person:小红", "to": "topic:画画", "rel_type": "likes"},
+    {"from": "person:小红", "to": "person:小明", "rel_type": "sibling"}
+  ]
+}

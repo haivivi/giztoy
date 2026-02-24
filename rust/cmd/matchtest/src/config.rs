@@ -79,6 +79,8 @@ pub struct ModelEntry {
     support_text_only: bool,
     #[serde(default)]
     use_system_role: bool,
+    #[serde(default)]
+    extra_fields: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
 /// Load model configs from directory recursively and register generators.
@@ -178,6 +180,7 @@ async fn register_openai(cfg: ConfigFile, api_key: &str) -> Result<Vec<String>> 
             use_system_role: m.use_system_role,
             generate_params: m.generate_params,
             invoke_params: m.invoke_params,
+            extra_fields: m.extra_fields,
         };
 
         let generator = Arc::new(OpenAIGenerator::new(config));

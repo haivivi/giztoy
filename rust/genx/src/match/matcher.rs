@@ -149,11 +149,10 @@ impl Matcher {
                 match chunk {
                     Ok(Some(message_chunk)) => {
                         // Extract text from chunk
-                        if let Some(part) = message_chunk.part {
-                            if let Part::Text(text) = part {
+                        if let Some(part) = message_chunk.part
+                            && let Part::Text(text) = part {
                                 pending.push_str(&text);
                             }
-                        }
 
                         // Process complete lines
                         while let Some(newline_pos) = pending.find('\n') {
@@ -413,13 +412,12 @@ fn expand_pattern(
     let expanded = placeholder_re
         .replace_all(input, |caps: &regex::Captures| {
             let var_name = &caps[1];
-            if let Some(var) = vars.get(var_name) {
-                if !var.label.is_empty() {
+            if let Some(var) = vars.get(var_name)
+                && !var.label.is_empty() {
                     let label = format!("[{}]", var.label);
                     out_parts.push(format!("{}={}", var_name, label));
                     return label;
                 }
-            }
             // No label defined, keep original
             caps[0].to_string()
         })
@@ -515,9 +513,10 @@ mod tests {
         assert_eq!(result.args["int_var"].value, Value::from(42i64));
         assert!(result.args["int_var"].has_value);
 
-        // Test float parsing
-        let result = matcher.parse_line("test_rule: float_var=3.14");
-        assert_eq!(result.args["float_var"].value, Value::from(3.14f64));
+        // Test float parsing (using 2.5 instead of 3.14 to avoid approx_constant lint)
+        let result = matcher.parse_line("test_rule: float_var=2.5");
+        let expected_float: f64 = 2.5;
+        assert_eq!(result.args["float_var"].value, Value::from(expected_float));
 
         // Test bool parsing
         let result = matcher.parse_line("test_rule: bool_var=true");

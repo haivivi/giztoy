@@ -1,0 +1,37 @@
+entity_types:
+  person:
+    desc: "A human person in the family or social circle"
+    attrs:
+      age:
+        type: "int"
+        desc: "Age in years"
+      gender:
+        type: "string"
+        desc: "Gender (男/女)"
+      birthday_month:
+        type: "int"
+        desc: "Birth month (1-12)"
+      school:
+        type: "string"
+        desc: "School name"
+      favorite_things:
+        type: "[]string"
+        desc: "List of favorite things/hobbies"
+      wish_list:
+        type: "[]string"
+        desc: "List of wished items"
+  topic:
+    desc: "A topic of interest or conversation subject"
+    attrs:
+      category:
+        type: "string"
+        desc: "Topic category (e.g., 动物, 科学, 艺术, 美食)"
+  place:
+    desc: "A physical location"
+    attrs:
+      city:
+        type: "string"
+        desc: "City name"
+      type:
+        type: "string"
+        desc: "Place type (e.g., 学校, 博物馆, 餐厅, 景点)"
