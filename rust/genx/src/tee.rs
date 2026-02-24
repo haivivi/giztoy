@@ -60,7 +60,6 @@ mod tests {
     use crate::error::Usage;
     use crate::stream::{collect_text, StreamBuilder};
     use crate::types::Role;
-    use crate::error::Usage;
 
     #[tokio::test]
     async fn t7_1_tee_three_chunks() {
