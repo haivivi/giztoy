@@ -1,0 +1,54 @@
+conv_id: session-178
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 今天想聊聊乐高的事
+- role: model
+  content: 好的，乐高怎么了？
+- role: user
+  name: 小红
+  content: 小红是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，小红是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小红
+  content: 上周小红去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 小红
+  content: 爷爷今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 等等，爷爷应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小红
+  content: 我对生日很感兴趣
+- role: model
+  content: 生日是个好话题
+- role: user
+  name: 小红
+  content: 奶奶和爷爷是同学
+- role: model
+  content: 原来奶奶和爷爷是同学关系
+- role: user
+  name: 小红
+  content: 爷爷今年70岁了
+- role: model
+  content: 原来爷爷70岁
+- role: user
+  name: 小红
+  content: 小红有没有什么计划？
+- role: model
+  content: 小红应该有一些计划

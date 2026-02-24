@@ -1,0 +1,54 @@
+conv_id: session-412
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢音乐
+- role: model
+  content: 是吗，爸爸确实挺喜欢音乐的
+- role: user
+  name: 爸爸
+  content: 最近乐高有什么新动态吗
+- role: model
+  content: 我听说乐高方面有不少变化
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说旅行让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 爸爸
+  content: 小明和老师是邻居
+- role: model
+  content: 原来小明和老师是邻居关系
+- role: user
+  name: 爸爸
+  content: 爸爸有没有什么计划？
+- role: model
+  content: 爸爸应该有一些计划
+- role: user
+  name: 爸爸
+  content: 爸爸最近在忙工程师
+- role: model
+  content: 爸爸忙工程师一定很充实

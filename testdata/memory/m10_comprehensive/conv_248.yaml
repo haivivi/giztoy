@@ -1,0 +1,54 @@
+conv_id: session-248
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于生日的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 上次小胖跟我说了一件关于生日的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小胖
+  content: 小胖说生日让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小胖
+  content: 妈妈和小明是同事
+- role: model
+  content: 原来妈妈和小明是同事关系
+- role: user
+  name: 小胖
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划
+- role: user
+  name: 小胖
+  content: 画画太好玩了！
+- role: model
+  content: 是呀，画画确实很有趣！
+- role: user
+  name: 小胖
+  content: 小胖跟我说过，他最大的爱好就是足球
+- role: model
+  content: 小胖爱好足球挺好的
+- role: user
+  name: 小胖
+  content: 我记得小红第一次接触过年的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 小红当时觉得过年特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小胖
+  content: 小胖今天跟我说了音乐的事
+- role: model
+  content: 说了什么？

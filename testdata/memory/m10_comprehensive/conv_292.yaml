@@ -1,0 +1,54 @@
+conv_id: session-292
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊过年的事
+- role: model
+  content: 好的，过年怎么了？
+- role: user
+  name: 爸爸
+  content: 小红和小胖是姐弟
+- role: model
+  content: 原来小红和小胖是姐弟关系
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于考试的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说考试让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 爸爸
+  content: 你了解考试吗
+- role: model
+  content: 了解一些，考试挺热门的
+- role: user
+  name: 爸爸
+  content: 妈妈和爸爸是同事
+- role: model
+  content: 原来妈妈和爸爸是同事关系
+- role: user
+  name: 爸爸
+  content: 乐高太好玩了！
+- role: model
+  content: 是呀，乐高确实很有趣！
+- role: user
+  name: 爸爸
+  content: 爷爷和奶奶是同学
+- role: model
+  content: 原来爷爷和奶奶是同学关系
+- role: user
+  name: 爸爸
+  content: 我对画画很感兴趣
+- role: model
+  content: 画画是个好话题

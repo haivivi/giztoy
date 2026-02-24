@@ -1,0 +1,54 @@
+conv_id: session-013
+labels:
+- person:小何
+messages:
+- role: user
+  name: 小何
+  content: 想跟你聊聊工作
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小何
+  content: 小何最近怎么样？
+- role: model
+  content: 小何最近挺好的
+- role: user
+  name: 小何
+  content: 小美打算去西湖玩
+- role: model
+  content: 西湖是个好地方
+- role: user
+  name: 小何
+  content: 上次小何跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小何
+  content: 小何说旅行让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小何
+  content: 小何去过杭州
+- role: model
+  content: 杭州挺美的
+- role: user
+  name: 小何
+  content: 最近新闻有什么新动态吗
+- role: model
+  content: 我听说新闻方面有不少变化
+- role: user
+  name: 小何
+  content: 老张最近怎么样？
+- role: model
+  content: 老张最近挺好的
+- role: user
+  name: 小何
+  content: 老张和小美是姐弟
+- role: model
+  content: 原来老张和小美是姐弟关系
+- role: user
+  name: 小何
+  content: 小何最近在忙自由职业
+- role: model
+  content: 小何忙自由职业一定很充实

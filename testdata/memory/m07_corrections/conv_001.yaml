@@ -1,0 +1,54 @@
+conv_id: session-001
+labels:
+- person:小刘
+messages:
+- role: user
+  name: 小刘
+  content: 跟你说个关于项目的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小刘
+  content: 小陈和小刘是同事
+- role: model
+  content: 原来小陈和小刘是同事关系
+- role: user
+  name: 小刘
+  content: 小刘跟我说过，他最大的爱好就是北京
+- role: model
+  content: 小刘爱好北京挺好的
+- role: user
+  name: 小刘
+  content: 有一次小刘因为工作闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小刘
+  content: 就是小刘在工作的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小刘
+  content: 小刘今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小刘
+  content: 等等，小刘应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小刘
+  content: 有一次小刘因为项目闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小刘
+  content: 就是小刘在项目的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小刘
+  content: 小刘打算去深圳玩
+- role: model
+  content: 深圳是个好地方

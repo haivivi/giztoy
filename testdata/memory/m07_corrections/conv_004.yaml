@@ -1,0 +1,54 @@
+conv_id: session-004
+labels:
+- person:小陈
+messages:
+- role: user
+  name: 小陈
+  content: 今天想聊聊跳槽的事
+- role: model
+  content: 好的，跳槽怎么了？
+- role: user
+  name: 小陈
+  content: 小陈喜欢吃什么？
+- role: model
+  content: 小陈口味挺好的
+- role: user
+  name: 小陈
+  content: 小陈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小陈
+  content: 不对，小陈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小陈
+  content: 最近跳槽有什么新动态吗
+- role: model
+  content: 我听说跳槽方面有不少变化
+- role: user
+  name: 小陈
+  content: 小刘和小陈是邻居
+- role: model
+  content: 原来小刘和小陈是邻居关系
+- role: user
+  name: 小陈
+  content: 小陈去过深圳
+- role: model
+  content: 深圳挺美的
+- role: user
+  name: 小陈
+  content: 小陈和小刘是邻居
+- role: model
+  content: 原来小陈和小刘是邻居关系
+- role: user
+  name: 小陈
+  content: 小陈最近在忙产品经理
+- role: model
+  content: 小陈忙产品经理一定很充实
+- role: user
+  name: 小陈
+  content: 上次小陈跟我说了一件关于面试的事
+- role: model
+  content: 什么事？

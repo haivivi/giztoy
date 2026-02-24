@@ -1,0 +1,12 @@
+name: m02_two_siblings
+desc: Two siblings, relation discovery
+persona: cat_girl
+total_messages: 10
+conversations: 1
+expect:
+  min_entities: 2
+  entities_contain:
+  - person:小明
+  - person:小红
+  min_relations: 1
+  min_segments: 1

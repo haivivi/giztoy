@@ -1,0 +1,54 @@
+conv_id: session-045
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 想跟你聊聊画画
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爷爷
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 爷爷
+  content: 爷爷打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 爷爷
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 爷爷
+  content: 爷爷今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 等等，爷爷应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爷爷
+  content: 小红和奶奶是亲戚
+- role: model
+  content: 原来小红和奶奶是亲戚关系
+- role: user
+  name: 爷爷
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 爷爷
+  content: 老师和小明是邻居
+- role: model
+  content: 原来老师和小明是邻居关系
+- role: user
+  name: 爷爷
+  content: 爷爷今年25岁
+- role: model
+  content: 好的

@@ -1,0 +1,54 @@
+conv_id: session-415
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊生日
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 有一次老师因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 老师
+  content: 就是老师在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 老师
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 你了解过年吗
+- role: model
+  content: 了解一些，过年挺热门的
+- role: user
+  name: 老师
+  content: 爸爸今天跟我说了乐高的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 爸爸说乐高最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 小胖和奶奶是亲戚
+- role: model
+  content: 原来小胖和奶奶是亲戚关系
+- role: user
+  name: 老师
+  content: 老师去过奶奶家
+- role: model
+  content: 奶奶家挺美的

@@ -1,0 +1,54 @@
+conv_id: session-066
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小红
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题
+- role: user
+  name: 小红
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 小红
+  content: 小红是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，小红是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小红
+  content: 上周小红去了图书馆
+- role: model
+  content: 图书馆不错呢
+- role: user
+  name: 小红
+  content: 有一次爷爷因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小红
+  content: 就是爷爷在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小红
+  content: 小红有没有什么计划？
+- role: model
+  content: 小红应该有一些计划
+- role: user
+  name: 小红
+  content: 奶奶今年25岁
+- role: model
+  content: 好的

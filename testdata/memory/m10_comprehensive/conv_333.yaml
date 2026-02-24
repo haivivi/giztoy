@@ -1,0 +1,54 @@
+conv_id: session-333
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 今天想聊聊考试的事
+- role: model
+  content: 好的，考试怎么了？
+- role: user
+  name: 爷爷
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爷爷
+  content: 上次爷爷跟我说了一件关于生日的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爷爷
+  content: 爷爷说生日让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爷爷
+  content: 爷爷学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爷爷
+  content: 不对，爷爷学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爷爷
+  content: 上周爷爷去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 爷爷
+  content: 我对学校很感兴趣
+- role: model
+  content: 学校是个好话题
+- role: user
+  name: 爷爷
+  content: 我对考试很感兴趣
+- role: model
+  content: 考试是个好话题

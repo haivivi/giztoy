@@ -1,0 +1,54 @@
+conv_id: session-430
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于恐龙的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 上周奶奶去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 奶奶
+  content: 爷爷和爸爸是邻居
+- role: model
+  content: 原来爷爷和爸爸是邻居关系
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题
+- role: user
+  name: 奶奶
+  content: 奶奶和爷爷是朋友
+- role: model
+  content: 原来奶奶和爷爷是朋友关系
+- role: user
+  name: 奶奶
+  content: 奶奶打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 上周小胖去了图书馆
+- role: model
+  content: 图书馆不错呢

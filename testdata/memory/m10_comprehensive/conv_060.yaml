@@ -1,0 +1,54 @@
+conv_id: session-060
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊乐高
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 小红和爸爸是同事
+- role: model
+  content: 原来小红和爸爸是同事关系
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 爸爸
+  content: 说到学校，我觉得挺有意思的
+- role: model
+  content: 是啊，学校确实值得聊聊
+- role: user
+  name: 爸爸
+  content: 爸爸在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爸爸
+  content: 其实爸爸自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于考试的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说考试让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢音乐
+- role: model
+  content: 原来爸爸喜欢音乐呀
+- role: user
+  name: 爸爸
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的

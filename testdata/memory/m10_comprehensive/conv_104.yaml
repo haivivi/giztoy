@@ -1,0 +1,54 @@
+conv_id: session-104
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 小胖
+  content: 有一次小胖因为运动闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在运动的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖周末一般做什么？
+- role: model
+  content: 小胖周末过得挺充实的
+- role: user
+  name: 小胖
+  content: 我记得小胖第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 小胖当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小胖
+  content: 音乐太好玩了！
+- role: model
+  content: 是呀，音乐确实很有趣！
+- role: user
+  name: 小胖
+  content: 小胖今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 等等，小胖应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小胖
+  content: 小胖和老师是姐弟
+- role: model
+  content: 原来小胖和老师是姐弟关系

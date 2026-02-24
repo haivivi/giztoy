@@ -1,0 +1,54 @@
+conv_id: session-190
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 今天想聊聊宠物的事
+- role: model
+  content: 好的，宠物怎么了？
+- role: user
+  name: 奶奶
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 奶奶
+  content: 不对，奶奶学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 奶奶
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的
+- role: user
+  name: 奶奶
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 奶奶
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 奶奶
+  content: 说到音乐，我觉得挺有意思的
+- role: model
+  content: 是啊，音乐确实值得聊聊
+- role: user
+  name: 奶奶
+  content: 最近考试有什么新动态吗
+- role: model
+  content: 我听说考试方面有不少变化
+- role: user
+  name: 奶奶
+  content: 小明和老师是姐弟
+- role: model
+  content: 原来小明和老师是姐弟关系

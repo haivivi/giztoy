@@ -1,0 +1,54 @@
+conv_id: session-024
+labels:
+- person:妹妹
+messages:
+- role: user
+  name: 妹妹
+  content: 跟你说个关于生日的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妹妹
+  content: 妹妹今天跟我说了健康的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妹妹
+  content: 妹妹说健康最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 妹妹
+  content: 妈妈最近在忙护士
+- role: model
+  content: 妈妈忙护士一定很充实
+- role: user
+  name: 妹妹
+  content: 上周妹妹去了北京
+- role: model
+  content: 北京不错呢
+- role: user
+  name: 妹妹
+  content: 爸爸和妈妈是邻居
+- role: model
+  content: 原来爸爸和妈妈是邻居关系
+- role: user
+  name: 妹妹
+  content: 妈妈在老家住过一段时间
+- role: model
+  content: 在老家生活应该很有意思
+- role: user
+  name: 妹妹
+  content: 妹妹喜欢吃什么？
+- role: model
+  content: 妹妹口味挺好的
+- role: user
+  name: 妹妹
+  content: 妹妹去过医院
+- role: model
+  content: 医院挺美的
+- role: user
+  name: 妹妹
+  content: 妹妹在北京住过一段时间
+- role: model
+  content: 在北京生活应该很有意思

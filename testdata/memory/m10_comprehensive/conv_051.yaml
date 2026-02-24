@@ -1,0 +1,54 @@
+conv_id: session-051
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于画画的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实妈妈自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 妈妈打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 妈妈
+  content: 妈妈去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙设计师
+- role: model
+  content: 妈妈忙设计师一定很充实
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 妈妈
+  content: 小胖说他特别喜欢足球
+- role: model
+  content: 原来小胖喜欢足球呀
+- role: user
+  name: 妈妈
+  content: 妈妈去过博物馆
+- role: model
+  content: 博物馆挺美的

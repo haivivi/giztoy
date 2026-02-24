@@ -1,0 +1,54 @@
+conv_id: session-113
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊画画
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是古生物学家
+- role: model
+  content: 小明爱好古生物学家挺好的
+- role: user
+  name: 小明
+  content: 我记得老师第一次接触过年的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小明
+  content: 老师当时觉得过年特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小明
+  content: 爷爷在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 小明
+  content: 小红和奶奶是兄妹
+- role: model
+  content: 原来小红和奶奶是兄妹关系
+- role: user
+  name: 小明
+  content: 我对画画很感兴趣
+- role: model
+  content: 画画是个好话题
+- role: user
+  name: 小明
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实
+- role: user
+  name: 小明
+  content: 妈妈说他特别喜欢做饭
+- role: model
+  content: 原来妈妈喜欢做饭呀

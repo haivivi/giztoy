@@ -1,0 +1,54 @@
+conv_id: session-156
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近考试有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 小红和奶奶是朋友
+- role: model
+  content: 原来小红和奶奶是朋友关系
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 爸爸去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 爸爸
+  content: 老师在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 小明和爸爸是朋友
+- role: model
+  content: 原来小明和爸爸是朋友关系
+- role: user
+  name: 爸爸
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系

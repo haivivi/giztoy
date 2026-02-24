@@ -1,0 +1,54 @@
+conv_id: session-009
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 跟你说个关于运动的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小明
+  content: 小明说他特别喜欢古生物学家
+- role: model
+  content: 原来小明喜欢古生物学家呀
+- role: user
+  name: 小明
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 小明
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的
+- role: user
+  name: 小明
+  content: 我对过年很感兴趣
+- role: model
+  content: 过年是个好话题
+- role: user
+  name: 小明
+  content: 小明说他特别喜欢古生物学家
+- role: model
+  content: 原来小明喜欢古生物学家呀
+- role: user
+  name: 小明
+  content: 最近旅行有什么新动态吗
+- role: model
+  content: 我听说旅行方面有不少变化
+- role: user
+  name: 小明
+  content: 有一次小明因为画画闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小明
+  content: 就是小明在画画的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小明
+  content: 说到宠物，我觉得挺有意思的
+- role: model
+  content: 是啊，宠物确实值得聊聊

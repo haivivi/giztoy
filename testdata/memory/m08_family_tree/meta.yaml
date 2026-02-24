@@ -1,0 +1,16 @@
+name: m08_family_tree
+desc: Dense family relations over 50 sessions
+persona: cat_girl
+total_messages: 1000
+conversations: 50
+expect:
+  min_entities: 5
+  min_relations: 4
+  min_segments: 8
+  recall:
+  - text: 家庭
+    min_results: 2
+  - text: 学校
+    labels:
+    - person:哥哥
+    min_results: 1

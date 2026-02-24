@@ -1,0 +1,54 @@
+conv_id: session-462
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 最近恐龙有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 奶奶
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 奶奶
+  content: 小红和爷爷是姐弟
+- role: model
+  content: 原来小红和爷爷是姐弟关系
+- role: user
+  name: 奶奶
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶今天跟我说了恐龙的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 奶奶
+  content: 奶奶说恐龙最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 奶奶
+  content: 你了解学校吗
+- role: model
+  content: 了解一些，学校挺热门的
+- role: user
+  name: 奶奶
+  content: 奶奶学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 奶奶
+  content: 不对，奶奶学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 奶奶
+  content: 奶奶最近怎么样？
+- role: model
+  content: 奶奶最近挺好的

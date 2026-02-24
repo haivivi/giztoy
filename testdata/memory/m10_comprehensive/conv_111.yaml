@@ -1,0 +1,54 @@
+conv_id: session-111
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊运动
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 上次奶奶跟我说了一件关于乐高的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老师
+  content: 奶奶说乐高让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 老师
+  content: 爸爸周末一般做什么？
+- role: model
+  content: 爸爸周末过得挺充实的
+- role: user
+  name: 老师
+  content: 上次老师跟我说了一件关于做饭的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老师
+  content: 老师说做饭让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 老师
+  content: 说到画画，我觉得挺有意思的
+- role: model
+  content: 是啊，画画确实值得聊聊
+- role: user
+  name: 老师
+  content: 小胖和老师是同学
+- role: model
+  content: 原来小胖和老师是同学关系

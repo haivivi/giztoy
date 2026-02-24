@@ -1,0 +1,54 @@
+conv_id: session-371
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 妈妈
+  content: 我对生日很感兴趣
+- role: model
+  content: 生日是个好话题
+- role: user
+  name: 妈妈
+  content: 妈妈和小明是朋友
+- role: model
+  content: 原来妈妈和小明是朋友关系
+- role: user
+  name: 妈妈
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 爸爸和爷爷是同学
+- role: model
+  content: 原来爸爸和爷爷是同学关系
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙做饭
+- role: model
+  content: 妈妈忙做饭一定很充实
+- role: user
+  name: 妈妈
+  content: 爷爷打算去图书馆玩
+- role: model
+  content: 图书馆是个好地方

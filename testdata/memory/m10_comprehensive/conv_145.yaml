@@ -1,0 +1,54 @@
+conv_id: session-145
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊旅行
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 小明
+  content: 我记得小明第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小明
+  content: 小明当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小明
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 小明在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小明自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 小明
+  content: 老师和爷爷是同学
+- role: model
+  content: 原来老师和爷爷是同学关系

@@ -1,0 +1,54 @@
+conv_id: session-439
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊做饭的事
+- role: model
+  content: 好的，做饭怎么了？
+- role: user
+  name: 老师
+  content: 有一次老师因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 老师
+  content: 就是老师在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 老师打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 老师
+  content: 老师打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 老师
+  content: 小红今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，小红应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好

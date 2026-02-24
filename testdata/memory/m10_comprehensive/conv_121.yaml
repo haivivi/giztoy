@@ -1,0 +1,54 @@
+conv_id: session-121
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 小胖和小明是姐弟
+- role: model
+  content: 原来小胖和小明是姐弟关系
+- role: user
+  name: 小明
+  content: 上周小胖去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 小明
+  content: 小明周末一般做什么？
+- role: model
+  content: 小明周末过得挺充实的
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 小明有没有什么计划？
+- role: model
+  content: 小明应该有一些计划
+- role: user
+  name: 小明
+  content: 小明和奶奶是朋友
+- role: model
+  content: 原来小明和奶奶是朋友关系
+- role: user
+  name: 小明
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 小明说他特别喜欢古生物学家
+- role: model
+  content: 原来小明喜欢古生物学家呀

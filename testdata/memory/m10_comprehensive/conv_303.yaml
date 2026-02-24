@@ -1,0 +1,54 @@
+conv_id: session-303
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 上周老师去了公园
+- role: model
+  content: 公园不错呢
+- role: user
+  name: 老师
+  content: 我记得小胖第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 小胖当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 上周爷爷去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 老师
+  content: 老师最近在忙数学
+- role: model
+  content: 老师忙数学一定很充实
+- role: user
+  name: 老师
+  content: 老师在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 老师
+  content: 你了解过年吗
+- role: model
+  content: 了解一些，过年挺热门的
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错

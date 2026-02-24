@@ -1,0 +1,54 @@
+conv_id: session-425
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊运动的事
+- role: model
+  content: 好的，运动怎么了？
+- role: user
+  name: 小明
+  content: 小胖去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 小明
+  content: 小胖去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 小明
+  content: 小明打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 小明
+  content: 小明今天跟我说了宠物的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 小明说宠物最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小明
+  content: 小明在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小明自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 你了解宠物吗
+- role: model
+  content: 了解一些，宠物挺热门的
+- role: user
+  name: 小明
+  content: 老师和小胖是朋友
+- role: model
+  content: 原来老师和小胖是朋友关系

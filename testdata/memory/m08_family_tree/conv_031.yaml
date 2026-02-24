@@ -1,0 +1,54 @@
+conv_id: session-031
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近家庭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 爷爷和妈妈是同学
+- role: model
+  content: 原来爷爷和妈妈是同学关系
+- role: user
+  name: 爷爷
+  content: 爷爷最近怎么样？
+- role: model
+  content: 爷爷最近挺好的
+- role: user
+  name: 爷爷
+  content: 上周爷爷去了老家
+- role: model
+  content: 老家不错呢
+- role: user
+  name: 爷爷
+  content: 有一次爷爷因为过年闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是爷爷在过年的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爷爷
+  content: 爷爷和爸爸是姐弟
+- role: model
+  content: 原来爷爷和爸爸是姐弟关系
+- role: user
+  name: 爷爷
+  content: 妈妈去过医院
+- role: model
+  content: 医院挺美的
+- role: user
+  name: 爷爷
+  content: 爷爷今年75岁了
+- role: model
+  content: 原来爷爷75岁
+- role: user
+  name: 爷爷
+  content: 说到做饭，我觉得挺有意思的
+- role: model
+  content: 是啊，做饭确实值得聊聊

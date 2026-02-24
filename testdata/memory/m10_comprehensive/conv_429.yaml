@@ -1,0 +1,54 @@
+conv_id: session-429
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爷爷
+  content: 小胖和老师是同学
+- role: model
+  content: 原来小胖和老师是同学关系
+- role: user
+  name: 爷爷
+  content: 爷爷最近怎么样？
+- role: model
+  content: 爷爷最近挺好的
+- role: user
+  name: 爷爷
+  content: 爷爷在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实爷爷自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爷爷
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爷爷
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 爷爷
+  content: 有一次爷爷因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是爷爷在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣

@@ -1,0 +1,54 @@
+conv_id: session-273
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小明
+  content: 小红在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 小明
+  content: 奶奶和爷爷是兄妹
+- role: model
+  content: 原来奶奶和爷爷是兄妹关系
+- role: user
+  name: 小明
+  content: 小明周末一般做什么？
+- role: model
+  content: 小明周末过得挺充实的
+- role: user
+  name: 小明
+  content: 妈妈平时有什么爱好？
+- role: model
+  content: 妈妈的爱好挺多的
+- role: user
+  name: 小明
+  content: 最近乐高有什么新动态吗
+- role: model
+  content: 我听说乐高方面有不少变化
+- role: user
+  name: 小明
+  content: 你了解恐龙吗
+- role: model
+  content: 了解一些，恐龙挺热门的
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小明今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 小明说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

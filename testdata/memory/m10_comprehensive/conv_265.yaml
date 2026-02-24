@@ -1,0 +1,54 @@
+conv_id: session-265
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近画画有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 最近乐高有什么新动态吗
+- role: model
+  content: 我听说乐高方面有不少变化
+- role: user
+  name: 小明
+  content: 小明在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小明自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 小红和老师是朋友
+- role: model
+  content: 原来小红和老师是朋友关系
+- role: user
+  name: 小明
+  content: 小胖和小红是同学
+- role: model
+  content: 原来小胖和小红是同学关系
+- role: user
+  name: 小明
+  content: 小明去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 小明
+  content: 奶奶和老师是同事
+- role: model
+  content: 原来奶奶和老师是同事关系
+- role: user
+  name: 小明
+  content: 小明今天跟我说了运动的事
+- role: model
+  content: 说了什么？

@@ -1,0 +1,54 @@
+conv_id: session-008
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 奶奶
+  content: 奶奶今年73岁了
+- role: model
+  content: 原来奶奶73岁
+- role: user
+  name: 奶奶
+  content: 哥哥和妈妈是朋友
+- role: model
+  content: 原来哥哥和妈妈是朋友关系
+- role: user
+  name: 奶奶
+  content: 上周奶奶去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 奶奶
+  content: 奶奶去过医院
+- role: model
+  content: 医院挺美的
+- role: user
+  name: 奶奶
+  content: 上周奶奶去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 奶奶
+  content: 奶奶今年73岁了
+- role: model
+  content: 原来奶奶73岁
+- role: user
+  name: 奶奶
+  content: 奶奶今年73岁了
+- role: model
+  content: 原来奶奶73岁
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触健康的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得健康特别新奇
+- role: model
+  content: 每个人都有第一次嘛

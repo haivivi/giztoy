@@ -1,0 +1,54 @@
+conv_id: session-047
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 最近健康有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老张
+  content: 老张喜欢吃什么？
+- role: model
+  content: 老张口味挺好的
+- role: user
+  name: 老张
+  content: 小何和小美是同学
+- role: model
+  content: 原来小何和小美是同学关系
+- role: user
+  name: 老张
+  content: 上周老张去了西湖
+- role: model
+  content: 西湖不错呢
+- role: user
+  name: 老张
+  content: 上周老张去了苏州
+- role: model
+  content: 苏州不错呢
+- role: user
+  name: 老张
+  content: 最近理财有什么新动态吗
+- role: model
+  content: 我听说理财方面有不少变化
+- role: user
+  name: 老张
+  content: 说到工作，我觉得挺有意思的
+- role: model
+  content: 是啊，工作确实值得聊聊
+- role: user
+  name: 老张
+  content: 说到天气，我觉得挺有意思的
+- role: model
+  content: 是啊，天气确实值得聊聊
+- role: user
+  name: 老张
+  content: 小何和老张是同事
+- role: model
+  content: 原来小何和老张是同事关系
+- role: user
+  name: 老张
+  content: 最近爱好有什么新动态吗
+- role: model
+  content: 我听说爱好方面有不少变化

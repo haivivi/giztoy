@@ -1,0 +1,54 @@
+conv_id: session-035
+labels:
+- person:哥哥
+messages:
+- role: user
+  name: 哥哥
+  content: 跟你说个关于旅行的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 哥哥
+  content: 哥哥在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 哥哥
+  content: 说到做饭，我觉得挺有意思的
+- role: model
+  content: 是啊，做饭确实值得聊聊
+- role: user
+  name: 哥哥
+  content: 哥哥周末一般做什么？
+- role: model
+  content: 哥哥周末过得挺充实的
+- role: user
+  name: 哥哥
+  content: 上次妹妹跟我说了一件关于做饭的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 哥哥
+  content: 妹妹说做饭让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 哥哥
+  content: 哥哥喜欢吃什么？
+- role: model
+  content: 哥哥口味挺好的
+- role: user
+  name: 哥哥
+  content: 你了解过年吗
+- role: model
+  content: 了解一些，过年挺热门的
+- role: user
+  name: 哥哥
+  content: 哥哥喜欢清华大学
+- role: model
+  content: 是吗，哥哥确实挺喜欢清华大学的
+- role: user
+  name: 哥哥
+  content: 说到过年，我觉得挺有意思的
+- role: model
+  content: 是啊，过年确实值得聊聊

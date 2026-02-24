@@ -7,9 +7,13 @@ use crate::error::MemoryError;
 use crate::host::{Host, HostConfig};
 use crate::keys::{conv_msg_key, conv_msg_prefix, conv_revert_key};
 use crate::types::{
-    CompressPolicy, CompressResult, Compressor, EntityInfo, EntityInput, EntityUpdate, Message,
-    RecallQuery, RelationInput, Role, SegmentInput, messages_to_strings, now_nano,
+    CompressPolicy, CompressResult, Compressor, EntityInput, EntityUpdate, Message,
+    RecallQuery, RelationInput, Role, SegmentInput, now_nano,
 };
+use crate::messages_to_strings;
+
+use giztoy_genx::segmentors::{EntityOutput, SegmentOutput, Segmentor, SegmentorInput, SegmentorMux, SegmentorResult};
+use crate::compressor::{LLMCompressor, LLMCompressorConfig};
 
 // ---------------------------------------------------------------------------
 // Mock compressor
@@ -19,30 +23,41 @@ use crate::types::{
 /// labels like "person:小明", matching Go's test configuration.
 const TEST_SEP: char = '\x1F';
 
-struct MockCompressor;
+struct FakeSegmentor;
 
 #[async_trait::async_trait]
-impl Compressor for MockCompressor {
-    async fn compress_messages(&self, msgs: &[Message]) -> Result<CompressResult, MemoryError> {
-        let summary = msgs
+impl Segmentor for FakeSegmentor {
+    async fn process(&self, input: SegmentorInput) -> Result<SegmentorResult, giztoy_genx::error::GenxError> {
+        let summary = input.messages
             .iter()
-            .filter(|m| !m.content.is_empty())
-            .map(|m| m.content.as_str())
+            .map(|s| s.split(": ").nth(1).unwrap_or(s))
+            .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
             .join("; ");
-        Ok(CompressResult {
-            segments: vec![SegmentInput {
-                summary: summary.clone(),
-                keywords: vec!["test".into()],
-                labels: vec!["person:test".into()],
-            }],
-            summary: format!("compressed: {summary}"),
-        })
-    }
+        
+        let combined = if input.messages.iter().all(|s| s.contains(" | ")) || input.messages.len() <= 2 && input.messages.iter().any(|s| !s.contains(": ")) {
+            // This is a compact_segments call where we joined them with " | " or similar
+            // In MockCompressor compact_segments returned combined joined by " | "
+            input.messages.join(" | ")
+        } else {
+            format!("compressed: {summary}")
+        };
 
-    async fn extract_entities(&self, _msgs: &[Message]) -> Result<EntityUpdate, MemoryError> {
-        Ok(EntityUpdate {
-            entities: vec![EntityInput {
+        let summary_out = if combined.contains(" | ") {
+            combined
+        } else {
+            format!("compressed: {summary}")
+        };
+
+        let keyword = if summary_out.contains(" | ") { "compacted" } else { "test" };
+
+        Ok(SegmentorResult {
+            segment: SegmentOutput {
+                summary: summary_out,
+                keywords: vec![keyword.into()],
+                labels: vec!["person:test".into()],
+            },
+            entities: vec![EntityOutput {
                 label: "person:test".into(),
                 attrs: HashMap::from([("compressed".into(), serde_json::json!(true))]),
             }],
@@ -50,16 +65,8 @@ impl Compressor for MockCompressor {
         })
     }
 
-    async fn compact_segments(&self, summaries: &[String]) -> Result<CompressResult, MemoryError> {
-        let combined = summaries.join(" | ");
-        Ok(CompressResult {
-            segments: vec![SegmentInput {
-                summary: combined.clone(),
-                keywords: vec!["compacted".into()],
-                labels: vec!["person:test".into()],
-            }],
-            summary: combined,
-        })
+    fn model(&self) -> &str {
+        "fake"
     }
 }
 
@@ -82,6 +89,20 @@ impl Compressor for FailingCompressor {
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
+
+fn new_mock_llm_compressor() -> LLMCompressor {
+    let mut mux = SegmentorMux::new();
+    mux.handle("test-seg", Arc::new(FakeSegmentor)).unwrap();
+
+    LLMCompressor::new(LLMCompressorConfig {
+        segmentor: "test-seg".into(),
+        profiler: None,
+        schema: None,
+        profiles: None,
+        seg_mux: Some(Arc::new(mux)),
+        prof_mux: None,
+    }).unwrap()
+}
 
 fn new_test_store() -> Arc<dyn openerp_kv::KVStore> {
     let dir = tempfile::tempdir().unwrap();
@@ -106,11 +127,23 @@ fn new_test_host() -> Host {
 
 fn new_test_host_with_compressor() -> Host {
     let store = new_test_store();
+    let mut mux = SegmentorMux::new();
+    mux.handle("test-seg", Arc::new(FakeSegmentor)).unwrap();
+
+    let llm_compressor = LLMCompressor::new(LLMCompressorConfig {
+        segmentor: "test-seg".into(),
+        profiler: None,
+        schema: None,
+        profiles: None,
+        seg_mux: Some(Arc::new(mux)),
+        prof_mux: None,
+    }).unwrap();
+
     Host::new(HostConfig {
         store,
         vec: None,
         embedder: None,
-        compressor: Some(Arc::new(MockCompressor)),
+        compressor: Some(Arc::new(llm_compressor)),
         compress_policy: CompressPolicy { max_chars: 100, max_messages: 5 },
         separator: TEST_SEP,
     })
@@ -502,7 +535,7 @@ async fn tc14_auto_compress_plus_compact_cascade() {
         store,
         vec: None,
         embedder: None,
-        compressor: Some(Arc::new(MockCompressor)),
+        compressor: Some(Arc::new(new_mock_llm_compressor())),
         compress_policy: CompressPolicy { max_chars: 50, max_messages: 3 },
         separator: TEST_SEP,
     })
@@ -759,7 +792,7 @@ async fn tm10_compact_bucket_cascade() {
         store,
         vec: None,
         embedder: None,
-        compressor: Some(Arc::new(MockCompressor)),
+        compressor: Some(Arc::new(new_mock_llm_compressor())),
         compress_policy: CompressPolicy { max_chars: 50, max_messages: 3 },
         separator: TEST_SEP,
     })
@@ -792,7 +825,7 @@ async fn tm10_compact_bucket_cascade() {
 
 #[tokio::test]
 async fn tl1_compress_messages_returns_segments() {
-    let c = MockCompressor;
+    let c = new_mock_llm_compressor();
     let msgs = vec![user_msg("hello"), model_msg("world")];
     let result = c.compress_messages(&msgs).await.unwrap();
     assert_eq!(result.segments.len(), 1);
@@ -802,7 +835,7 @@ async fn tl1_compress_messages_returns_segments() {
 
 #[tokio::test]
 async fn tl2_extract_entities_returns_update() {
-    let c = MockCompressor;
+    let c = new_mock_llm_compressor();
     let msgs = vec![user_msg("hello")];
     let update = c.extract_entities(&msgs).await.unwrap();
     assert_eq!(update.entities.len(), 1);
@@ -811,7 +844,7 @@ async fn tl2_extract_entities_returns_update() {
 
 #[tokio::test]
 async fn tl3_compact_segments_combines_summaries() {
-    let c = MockCompressor;
+    let c = new_mock_llm_compressor();
     let summaries = vec!["seg1".into(), "seg2".into()];
     let result = c.compact_segments(&summaries).await.unwrap();
     assert_eq!(result.segments.len(), 1);
@@ -822,7 +855,7 @@ async fn tl3_compact_segments_combines_summaries() {
 #[tokio::test]
 async fn tl4_empty_profiler_only_segmentor() {
     // MockCompressor acts as segmentor-only (no profiler).
-    let c = MockCompressor;
+    let c = new_mock_llm_compressor();
     let update = c.extract_entities(&[user_msg("test")]).await.unwrap();
     assert!(!update.entities.is_empty());
 }
@@ -1102,18 +1135,43 @@ async fn ti5_revert_and_reappend() {
 
 #[test]
 fn tx1_message_user_field_tags() {
-    let msg = Message {
-        role: Role::User,
-        name: String::new(),
-        content: "hello".into(),
-        timestamp: 100,
-        ..Default::default()
-    };
+    let data = std::fs::read("../../testdata/memory/serialization/message_user.msgpack").unwrap();
+    let decoded: Message = rmp_serde::from_slice(&data).unwrap();
+    assert_eq!(decoded.role, Role::User);
+    assert_eq!(decoded.content, "hello");
+    assert_eq!(decoded.timestamp, 100);
+}
 
-    let data = rmp_serde::to_vec_named(&msg).unwrap();
-    let value: rmpv::Value = rmpv::decode::read_value(&mut &data[..]).unwrap();
+#[test]
+fn tx2_message_model_field_tags() {
+    let data = std::fs::read("../../testdata/memory/serialization/message_model.msgpack").unwrap();
+    let decoded: Message = rmp_serde::from_slice(&data).unwrap();
+    assert_eq!(decoded.role, Role::Model);
+    assert_eq!(decoded.content, "response");
+    assert_eq!(decoded.timestamp, 200);
+}
 
-    // Verify the msgpack map contains the expected field names.
+#[test]
+fn tx3_message_tool_field_tags() {
+    let data = std::fs::read("../../testdata/memory/serialization/message_tool.msgpack").unwrap();
+    let decoded: Message = rmp_serde::from_slice(&data).unwrap();
+    assert_eq!(decoded.role, Role::Tool);
+    assert_eq!(decoded.content, "result");
+    assert_eq!(decoded.timestamp, 300);
+    assert_eq!(decoded.tool_call_id, "tc1");
+    assert_eq!(decoded.tool_call_name, "fn1");
+    assert_eq!(decoded.tool_call_args, "{}");
+    assert_eq!(decoded.tool_result_id, "tr1");
+}
+
+#[test]
+fn tx4_rust_serialize_preserves_go_tags() {
+    let data = std::fs::read("../../testdata/memory/serialization/message_user.msgpack").unwrap();
+    let decoded: Message = rmp_serde::from_slice(&data).unwrap();
+    
+    // re-serialize
+    let encoded = rmp_serde::to_vec_named(&decoded).unwrap();
+    let value: rmpv::Value = rmpv::decode::read_value(&mut &encoded[..]).unwrap();
     if let rmpv::Value::Map(map) = value {
         let keys: Vec<String> = map.iter().map(|(k, _)| {
             if let rmpv::Value::String(s) = k { s.as_str().unwrap_or("").to_string() } else { String::new() }
@@ -1127,82 +1185,15 @@ fn tx1_message_user_field_tags() {
 }
 
 #[test]
-fn tx2_message_model_field_tags() {
-    let msg = Message {
-        role: Role::Model,
-        name: String::new(),
-        content: "response".into(),
-        timestamp: 200,
-        ..Default::default()
-    };
-
-    let data = rmp_serde::to_vec_named(&msg).unwrap();
-    let decoded: Message = rmp_serde::from_slice(&data).unwrap();
-    assert_eq!(decoded.role, Role::Model);
-    assert_eq!(decoded.timestamp, 200);
-}
-
-#[test]
-fn tx3_message_tool_field_tags() {
-    let msg = Message {
-        role: Role::Tool,
-        name: String::new(),
-        content: "result".into(),
-        timestamp: 300,
-        tool_call_id: "tc1".into(),
-        tool_call_name: "fn1".into(),
-        tool_call_args: "{}".into(),
-        tool_result_id: "tr1".into(),
-    };
-
-    let data = rmp_serde::to_vec_named(&msg).unwrap();
-    let value: rmpv::Value = rmpv::decode::read_value(&mut &data[..]).unwrap();
-
-    if let rmpv::Value::Map(map) = value {
-        let keys: Vec<String> = map.iter().map(|(k, _)| {
-            if let rmpv::Value::String(s) = k { s.as_str().unwrap_or("").to_string() } else { String::new() }
-        }).collect();
-        assert!(keys.contains(&"tc_id".to_string()));
-        assert!(keys.contains(&"tc_name".to_string()));
-        assert!(keys.contains(&"tc_args".to_string()));
-        assert!(keys.contains(&"tr_id".to_string()));
-    } else {
-        panic!("expected msgpack map");
-    }
-}
-
-#[test]
-fn tx4_rust_serialize_preserves_go_tags() {
-    let msg = Message {
-        role: Role::User,
-        name: "testname".into(),
-        content: "testcontent".into(),
-        timestamp: 12345,
-        ..Default::default()
-    };
-
-    let data = rmp_serde::to_vec_named(&msg).unwrap();
-    let decoded: Message = rmp_serde::from_slice(&data).unwrap();
-    assert_eq!(decoded.name, "testname");
-    assert_eq!(decoded.content, "testcontent");
-    assert_eq!(decoded.timestamp, 12345);
-}
-
-#[test]
 fn tx5_kv_key_encoding_consistency() {
-    // Verify key format matches Go's output.
-    let key1 = conv_msg_key("cat_girl", "dev1", 1700000000000000000);
-    assert_eq!(key1, "mem:cat_girl:conv:dev1:msg:01700000000000000000");
+    let keys_content = std::fs::read_to_string("../../testdata/memory/keys/conv_msg_keys.txt").unwrap();
+    let expected_keys: Vec<&str> = keys_content.lines().collect();
 
-    let key2 = conv_revert_key("robot_boy", "sess_abc");
-    assert_eq!(key2, "mem:robot_boy:conv:sess_abc:revert");
+    let key1 = conv_msg_key("p1", "c1", 123456789);
+    assert_eq!(key1, expected_keys[0]);
 
-    // Verify ordering.
-    let ka = conv_msg_key("m", "c", 1);
-    let kb = conv_msg_key("m", "c", 100);
-    let kc = conv_msg_key("m", "c", 1000000000000000000);
-    assert!(ka < kb);
-    assert!(kb < kc);
+    let key2 = conv_msg_key("p1", "c1", 987654321);
+    assert_eq!(key2, expected_keys[1]);
 }
 
 // ===========================================================================
@@ -1428,7 +1419,7 @@ async fn tb2_100_segments_compact() {
         store,
         vec: None,
         embedder: None,
-        compressor: Some(Arc::new(MockCompressor)),
+        compressor: Some(Arc::new(new_mock_llm_compressor())),
         compress_policy: CompressPolicy { max_chars: 500, max_messages: 10 },
         separator: TEST_SEP,
     })

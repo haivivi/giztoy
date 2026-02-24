@@ -1,0 +1,54 @@
+conv_id: session-458
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 跟你说个关于乐高的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小红
+  content: 上周小红去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 小红
+  content: 上次老师跟我说了一件关于画画的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小红
+  content: 老师说画画让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小红
+  content: 小红今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 等等，小红应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小红
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小红
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小红
+  content: 小红喜欢画画
+- role: model
+  content: 是吗，小红确实挺喜欢画画的
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的

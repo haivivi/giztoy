@@ -1,0 +1,54 @@
+conv_id: session-027
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 想跟你聊聊健康
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小美
+  content: 老张和小美是同事
+- role: model
+  content: 原来老张和小美是同事关系
+- role: user
+  name: 小美
+  content: 小美最近在忙跑步
+- role: model
+  content: 小美忙跑步一定很充实
+- role: user
+  name: 小美
+  content: 老张最近在忙mentor
+- role: model
+  content: 老张忙mentor一定很充实
+- role: user
+  name: 小美
+  content: 小美和小何是姐弟
+- role: model
+  content: 原来小美和小何是姐弟关系
+- role: user
+  name: 小美
+  content: 小美在杭州住过一段时间
+- role: model
+  content: 在杭州生活应该很有意思
+- role: user
+  name: 小美
+  content: 小美今天跟我说了爱好的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小美
+  content: 小美说爱好最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小美
+  content: 我记得小美第一次接触学习的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小美
+  content: 小美当时觉得学习特别新奇
+- role: model
+  content: 每个人都有第一次嘛

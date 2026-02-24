@@ -1,0 +1,54 @@
+conv_id: session-004
+labels:
+- person:小王
+messages:
+- role: user
+  name: 小王
+  content: 今天想聊聊电影的事
+- role: model
+  content: 好的，电影怎么了？
+- role: user
+  name: 小王
+  content: 小王最近在忙设计师
+- role: model
+  content: 小王忙设计师一定很充实
+- role: user
+  name: 小王
+  content: 上周小王去了东京
+- role: model
+  content: 东京不错呢
+- role: user
+  name: 小王
+  content: 小王喜欢吃什么？
+- role: model
+  content: 小王口味挺好的
+- role: user
+  name: 小王
+  content: 小王有没有什么计划？
+- role: model
+  content: 小王应该有一些计划
+- role: user
+  name: 小王
+  content: 小王喜欢设计师
+- role: model
+  content: 是吗，小王确实挺喜欢设计师的
+- role: user
+  name: 小王
+  content: 有一次小王因为摄影闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小王
+  content: 就是小王在摄影的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小王
+  content: 上周小王去了成都
+- role: model
+  content: 成都不错呢
+- role: user
+  name: 小王
+  content: 小王今天跟我说了运动的事
+- role: model
+  content: 说了什么？

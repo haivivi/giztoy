@@ -1,0 +1,54 @@
+conv_id: session-402
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 小红
+  content: 我记得小红第一次接触学校的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 小红当时觉得学校特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 你了解恐龙吗
+- role: model
+  content: 了解一些，恐龙挺热门的
+- role: user
+  name: 小红
+  content: 最近学校有什么新动态吗
+- role: model
+  content: 我听说学校方面有不少变化
+- role: user
+  name: 小红
+  content: 说到生日，我觉得挺有意思的
+- role: model
+  content: 是啊，生日确实值得聊聊
+- role: user
+  name: 小红
+  content: 小红是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，小红是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小红
+  content: 小红今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 等等，小红应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐

@@ -1,0 +1,54 @@
+conv_id: session-417
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 跟你说个关于运动的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小明
+  content: 小明和爷爷是兄妹
+- role: model
+  content: 原来小明和爷爷是兄妹关系
+- role: user
+  name: 小明
+  content: 妈妈最近在忙设计师
+- role: model
+  content: 妈妈忙设计师一定很充实
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小明今天跟我说了考试的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 小明说考试最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小明
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系

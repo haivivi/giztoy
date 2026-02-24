@@ -1,0 +1,54 @@
+conv_id: session-022
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 今天想聊聊运动的事
+- role: model
+  content: 好的，运动怎么了？
+- role: user
+  name: 奶奶
+  content: 奶奶打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 奶奶
+  content: 奶奶今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 等等，奶奶应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 奶奶
+  content: 奶奶学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 奶奶
+  content: 不对，奶奶学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 奶奶
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 奶奶今年25岁
+- role: model
+  content: 好的

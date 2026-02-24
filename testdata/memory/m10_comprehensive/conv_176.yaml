@@ -1,0 +1,54 @@
+conv_id: session-176
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 想跟你聊聊乐高
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小胖
+  content: 最近宠物有什么新动态吗
+- role: model
+  content: 我听说宠物方面有不少变化
+- role: user
+  name: 小胖
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小胖
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小胖
+  content: 爸爸和老师是同事
+- role: model
+  content: 原来爸爸和老师是同事关系
+- role: user
+  name: 小胖
+  content: 小胖去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 小胖
+  content: 有一次奶奶因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是奶奶在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 小胖
+  content: 爷爷去过图书馆
+- role: model
+  content: 图书馆挺美的

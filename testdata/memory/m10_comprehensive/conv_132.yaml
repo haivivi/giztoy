@@ -1,0 +1,54 @@
+conv_id: session-132
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 跟你说个关于音乐的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爸爸
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 爸爸
+  content: 爸爸今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爸爸
+  content: 爸爸说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 爸爸
+  content: 小明和小胖是亲戚
+- role: model
+  content: 原来小明和小胖是亲戚关系
+- role: user
+  name: 爸爸
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀
+- role: user
+  name: 爸爸
+  content: 爸爸平时有什么爱好？
+- role: model
+  content: 爸爸的爱好挺多的
+- role: user
+  name: 爸爸
+  content: 爸爸跟我说过，他最大的爱好就是工程师
+- role: model
+  content: 爸爸爱好工程师挺好的

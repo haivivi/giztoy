@@ -1,0 +1,54 @@
+conv_id: session-398
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 爸爸去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 奶奶
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 奶奶打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 奶奶
+  content: 小红学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 奶奶
+  content: 不对，小红学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 奶奶
+  content: 最近音乐有什么新动态吗
+- role: model
+  content: 我听说音乐方面有不少变化

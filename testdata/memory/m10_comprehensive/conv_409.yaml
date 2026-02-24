@@ -1,0 +1,54 @@
+conv_id: session-409
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近做饭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的
+- role: user
+  name: 小明
+  content: 小明去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小明在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 小明
+  content: 有一次老师因为画画闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小明
+  content: 就是老师在画画的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小明
+  content: 最近过年有什么新动态吗
+- role: model
+  content: 我听说过年方面有不少变化

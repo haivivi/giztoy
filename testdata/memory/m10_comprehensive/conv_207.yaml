@@ -1,0 +1,54 @@
+conv_id: session-207
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊音乐的事
+- role: model
+  content: 好的，音乐怎么了？
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划
+- role: user
+  name: 老师
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 老师
+  content: 最近宠物有什么新动态吗
+- role: model
+  content: 我听说宠物方面有不少变化
+- role: user
+  name: 老师
+  content: 小胖跟我说过，他最大的爱好就是足球
+- role: model
+  content: 小胖爱好足球挺好的
+- role: user
+  name: 老师
+  content: 奶奶和爷爷是同事
+- role: model
+  content: 原来奶奶和爷爷是同事关系
+- role: user
+  name: 老师
+  content: 爷爷和爸爸是兄妹
+- role: model
+  content: 原来爷爷和爸爸是兄妹关系
+- role: user
+  name: 老师
+  content: 爸爸今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，爸爸应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 小胖和妈妈是朋友
+- role: model
+  content: 原来小胖和妈妈是朋友关系

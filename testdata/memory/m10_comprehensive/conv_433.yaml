@@ -1,0 +1,54 @@
+conv_id: session-433
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊过年的事
+- role: model
+  content: 好的，过年怎么了？
+- role: user
+  name: 小明
+  content: 上次爸爸跟我说了一件关于音乐的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小明
+  content: 爸爸说音乐让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小明
+  content: 有一次小胖因为做饭闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小明
+  content: 就是小胖在做饭的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小明
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 小明学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，小明学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的

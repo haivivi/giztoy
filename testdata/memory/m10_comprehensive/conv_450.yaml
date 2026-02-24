@@ -1,0 +1,54 @@
+conv_id: session-450
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 想跟你聊聊音乐
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小红
+  content: 老师和小明是同事
+- role: model
+  content: 原来老师和小明是同事关系
+- role: user
+  name: 小红
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀
+- role: user
+  name: 小红
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 小红
+  content: 说到考试，我觉得挺有意思的
+- role: model
+  content: 是啊，考试确实值得聊聊
+- role: user
+  name: 小红
+  content: 爷爷和老师是兄妹
+- role: model
+  content: 原来爷爷和老师是兄妹关系
+- role: user
+  name: 小红
+  content: 爷爷今年70岁了
+- role: model
+  content: 原来爷爷70岁
+- role: user
+  name: 小红
+  content: 小红最近在忙画画
+- role: model
+  content: 小红忙画画一定很充实
+- role: user
+  name: 小红
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小胖平时有什么爱好？
+- role: model
+  content: 小胖的爱好挺多的

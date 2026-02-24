@@ -1,0 +1,54 @@
+conv_id: session-497
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近运动有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 爸爸跟我说过，他最大的爱好就是音乐
+- role: model
+  content: 爸爸爱好音乐挺好的
+- role: user
+  name: 小明
+  content: 妈妈和小明是兄妹
+- role: model
+  content: 原来妈妈和小明是兄妹关系
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 有一次小胖因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小明
+  content: 就是小胖在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小明
+  content: 爸爸和妈妈是兄妹
+- role: model
+  content: 原来爸爸和妈妈是兄妹关系
+- role: user
+  name: 小明
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 小明
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实
+- role: user
+  name: 小明
+  content: 小明说他特别喜欢古生物学家
+- role: model
+  content: 原来小明喜欢古生物学家呀

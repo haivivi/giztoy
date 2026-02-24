@@ -1,0 +1,54 @@
+conv_id: session-349
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爷爷
+  content: 爷爷学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爷爷
+  content: 不对，爷爷学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爷爷
+  content: 爷爷在博物馆住过一段时间
+- role: model
+  content: 在博物馆生活应该很有意思
+- role: user
+  name: 爷爷
+  content: 爷爷已经70岁了
+- role: model
+  content: 爷爷70岁了呀
+- role: user
+  name: 爷爷
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爷爷
+  content: 有一次爷爷因为画画闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是爷爷在画画的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爷爷
+  content: 妈妈在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思

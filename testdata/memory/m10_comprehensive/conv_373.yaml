@@ -1,0 +1,54 @@
+conv_id: session-373
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近恐龙有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 爸爸和爷爷是姐弟
+- role: model
+  content: 原来爸爸和爷爷是姐弟关系
+- role: user
+  name: 爷爷
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 爷爷
+  content: 爷爷周末一般做什么？
+- role: model
+  content: 爷爷周末过得挺充实的
+- role: user
+  name: 爷爷
+  content: 我记得爷爷第一次接触过年的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 爷爷当时觉得过年特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 有一次爷爷因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是爷爷在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爷爷
+  content: 爷爷有没有什么计划？
+- role: model
+  content: 爷爷应该有一些计划
+- role: user
+  name: 爷爷
+  content: 奶奶和老师是同学
+- role: model
+  content: 原来奶奶和老师是同学关系

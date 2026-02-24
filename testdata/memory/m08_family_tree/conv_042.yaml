@@ -1,0 +1,54 @@
+conv_id: session-042
+labels:
+- person:妹妹
+messages:
+- role: user
+  name: 妹妹
+  content: 今天想聊聊家庭的事
+- role: model
+  content: 好的，家庭怎么了？
+- role: user
+  name: 妹妹
+  content: 爷爷有没有什么计划？
+- role: model
+  content: 爷爷应该有一些计划
+- role: user
+  name: 妹妹
+  content: 奶奶和妈妈是同事
+- role: model
+  content: 原来奶奶和妈妈是同事关系
+- role: user
+  name: 妹妹
+  content: 你了解家庭吗
+- role: model
+  content: 了解一些，家庭挺热门的
+- role: user
+  name: 妹妹
+  content: 我对健康很感兴趣
+- role: model
+  content: 健康是个好话题
+- role: user
+  name: 妹妹
+  content: 妹妹在医院住过一段时间
+- role: model
+  content: 在医院生活应该很有意思
+- role: user
+  name: 妹妹
+  content: 妹妹最近怎么样？
+- role: model
+  content: 妹妹最近挺好的
+- role: user
+  name: 妹妹
+  content: 上周爷爷去了老家
+- role: model
+  content: 老家不错呢
+- role: user
+  name: 妹妹
+  content: 妹妹说他特别喜欢钢琴
+- role: model
+  content: 原来妹妹喜欢钢琴呀
+- role: user
+  name: 妹妹
+  content: 妹妹周末一般做什么？
+- role: model
+  content: 妹妹周末过得挺充实的

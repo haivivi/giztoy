@@ -1,0 +1,10 @@
+name: m01_single_person
+desc: Single person, basic facts
+persona: cat_girl
+total_messages: 10
+conversations: 1
+expect:
+  min_entities: 1
+  entities_contain:
+  - person:小明
+  min_segments: 1

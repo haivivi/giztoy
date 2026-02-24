@@ -1,0 +1,54 @@
+conv_id: session-112
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 小胖
+  content: 我记得小胖第一次接触考试的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 小胖当时觉得考试特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小胖
+  content: 小明喜欢恐龙
+- role: model
+  content: 是吗，小明确实挺喜欢恐龙的
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，小胖学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小胖
+  content: 上次小胖跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小胖
+  content: 小胖说旅行让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小胖
+  content: 小胖最近在忙足球
+- role: model
+  content: 小胖忙足球一定很充实
+- role: user
+  name: 小胖
+  content: 老师喜欢吃什么？
+- role: model
+  content: 老师口味挺好的

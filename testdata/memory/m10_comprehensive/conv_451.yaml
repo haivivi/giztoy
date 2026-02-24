@@ -1,0 +1,54 @@
+conv_id: session-451
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 老师和小红是同学
+- role: model
+  content: 原来老师和小红是同学关系
+- role: user
+  name: 妈妈
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 妈妈
+  content: 妈妈是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，妈妈是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 妈妈
+  content: 爸爸和小红是姐弟
+- role: model
+  content: 原来爸爸和小红是姐弟关系
+- role: user
+  name: 妈妈
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妈妈
+  content: 小胖和小红是同事
+- role: model
+  content: 原来小胖和小红是同事关系
+- role: user
+  name: 妈妈
+  content: 说到旅行，我觉得挺有意思的
+- role: model
+  content: 是啊，旅行确实值得聊聊

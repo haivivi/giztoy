@@ -1,0 +1,54 @@
+conv_id: session-180
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊恐龙的事
+- role: model
+  content: 好的，恐龙怎么了？
+- role: user
+  name: 爸爸
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触宠物的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得宠物特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触音乐的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得音乐特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 小胖和爷爷是兄妹
+- role: model
+  content: 原来小胖和爷爷是兄妹关系
+- role: user
+  name: 爸爸
+  content: 小红和爸爸是亲戚
+- role: model
+  content: 原来小红和爸爸是亲戚关系
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛

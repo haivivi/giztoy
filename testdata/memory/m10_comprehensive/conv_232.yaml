@@ -1,0 +1,54 @@
+conv_id: session-232
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 想跟你聊聊旅行
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小胖
+  content: 小胖喜欢足球
+- role: model
+  content: 是吗，小胖确实挺喜欢足球的
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，小胖学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小胖
+  content: 小胖喜欢足球
+- role: model
+  content: 是吗，小胖确实挺喜欢足球的
+- role: user
+  name: 小胖
+  content: 小胖在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思
+- role: user
+  name: 小胖
+  content: 小胖喜欢吃什么？
+- role: model
+  content: 小胖口味挺好的
+- role: user
+  name: 小胖
+  content: 小胖说他特别喜欢足球
+- role: model
+  content: 原来小胖喜欢足球呀
+- role: user
+  name: 小胖
+  content: 小胖去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 小胖
+  content: 小明去过游乐场
+- role: model
+  content: 游乐场挺美的

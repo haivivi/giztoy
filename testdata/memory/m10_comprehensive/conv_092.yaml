@@ -1,0 +1,54 @@
+conv_id: session-092
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 跟你说个关于生日的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爸爸
+  content: 说到宠物，我觉得挺有意思的
+- role: model
+  content: 是啊，宠物确实值得聊聊
+- role: user
+  name: 爸爸
+  content: 最近运动有什么新动态吗
+- role: model
+  content: 我听说运动方面有不少变化
+- role: user
+  name: 爸爸
+  content: 上次奶奶跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 奶奶说旅行让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸跟我说过，他最大的爱好就是音乐
+- role: model
+  content: 爸爸爱好音乐挺好的
+- role: user
+  name: 爸爸
+  content: 最近生日有什么新动态吗
+- role: model
+  content: 我听说生日方面有不少变化
+- role: user
+  name: 爸爸
+  content: 恐龙太好玩了！
+- role: model
+  content: 是呀，恐龙确实很有趣！
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢音乐
+- role: model
+  content: 原来爸爸喜欢音乐呀
+- role: user
+  name: 爸爸
+  content: 小胖和奶奶是邻居
+- role: model
+  content: 原来小胖和奶奶是邻居关系

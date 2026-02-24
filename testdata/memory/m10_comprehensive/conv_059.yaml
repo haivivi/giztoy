@@ -1,0 +1,54 @@
+conv_id: session-059
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近做饭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 爸爸在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 爸爸和小红是同事
+- role: model
+  content: 原来爸爸和小红是同事关系
+- role: user
+  name: 妈妈
+  content: 妈妈去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 妈妈
+  content: 爷爷和老师是同事
+- role: model
+  content: 原来爷爷和老师是同事关系
+- role: user
+  name: 妈妈
+  content: 爸爸和老师是亲戚
+- role: model
+  content: 原来爸爸和老师是亲戚关系
+- role: user
+  name: 妈妈
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 妈妈
+  content: 小明和小红是姐弟
+- role: model
+  content: 原来小明和小红是姐弟关系
+- role: user
+  name: 妈妈
+  content: 小胖和老师是亲戚
+- role: model
+  content: 原来小胖和老师是亲戚关系
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢设计师
+- role: model
+  content: 原来妈妈喜欢设计师呀

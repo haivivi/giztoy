@@ -1,0 +1,54 @@
+conv_id: session-021
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近学校有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 爸爸去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 爸爸
+  content: 妈妈和爷爷是邻居
+- role: model
+  content: 原来妈妈和爷爷是邻居关系
+- role: user
+  name: 爸爸
+  content: 爸爸去过医院
+- role: model
+  content: 医院挺美的
+- role: user
+  name: 爸爸
+  content: 爸爸和妈妈是姐弟
+- role: model
+  content: 原来爸爸和妈妈是姐弟关系
+- role: user
+  name: 爸爸
+  content: 妹妹和爸爸是姐弟
+- role: model
+  content: 原来妹妹和爸爸是姐弟关系
+- role: user
+  name: 爸爸
+  content: 爸爸今天跟我说了健康的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爸爸
+  content: 爸爸说健康最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸去过老家
+- role: model
+  content: 老家挺美的
+- role: user
+  name: 爸爸
+  content: 爸爸有没有什么计划？
+- role: model
+  content: 爸爸应该有一些计划

@@ -1,0 +1,29 @@
+conv_id: session-001
+labels:
+- person:Alice
+messages:
+- role: user
+  name: Alice
+  content: 想跟你聊聊project
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: Alice
+  content: Alice最近在忙TechCorp
+- role: model
+  content: Alice忙TechCorp一定很充实
+- role: user
+  name: Alice
+  content: Alice周末一般做什么？
+- role: model
+  content: Alice周末过得挺充实的
+- role: user
+  name: Alice
+  content: Alice说他特别喜欢TechCorp
+- role: model
+  content: 原来Alice喜欢TechCorp呀
+- role: user
+  name: Alice
+  content: Alice喜欢engineer
+- role: model
+  content: 是吗，Alice确实挺喜欢engineer的

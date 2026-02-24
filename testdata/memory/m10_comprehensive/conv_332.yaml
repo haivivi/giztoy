@@ -1,0 +1,54 @@
+conv_id: session-332
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊过年
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 妈妈在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 妈妈和爸爸是姐弟
+- role: model
+  content: 原来妈妈和爸爸是姐弟关系
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 老师喜欢吃什么？
+- role: model
+  content: 老师口味挺好的
+- role: user
+  name: 爸爸
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 爸爸
+  content: 小明和奶奶是兄妹
+- role: model
+  content: 原来小明和奶奶是兄妹关系
+- role: user
+  name: 爸爸
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的
+- role: user
+  name: 爸爸
+  content: 小胖最近在忙足球
+- role: model
+  content: 小胖忙足球一定很充实

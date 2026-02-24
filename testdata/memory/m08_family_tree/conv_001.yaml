@@ -1,0 +1,54 @@
+conv_id: session-001
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 今天想聊聊健康的事
+- role: model
+  content: 好的，健康怎么了？
+- role: user
+  name: 爷爷
+  content: 哥哥和爸爸是同学
+- role: model
+  content: 原来哥哥和爸爸是同学关系
+- role: user
+  name: 爷爷
+  content: 哥哥喜欢吃什么？
+- role: model
+  content: 哥哥口味挺好的
+- role: user
+  name: 爷爷
+  content: 我记得爷爷第一次接触过年的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 爷爷当时觉得过年特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 妈妈和爸爸是邻居
+- role: model
+  content: 原来妈妈和爸爸是邻居关系
+- role: user
+  name: 爷爷
+  content: 爷爷平时有什么爱好？
+- role: model
+  content: 爷爷的爱好挺多的
+- role: user
+  name: 爷爷
+  content: 爸爸喜欢教师
+- role: model
+  content: 是吗，爸爸确实挺喜欢教师的
+- role: user
+  name: 爷爷
+  content: 爷爷在北京住过一段时间
+- role: model
+  content: 在北京生活应该很有意思
+- role: user
+  name: 爷爷
+  content: 最近生日有什么新动态吗
+- role: model
+  content: 我听说生日方面有不少变化

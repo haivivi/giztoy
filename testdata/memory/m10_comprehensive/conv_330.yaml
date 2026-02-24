@@ -1,0 +1,54 @@
+conv_id: session-330
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小红
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小红
+  content: 我记得小胖第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 小胖当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 我记得小红第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 小红当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 我对画画很感兴趣
+- role: model
+  content: 画画是个好话题
+- role: user
+  name: 小红
+  content: 小红和老师是同事
+- role: model
+  content: 原来小红和老师是同事关系
+- role: user
+  name: 小红
+  content: 妈妈今天跟我说了做饭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小红
+  content: 妈妈说做饭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

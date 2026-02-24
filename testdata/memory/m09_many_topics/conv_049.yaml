@@ -1,0 +1,54 @@
+conv_id: session-049
+labels:
+- person:小何
+messages:
+- role: user
+  name: 小何
+  content: 跟你说个关于旅行的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小何
+  content: 上周小何去了南京
+- role: model
+  content: 南京不错呢
+- role: user
+  name: 小何
+  content: 上周老张去了西湖
+- role: model
+  content: 西湖不错呢
+- role: user
+  name: 小何
+  content: 小何有没有什么计划？
+- role: model
+  content: 小何应该有一些计划
+- role: user
+  name: 小何
+  content: 小何平时有什么爱好？
+- role: model
+  content: 小何的爱好挺多的
+- role: user
+  name: 小何
+  content: 你了解学习吗
+- role: model
+  content: 了解一些，学习挺热门的
+- role: user
+  name: 小何
+  content: 我记得老张第一次接触工作的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小何
+  content: 老张当时觉得工作特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小何
+  content: 老张和小美是兄妹
+- role: model
+  content: 原来老张和小美是兄妹关系
+- role: user
+  name: 小何
+  content: 老张在南京住过一段时间
+- role: model
+  content: 在南京生活应该很有意思

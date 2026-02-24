@@ -1,0 +1,54 @@
+conv_id: session-098
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 今天想聊聊做饭的事
+- role: model
+  content: 好的，做饭怎么了？
+- role: user
+  name: 小红
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 小红
+  content: 上次小红跟我说了一件关于乐高的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小红
+  content: 小红说乐高让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小红
+  content: 小红今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 等等，小红应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的
+- role: user
+  name: 小红
+  content: 妈妈和老师是兄妹
+- role: model
+  content: 原来妈妈和老师是兄妹关系
+- role: user
+  name: 小红
+  content: 小红去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 小红
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的

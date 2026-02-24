@@ -1,0 +1,54 @@
+conv_id: session-208
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 想跟你聊聊过年
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小胖
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题
+- role: user
+  name: 小胖
+  content: 小胖今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 等等，小胖应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小胖
+  content: 小胖今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 等等，小胖应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小胖
+  content: 说到恐龙，我觉得挺有意思的
+- role: model
+  content: 是啊，恐龙确实值得聊聊
+- role: user
+  name: 小胖
+  content: 小明和小胖是同学
+- role: model
+  content: 原来小明和小胖是同学关系
+- role: user
+  name: 小胖
+  content: 小胖平时有什么爱好？
+- role: model
+  content: 小胖的爱好挺多的
+- role: user
+  name: 小胖
+  content: 宠物太好玩了！
+- role: model
+  content: 是呀，宠物确实很有趣！

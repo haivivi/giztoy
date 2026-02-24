@@ -1,0 +1,54 @@
+conv_id: session-338
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 跟你说个关于旅行的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小红
+  content: 小红学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小红
+  content: 不对，小红学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小红
+  content: 妈妈和爷爷是兄妹
+- role: model
+  content: 原来妈妈和爷爷是兄妹关系
+- role: user
+  name: 小红
+  content: 上次小红跟我说了一件关于学校的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小红
+  content: 小红说学校让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小红
+  content: 我对画画很感兴趣
+- role: model
+  content: 画画是个好话题
+- role: user
+  name: 小红
+  content: 小明和小红是姐弟
+- role: model
+  content: 原来小明和小红是姐弟关系
+- role: user
+  name: 小红
+  content: 爸爸去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 小红
+  content: 爷爷平时有什么爱好？
+- role: model
+  content: 爷爷的爱好挺多的

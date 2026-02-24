@@ -1,0 +1,54 @@
+conv_id: session-399
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊过年
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 最近考试有什么新动态吗
+- role: model
+  content: 我听说考试方面有不少变化
+- role: user
+  name: 老师
+  content: 你了解画画吗
+- role: model
+  content: 了解一些，画画挺热门的
+- role: user
+  name: 老师
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 老师
+  content: 奶奶周末一般做什么？
+- role: model
+  content: 奶奶周末过得挺充实的
+- role: user
+  name: 老师
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 最近生日有什么新动态吗
+- role: model
+  content: 我听说生日方面有不少变化
+- role: user
+  name: 老师
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 老师
+  content: 你了解宠物吗
+- role: model
+  content: 了解一些，宠物挺热门的

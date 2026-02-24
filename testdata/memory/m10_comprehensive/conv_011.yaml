@@ -1,0 +1,54 @@
+conv_id: session-011
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢做饭
+- role: model
+  content: 原来妈妈喜欢做饭呀
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢做饭
+- role: model
+  content: 是吗，妈妈确实挺喜欢做饭的
+- role: user
+  name: 妈妈
+  content: 爷爷在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实爷爷自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 妈妈打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 妈妈
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢做饭
+- role: model
+  content: 是吗，妈妈确实挺喜欢做饭的
+- role: user
+  name: 妈妈
+  content: 妈妈是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，妈妈是在上海工作的，我记错了
+- role: model
+  content: 没关系

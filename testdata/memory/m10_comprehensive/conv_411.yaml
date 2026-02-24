@@ -1,0 +1,54 @@
+conv_id: session-411
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊考试
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 妈妈
+  content: 小胖是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，小胖是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 妈妈
+  content: 爸爸打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 妈妈
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触乐高的时候
+- role: model
+  content: 然后呢？

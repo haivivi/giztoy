@@ -1,0 +1,54 @@
+conv_id: session-455
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊学校的事
+- role: model
+  content: 好的，学校怎么了？
+- role: user
+  name: 老师
+  content: 奶奶和小红是邻居
+- role: model
+  content: 原来奶奶和小红是邻居关系
+- role: user
+  name: 老师
+  content: 老师去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 老师
+  content: 老师在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 老师
+  content: 上周老师去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 老师
+  content: 爸爸喜欢吃什么？
+- role: model
+  content: 爸爸口味挺好的
+- role: user
+  name: 老师
+  content: 老师周末一般做什么？
+- role: model
+  content: 老师周末过得挺充实的
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀

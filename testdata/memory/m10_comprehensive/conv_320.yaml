@@ -1,0 +1,54 @@
+conv_id: session-320
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 小胖
+  content: 妈妈说他特别喜欢做饭
+- role: model
+  content: 原来妈妈喜欢做饭呀
+- role: user
+  name: 小胖
+  content: 上次小胖跟我说了一件关于做饭的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小胖
+  content: 小胖说做饭让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小胖
+  content: 爷爷和爸爸是同事
+- role: model
+  content: 原来爷爷和爸爸是同事关系
+- role: user
+  name: 小胖
+  content: 爸爸和小明是邻居
+- role: model
+  content: 原来爸爸和小明是邻居关系
+- role: user
+  name: 小胖
+  content: 小胖今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 等等，小胖应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小胖
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题
+- role: user
+  name: 小胖
+  content: 小红说他特别喜欢画画
+- role: model
+  content: 原来小红喜欢画画呀

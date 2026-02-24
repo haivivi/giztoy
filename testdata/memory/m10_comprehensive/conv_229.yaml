@@ -1,0 +1,54 @@
+conv_id: session-229
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近过年有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 爷爷有没有什么计划？
+- role: model
+  content: 爷爷应该有一些计划
+- role: user
+  name: 爷爷
+  content: 上周爷爷去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 爷爷
+  content: 爷爷去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 爷爷
+  content: 爷爷在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实爷爷自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爷爷
+  content: 爷爷已经70岁了
+- role: model
+  content: 爷爷70岁了呀
+- role: user
+  name: 爷爷
+  content: 爷爷和老师是姐弟
+- role: model
+  content: 原来爷爷和老师是姐弟关系
+- role: user
+  name: 爷爷
+  content: 爷爷去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 爷爷
+  content: 爷爷周末一般做什么？
+- role: model
+  content: 爷爷周末过得挺充实的

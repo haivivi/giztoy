@@ -1,0 +1,54 @@
+conv_id: session-469
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 爷爷
+  content: 爷爷有没有什么计划？
+- role: model
+  content: 爷爷应该有一些计划
+- role: user
+  name: 爷爷
+  content: 爷爷在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实爷爷自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爷爷
+  content: 妈妈和爷爷是姐弟
+- role: model
+  content: 原来妈妈和爷爷是姐弟关系
+- role: user
+  name: 爷爷
+  content: 小胖今天跟我说了过年的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爷爷
+  content: 小胖说过年最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 爷爷
+  content: 小红喜欢画画
+- role: model
+  content: 是吗，小红确实挺喜欢画画的
+- role: user
+  name: 爷爷
+  content: 妈妈在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 爷爷
+  content: 小红今天跟我说了画画的事
+- role: model
+  content: 说了什么？

@@ -1,0 +1,54 @@
+conv_id: session-297
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近画画有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 画画太好玩了！
+- role: model
+  content: 是呀，画画确实很有趣！
+- role: user
+  name: 小明
+  content: 奶奶和小明是邻居
+- role: model
+  content: 原来奶奶和小明是邻居关系
+- role: user
+  name: 小明
+  content: 小红打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 小明
+  content: 老师在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 小明
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 上周小明去了公园
+- role: model
+  content: 公园不错呢
+- role: user
+  name: 小明
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 小明
+  content: 说到学校，我觉得挺有意思的
+- role: model
+  content: 是啊，学校确实值得聊聊

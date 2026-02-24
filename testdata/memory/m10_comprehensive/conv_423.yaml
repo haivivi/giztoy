@@ -1,0 +1,54 @@
+conv_id: session-423
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 老师喜欢吃什么？
+- role: model
+  content: 老师口味挺好的
+- role: user
+  name: 老师
+  content: 妈妈和奶奶是同事
+- role: model
+  content: 原来妈妈和奶奶是同事关系
+- role: user
+  name: 老师
+  content: 爷爷去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 老师
+  content: 老师最近在忙数学
+- role: model
+  content: 老师忙数学一定很充实
+- role: user
+  name: 老师
+  content: 爸爸和老师是同事
+- role: model
+  content: 原来爸爸和老师是同事关系
+- role: user
+  name: 老师
+  content: 上周老师去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划

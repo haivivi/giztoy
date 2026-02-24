@@ -1,0 +1,54 @@
+conv_id: session-192
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊乐高的事
+- role: model
+  content: 好的，乐高怎么了？
+- role: user
+  name: 小胖
+  content: 你了解宠物吗
+- role: model
+  content: 了解一些，宠物挺热门的
+- role: user
+  name: 小胖
+  content: 小胖今天跟我说了做饭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小胖
+  content: 小胖说做饭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小胖
+  content: 小胖说他特别喜欢足球
+- role: model
+  content: 原来小胖喜欢足球呀
+- role: user
+  name: 小胖
+  content: 小胖跟我说过，他最大的爱好就是足球
+- role: model
+  content: 小胖爱好足球挺好的
+- role: user
+  name: 小胖
+  content: 小胖打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 小胖
+  content: 老师和小胖是同事
+- role: model
+  content: 原来老师和小胖是同事关系
+- role: user
+  name: 小胖
+  content: 小胖最近怎么样？
+- role: model
+  content: 小胖最近挺好的
+- role: user
+  name: 小胖
+  content: 妈妈和老师是亲戚
+- role: model
+  content: 原来妈妈和老师是亲戚关系

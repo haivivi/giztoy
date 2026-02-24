@@ -1,0 +1,54 @@
+conv_id: session-028
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊乐高的事
+- role: model
+  content: 好的，乐高怎么了？
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 奶奶和爷爷是邻居
+- role: model
+  content: 原来奶奶和爷爷是邻居关系
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 爸爸在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爸爸
+  content: 其实爸爸自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢吃什么？
+- role: model
+  content: 爸爸口味挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸今年25岁
+- role: model
+  content: 好的

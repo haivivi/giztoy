@@ -1,0 +1,54 @@
+conv_id: session-424
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于考试的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 小胖跟我说过，他最大的爱好就是足球
+- role: model
+  content: 小胖爱好足球挺好的
+- role: user
+  name: 小胖
+  content: 小胖平时有什么爱好？
+- role: model
+  content: 小胖的爱好挺多的
+- role: user
+  name: 小胖
+  content: 小胖说他特别喜欢足球
+- role: model
+  content: 原来小胖喜欢足球呀
+- role: user
+  name: 小胖
+  content: 小胖喜欢吃什么？
+- role: model
+  content: 小胖口味挺好的
+- role: user
+  name: 小胖
+  content: 小胖在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 小胖
+  content: 小胖周末一般做什么？
+- role: model
+  content: 小胖周末过得挺充实的
+- role: user
+  name: 小胖
+  content: 小胖最近在忙足球
+- role: model
+  content: 小胖忙足球一定很充实
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，小胖学的是物理，我搞混了
+- role: model
+  content: 物理也很好

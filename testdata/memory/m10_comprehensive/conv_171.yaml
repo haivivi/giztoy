@@ -1,0 +1,54 @@
+conv_id: session-171
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于运动的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 你了解过年吗
+- role: model
+  content: 了解一些，过年挺热门的
+- role: user
+  name: 妈妈
+  content: 妈妈去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 妈妈
+  content: 画画太好玩了！
+- role: model
+  content: 是呀，画画确实很有趣！
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙做饭
+- role: model
+  content: 妈妈忙做饭一定很充实
+- role: user
+  name: 妈妈
+  content: 妈妈最近怎么样？
+- role: model
+  content: 妈妈最近挺好的
+- role: user
+  name: 妈妈
+  content: 有一次妈妈因为恐龙闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 妈妈
+  content: 就是妈妈在恐龙的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 妈妈
+  content: 你了解画画吗
+- role: model
+  content: 了解一些，画画挺热门的
+- role: user
+  name: 妈妈
+  content: 小胖今天跟我说了运动的事
+- role: model
+  content: 说了什么？

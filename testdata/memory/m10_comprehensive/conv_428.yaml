@@ -1,0 +1,54 @@
+conv_id: session-428
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爸爸
+  content: 爸爸有没有什么计划？
+- role: model
+  content: 爸爸应该有一些计划
+- role: user
+  name: 爸爸
+  content: 小红和老师是同学
+- role: model
+  content: 原来小红和老师是同学关系
+- role: user
+  name: 爸爸
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爸爸
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爸爸
+  content: 爸爸最近在忙工程师
+- role: model
+  content: 爸爸忙工程师一定很充实
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于运动的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说运动让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 我记得老师第一次接触学校的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 老师当时觉得学校特别新奇
+- role: model
+  content: 每个人都有第一次嘛

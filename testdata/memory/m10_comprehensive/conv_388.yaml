@@ -1,0 +1,54 @@
+conv_id: session-388
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊画画
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 爸爸跟我说过，他最大的爱好就是音乐
+- role: model
+  content: 爸爸爱好音乐挺好的
+- role: user
+  name: 爸爸
+  content: 小胖和小明是亲戚
+- role: model
+  content: 原来小胖和小明是亲戚关系
+- role: user
+  name: 爸爸
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀
+- role: user
+  name: 爸爸
+  content: 小明打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 爸爸
+  content: 最近运动有什么新动态吗
+- role: model
+  content: 我听说运动方面有不少变化
+- role: user
+  name: 爸爸
+  content: 最近学校有什么新动态吗
+- role: model
+  content: 我听说学校方面有不少变化
+- role: user
+  name: 爸爸
+  content: 奶奶在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀

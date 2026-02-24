@@ -1,0 +1,54 @@
+conv_id: session-049
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近画画有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 爸爸和小胖是同学
+- role: model
+  content: 原来爸爸和小胖是同学关系
+- role: user
+  name: 小明
+  content: 小明说他特别喜欢古生物学家
+- role: model
+  content: 原来小明喜欢古生物学家呀
+- role: user
+  name: 小明
+  content: 奶奶打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 小明
+  content: 说到运动，我觉得挺有意思的
+- role: model
+  content: 是啊，运动确实值得聊聊
+- role: user
+  name: 小明
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 小明说他特别喜欢恐龙
+- role: model
+  content: 原来小明喜欢恐龙呀
+- role: user
+  name: 小明
+  content: 小明今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 小明说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

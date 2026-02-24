@@ -1,0 +1,54 @@
+conv_id: session-011
+labels:
+- person:哥哥
+messages:
+- role: user
+  name: 哥哥
+  content: 跟你说个关于旅行的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 哥哥
+  content: 爸爸在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 哥哥
+  content: 哥哥今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 哥哥
+  content: 哥哥说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 哥哥
+  content: 妈妈和妹妹是同学
+- role: model
+  content: 原来妈妈和妹妹是同学关系
+- role: user
+  name: 哥哥
+  content: 上周妹妹去了医院
+- role: model
+  content: 医院不错呢
+- role: user
+  name: 哥哥
+  content: 哥哥去过医院
+- role: model
+  content: 医院挺美的
+- role: user
+  name: 哥哥
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 哥哥
+  content: 爸爸周末一般做什么？
+- role: model
+  content: 爸爸周末过得挺充实的
+- role: user
+  name: 哥哥
+  content: 哥哥最近在忙清华大学
+- role: model
+  content: 哥哥忙清华大学一定很充实

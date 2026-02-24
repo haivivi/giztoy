@@ -1,0 +1,54 @@
+conv_id: session-368
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小胖
+  content: 上周小胖去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 小胖
+  content: 宠物太好玩了！
+- role: model
+  content: 是呀，宠物确实很有趣！
+- role: user
+  name: 小胖
+  content: 小胖在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 小胖
+  content: 最近音乐有什么新动态吗
+- role: model
+  content: 我听说音乐方面有不少变化
+- role: user
+  name: 小胖
+  content: 奶奶和爷爷是姐弟
+- role: model
+  content: 原来奶奶和爷爷是姐弟关系
+- role: user
+  name: 小胖
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划
+- role: user
+  name: 小胖
+  content: 说到旅行，我觉得挺有意思的
+- role: model
+  content: 是啊，旅行确实值得聊聊
+- role: user
+  name: 小胖
+  content: 爷爷和奶奶是亲戚
+- role: model
+  content: 原来爷爷和奶奶是亲戚关系
+- role: user
+  name: 小胖
+  content: 小胖周末一般做什么？
+- role: model
+  content: 小胖周末过得挺充实的

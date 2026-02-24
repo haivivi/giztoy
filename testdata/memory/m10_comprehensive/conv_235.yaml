@@ -1,0 +1,54 @@
+conv_id: session-235
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊旅行的事
+- role: model
+  content: 好的，旅行怎么了？
+- role: user
+  name: 妈妈
+  content: 老师周末一般做什么？
+- role: model
+  content: 老师周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 妈妈
+  content: 小明在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，妈妈是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 妈妈
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 妈妈
+  content: 小红和妈妈是亲戚
+- role: model
+  content: 原来小红和妈妈是亲戚关系

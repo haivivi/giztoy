@@ -1,0 +1,11 @@
+name: m09_many_topics
+desc: Many interleaved topics over 50 sessions
+persona: assistant
+total_messages: 1000
+conversations: 50
+expect:
+  min_entities: 3
+  min_segments: 8
+  recall:
+  - text: 工作
+    min_results: 1

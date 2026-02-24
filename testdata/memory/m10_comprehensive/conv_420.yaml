@@ -1,0 +1,54 @@
+conv_id: session-420
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊过年的事
+- role: model
+  content: 好的，过年怎么了？
+- role: user
+  name: 爸爸
+  content: 最近运动有什么新动态吗
+- role: model
+  content: 我听说运动方面有不少变化
+- role: user
+  name: 爸爸
+  content: 爸爸在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爸爸
+  content: 其实爸爸自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爸爸
+  content: 小红喜欢画画
+- role: model
+  content: 是吗，小红确实挺喜欢画画的
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于恐龙的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说恐龙让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 最近学校有什么新动态吗
+- role: model
+  content: 我听说学校方面有不少变化
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢吃什么？
+- role: model
+  content: 爸爸口味挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸平时有什么爱好？
+- role: model
+  content: 爸爸的爱好挺多的

@@ -1,0 +1,54 @@
+conv_id: session-434
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小红和小明是同事
+- role: model
+  content: 原来小红和小明是同事关系
+- role: user
+  name: 小红
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的
+- role: user
+  name: 小红
+  content: 上周小红去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 小红
+  content: 你了解旅行吗
+- role: model
+  content: 了解一些，旅行挺热门的
+- role: user
+  name: 小红
+  content: 小红喜欢画画
+- role: model
+  content: 是吗，小红确实挺喜欢画画的
+- role: user
+  name: 小红
+  content: 上次小红跟我说了一件关于过年的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小红
+  content: 小红说过年让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小红
+  content: 小红是在北京工作的
+- role: model
+  content: 好的

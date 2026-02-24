@@ -1,0 +1,54 @@
+conv_id: session-015
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 今天想聊聊健康的事
+- role: model
+  content: 好的，健康怎么了？
+- role: user
+  name: 小美
+  content: 小美和小何是亲戚
+- role: model
+  content: 原来小美和小何是亲戚关系
+- role: user
+  name: 小美
+  content: 老张和小美是兄妹
+- role: model
+  content: 原来老张和小美是兄妹关系
+- role: user
+  name: 小美
+  content: 小美周末一般做什么？
+- role: model
+  content: 小美周末过得挺充实的
+- role: user
+  name: 小美
+  content: 老张和小美是兄妹
+- role: model
+  content: 原来老张和小美是兄妹关系
+- role: user
+  name: 小美
+  content: 新闻太好玩了！
+- role: model
+  content: 是呀，新闻确实很有趣！
+- role: user
+  name: 小美
+  content: 有一次小美因为理财闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小美
+  content: 就是小美在理财的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小美
+  content: 上周小美去了杭州
+- role: model
+  content: 杭州不错呢
+- role: user
+  name: 小美
+  content: 小美最近怎么样？
+- role: model
+  content: 小美最近挺好的

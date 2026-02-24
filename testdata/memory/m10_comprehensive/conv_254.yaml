@@ -1,0 +1,54 @@
+conv_id: session-254
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 今天想聊聊做饭的事
+- role: model
+  content: 好的，做饭怎么了？
+- role: user
+  name: 奶奶
+  content: 有一次奶奶因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 奶奶
+  content: 就是奶奶在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 奶奶
+  content: 运动太好玩了！
+- role: model
+  content: 是呀，运动确实很有趣！
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 小明有没有什么计划？
+- role: model
+  content: 小明应该有一些计划
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 奶奶周末一般做什么？
+- role: model
+  content: 奶奶周末过得挺充实的
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 奶奶去过博物馆
+- role: model
+  content: 博物馆挺美的

@@ -1,0 +1,54 @@
+conv_id: session-438
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于考试的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 有一次小明因为考试闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 奶奶
+  content: 就是小明在考试的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 奶奶
+  content: 我记得小明第一次接触考试的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 小明当时觉得考试特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 奶奶
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的
+- role: user
+  name: 奶奶
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 奶奶
+  content: 其实小红自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 奶奶
+  content: 奶奶打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 奶奶
+  content: 老师和爸爸是亲戚
+- role: model
+  content: 原来老师和爸爸是亲戚关系

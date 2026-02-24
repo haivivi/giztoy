@@ -1,0 +1,54 @@
+conv_id: session-376
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 最近运动有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小胖
+  content: 小胖打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 小胖
+  content: 妈妈喜欢设计师
+- role: model
+  content: 是吗，妈妈确实挺喜欢设计师的
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，小胖学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小胖
+  content: 小明今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 等等，小明应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小胖
+  content: 老师和小胖是朋友
+- role: model
+  content: 原来老师和小胖是朋友关系
+- role: user
+  name: 小胖
+  content: 小胖周末一般做什么？
+- role: model
+  content: 小胖周末过得挺充实的
+- role: user
+  name: 小胖
+  content: 小胖今天跟我说了恐龙的事
+- role: model
+  content: 说了什么？

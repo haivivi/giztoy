@@ -1,0 +1,54 @@
+conv_id: session-003
+labels:
+- person:小刘
+messages:
+- role: user
+  name: 小刘
+  content: 最近跳槽有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小刘
+  content: 小刘喜欢程序员
+- role: model
+  content: 是吗，小刘确实挺喜欢程序员的
+- role: user
+  name: 小刘
+  content: 小刘学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小刘
+  content: 不对，小刘学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小刘
+  content: 工作太好玩了！
+- role: model
+  content: 是呀，工作确实很有趣！
+- role: user
+  name: 小刘
+  content: 小刘和小陈是亲戚
+- role: model
+  content: 原来小刘和小陈是亲戚关系
+- role: user
+  name: 小刘
+  content: 我记得小陈第一次接触项目的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小刘
+  content: 小陈当时觉得项目特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小刘
+  content: 小陈有没有什么计划？
+- role: model
+  content: 小陈应该有一些计划
+- role: user
+  name: 小刘
+  content: 上周小刘去了北京
+- role: model
+  content: 北京不错呢

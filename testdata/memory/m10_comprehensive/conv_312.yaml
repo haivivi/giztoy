@@ -1,0 +1,54 @@
+conv_id: session-312
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊恐龙的事
+- role: model
+  content: 好的，恐龙怎么了？
+- role: user
+  name: 小胖
+  content: 上次小胖跟我说了一件关于音乐的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小胖
+  content: 小胖说音乐让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小胖
+  content: 小胖去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 小胖
+  content: 爸爸和小胖是兄妹
+- role: model
+  content: 原来爸爸和小胖是兄妹关系
+- role: user
+  name: 小胖
+  content: 我记得小胖第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 小胖当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小胖
+  content: 小胖最近在忙足球
+- role: model
+  content: 小胖忙足球一定很充实
+- role: user
+  name: 小胖
+  content: 妈妈最近怎么样？
+- role: model
+  content: 妈妈最近挺好的
+- role: user
+  name: 小胖
+  content: 小胖在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思

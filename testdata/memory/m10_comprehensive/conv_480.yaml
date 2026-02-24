@@ -1,0 +1,54 @@
+conv_id: session-480
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 小胖去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 小胖
+  content: 爸爸和小明是兄妹
+- role: model
+  content: 原来爸爸和小明是兄妹关系
+- role: user
+  name: 小胖
+  content: 爷爷今年70岁了
+- role: model
+  content: 原来爷爷70岁
+- role: user
+  name: 小胖
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划
+- role: user
+  name: 小胖
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题
+- role: user
+  name: 小胖
+  content: 爷爷和奶奶是同事
+- role: model
+  content: 原来爷爷和奶奶是同事关系
+- role: user
+  name: 小胖
+  content: 你了解宠物吗
+- role: model
+  content: 了解一些，宠物挺热门的
+- role: user
+  name: 小胖
+  content: 小胖今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 等等，小胖应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐

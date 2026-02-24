@@ -1,0 +1,54 @@
+conv_id: session-361
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊音乐的事
+- role: model
+  content: 好的，音乐怎么了？
+- role: user
+  name: 小明
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的
+- role: user
+  name: 小明
+  content: 爷爷和爸爸是朋友
+- role: model
+  content: 原来爷爷和爸爸是朋友关系
+- role: user
+  name: 小明
+  content: 你了解运动吗
+- role: model
+  content: 了解一些，运动挺热门的
+- role: user
+  name: 小明
+  content: 上周小明去了公园
+- role: model
+  content: 公园不错呢
+- role: user
+  name: 小明
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 上次小明跟我说了一件关于音乐的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小明
+  content: 小明说音乐让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小明
+  content: 上次小明跟我说了一件关于运动的事
+- role: model
+  content: 什么事？

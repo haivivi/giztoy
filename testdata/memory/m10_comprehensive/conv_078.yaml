@@ -1,0 +1,54 @@
+conv_id: session-078
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 最近画画有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 小胖跟我说过，他最大的爱好就是足球
+- role: model
+  content: 小胖爱好足球挺好的
+- role: user
+  name: 奶奶
+  content: 你了解音乐吗
+- role: model
+  content: 了解一些，音乐挺热门的
+- role: user
+  name: 奶奶
+  content: 小明和妈妈是兄妹
+- role: model
+  content: 原来小明和妈妈是兄妹关系
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触运动的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得运动特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 奶奶
+  content: 妈妈和奶奶是同事
+- role: model
+  content: 原来妈妈和奶奶是同事关系
+- role: user
+  name: 奶奶
+  content: 爷爷和小红是朋友
+- role: model
+  content: 原来爷爷和小红是朋友关系
+- role: user
+  name: 奶奶
+  content: 奶奶周末一般做什么？
+- role: model
+  content: 奶奶周末过得挺充实的

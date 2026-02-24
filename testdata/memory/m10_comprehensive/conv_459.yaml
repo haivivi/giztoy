@@ -1,0 +1,54 @@
+conv_id: session-459
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近考试有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 妈妈跟我说过，他最大的爱好就是做饭
+- role: model
+  content: 妈妈爱好做饭挺好的
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 妈妈
+  content: 上次奶奶跟我说了一件关于运动的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 妈妈
+  content: 奶奶说运动让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 妈妈
+  content: 妈妈去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 妈妈
+  content: 小红去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 妈妈
+  content: 小红喜欢吃什么？
+- role: model
+  content: 小红口味挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方

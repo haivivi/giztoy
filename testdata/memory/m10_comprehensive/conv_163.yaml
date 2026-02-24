@@ -1,0 +1,54 @@
+conv_id: session-163
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 妈妈
+  content: 小红和妈妈是同事
+- role: model
+  content: 原来小红和妈妈是同事关系
+- role: user
+  name: 妈妈
+  content: 说到音乐，我觉得挺有意思的
+- role: model
+  content: 是啊，音乐确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 老师和小明是同学
+- role: model
+  content: 原来老师和小明是同学关系
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢设计师
+- role: model
+  content: 原来妈妈喜欢设计师呀
+- role: user
+  name: 妈妈
+  content: 妈妈在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 妈妈跟我说过，他最大的爱好就是做饭
+- role: model
+  content: 妈妈爱好做饭挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈跟我说过，他最大的爱好就是设计师
+- role: model
+  content: 妈妈爱好设计师挺好的
+- role: user
+  name: 妈妈
+  content: 说到做饭，我觉得挺有意思的
+- role: model
+  content: 是啊，做饭确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 我对考试很感兴趣
+- role: model
+  content: 考试是个好话题

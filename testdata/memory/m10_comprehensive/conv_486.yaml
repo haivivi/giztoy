@@ -1,0 +1,54 @@
+conv_id: session-486
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 想跟你聊聊乐高
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 奶奶
+  content: 上周奶奶去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 奶奶
+  content: 奶奶今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 等等，奶奶应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 奶奶
+  content: 爸爸最近在忙音乐
+- role: model
+  content: 爸爸忙音乐一定很充实
+- role: user
+  name: 奶奶
+  content: 奶奶周末一般做什么？
+- role: model
+  content: 奶奶周末过得挺充实的
+- role: user
+  name: 奶奶
+  content: 小胖和小明是兄妹
+- role: model
+  content: 原来小胖和小明是兄妹关系
+- role: user
+  name: 奶奶
+  content: 最近考试有什么新动态吗
+- role: model
+  content: 我听说考试方面有不少变化
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛

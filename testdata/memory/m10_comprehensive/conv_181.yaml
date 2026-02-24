@@ -1,0 +1,54 @@
+conv_id: session-181
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爷爷
+  content: 奶奶和爷爷是亲戚
+- role: model
+  content: 原来奶奶和爷爷是亲戚关系
+- role: user
+  name: 爷爷
+  content: 小胖和老师是邻居
+- role: model
+  content: 原来小胖和老师是邻居关系
+- role: user
+  name: 爷爷
+  content: 小胖和小明是同学
+- role: model
+  content: 原来小胖和小明是同学关系
+- role: user
+  name: 爷爷
+  content: 爷爷周末一般做什么？
+- role: model
+  content: 爷爷周末过得挺充实的
+- role: user
+  name: 爷爷
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爷爷
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 爷爷
+  content: 小胖去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 爷爷
+  content: 爷爷学的是数学
+- role: model
+  content: 数学不错

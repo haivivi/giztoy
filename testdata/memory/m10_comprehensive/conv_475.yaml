@@ -1,0 +1,54 @@
+conv_id: session-475
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 妈妈
+  content: 最近过年有什么新动态吗
+- role: model
+  content: 我听说过年方面有不少变化
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙做饭
+- role: model
+  content: 妈妈忙做饭一定很充实
+- role: user
+  name: 妈妈
+  content: 小胖说他特别喜欢足球
+- role: model
+  content: 原来小胖喜欢足球呀
+- role: user
+  name: 妈妈
+  content: 生日太好玩了！
+- role: model
+  content: 是呀，生日确实很有趣！
+- role: user
+  name: 妈妈
+  content: 小红去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 妈妈
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实妈妈自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实妈妈自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的

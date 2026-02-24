@@ -1,0 +1,54 @@
+conv_id: session-105
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 小明
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 爸爸周末一般做什么？
+- role: model
+  content: 爸爸周末过得挺充实的
+- role: user
+  name: 小明
+  content: 有一次小明因为恐龙闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小明
+  content: 就是小明在恐龙的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小明
+  content: 小明喜欢古生物学家
+- role: model
+  content: 是吗，小明确实挺喜欢古生物学家的
+- role: user
+  name: 小明
+  content: 我记得小胖第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小明
+  content: 小胖当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小明
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实

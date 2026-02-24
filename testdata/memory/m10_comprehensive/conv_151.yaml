@@ -1,0 +1,54 @@
+conv_id: session-151
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊运动
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 老师今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，老师应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 有一次奶奶因为做饭闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 老师
+  content: 就是奶奶在做饭的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 老师
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 老师
+  content: 老师喜欢吃什么？
+- role: model
+  content: 老师口味挺好的
+- role: user
+  name: 老师
+  content: 考试太好玩了！
+- role: model
+  content: 是呀，考试确实很有趣！

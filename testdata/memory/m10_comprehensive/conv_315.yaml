@@ -1,0 +1,54 @@
+conv_id: session-315
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近学校有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 妈妈
+  content: 说到恐龙，我觉得挺有意思的
+- role: model
+  content: 是啊，恐龙确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 上周老师去了公园
+- role: model
+  content: 公园不错呢
+- role: user
+  name: 妈妈
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妈妈
+  content: 爸爸和妈妈是朋友
+- role: model
+  content: 原来爸爸和妈妈是朋友关系
+- role: user
+  name: 妈妈
+  content: 爷爷和小红是同事
+- role: model
+  content: 原来爷爷和小红是同事关系
+- role: user
+  name: 妈妈
+  content: 小红平时有什么爱好？
+- role: model
+  content: 小红的爱好挺多的
+- role: user
+  name: 妈妈
+  content: 妈妈今天跟我说了生日的事
+- role: model
+  content: 说了什么？

@@ -1,0 +1,54 @@
+conv_id: session-005
+labels:
+- person:小刘
+messages:
+- role: user
+  name: 小刘
+  content: 今天想聊聊项目的事
+- role: model
+  content: 好的，项目怎么了？
+- role: user
+  name: 小刘
+  content: 上次小刘跟我说了一件关于面试的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小刘
+  content: 小刘说面试让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小刘
+  content: 上周小陈去了北京
+- role: model
+  content: 北京不错呢
+- role: user
+  name: 小刘
+  content: 小刘今天跟我说了工作的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小刘
+  content: 小刘说工作最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小刘
+  content: 说到面试，我觉得挺有意思的
+- role: model
+  content: 是啊，面试确实值得聊聊
+- role: user
+  name: 小刘
+  content: 我对项目很感兴趣
+- role: model
+  content: 项目是个好话题
+- role: user
+  name: 小刘
+  content: 跳槽太好玩了！
+- role: model
+  content: 是呀，跳槽确实很有趣！
+- role: user
+  name: 小刘
+  content: 小陈最近怎么样？
+- role: model
+  content: 小陈最近挺好的

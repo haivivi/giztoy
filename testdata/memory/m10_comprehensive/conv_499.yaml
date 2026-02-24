@@ -1,0 +1,54 @@
+conv_id: session-499
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近运动有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 小红和妈妈是同事
+- role: model
+  content: 原来小红和妈妈是同事关系
+- role: user
+  name: 妈妈
+  content: 生日太好玩了！
+- role: model
+  content: 是呀，生日确实很有趣！
+- role: user
+  name: 妈妈
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 妈妈跟我说过，他最大的爱好就是做饭
+- role: model
+  content: 妈妈爱好做饭挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实妈妈自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 小胖和老师是同学
+- role: model
+  content: 原来小胖和老师是同学关系
+- role: user
+  name: 妈妈
+  content: 上次妈妈跟我说了一件关于运动的事
+- role: model
+  content: 什么事？

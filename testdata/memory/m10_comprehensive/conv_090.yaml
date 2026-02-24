@@ -1,0 +1,54 @@
+conv_id: session-090
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近学校有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 奶奶周末一般做什么？
+- role: model
+  content: 奶奶周末过得挺充实的
+- role: user
+  name: 小红
+  content: 老师今天跟我说了运动的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小红
+  content: 老师说运动最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小红
+  content: 小胖和爸爸是同事
+- role: model
+  content: 原来小胖和爸爸是同事关系
+- role: user
+  name: 小红
+  content: 小红有没有什么计划？
+- role: model
+  content: 小红应该有一些计划
+- role: user
+  name: 小红
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 小红
+  content: 你了解恐龙吗
+- role: model
+  content: 了解一些，恐龙挺热门的
+- role: user
+  name: 小红
+  content: 妈妈和奶奶是朋友
+- role: model
+  content: 原来妈妈和奶奶是朋友关系
+- role: user
+  name: 小红
+  content: 爸爸今年25岁
+- role: model
+  content: 好的

@@ -1,0 +1,54 @@
+conv_id: session-239
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于旅行的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 我对生日很感兴趣
+- role: model
+  content: 生日是个好话题
+- role: user
+  name: 老师
+  content: 最近运动有什么新动态吗
+- role: model
+  content: 我听说运动方面有不少变化
+- role: user
+  name: 老师
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 老师
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的

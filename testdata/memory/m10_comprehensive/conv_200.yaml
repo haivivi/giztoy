@@ -1,0 +1,54 @@
+conv_id: session-200
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 最近旅行有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小胖
+  content: 有一次小胖因为运动闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在运动的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 小胖
+  content: 有一次小红因为生日闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小红在生日的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖和妈妈是亲戚
+- role: model
+  content: 原来小胖和妈妈是亲戚关系
+- role: user
+  name: 小胖
+  content: 小明有没有什么计划？
+- role: model
+  content: 小明应该有一些计划
+- role: user
+  name: 小胖
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划
+- role: user
+  name: 小胖
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划

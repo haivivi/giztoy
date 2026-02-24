@@ -1,0 +1,54 @@
+conv_id: session-252
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近考试有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 妈妈打算去图书馆玩
+- role: model
+  content: 图书馆是个好地方
+- role: user
+  name: 爸爸
+  content: 小明和小胖是同事
+- role: model
+  content: 原来小明和小胖是同事关系
+- role: user
+  name: 爸爸
+  content: 爸爸今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爸爸
+  content: 爸爸说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 爸爸
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 爸爸
+  content: 最近宠物有什么新动态吗
+- role: model
+  content: 我听说宠物方面有不少变化
+- role: user
+  name: 爸爸
+  content: 奶奶和妈妈是邻居
+- role: model
+  content: 原来奶奶和妈妈是邻居关系

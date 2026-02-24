@@ -1,0 +1,54 @@
+conv_id: session-482
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 跟你说个关于学校的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小红
+  content: 说到做饭，我觉得挺有意思的
+- role: model
+  content: 是啊，做饭确实值得聊聊
+- role: user
+  name: 小红
+  content: 爷爷今天跟我说了过年的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小红
+  content: 爷爷说过年最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小红
+  content: 过年太好玩了！
+- role: model
+  content: 是呀，过年确实很有趣！
+- role: user
+  name: 小红
+  content: 爸爸在博物馆住过一段时间
+- role: model
+  content: 在博物馆生活应该很有意思
+- role: user
+  name: 小红
+  content: 小明和妈妈是同学
+- role: model
+  content: 原来小明和妈妈是同学关系
+- role: user
+  name: 小红
+  content: 小红有没有什么计划？
+- role: model
+  content: 小红应该有一些计划
+- role: user
+  name: 小红
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化
+- role: user
+  name: 小红
+  content: 爷爷和妈妈是同学
+- role: model
+  content: 原来爷爷和妈妈是同学关系

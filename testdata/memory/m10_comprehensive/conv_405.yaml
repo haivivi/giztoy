@@ -1,0 +1,54 @@
+conv_id: session-405
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 跟你说个关于乐高的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爷爷
+  content: 爷爷打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 爷爷
+  content: 爷爷最近怎么样？
+- role: model
+  content: 爷爷最近挺好的
+- role: user
+  name: 爷爷
+  content: 爷爷今年70岁了
+- role: model
+  content: 原来爷爷70岁
+- role: user
+  name: 爷爷
+  content: 最近运动有什么新动态吗
+- role: model
+  content: 我听说运动方面有不少变化
+- role: user
+  name: 爷爷
+  content: 小红最近在忙画画
+- role: model
+  content: 小红忙画画一定很充实
+- role: user
+  name: 爷爷
+  content: 爸爸最近在忙音乐
+- role: model
+  content: 爸爸忙音乐一定很充实
+- role: user
+  name: 爷爷
+  content: 奶奶和小胖是朋友
+- role: model
+  content: 原来奶奶和小胖是朋友关系
+- role: user
+  name: 爷爷
+  content: 奶奶有没有什么计划？
+- role: model
+  content: 奶奶应该有一些计划
+- role: user
+  name: 爷爷
+  content: 爷爷学的是数学
+- role: model
+  content: 数学不错

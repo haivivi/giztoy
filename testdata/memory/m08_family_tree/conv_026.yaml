@@ -1,0 +1,54 @@
+conv_id: session-026
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于健康的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 奶奶在北京住过一段时间
+- role: model
+  content: 在北京生活应该很有意思
+- role: user
+  name: 奶奶
+  content: 奶奶去过北京
+- role: model
+  content: 北京挺美的
+- role: user
+  name: 奶奶
+  content: 妹妹和哥哥是兄妹
+- role: model
+  content: 原来妹妹和哥哥是兄妹关系
+- role: user
+  name: 奶奶
+  content: 奶奶最近怎么样？
+- role: model
+  content: 奶奶最近挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶已经73岁了
+- role: model
+  content: 奶奶73岁了呀
+- role: user
+  name: 奶奶
+  content: 说到生日，我觉得挺有意思的
+- role: model
+  content: 是啊，生日确实值得聊聊
+- role: user
+  name: 奶奶
+  content: 说到过年，我觉得挺有意思的
+- role: model
+  content: 是啊，过年确实值得聊聊
+- role: user
+  name: 奶奶
+  content: 说到做饭，我觉得挺有意思的
+- role: model
+  content: 是啊，做饭确实值得聊聊
+- role: user
+  name: 奶奶
+  content: 奶奶去过北京
+- role: model
+  content: 北京挺美的

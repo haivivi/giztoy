@@ -1,0 +1,54 @@
+conv_id: session-073
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊旅行
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 我记得小明第一次接触画画的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小明
+  content: 小明当时觉得画画特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小明
+  content: 小胖喜欢吃什么？
+- role: model
+  content: 小胖口味挺好的
+- role: user
+  name: 小明
+  content: 我记得小明第一次接触乐高的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小明
+  content: 小明当时觉得乐高特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小明
+  content: 小明学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，小明学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 小明打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 小明
+  content: 小红和爸爸是同事
+- role: model
+  content: 原来小红和爸爸是同事关系

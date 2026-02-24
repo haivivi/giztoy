@@ -1,0 +1,54 @@
+conv_id: session-329
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实
+- role: user
+  name: 小明
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 最近音乐有什么新动态吗
+- role: model
+  content: 我听说音乐方面有不少变化
+- role: user
+  name: 小明
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 小明喜欢古生物学家
+- role: model
+  content: 是吗，小明确实挺喜欢古生物学家的
+- role: user
+  name: 小明
+  content: 爷爷今天跟我说了恐龙的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 爷爷说恐龙最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

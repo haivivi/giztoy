@@ -1,0 +1,8 @@
+name: m07_corrections
+desc: Facts get corrected and updated across 5 sessions
+persona: assistant
+total_messages: 100
+conversations: 5
+expect:
+  min_entities: 2
+  min_segments: 2

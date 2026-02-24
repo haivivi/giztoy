@@ -1,0 +1,54 @@
+conv_id: session-041
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 想跟你聊聊爱好
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老张
+  content: 小何周末一般做什么？
+- role: model
+  content: 小何周末过得挺充实的
+- role: user
+  name: 老张
+  content: 我对电影很感兴趣
+- role: model
+  content: 电影是个好话题
+- role: user
+  name: 老张
+  content: 老张跟我说过，他最大的爱好就是mentor
+- role: model
+  content: 老张爱好mentor挺好的
+- role: user
+  name: 老张
+  content: 老张周末一般做什么？
+- role: model
+  content: 老张周末过得挺充实的
+- role: user
+  name: 老张
+  content: 老张在苏州住过一段时间
+- role: model
+  content: 在苏州生活应该很有意思
+- role: user
+  name: 老张
+  content: 老张和小美是邻居
+- role: model
+  content: 原来老张和小美是邻居关系
+- role: user
+  name: 老张
+  content: 老张有没有什么计划？
+- role: model
+  content: 老张应该有一些计划
+- role: user
+  name: 老张
+  content: 老张说他特别喜欢mentor
+- role: model
+  content: 原来老张喜欢mentor呀
+- role: user
+  name: 老张
+  content: 最近电影有什么新动态吗
+- role: model
+  content: 我听说电影方面有不少变化

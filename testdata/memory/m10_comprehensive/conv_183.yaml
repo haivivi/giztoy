@@ -1,0 +1,54 @@
+conv_id: session-183
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 最近宠物有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老师
+  content: 做饭太好玩了！
+- role: model
+  content: 是呀，做饭确实很有趣！
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 老师当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 老师当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 老师和妈妈是同学
+- role: model
+  content: 原来老师和妈妈是同学关系
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的

@@ -1,0 +1,54 @@
+conv_id: session-287
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 最近做饭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 爷爷和小明是姐弟
+- role: model
+  content: 原来爷爷和小明是姐弟关系
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 老师
+  content: 老师今天跟我说了学校的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说学校最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 小胖打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 老师
+  content: 爷爷和奶奶是同学
+- role: model
+  content: 原来爷爷和奶奶是同学关系

@@ -1,0 +1,54 @@
+conv_id: session-295
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 老师打算去图书馆玩
+- role: model
+  content: 图书馆是个好地方
+- role: user
+  name: 老师
+  content: 我对画画很感兴趣
+- role: model
+  content: 画画是个好话题
+- role: user
+  name: 老师
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 老师
+  content: 老师周末一般做什么？
+- role: model
+  content: 老师周末过得挺充实的
+- role: user
+  name: 老师
+  content: 旅行太好玩了！
+- role: model
+  content: 是呀，旅行确实很有趣！
+- role: user
+  name: 老师
+  content: 小明和爷爷是朋友
+- role: model
+  content: 原来小明和爷爷是朋友关系
+- role: user
+  name: 老师
+  content: 我记得妈妈第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 妈妈当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛

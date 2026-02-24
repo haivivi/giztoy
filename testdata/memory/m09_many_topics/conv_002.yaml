@@ -1,0 +1,54 @@
+conv_id: session-002
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 跟你说个关于旅行的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老张
+  content: 小何说他特别喜欢自由职业
+- role: model
+  content: 原来小何喜欢自由职业呀
+- role: user
+  name: 老张
+  content: 上周老张去了杭州
+- role: model
+  content: 杭州不错呢
+- role: user
+  name: 老张
+  content: 小何喜欢自由职业
+- role: model
+  content: 是吗，小何确实挺喜欢自由职业的
+- role: user
+  name: 老张
+  content: 我记得小美第一次接触美食的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老张
+  content: 小美当时觉得美食特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老张
+  content: 老张今天跟我说了天气的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老张
+  content: 老张说天气最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老张
+  content: 老张平时有什么爱好？
+- role: model
+  content: 老张的爱好挺多的
+- role: user
+  name: 老张
+  content: 小何和小美是兄妹
+- role: model
+  content: 原来小何和小美是兄妹关系

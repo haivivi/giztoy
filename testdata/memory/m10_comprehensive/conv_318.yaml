@@ -1,0 +1,54 @@
+conv_id: session-318
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 奶奶
+  content: 上周小红去了公园
+- role: model
+  content: 公园不错呢
+- role: user
+  name: 奶奶
+  content: 小胖最近在忙足球
+- role: model
+  content: 小胖忙足球一定很充实
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 爸爸最近在忙工程师
+- role: model
+  content: 爸爸忙工程师一定很充实
+- role: user
+  name: 奶奶
+  content: 奶奶去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 奶奶
+  content: 恐龙太好玩了！
+- role: model
+  content: 是呀，恐龙确实很有趣！
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 小红和妈妈是同事
+- role: model
+  content: 原来小红和妈妈是同事关系

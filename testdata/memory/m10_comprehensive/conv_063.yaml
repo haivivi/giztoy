@@ -1,0 +1,54 @@
+conv_id: session-063
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 老师周末一般做什么？
+- role: model
+  content: 老师周末过得挺充实的
+- role: user
+  name: 老师
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 老师打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 老师当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 妈妈和奶奶是兄妹
+- role: model
+  content: 原来妈妈和奶奶是兄妹关系
+- role: user
+  name: 老师
+  content: 小明在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触宠物的时候
+- role: model
+  content: 然后呢？

@@ -1,0 +1,54 @@
+conv_id: session-257
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊旅行
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 说到过年，我觉得挺有意思的
+- role: model
+  content: 是啊，过年确实值得聊聊
+- role: user
+  name: 小明
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实
+- role: user
+  name: 小明
+  content: 奶奶学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，奶奶学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 你了解乐高吗
+- role: model
+  content: 了解一些，乐高挺热门的
+- role: user
+  name: 小明
+  content: 说到乐高，我觉得挺有意思的
+- role: model
+  content: 是啊，乐高确实值得聊聊
+- role: user
+  name: 小明
+  content: 小胖周末一般做什么？
+- role: model
+  content: 小胖周末过得挺充实的
+- role: user
+  name: 小明
+  content: 小明今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 等等，小明应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐

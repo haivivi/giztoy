@@ -1,0 +1,54 @@
+conv_id: session-021
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 最近美食有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小美
+  content: 我记得小美第一次接触美食的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小美
+  content: 小美当时觉得美食特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小美
+  content: 老张今天跟我说了学习的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小美
+  content: 老张说学习最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小美
+  content: 小美去过西湖
+- role: model
+  content: 西湖挺美的
+- role: user
+  name: 小美
+  content: 最近天气有什么新动态吗
+- role: model
+  content: 我听说天气方面有不少变化
+- role: user
+  name: 小美
+  content: 有一次小美因为电影闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小美
+  content: 就是小美在电影的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小美
+  content: 小美和小何是姐弟
+- role: model
+  content: 原来小美和小何是姐弟关系

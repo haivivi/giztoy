@@ -1,0 +1,54 @@
+conv_id: session-126
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于过年的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 我对考试很感兴趣
+- role: model
+  content: 考试是个好话题
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 小胖打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 奶奶
+  content: 最近旅行有什么新动态吗
+- role: model
+  content: 我听说旅行方面有不少变化
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 你了解旅行吗
+- role: model
+  content: 了解一些，旅行挺热门的

@@ -1,0 +1,54 @@
+conv_id: session-274
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近过年有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 老师和小胖是姐弟
+- role: model
+  content: 原来老师和小胖是姐弟关系
+- role: user
+  name: 小红
+  content: 有一次小红因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小红
+  content: 就是小红在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小红
+  content: 说到宠物，我觉得挺有意思的
+- role: model
+  content: 是啊，宠物确实值得聊聊
+- role: user
+  name: 小红
+  content: 最近宠物有什么新动态吗
+- role: model
+  content: 我听说宠物方面有不少变化
+- role: user
+  name: 小红
+  content: 小红打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 小红
+  content: 爸爸喜欢音乐
+- role: model
+  content: 是吗，爸爸确实挺喜欢音乐的
+- role: user
+  name: 小红
+  content: 画画太好玩了！
+- role: model
+  content: 是呀，画画确实很有趣！
+- role: user
+  name: 小红
+  content: 说到考试，我觉得挺有意思的
+- role: model
+  content: 是啊，考试确实值得聊聊

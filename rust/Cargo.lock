@@ -1230,6 +1230,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "giztoy-embed",
+ "giztoy-genx",
  "giztoy-graph",
  "giztoy-recall",
  "giztoy-vecstore",

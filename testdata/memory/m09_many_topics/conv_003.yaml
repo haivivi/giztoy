@@ -1,0 +1,54 @@
+conv_id: session-003
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 今天想聊聊学习的事
+- role: model
+  content: 好的，学习怎么了？
+- role: user
+  name: 小美
+  content: 旅行太好玩了！
+- role: model
+  content: 是呀，旅行确实很有趣！
+- role: user
+  name: 小美
+  content: 小美在南京住过一段时间
+- role: model
+  content: 在南京生活应该很有意思
+- role: user
+  name: 小美
+  content: 小美跟我说过，他最大的爱好就是跑步
+- role: model
+  content: 小美爱好跑步挺好的
+- role: user
+  name: 小美
+  content: 电影太好玩了！
+- role: model
+  content: 是呀，电影确实很有趣！
+- role: user
+  name: 小美
+  content: 小美和老张是同学
+- role: model
+  content: 原来小美和老张是同学关系
+- role: user
+  name: 小美
+  content: 我对天气很感兴趣
+- role: model
+  content: 天气是个好话题
+- role: user
+  name: 小美
+  content: 小美周末一般做什么？
+- role: model
+  content: 小美周末过得挺充实的
+- role: user
+  name: 小美
+  content: 小美喜欢跑步
+- role: model
+  content: 是吗，小美确实挺喜欢跑步的
+- role: user
+  name: 小美
+  content: 上次小美跟我说了一件关于电影的事
+- role: model
+  content: 什么事？

@@ -1,0 +1,54 @@
+conv_id: session-004
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊音乐
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 爸爸
+  content: 最近恐龙有什么新动态吗
+- role: model
+  content: 我听说恐龙方面有不少变化
+- role: user
+  name: 爸爸
+  content: 我对音乐很感兴趣
+- role: model
+  content: 音乐是个好话题
+- role: user
+  name: 爸爸
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 爸爸
+  content: 说到故事，我觉得挺有意思的
+- role: model
+  content: 是啊，故事确实值得聊聊
+- role: user
+  name: 爸爸
+  content: 小明在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 爸爸打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 爸爸
+  content: 小红和小明是同学
+- role: model
+  content: 原来小红和小明是同学关系
+- role: user
+  name: 爸爸
+  content: 最近故事有什么新动态吗
+- role: model
+  content: 我听说故事方面有不少变化

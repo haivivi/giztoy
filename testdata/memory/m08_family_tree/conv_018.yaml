@@ -1,0 +1,54 @@
+conv_id: session-018
+labels:
+- person:妹妹
+messages:
+- role: user
+  name: 妹妹
+  content: 想跟你聊聊健康
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妹妹
+  content: 妈妈在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 妹妹
+  content: 爸爸说他特别喜欢教师
+- role: model
+  content: 原来爸爸喜欢教师呀
+- role: user
+  name: 妹妹
+  content: 妹妹最近在忙钢琴
+- role: model
+  content: 妹妹忙钢琴一定很充实
+- role: user
+  name: 妹妹
+  content: 最近学校有什么新动态吗
+- role: model
+  content: 我听说学校方面有不少变化
+- role: user
+  name: 妹妹
+  content: 爸爸和哥哥是邻居
+- role: model
+  content: 原来爸爸和哥哥是邻居关系
+- role: user
+  name: 妹妹
+  content: 我对家庭很感兴趣
+- role: model
+  content: 家庭是个好话题
+- role: user
+  name: 妹妹
+  content: 妹妹去过北京
+- role: model
+  content: 北京挺美的
+- role: user
+  name: 妹妹
+  content: 爸爸和妈妈是同学
+- role: model
+  content: 原来爸爸和妈妈是同学关系
+- role: user
+  name: 妹妹
+  content: 妹妹喜欢钢琴
+- role: model
+  content: 是吗，妹妹确实挺喜欢钢琴的

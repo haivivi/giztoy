@@ -1,0 +1,54 @@
+conv_id: session-472
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小胖
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化
+- role: user
+  name: 小胖
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小胖
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小胖
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小胖
+  content: 小胖和奶奶是姐弟
+- role: model
+  content: 原来小胖和奶奶是姐弟关系
+- role: user
+  name: 小胖
+  content: 上次小明跟我说了一件关于画画的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小胖
+  content: 小明说画画让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小胖
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的

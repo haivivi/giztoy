@@ -1,0 +1,54 @@
+conv_id: session-025
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爷爷
+  content: 我记得爷爷第一次接触健康的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 爷爷当时觉得健康特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 爷爷平时有什么爱好？
+- role: model
+  content: 爷爷的爱好挺多的
+- role: user
+  name: 爷爷
+  content: 爷爷今年75岁了
+- role: model
+  content: 原来爷爷75岁
+- role: user
+  name: 爷爷
+  content: 爷爷今天跟我说了做饭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爷爷
+  content: 爷爷说做饭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 爷爷
+  content: 有一次爷爷因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是爷爷在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爷爷
+  content: 爷爷今年75岁了
+- role: model
+  content: 原来爷爷75岁

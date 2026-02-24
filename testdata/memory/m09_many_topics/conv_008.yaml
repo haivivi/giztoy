@@ -1,0 +1,54 @@
+conv_id: session-008
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 最近新闻有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老张
+  content: 老张在杭州住过一段时间
+- role: model
+  content: 在杭州生活应该很有意思
+- role: user
+  name: 老张
+  content: 老张跟我说过，他最大的爱好就是mentor
+- role: model
+  content: 老张爱好mentor挺好的
+- role: user
+  name: 老张
+  content: 我记得老张第一次接触学习的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老张
+  content: 老张当时觉得学习特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老张
+  content: 我对电影很感兴趣
+- role: model
+  content: 电影是个好话题
+- role: user
+  name: 老张
+  content: 老张跟我说过，他最大的爱好就是mentor
+- role: model
+  content: 老张爱好mentor挺好的
+- role: user
+  name: 老张
+  content: 小何跟我说过，他最大的爱好就是自由职业
+- role: model
+  content: 小何爱好自由职业挺好的
+- role: user
+  name: 老张
+  content: 我记得老张第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老张
+  content: 老张当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛

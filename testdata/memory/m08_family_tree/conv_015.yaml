@@ -1,0 +1,54 @@
+conv_id: session-015
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近旅行有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢吃什么？
+- role: model
+  content: 爸爸口味挺好的
+- role: user
+  name: 爸爸
+  content: 妹妹和爷爷是邻居
+- role: model
+  content: 原来妹妹和爷爷是邻居关系
+- role: user
+  name: 爸爸
+  content: 哥哥和爷爷是邻居
+- role: model
+  content: 原来哥哥和爷爷是邻居关系
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢教师
+- role: model
+  content: 是吗，爸爸确实挺喜欢教师的
+- role: user
+  name: 爸爸
+  content: 奶奶今天跟我说了学校的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爸爸
+  content: 奶奶说学校最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 旅行太好玩了！
+- role: model
+  content: 是呀，旅行确实很有趣！

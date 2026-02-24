@@ -1,0 +1,54 @@
+conv_id: session-006
+labels:
+- person:妹妹
+messages:
+- role: user
+  name: 妹妹
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妹妹
+  content: 妈妈和奶奶是朋友
+- role: model
+  content: 原来妈妈和奶奶是朋友关系
+- role: user
+  name: 妹妹
+  content: 妹妹说他特别喜欢钢琴
+- role: model
+  content: 原来妹妹喜欢钢琴呀
+- role: user
+  name: 妹妹
+  content: 妹妹最近怎么样？
+- role: model
+  content: 妹妹最近挺好的
+- role: user
+  name: 妹妹
+  content: 我对过年很感兴趣
+- role: model
+  content: 过年是个好话题
+- role: user
+  name: 妹妹
+  content: 妹妹打算去医院玩
+- role: model
+  content: 医院是个好地方
+- role: user
+  name: 妹妹
+  content: 妈妈最近在忙护士
+- role: model
+  content: 妈妈忙护士一定很充实
+- role: user
+  name: 妹妹
+  content: 哥哥和爷爷是朋友
+- role: model
+  content: 原来哥哥和爷爷是朋友关系
+- role: user
+  name: 妹妹
+  content: 爷爷有没有什么计划？
+- role: model
+  content: 爷爷应该有一些计划
+- role: user
+  name: 妹妹
+  content: 学校太好玩了！
+- role: model
+  content: 是呀，学校确实很有趣！

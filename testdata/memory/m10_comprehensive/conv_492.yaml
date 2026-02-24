@@ -1,0 +1,54 @@
+conv_id: session-492
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊生日
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于画画的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说画画让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的
+- role: user
+  name: 爸爸
+  content: 我对宠物很感兴趣
+- role: model
+  content: 宠物是个好话题
+- role: user
+  name: 爸爸
+  content: 爸爸学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，爸爸学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爸爸
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的

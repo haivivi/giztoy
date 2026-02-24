@@ -1,0 +1,54 @@
+conv_id: session-021
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 爷爷
+  content: 爷爷已经70岁了
+- role: model
+  content: 爷爷70岁了呀
+- role: user
+  name: 爷爷
+  content: 小明和爷爷是兄妹
+- role: model
+  content: 原来小明和爷爷是兄妹关系
+- role: user
+  name: 爷爷
+  content: 我记得爷爷第一次接触宠物的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 爷爷当时觉得宠物特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 奶奶和爸爸是朋友
+- role: model
+  content: 原来奶奶和爸爸是朋友关系
+- role: user
+  name: 爷爷
+  content: 爷爷今年70岁了
+- role: model
+  content: 原来爷爷70岁
+- role: user
+  name: 爷爷
+  content: 奶奶和小红是同事
+- role: model
+  content: 原来奶奶和小红是同事关系
+- role: user
+  name: 爷爷
+  content: 小明和小红是姐弟
+- role: model
+  content: 原来小明和小红是姐弟关系
+- role: user
+  name: 爷爷
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的

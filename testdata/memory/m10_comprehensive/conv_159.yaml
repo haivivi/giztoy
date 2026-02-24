@@ -1,0 +1,54 @@
+conv_id: session-159
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 最近过年有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老师
+  content: 小明和妈妈是姐弟
+- role: model
+  content: 原来小明和妈妈是姐弟关系
+- role: user
+  name: 老师
+  content: 老师去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 老师
+  content: 我对过年很感兴趣
+- role: model
+  content: 过年是个好话题
+- role: user
+  name: 老师
+  content: 老师今天跟我说了画画的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说画画最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 老师最近在忙数学
+- role: model
+  content: 老师忙数学一定很充实
+- role: user
+  name: 老师
+  content: 老师打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 老师
+  content: 老师喜欢数学
+- role: model
+  content: 是吗，老师确实挺喜欢数学的
+- role: user
+  name: 老师
+  content: 有一次老师因为考试闹了个笑话
+- role: model
+  content: 哈哈什么笑话

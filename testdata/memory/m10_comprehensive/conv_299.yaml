@@ -1,0 +1,54 @@
+conv_id: session-299
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近恐龙有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 最近过年有什么新动态吗
+- role: model
+  content: 我听说过年方面有不少变化
+- role: user
+  name: 妈妈
+  content: 小明最近在忙恐龙
+- role: model
+  content: 小明忙恐龙一定很充实
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 妈妈
+  content: 说到运动，我觉得挺有意思的
+- role: model
+  content: 是啊，运动确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 妈妈和老师是姐弟
+- role: model
+  content: 原来妈妈和老师是姐弟关系
+- role: user
+  name: 妈妈
+  content: 考试太好玩了！
+- role: model
+  content: 是呀，考试确实很有趣！
+- role: user
+  name: 妈妈
+  content: 有一次妈妈因为过年闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 妈妈
+  content: 就是妈妈在过年的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 妈妈
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题

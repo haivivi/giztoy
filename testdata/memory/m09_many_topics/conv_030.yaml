@@ -1,0 +1,54 @@
+conv_id: session-030
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 今天想聊聊天气的事
+- role: model
+  content: 好的，天气怎么了？
+- role: user
+  name: 小美
+  content: 我记得小美第一次接触电影的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小美
+  content: 小美当时觉得电影特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小美
+  content: 说到理财，我觉得挺有意思的
+- role: model
+  content: 是啊，理财确实值得聊聊
+- role: user
+  name: 小美
+  content: 小美有没有什么计划？
+- role: model
+  content: 小美应该有一些计划
+- role: user
+  name: 小美
+  content: 老张喜欢mentor
+- role: model
+  content: 是吗，老张确实挺喜欢mentor的
+- role: user
+  name: 小美
+  content: 最近工作有什么新动态吗
+- role: model
+  content: 我听说工作方面有不少变化
+- role: user
+  name: 小美
+  content: 老张和小何是亲戚
+- role: model
+  content: 原来老张和小何是亲戚关系
+- role: user
+  name: 小美
+  content: 小美喜欢吃什么？
+- role: model
+  content: 小美口味挺好的
+- role: user
+  name: 小美
+  content: 小美有没有什么计划？
+- role: model
+  content: 小美应该有一些计划

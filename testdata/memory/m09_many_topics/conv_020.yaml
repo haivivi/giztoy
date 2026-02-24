@@ -1,0 +1,54 @@
+conv_id: session-020
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 想跟你聊聊旅行
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老张
+  content: 老张喜欢mentor
+- role: model
+  content: 是吗，老张确实挺喜欢mentor的
+- role: user
+  name: 老张
+  content: 上次老张跟我说了一件关于电影的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老张
+  content: 老张说电影让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 老张
+  content: 你了解美食吗
+- role: model
+  content: 了解一些，美食挺热门的
+- role: user
+  name: 老张
+  content: 老张去过苏州
+- role: model
+  content: 苏州挺美的
+- role: user
+  name: 老张
+  content: 老张去过苏州
+- role: model
+  content: 苏州挺美的
+- role: user
+  name: 老张
+  content: 老张有没有什么计划？
+- role: model
+  content: 老张应该有一些计划
+- role: user
+  name: 老张
+  content: 老张今天跟我说了旅行的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老张
+  content: 老张说旅行最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

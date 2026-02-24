@@ -1,0 +1,54 @@
+conv_id: session-327
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于恐龙的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 小红和妈妈是兄妹
+- role: model
+  content: 原来小红和妈妈是兄妹关系
+- role: user
+  name: 老师
+  content: 老师周末一般做什么？
+- role: model
+  content: 老师周末过得挺充实的
+- role: user
+  name: 老师
+  content: 老师和小明是同学
+- role: model
+  content: 原来老师和小明是同学关系
+- role: user
+  name: 老师
+  content: 奶奶和小胖是邻居
+- role: model
+  content: 原来奶奶和小胖是邻居关系
+- role: user
+  name: 老师
+  content: 老师最近在忙数学
+- role: model
+  content: 老师忙数学一定很充实
+- role: user
+  name: 老师
+  content: 我记得妈妈第一次接触音乐的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 妈妈当时觉得音乐特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 爷爷和小明是姐弟
+- role: model
+  content: 原来爷爷和小明是姐弟关系
+- role: user
+  name: 老师
+  content: 老师在博物馆住过一段时间
+- role: model
+  content: 在博物馆生活应该很有意思

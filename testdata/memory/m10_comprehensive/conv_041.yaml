@@ -1,0 +1,54 @@
+conv_id: session-041
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊旅行的事
+- role: model
+  content: 好的，旅行怎么了？
+- role: user
+  name: 小明
+  content: 爸爸打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 小明
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 小明
+  content: 小红和老师是邻居
+- role: model
+  content: 原来小红和老师是邻居关系
+- role: user
+  name: 小明
+  content: 画画太好玩了！
+- role: model
+  content: 是呀，画画确实很有趣！
+- role: user
+  name: 小明
+  content: 小明今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 小明说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小明
+  content: 最近学校有什么新动态吗
+- role: model
+  content: 我听说学校方面有不少变化
+- role: user
+  name: 小明
+  content: 说到生日，我觉得挺有意思的
+- role: model
+  content: 是啊，生日确实值得聊聊
+- role: user
+  name: 小明
+  content: 奶奶和妈妈是兄妹
+- role: model
+  content: 原来奶奶和妈妈是兄妹关系

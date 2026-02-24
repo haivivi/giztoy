@@ -1,0 +1,54 @@
+conv_id: session-407
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊乐高的事
+- role: model
+  content: 好的，乐高怎么了？
+- role: user
+  name: 老师
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触过年的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 老师当时觉得过年特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 过年太好玩了！
+- role: model
+  content: 是呀，过年确实很有趣！
+- role: user
+  name: 老师
+  content: 老师喜欢数学
+- role: model
+  content: 是吗，老师确实挺喜欢数学的
+- role: user
+  name: 老师
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 老师
+  content: 小红喜欢吃什么？
+- role: model
+  content: 小红口味挺好的
+- role: user
+  name: 老师
+  content: 老师喜欢数学
+- role: model
+  content: 是吗，老师确实挺喜欢数学的
+- role: user
+  name: 老师
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的

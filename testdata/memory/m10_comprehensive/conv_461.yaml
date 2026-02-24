@@ -1,0 +1,54 @@
+conv_id: session-461
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近乐高有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 爷爷已经70岁了
+- role: model
+  content: 爷爷70岁了呀
+- role: user
+  name: 爷爷
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爷爷
+  content: 小胖去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 爷爷
+  content: 我记得爷爷第一次接触运动的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 爷爷当时觉得运动特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 爸爸和奶奶是姐弟
+- role: model
+  content: 原来爸爸和奶奶是姐弟关系
+- role: user
+  name: 爷爷
+  content: 爷爷学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爷爷
+  content: 不对，爷爷学的是物理，我搞混了
+- role: model
+  content: 物理也很好

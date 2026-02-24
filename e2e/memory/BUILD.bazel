@@ -15,6 +15,7 @@ go_library(
         "//go/pkg/kv",
         "//go/pkg/memory",
         "@com_github_goccy_go_yaml//:go-yaml",
+        "@com_github_vmihailenco_msgpack_v5//:msgpack",
     ],
 )
 

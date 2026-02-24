@@ -224,22 +224,3 @@ pub fn now_nano() -> i64 {
         }
     }
 }
-
-/// Convert messages to "role(name): content" strings for segmentors/profilers.
-pub fn messages_to_strings(messages: &[Message]) -> Vec<String> {
-    messages
-        .iter()
-        .filter(|m| !m.content.is_empty())
-        .map(|m| {
-            let mut s = m.role.to_string();
-            if !m.name.is_empty() {
-                s.push('(');
-                s.push_str(&m.name);
-                s.push(')');
-            }
-            s.push_str(": ");
-            s.push_str(&m.content);
-            s
-        })
-        .collect()
-}

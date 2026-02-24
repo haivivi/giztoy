@@ -1,0 +1,54 @@
+conv_id: session-468
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊运动
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 奶奶和小胖是朋友
+- role: model
+  content: 原来奶奶和小胖是朋友关系
+- role: user
+  name: 爸爸
+  content: 老师和爸爸是同事
+- role: model
+  content: 原来老师和爸爸是同事关系
+- role: user
+  name: 爸爸
+  content: 爸爸去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 爸爸
+  content: 爷爷和妈妈是姐弟
+- role: model
+  content: 原来爷爷和妈妈是姐弟关系
+- role: user
+  name: 爸爸
+  content: 小明和小胖是姐弟
+- role: model
+  content: 原来小明和小胖是姐弟关系
+- role: user
+  name: 爸爸
+  content: 爸爸在博物馆住过一段时间
+- role: model
+  content: 在博物馆生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 爸爸去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的

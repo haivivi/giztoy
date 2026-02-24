@@ -1,0 +1,54 @@
+conv_id: session-023
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 跟你说个关于天气的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老张
+  content: 老张有没有什么计划？
+- role: model
+  content: 老张应该有一些计划
+- role: user
+  name: 老张
+  content: 老张最近在忙mentor
+- role: model
+  content: 老张忙mentor一定很充实
+- role: user
+  name: 老张
+  content: 小美和老张是亲戚
+- role: model
+  content: 原来小美和老张是亲戚关系
+- role: user
+  name: 老张
+  content: 最近旅行有什么新动态吗
+- role: model
+  content: 我听说旅行方面有不少变化
+- role: user
+  name: 老张
+  content: 老张平时有什么爱好？
+- role: model
+  content: 老张的爱好挺多的
+- role: user
+  name: 老张
+  content: 老张在南京住过一段时间
+- role: model
+  content: 在南京生活应该很有意思
+- role: user
+  name: 老张
+  content: 小美和老张是同事
+- role: model
+  content: 原来小美和老张是同事关系
+- role: user
+  name: 老张
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题
+- role: user
+  name: 老张
+  content: 老张最近怎么样？
+- role: model
+  content: 老张最近挺好的

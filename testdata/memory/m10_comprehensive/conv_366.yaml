@@ -1,0 +1,54 @@
+conv_id: session-366
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 今天想聊聊恐龙的事
+- role: model
+  content: 好的，恐龙怎么了？
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 奶奶在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 奶奶
+  content: 爸爸有没有什么计划？
+- role: model
+  content: 爸爸应该有一些计划
+- role: user
+  name: 奶奶
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的
+- role: user
+  name: 奶奶
+  content: 说到音乐，我觉得挺有意思的
+- role: model
+  content: 是啊，音乐确实值得聊聊
+- role: user
+  name: 奶奶
+  content: 小明和老师是亲戚
+- role: model
+  content: 原来小明和老师是亲戚关系
+- role: user
+  name: 奶奶
+  content: 奶奶最近怎么样？
+- role: model
+  content: 奶奶最近挺好的
+- role: user
+  name: 奶奶
+  content: 爸爸周末一般做什么？
+- role: model
+  content: 爸爸周末过得挺充实的

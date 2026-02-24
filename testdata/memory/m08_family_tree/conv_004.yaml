@@ -1,0 +1,54 @@
+conv_id: session-004
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊过年的事
+- role: model
+  content: 好的，过年怎么了？
+- role: user
+  name: 妈妈
+  content: 哥哥和妈妈是亲戚
+- role: model
+  content: 原来哥哥和妈妈是亲戚关系
+- role: user
+  name: 妈妈
+  content: 上周爸爸去了医院
+- role: model
+  content: 医院不错呢
+- role: user
+  name: 妈妈
+  content: 我记得哥哥第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 哥哥当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妈妈
+  content: 最近学校有什么新动态吗
+- role: model
+  content: 我听说学校方面有不少变化
+- role: user
+  name: 妈妈
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 说到学校，我觉得挺有意思的
+- role: model
+  content: 是啊，学校确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 说到旅行，我觉得挺有意思的
+- role: model
+  content: 是啊，旅行确实值得聊聊

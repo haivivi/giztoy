@@ -1,0 +1,54 @@
+conv_id: session-025
+labels:
+- person:小何
+messages:
+- role: user
+  name: 小何
+  content: 最近新闻有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小何
+  content: 最近工作有什么新动态吗
+- role: model
+  content: 我听说工作方面有不少变化
+- role: user
+  name: 小何
+  content: 电影太好玩了！
+- role: model
+  content: 是呀，电影确实很有趣！
+- role: user
+  name: 小何
+  content: 小美和小何是朋友
+- role: model
+  content: 原来小美和小何是朋友关系
+- role: user
+  name: 小何
+  content: 小何在西湖住过一段时间
+- role: model
+  content: 在西湖生活应该很有意思
+- role: user
+  name: 小何
+  content: 小何去过杭州
+- role: model
+  content: 杭州挺美的
+- role: user
+  name: 小何
+  content: 旅行太好玩了！
+- role: model
+  content: 是呀，旅行确实很有趣！
+- role: user
+  name: 小何
+  content: 小美最近怎么样？
+- role: model
+  content: 小美最近挺好的
+- role: user
+  name: 小何
+  content: 小何和小美是朋友
+- role: model
+  content: 原来小何和小美是朋友关系
+- role: user
+  name: 小何
+  content: 小何喜欢吃什么？
+- role: model
+  content: 小何口味挺好的

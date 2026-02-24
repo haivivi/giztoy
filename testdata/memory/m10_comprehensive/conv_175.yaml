@@ -1,0 +1,54 @@
+conv_id: session-175
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊做饭的事
+- role: model
+  content: 好的，做饭怎么了？
+- role: user
+  name: 老师
+  content: 爸爸周末一般做什么？
+- role: model
+  content: 爸爸周末过得挺充实的
+- role: user
+  name: 老师
+  content: 小红和小明是兄妹
+- role: model
+  content: 原来小红和小明是兄妹关系
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 老师今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，老师应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 我对生日很感兴趣
+- role: model
+  content: 生日是个好话题
+- role: user
+  name: 老师
+  content: 小明和奶奶是兄妹
+- role: model
+  content: 原来小明和奶奶是兄妹关系
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 老师当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛

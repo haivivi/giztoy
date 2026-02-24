@@ -1,0 +1,54 @@
+conv_id: session-397
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 跟你说个关于学校的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爷爷
+  content: 爷爷最近怎么样？
+- role: model
+  content: 爷爷最近挺好的
+- role: user
+  name: 爷爷
+  content: 我记得爷爷第一次接触宠物的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 爷爷当时觉得宠物特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 爷爷最近怎么样？
+- role: model
+  content: 爷爷最近挺好的
+- role: user
+  name: 爷爷
+  content: 我记得小明第一次接触画画的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 小明当时觉得画画特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 小胖和爷爷是同学
+- role: model
+  content: 原来小胖和爷爷是同学关系
+- role: user
+  name: 爷爷
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实妈妈自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的

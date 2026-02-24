@@ -1,0 +1,54 @@
+conv_id: session-046
+labels:
+- person:小何
+messages:
+- role: user
+  name: 小何
+  content: 最近工作有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小何
+  content: 小何平时有什么爱好？
+- role: model
+  content: 小何的爱好挺多的
+- role: user
+  name: 小何
+  content: 老张有没有什么计划？
+- role: model
+  content: 老张应该有一些计划
+- role: user
+  name: 小何
+  content: 小何喜欢自由职业
+- role: model
+  content: 是吗，小何确实挺喜欢自由职业的
+- role: user
+  name: 小何
+  content: 小何说他特别喜欢自由职业
+- role: model
+  content: 原来小何喜欢自由职业呀
+- role: user
+  name: 小何
+  content: 小何平时有什么爱好？
+- role: model
+  content: 小何的爱好挺多的
+- role: user
+  name: 小何
+  content: 上周小何去了南京
+- role: model
+  content: 南京不错呢
+- role: user
+  name: 小何
+  content: 小何平时有什么爱好？
+- role: model
+  content: 小何的爱好挺多的
+- role: user
+  name: 小何
+  content: 小何打算去苏州玩
+- role: model
+  content: 苏州是个好地方
+- role: user
+  name: 小何
+  content: 老张打算去南京玩
+- role: model
+  content: 南京是个好地方

@@ -1,0 +1,54 @@
+conv_id: session-014
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 今天想聊聊音乐的事
+- role: model
+  content: 好的，音乐怎么了？
+- role: user
+  name: 奶奶
+  content: 爸爸和小红是兄妹
+- role: model
+  content: 原来爸爸和小红是兄妹关系
+- role: user
+  name: 奶奶
+  content: 学校太好玩了！
+- role: model
+  content: 是呀，学校确实很有趣！
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 上周奶奶去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 奶奶
+  content: 奶奶在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 奶奶
+  content: 其实奶奶自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的

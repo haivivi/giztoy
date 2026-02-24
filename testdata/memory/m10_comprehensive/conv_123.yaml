@@ -1,0 +1,54 @@
+conv_id: session-123
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于运动的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈今天跟我说了宠物的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妈妈
+  content: 妈妈说宠物最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 妈妈
+  content: 妈妈今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妈妈
+  content: 妈妈说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 妈妈
+  content: 爸爸有没有什么计划？
+- role: model
+  content: 爸爸应该有一些计划
+- role: user
+  name: 妈妈
+  content: 妈妈去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触学校的时候
+- role: model
+  content: 然后呢？

@@ -1,0 +1,54 @@
+conv_id: session-442
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近宠物有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 小红今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 等等，小红应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小红
+  content: 小红喜欢吃什么？
+- role: model
+  content: 小红口味挺好的
+- role: user
+  name: 小红
+  content: 小红去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 小红
+  content: 我记得小红第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 小红当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 小明和爷爷是朋友
+- role: model
+  content: 原来小明和爷爷是朋友关系
+- role: user
+  name: 小红
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小红
+  content: 其实小红自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的

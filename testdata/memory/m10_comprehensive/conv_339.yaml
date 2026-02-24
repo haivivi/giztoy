@@ -1,0 +1,54 @@
+conv_id: session-339
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊学校的事
+- role: model
+  content: 好的，学校怎么了？
+- role: user
+  name: 妈妈
+  content: 妈妈今天跟我说了考试的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妈妈
+  content: 妈妈说考试最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 妈妈
+  content: 老师和小红是姐弟
+- role: model
+  content: 原来老师和小红是姐弟关系
+- role: user
+  name: 妈妈
+  content: 有一次妈妈因为生日闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 妈妈
+  content: 就是妈妈在生日的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 妈妈
+  content: 最近画画有什么新动态吗
+- role: model
+  content: 我听说画画方面有不少变化
+- role: user
+  name: 妈妈
+  content: 我对学校很感兴趣
+- role: model
+  content: 学校是个好话题
+- role: user
+  name: 妈妈
+  content: 妈妈是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，妈妈是在上海工作的，我记错了
+- role: model
+  content: 没关系

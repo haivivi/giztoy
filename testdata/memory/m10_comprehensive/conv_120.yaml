@@ -1,0 +1,54 @@
+conv_id: session-120
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于恐龙的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 我记得小胖第一次接触考试的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 小胖当时觉得考试特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小胖
+  content: 小胖说他特别喜欢足球
+- role: model
+  content: 原来小胖喜欢足球呀
+- role: user
+  name: 小胖
+  content: 小胖是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 哦不对，小胖是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小胖
+  content: 小胖喜欢足球
+- role: model
+  content: 是吗，小胖确实挺喜欢足球的
+- role: user
+  name: 小胖
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划
+- role: user
+  name: 小胖
+  content: 小红喜欢画画
+- role: model
+  content: 是吗，小红确实挺喜欢画画的
+- role: user
+  name: 小胖
+  content: 有一次小胖因为生日闹了个笑话
+- role: model
+  content: 哈哈什么笑话

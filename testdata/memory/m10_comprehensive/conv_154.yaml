@@ -1,0 +1,54 @@
+conv_id: session-154
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近做饭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 上次小红跟我说了一件关于画画的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小红
+  content: 小红说画画让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小红
+  content: 妈妈和小明是同事
+- role: model
+  content: 原来妈妈和小明是同事关系
+- role: user
+  name: 小红
+  content: 小红打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 小红
+  content: 小红有没有什么计划？
+- role: model
+  content: 小红应该有一些计划
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小红是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，小红是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小红
+  content: 小胖周末一般做什么？
+- role: model
+  content: 小胖周末过得挺充实的

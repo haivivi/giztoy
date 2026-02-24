@@ -1,0 +1,54 @@
+conv_id: session-454
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 奶奶
+  content: 老师在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 奶奶
+  content: 我对音乐很感兴趣
+- role: model
+  content: 音乐是个好话题
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 奶奶
+  content: 最近运动有什么新动态吗
+- role: model
+  content: 我听说运动方面有不少变化
+- role: user
+  name: 奶奶
+  content: 你了解恐龙吗
+- role: model
+  content: 了解一些，恐龙挺热门的
+- role: user
+  name: 奶奶
+  content: 你了解旅行吗
+- role: model
+  content: 了解一些，旅行挺热门的
+- role: user
+  name: 奶奶
+  content: 小明和爷爷是邻居
+- role: model
+  content: 原来小明和爷爷是邻居关系
+- role: user
+  name: 奶奶
+  content: 老师和爷爷是亲戚
+- role: model
+  content: 原来老师和爷爷是亲戚关系

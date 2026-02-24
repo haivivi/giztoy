@@ -1,0 +1,54 @@
+conv_id: session-491
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊音乐
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妈妈
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 妈妈
+  content: 妈妈是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，妈妈是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 妈妈
+  content: 小胖最近怎么样？
+- role: model
+  content: 小胖最近挺好的
+- role: user
+  name: 妈妈
+  content: 小红和老师是兄妹
+- role: model
+  content: 原来小红和老师是兄妹关系
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 妈妈
+  content: 妈妈在博物馆住过一段时间
+- role: model
+  content: 在博物馆生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 爷爷今年25岁
+- role: model
+  content: 好的

@@ -1,0 +1,17 @@
+name: m05_family_week
+desc: A week with the family, facts accumulate across 5 sessions
+persona: cat_girl
+total_messages: 100
+conversations: 5
+expect:
+  min_entities: 4
+  entities_contain:
+  - person:小明
+  - person:小红
+  min_relations: 2
+  min_segments: 2
+  recall:
+  - text: 恐龙
+    labels:
+    - person:小明
+    min_results: 1

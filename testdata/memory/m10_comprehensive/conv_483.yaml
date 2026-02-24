@@ -1,0 +1,54 @@
+conv_id: session-483
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊学校的事
+- role: model
+  content: 好的，学校怎么了？
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 你了解音乐吗
+- role: model
+  content: 了解一些，音乐挺热门的
+- role: user
+  name: 妈妈
+  content: 有一次妈妈因为乐高闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 妈妈
+  content: 就是妈妈在乐高的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触音乐的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 妈妈当时觉得音乐特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢做饭
+- role: model
+  content: 原来妈妈喜欢做饭呀
+- role: user
+  name: 妈妈
+  content: 奶奶和老师是同事
+- role: model
+  content: 原来奶奶和老师是同事关系
+- role: user
+  name: 妈妈
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划

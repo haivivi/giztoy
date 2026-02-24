@@ -1,0 +1,54 @@
+conv_id: session-003
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊音乐的事
+- role: model
+  content: 好的，音乐怎么了？
+- role: user
+  name: 妈妈
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 妈妈
+  content: 妈妈平时有什么爱好？
+- role: model
+  content: 妈妈的爱好挺多的
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触画画的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 妈妈当时觉得画画特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妈妈
+  content: 小红喜欢画画
+- role: model
+  content: 是吗，小红确实挺喜欢画画的
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了家
+- role: model
+  content: 家不错呢
+- role: user
+  name: 妈妈
+  content: 爸爸和小红是邻居
+- role: model
+  content: 原来爸爸和小红是邻居关系
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了学校
+- role: model
+  content: 学校不错呢

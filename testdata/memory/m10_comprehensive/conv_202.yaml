@@ -1,0 +1,54 @@
+conv_id: session-202
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 今天想聊聊旅行的事
+- role: model
+  content: 好的，旅行怎么了？
+- role: user
+  name: 小红
+  content: 上周小红去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 小红
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小红
+  content: 其实小红自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小红
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小红
+  content: 你了解画画吗
+- role: model
+  content: 了解一些，画画挺热门的
+- role: user
+  name: 小红
+  content: 说到考试，我觉得挺有意思的
+- role: model
+  content: 是啊，考试确实值得聊聊
+- role: user
+  name: 小红
+  content: 小明周末一般做什么？
+- role: model
+  content: 小明周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小红打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方

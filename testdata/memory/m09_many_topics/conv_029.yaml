@@ -1,0 +1,54 @@
+conv_id: session-029
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 今天想聊聊爱好的事
+- role: model
+  content: 好的，爱好怎么了？
+- role: user
+  name: 老张
+  content: 小美和老张是邻居
+- role: model
+  content: 原来小美和老张是邻居关系
+- role: user
+  name: 老张
+  content: 老张喜欢吃什么？
+- role: model
+  content: 老张口味挺好的
+- role: user
+  name: 老张
+  content: 老张说他特别喜欢mentor
+- role: model
+  content: 原来老张喜欢mentor呀
+- role: user
+  name: 老张
+  content: 最近理财有什么新动态吗
+- role: model
+  content: 我听说理财方面有不少变化
+- role: user
+  name: 老张
+  content: 你了解健康吗
+- role: model
+  content: 了解一些，健康挺热门的
+- role: user
+  name: 老张
+  content: 小美和老张是同事
+- role: model
+  content: 原来小美和老张是同事关系
+- role: user
+  name: 老张
+  content: 老张和小美是同事
+- role: model
+  content: 原来老张和小美是同事关系
+- role: user
+  name: 老张
+  content: 小美和小何是姐弟
+- role: model
+  content: 原来小美和小何是姐弟关系
+- role: user
+  name: 老张
+  content: 老张周末一般做什么？
+- role: model
+  content: 老张周末过得挺充实的

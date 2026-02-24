@@ -1,0 +1,54 @@
+conv_id: session-206
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 奶奶今天跟我说了学校的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 奶奶
+  content: 奶奶说学校最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 奶奶
+  content: 不对，奶奶学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 奶奶
+  content: 有一次小红因为做饭闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 奶奶
+  content: 就是小红在做饭的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 奶奶
+  content: 奶奶今天跟我说了过年的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 奶奶
+  content: 奶奶说过年最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 奶奶
+  content: 运动太好玩了！
+- role: model
+  content: 是呀，运动确实很有趣！

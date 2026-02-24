@@ -1,0 +1,54 @@
+conv_id: session-465
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近学校有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 老师和妈妈是朋友
+- role: model
+  content: 原来老师和妈妈是朋友关系
+- role: user
+  name: 小明
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的
+- role: user
+  name: 小明
+  content: 小明喜欢古生物学家
+- role: model
+  content: 是吗，小明确实挺喜欢古生物学家的
+- role: user
+  name: 小明
+  content: 妈妈和小胖是同事
+- role: model
+  content: 原来妈妈和小胖是同事关系
+- role: user
+  name: 小明
+  content: 我记得小明第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小明
+  content: 小明当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小明
+  content: 小明学的是数学
+- role: model
+  content: 数学不错

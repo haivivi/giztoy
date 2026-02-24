@@ -1,0 +1,54 @@
+conv_id: session-074
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小红
+  content: 小红去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 小红
+  content: 有一次小红因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小红
+  content: 就是小红在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小红
+  content: 小红去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 小红
+  content: 我对音乐很感兴趣
+- role: model
+  content: 音乐是个好话题
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小红
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 小红
+  content: 小胖和小红是亲戚
+- role: model
+  content: 原来小胖和小红是亲戚关系
+- role: user
+  name: 小红
+  content: 爷爷今年25岁
+- role: model
+  content: 好的

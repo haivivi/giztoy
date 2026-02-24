@@ -1,0 +1,54 @@
+conv_id: session-012
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近乐高有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 小胖和爷爷是同事
+- role: model
+  content: 原来小胖和爷爷是同事关系
+- role: user
+  name: 爸爸
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢工程师
+- role: model
+  content: 是吗，爸爸确实挺喜欢工程师的
+- role: user
+  name: 爸爸
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 爸爸
+  content: 爸爸跟我说过，他最大的爱好就是音乐
+- role: model
+  content: 爸爸爱好音乐挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，爸爸学的是物理，我搞混了
+- role: model
+  content: 物理也很好

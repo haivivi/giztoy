@@ -1,0 +1,54 @@
+conv_id: session-029
+labels:
+- person:哥哥
+messages:
+- role: user
+  name: 哥哥
+  content: 最近健康有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 哥哥
+  content: 哥哥打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 哥哥
+  content: 有一次哥哥因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 哥哥
+  content: 就是哥哥在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 哥哥
+  content: 哥哥最近在忙清华大学
+- role: model
+  content: 哥哥忙清华大学一定很充实
+- role: user
+  name: 哥哥
+  content: 哥哥打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 哥哥
+  content: 说到过年，我觉得挺有意思的
+- role: model
+  content: 是啊，过年确实值得聊聊
+- role: user
+  name: 哥哥
+  content: 有一次爷爷因为家庭闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 哥哥
+  content: 就是爷爷在家庭的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 哥哥
+  content: 妹妹在北京住过一段时间
+- role: model
+  content: 在北京生活应该很有意思

@@ -1,0 +1,54 @@
+conv_id: session-018
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 想跟你聊聊美食
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小美
+  content: 小美平时有什么爱好？
+- role: model
+  content: 小美的爱好挺多的
+- role: user
+  name: 小美
+  content: 我对理财很感兴趣
+- role: model
+  content: 理财是个好话题
+- role: user
+  name: 小美
+  content: 小美和小何是姐弟
+- role: model
+  content: 原来小美和小何是姐弟关系
+- role: user
+  name: 小美
+  content: 小美喜欢吃什么？
+- role: model
+  content: 小美口味挺好的
+- role: user
+  name: 小美
+  content: 小美最近在忙跑步
+- role: model
+  content: 小美忙跑步一定很充实
+- role: user
+  name: 小美
+  content: 小何在苏州住过一段时间
+- role: model
+  content: 在苏州生活应该很有意思
+- role: user
+  name: 小美
+  content: 说到理财，我觉得挺有意思的
+- role: model
+  content: 是啊，理财确实值得聊聊
+- role: user
+  name: 小美
+  content: 老张和小美是朋友
+- role: model
+  content: 原来老张和小美是朋友关系
+- role: user
+  name: 小美
+  content: 有一次小美因为新闻闹了个笑话
+- role: model
+  content: 哈哈什么笑话

@@ -1,0 +1,54 @@
+conv_id: session-272
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 有一次小明因为过年闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小明在过年的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖周末一般做什么？
+- role: model
+  content: 小胖周末过得挺充实的
+- role: user
+  name: 小胖
+  content: 你了解音乐吗
+- role: model
+  content: 了解一些，音乐挺热门的
+- role: user
+  name: 小胖
+  content: 上周小胖去了图书馆
+- role: model
+  content: 图书馆不错呢
+- role: user
+  name: 小胖
+  content: 最近过年有什么新动态吗
+- role: model
+  content: 我听说过年方面有不少变化
+- role: user
+  name: 小胖
+  content: 有一次小胖因为考试闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在考试的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小明是在北京工作的
+- role: model
+  content: 好的

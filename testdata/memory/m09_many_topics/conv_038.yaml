@@ -1,0 +1,54 @@
+conv_id: session-038
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 想跟你聊聊工作
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老张
+  content: 小何周末一般做什么？
+- role: model
+  content: 小何周末过得挺充实的
+- role: user
+  name: 老张
+  content: 老张有没有什么计划？
+- role: model
+  content: 老张应该有一些计划
+- role: user
+  name: 老张
+  content: 老张最近怎么样？
+- role: model
+  content: 老张最近挺好的
+- role: user
+  name: 老张
+  content: 我记得老张第一次接触理财的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老张
+  content: 老张当时觉得理财特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老张
+  content: 上次老张跟我说了一件关于电影的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老张
+  content: 老张说电影让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 老张
+  content: 老张最近怎么样？
+- role: model
+  content: 老张最近挺好的
+- role: user
+  name: 老张
+  content: 老张和小美是同事
+- role: model
+  content: 原来老张和小美是同事关系

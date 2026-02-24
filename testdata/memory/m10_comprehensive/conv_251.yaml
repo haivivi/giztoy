@@ -1,0 +1,54 @@
+conv_id: session-251
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近学校有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 妈妈
+  content: 妈妈平时有什么爱好？
+- role: model
+  content: 妈妈的爱好挺多的
+- role: user
+  name: 妈妈
+  content: 妈妈今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 等等，妈妈应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 妈妈
+  content: 说到宠物，我觉得挺有意思的
+- role: model
+  content: 是啊，宠物确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触画画的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 妈妈当时觉得画画特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妈妈
+  content: 小红说他特别喜欢画画
+- role: model
+  content: 原来小红喜欢画画呀

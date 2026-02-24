@@ -1,0 +1,54 @@
+conv_id: session-079
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于音乐的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 爸爸喜欢音乐
+- role: model
+  content: 是吗，爸爸确实挺喜欢音乐的
+- role: user
+  name: 老师
+  content: 爸爸今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，爸爸应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 上次老师跟我说了一件关于考试的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老师
+  content: 老师说考试让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 老师
+  content: 奶奶和爷爷是朋友
+- role: model
+  content: 原来奶奶和爷爷是朋友关系
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 老师和奶奶是朋友
+- role: model
+  content: 原来老师和奶奶是朋友关系
+- role: user
+  name: 老师
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的

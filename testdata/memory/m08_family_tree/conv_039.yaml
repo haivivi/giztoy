@@ -1,0 +1,54 @@
+conv_id: session-039
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊生日
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 爸爸平时有什么爱好？
+- role: model
+  content: 爸爸的爱好挺多的
+- role: user
+  name: 爸爸
+  content: 最近家庭有什么新动态吗
+- role: model
+  content: 我听说家庭方面有不少变化
+- role: user
+  name: 爸爸
+  content: 爸爸周末一般做什么？
+- role: model
+  content: 爸爸周末过得挺充实的
+- role: user
+  name: 爸爸
+  content: 我对健康很感兴趣
+- role: model
+  content: 健康是个好话题
+- role: user
+  name: 爸爸
+  content: 上周妹妹去了医院
+- role: model
+  content: 医院不错呢
+- role: user
+  name: 爸爸
+  content: 妈妈和哥哥是同事
+- role: model
+  content: 原来妈妈和哥哥是同事关系
+- role: user
+  name: 爸爸
+  content: 你了解健康吗
+- role: model
+  content: 了解一些，健康挺热门的
+- role: user
+  name: 爸爸
+  content: 爸爸跟我说过，他最大的爱好就是教师
+- role: model
+  content: 爸爸爱好教师挺好的
+- role: user
+  name: 爸爸
+  content: 哥哥和妹妹是同事
+- role: model
+  content: 原来哥哥和妹妹是同事关系

@@ -1,0 +1,54 @@
+conv_id: session-345
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 跟你说个关于考试的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小明
+  content: 小明喜欢古生物学家
+- role: model
+  content: 是吗，小明确实挺喜欢古生物学家的
+- role: user
+  name: 小明
+  content: 小明说他特别喜欢恐龙
+- role: model
+  content: 原来小明喜欢恐龙呀
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 小明有没有什么计划？
+- role: model
+  content: 小明应该有一些计划
+- role: user
+  name: 小明
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小红自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 妈妈喜欢做饭
+- role: model
+  content: 是吗，妈妈确实挺喜欢做饭的
+- role: user
+  name: 小明
+  content: 小明今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 等等，小明应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
