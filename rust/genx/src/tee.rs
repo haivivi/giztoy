@@ -57,6 +57,7 @@ impl Stream for TeeStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::Usage;
     use crate::stream::{collect_text, StreamBuilder};
     use crate::types::Role;
 
