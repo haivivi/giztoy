@@ -144,16 +144,44 @@ fn os_expand_env(s: &str) -> String {
 
         // ${VAR}
         if chars[i] == '{' {
-            i += 1;
-            let start = i;
-            while i < chars.len() && chars[i] != '}' {
-                i += 1;
+            i += 1; // skip '{'
+            let mut j = i;
+            
+            // Go shell special vars with braces like ${0}..${9}, ${$}, ${!}, etc.
+            // Go: if len(s) > 2 && isShellSpecialVar(s[1]) && s[2] == '}' { return s[1:2], 3 }
+            if j + 1 < chars.len() && is_shell_special(chars[j]) && chars[j+1] == '}' {
+                let var_name = chars[j].to_string();
+                result.push_str(&std::env::var(&var_name).unwrap_or_default());
+                i = j + 2;
+                continue;
             }
-            let var_name: String = chars[start..i].iter().collect();
+            
+            // scan to closing brace
+            let mut found_brace = false;
+            while j < chars.len() {
+                if chars[j] == '}' {
+                    found_brace = true;
+                    break;
+                }
+                j += 1;
+            }
+            
+            if !found_brace {
+                // Bad syntax; eat "${"
+                // Do not append $ or {
+                // i is already at the char after {
+                continue;
+            }
+            
+            if j == i {
+                // Bad syntax; eat "${}"
+                i = j + 1;
+                continue;
+            }
+            
+            let var_name: String = chars[i..j].iter().collect();
             result.push_str(&std::env::var(&var_name).unwrap_or_default());
-            if i < chars.len() {
-                i += 1;
-            }
+            i = j + 1;
             continue;
         }
 
@@ -773,6 +801,13 @@ mod tests {
             ("$ abc", "$ abc", "space: not consumed, $ literal"),
             ("$+abc", "$+abc", "plus: not consumed, $ literal"),
             ("$=abc", "$=abc", "equals: not consumed, $ literal"),
+
+            // Unclosed braces and bad syntax
+            ("${_GX_OE_H", "_GX_OE_H", "unclosed brace → Go eats ${ and leaves rest literal"),
+            ("${", "", "unclosed brace at end → Go eats ${"),
+            ("${}", "", "empty brace → Go eats ${}"),
+            ("${!}", "", "shell special in brace but no closing brace? No, ${!} is just expanded to empty string by Go because ! is a shell special var that gets substituted, so ${!} means variable '!'. Wait, no. If the var is ! and it's not set, it expands to empty string."),
+            ("${FOO bar", "FOO bar", "unclosed brace with space → Go eats ${ and leaves rest literal"),
         ];
 
         for (input, expected, desc) in cases {

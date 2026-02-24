@@ -434,8 +434,9 @@ impl Generator for OpenAIGenerator {
 
             // Process any remaining buffer after stream ends
             buffer.push('\n');
-            process_events(&mut buffer, &builder_clone, &mut final_usage);
-            let _ = builder_clone.done(final_usage);
+            if process_events(&mut buffer, &builder_clone, &mut final_usage).is_none() {
+                let _ = builder_clone.done(final_usage);
+            }
         });
 
         Ok(Box::new(builder.stream()))
