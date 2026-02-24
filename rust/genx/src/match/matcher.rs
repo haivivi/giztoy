@@ -513,9 +513,10 @@ mod tests {
         assert_eq!(result.args["int_var"].value, Value::from(42i64));
         assert!(result.args["int_var"].has_value);
 
-        // Test float parsing
-        let result = matcher.parse_line("test_rule: float_var=3.14");
-        assert_eq!(result.args["float_var"].value, Value::from(3.14f64));
+        // Test float parsing (using 2.5 instead of 3.14 to avoid approx_constant lint)
+        let result = matcher.parse_line("test_rule: float_var=2.5");
+        let expected_float: f64 = 2.5;
+        assert_eq!(result.args["float_var"].value, Value::from(expected_float));
 
         // Test bool parsing
         let result = matcher.parse_line("test_rule: bool_var=true");

@@ -625,7 +625,7 @@ mod tests {
         let result = load_from_dir(&dir, &mut muxes);
         // May fail due to missing API keys in env, which is expected (skipped)
         match result {
-            Ok(names) => assert!(!names.is_empty() || true),
+            Ok(names) => assert!(!names.is_empty()),
             Err(e) => {
                 let msg = e.to_string();
                 assert!(

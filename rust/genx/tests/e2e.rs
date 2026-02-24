@@ -6,7 +6,7 @@ use std::path::Path;
 use giztoy_genx::modelloader::{load_from_dir, MuxSet};
 use giztoy_genx::segmentors::{Schema, SegmentorInput, SegmentorResult};
 use giztoy_genx::profilers::ProfilerInput;
-use giztoy_genx::{collect_text, Generator, ModelContextBuilder};
+use giztoy_genx::{collect_text, ModelContextBuilder};
 
 fn testdata(rel: &str) -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -48,10 +48,13 @@ async fn e2e_generator_dashscope() {
     mcb.user_text("user", "你好");
     let ctx = mcb.build();
 
-    let mut stream = muxes
-        .generators
-        .read()
-        .unwrap()
+    // Get generator Arc first, then release the lock before awaiting
+    let generator = {
+        let guard = muxes.generators.read().unwrap();
+        guard.get_arc("qwen/turbo").expect("generator not found").clone()
+    };
+    
+    let mut stream = generator
         .generate_stream("qwen/turbo", &ctx)
         .await
         .expect("generate_stream failed");
@@ -96,7 +99,7 @@ async fn e2e_segmentor_dashscope() {
     assert!(result.segment.keywords.len() >= 2);
     assert!(result.entities.len() >= 2);
     assert!(result.entities.iter().any(|e| e.label.contains("小明")));
-    assert!(result.relations.len() >= 1);
+    assert!(!result.relations.is_empty());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
