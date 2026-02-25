@@ -8,8 +8,8 @@ rust_library(
     deps = [
         "//rust/embed:embed",
         "//rust/graph:graph",
-        "//rust/kv:kv",
         "//rust/vecstore:vecstore",
+        "@openerp//rust/lib/kv:kv",
         "@crate_index//:chrono",
         "@crate_index//:rmp-serde",
         "@crate_index//:serde",
@@ -21,7 +21,7 @@ rust_test(
     name = "recall_test",
     crate = ":recall",
     deps = [
-        "//rust/kv:kv",
+        "@openerp//rust/lib/kv:kv",
         "@crate_index//:tempfile",
         "@crate_index//:tokio",
     ],

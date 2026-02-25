@@ -4,14 +4,17 @@ rust_library(
     name = "memory",
     crate_name = "giztoy_memory",
     srcs = glob(["src/**/*.rs"]),
+    proc_macro_deps = [
+        "@crate_index//:async-trait",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//rust/embed:embed",
+        "//rust/genx:genx",
         "//rust/graph:graph",
-        "//rust/kv:kv",
         "//rust/recall:recall",
         "//rust/vecstore:vecstore",
-        "@crate_index//:async-trait",
+        "@openerp//rust/lib/kv:kv",
         "@crate_index//:rmp-serde",
         "@crate_index//:serde",
         "@crate_index//:serde_json",
@@ -22,9 +25,11 @@ rust_library(
 rust_test(
     name = "memory_test",
     crate = ":memory",
+    data = ["//testdata/memory:memory_data"],
     deps = [
-        "//rust/kv:kv",
-        "@crate_index//:tokio",
+        "@openerp//rust/lib/kv:kv",
+        "@crate_index//:rmpv",
         "@crate_index//:tempfile",
+        "@crate_index//:tokio",
     ],
 )

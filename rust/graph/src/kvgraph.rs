@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use giztoy_kv::{KVError, KVStore};
+use openerp_kv::{KVError, KVStore};
 use serde_json::Value;
 
 use crate::error::GraphError;
@@ -51,9 +51,7 @@ impl KVGraph {
     }
 
     /// Return the separator used by this graph.
-    pub fn separator(&self) -> char {
-        self.sep
-    }
+    pub fn separator(&self) -> char { self.sep }
 
     fn validate_segments(&self, segs: &[&str]) -> Result<(), GraphError> {
         for s in segs {
@@ -75,14 +73,7 @@ impl KVGraph {
     }
 
     fn fwd_key(&self, from: &str, rel_type: &str, to: &str) -> String {
-        format!(
-            "{}{s}r{s}{}{s}{}{s}{}",
-            self.prefix,
-            from,
-            rel_type,
-            to,
-            s = self.sep
-        )
+        format!("{}{s}r{s}{}{s}{}{s}{}", self.prefix, from, rel_type, to, s = self.sep)
     }
 
     fn fwd_prefix(&self, from: &str) -> String {
@@ -90,14 +81,7 @@ impl KVGraph {
     }
 
     fn rev_key(&self, to: &str, rel_type: &str, from: &str) -> String {
-        format!(
-            "{}{s}ri{s}{}{s}{}{s}{}",
-            self.prefix,
-            to,
-            rel_type,
-            from,
-            s = self.sep
-        )
+        format!("{}{s}ri{s}{}{s}{}{s}{}", self.prefix, to, rel_type, from, s = self.sep)
     }
 
     fn rev_prefix(&self, to: &str) -> String {
@@ -138,11 +122,7 @@ fn map_kv_err(e: KVError) -> GraphError {
 impl Graph for KVGraph {
     fn get_entity(&self, label: &str) -> Result<Option<Entity>, GraphError> {
         self.validate_segments(&[label])?;
-        match self
-            .store
-            .get(&self.entity_key(label))
-            .map_err(map_kv_err)?
-        {
+        match self.store.get(&self.entity_key(label)).map_err(map_kv_err)? {
             Some(data) => {
                 let attrs: HashMap<String, Value> = if data.is_empty() {
                     HashMap::new()
@@ -185,9 +165,15 @@ impl Graph for KVGraph {
         self.store.batch_delete(&key_refs).map_err(map_kv_err)
     }
 
-    fn merge_attrs(&self, label: &str, attrs: &HashMap<String, Value>) -> Result<(), GraphError> {
+    fn merge_attrs(
+        &self,
+        label: &str,
+        attrs: &HashMap<String, Value>,
+    ) -> Result<(), GraphError> {
         self.validate_segments(&[label])?;
-        let mut entity = self.get_entity(label)?.ok_or(GraphError::NotFound)?;
+        let mut entity = self
+            .get_entity(label)?
+            .ok_or(GraphError::NotFound)?;
         for (k, v) in attrs {
             entity.attrs.insert(k.clone(), v.clone());
         }
@@ -234,7 +220,12 @@ impl Graph for KVGraph {
             .map_err(map_kv_err)
     }
 
-    fn remove_relation(&self, from: &str, to: &str, rel_type: &str) -> Result<(), GraphError> {
+    fn remove_relation(
+        &self,
+        from: &str,
+        to: &str,
+        rel_type: &str,
+    ) -> Result<(), GraphError> {
         self.validate_segments(&[from, to, rel_type])?;
         let fwd = self.fwd_key(from, rel_type, to);
         let rev = self.rev_key(to, rel_type, from);
@@ -248,10 +239,7 @@ impl Graph for KVGraph {
         let mut rels = Vec::new();
 
         // Forward: relations where label is the source.
-        let fwd_entries = self
-            .store
-            .scan(&self.fwd_prefix(label))
-            .map_err(map_kv_err)?;
+        let fwd_entries = self.store.scan(&self.fwd_prefix(label)).map_err(map_kv_err)?;
         for (key, _) in fwd_entries {
             if let Some((from, rel_type, to)) = self.parse_fwd_key(&key) {
                 rels.push(Relation { from, to, rel_type });
@@ -259,10 +247,7 @@ impl Graph for KVGraph {
         }
 
         // Reverse: relations where label is the target.
-        let rev_entries = self
-            .store
-            .scan(&self.rev_prefix(label))
-            .map_err(map_kv_err)?;
+        let rev_entries = self.store.scan(&self.rev_prefix(label)).map_err(map_kv_err)?;
         for (key, _) in rev_entries {
             if let Some((to, rel_type, from)) = self.parse_rev_key(&key) {
                 // Skip self-loops: already captured by the forward scan.
@@ -276,7 +261,11 @@ impl Graph for KVGraph {
         Ok(rels)
     }
 
-    fn neighbors(&self, label: &str, rel_types: &[&str]) -> Result<Vec<String>, GraphError> {
+    fn neighbors(
+        &self,
+        label: &str,
+        rel_types: &[&str],
+    ) -> Result<Vec<String>, GraphError> {
         self.validate_segments(&[label])?;
         for rt in rel_types {
             self.validate_segments(&[rt])?;
@@ -287,10 +276,7 @@ impl Graph for KVGraph {
         let mut seen = HashSet::new();
 
         // Outgoing neighbors.
-        let fwd_entries = self
-            .store
-            .scan(&self.fwd_prefix(label))
-            .map_err(map_kv_err)?;
+        let fwd_entries = self.store.scan(&self.fwd_prefix(label)).map_err(map_kv_err)?;
         for (key, _) in fwd_entries {
             if let Some((_from, rel_type, to)) = self.parse_fwd_key(&key) {
                 if filter_type && !type_set.contains(rel_type.as_str()) {
@@ -301,10 +287,7 @@ impl Graph for KVGraph {
         }
 
         // Incoming neighbors.
-        let rev_entries = self
-            .store
-            .scan(&self.rev_prefix(label))
-            .map_err(map_kv_err)?;
+        let rev_entries = self.store.scan(&self.rev_prefix(label)).map_err(map_kv_err)?;
         for (key, _) in rev_entries {
             if let Some((_to, rel_type, from)) = self.parse_rev_key(&key) {
                 if filter_type && !type_set.contains(rel_type.as_str()) {
@@ -319,7 +302,11 @@ impl Graph for KVGraph {
         Ok(result)
     }
 
-    fn expand(&self, seeds: &[&str], hops: usize) -> Result<Vec<String>, GraphError> {
+    fn expand(
+        &self,
+        seeds: &[&str],
+        hops: usize,
+    ) -> Result<Vec<String>, GraphError> {
         for s in seeds {
             self.validate_segments(&[s])?;
         }
@@ -353,7 +340,7 @@ impl Graph for KVGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use giztoy_kv::RedbStore;
+    use openerp_kv::RedbStore;
 
     fn new_test_graph() -> KVGraph {
         let dir = tempfile::tempdir().unwrap();
@@ -560,10 +547,7 @@ mod tests {
     #[test]
     fn test_merge_attrs_not_found() {
         let g = new_test_graph();
-        let result = g.merge_attrs(
-            "ghost",
-            &HashMap::from([("a".into(), serde_json::json!("1"))]),
-        );
+        let result = g.merge_attrs("ghost", &HashMap::from([("a".into(), serde_json::json!("1"))]));
         assert!(matches!(result, Err(GraphError::NotFound)));
     }
 

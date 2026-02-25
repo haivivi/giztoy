@@ -1,4 +1,4 @@
-use giztoy_kv::KVStore;
+use openerp_kv::KVStore;
 
 use giztoy_embed::Embedder;
 use giztoy_graph::{Graph, KVGraph};

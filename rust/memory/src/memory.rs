@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use giztoy_graph::{Entity, Graph, GraphError, Relation};
 use giztoy_recall::{RecallIndex, Segment, bucket_1h};
-use giztoy_kv::KVStore;
+use openerp_kv::KVStore;
 
 use crate::conversation::Conversation;
 use crate::error::MemoryError;

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::{env, fs};
 
-use giztoy_kv::RedbStore;
+use openerp_kv::RedbStore;
 
 use crate::error::MemoryError;
 use crate::host::{Host, HostConfig};
@@ -59,8 +60,8 @@ impl Segmentor for FakeSegmentor {
             entities.push(EntityOutput { label: "person:小明".into(), attrs: HashMap::from([("favorite_food".into(), serde_json::json!("sushi"))]) });
         }
 
-        // For backward compatibility with other tests
-        // Create a default test entity if no entities were extracted
+        // For backward compatibility with existing tests that expect
+        // a default entity for generic conversations.
         if entities.is_empty() {
             entities.push(EntityOutput { label: "person:test".into(), attrs: HashMap::from([("compressed".into(), serde_json::json!(true))]) });
         }
@@ -117,7 +118,7 @@ fn new_mock_llm_compressor() -> LLMCompressor {
     }).unwrap()
 }
 
-fn new_test_store() -> Arc<dyn giztoy_kv::KVStore> {
+fn new_test_store() -> Arc<dyn openerp_kv::KVStore> {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.redb");
     let store = RedbStore::open(&db_path).unwrap();
@@ -200,6 +201,35 @@ fn model_msg(content: &str) -> Message {
         tool_call_args: String::new(),
         tool_result_id: String::new(),
     }
+}
+
+fn read_shared_testdata_bytes(rel: &str) -> Vec<u8> {
+    let mut candidates = vec![
+        format!("../../testdata/memory/{rel}"),
+        format!("testdata/memory/{rel}"),
+    ];
+
+    if let (Ok(test_srcdir), Ok(workspace)) = (env::var("TEST_SRCDIR"), env::var("TEST_WORKSPACE")) {
+        candidates.push(format!("{test_srcdir}/{workspace}/testdata/memory/{rel}"));
+    }
+    if let Ok(runfiles_dir) = env::var("RUNFILES_DIR") {
+        if let Ok(workspace) = env::var("TEST_WORKSPACE") {
+            candidates.push(format!("{runfiles_dir}/{workspace}/testdata/memory/{rel}"));
+        }
+    }
+
+    for path in &candidates {
+        if let Ok(data) = fs::read(path) {
+            return data;
+        }
+    }
+
+    panic!("unable to locate shared testdata file: {rel}, tried: {candidates:?}");
+}
+
+fn read_shared_testdata_string(rel: &str) -> String {
+    let data = read_shared_testdata_bytes(rel);
+    String::from_utf8(data).expect("shared testdata should be utf8")
 }
 
 // ===========================================================================
@@ -1148,7 +1178,7 @@ async fn ti5_revert_and_reappend() {
 
 #[test]
 fn tx1_message_user_field_tags() {
-    let data = std::fs::read("../../testdata/memory/serialization/message_user.msgpack").unwrap();
+    let data = read_shared_testdata_bytes("serialization/message_user.msgpack");
     let decoded: Message = rmp_serde::from_slice(&data).unwrap();
     assert_eq!(decoded.role, Role::User);
     assert_eq!(decoded.content, "hello");
@@ -1157,7 +1187,7 @@ fn tx1_message_user_field_tags() {
 
 #[test]
 fn tx2_message_model_field_tags() {
-    let data = std::fs::read("../../testdata/memory/serialization/message_model.msgpack").unwrap();
+    let data = read_shared_testdata_bytes("serialization/message_model.msgpack");
     let decoded: Message = rmp_serde::from_slice(&data).unwrap();
     assert_eq!(decoded.role, Role::Model);
     assert_eq!(decoded.content, "response");
@@ -1166,7 +1196,7 @@ fn tx2_message_model_field_tags() {
 
 #[test]
 fn tx3_message_tool_field_tags() {
-    let data = std::fs::read("../../testdata/memory/serialization/message_tool.msgpack").unwrap();
+    let data = read_shared_testdata_bytes("serialization/message_tool.msgpack");
     let decoded: Message = rmp_serde::from_slice(&data).unwrap();
     assert_eq!(decoded.role, Role::Tool);
     assert_eq!(decoded.content, "result");
@@ -1179,7 +1209,7 @@ fn tx3_message_tool_field_tags() {
 
 #[test]
 fn tx4_rust_serialize_preserves_go_tags() {
-    let data = std::fs::read("../../testdata/memory/serialization/message_user.msgpack").unwrap();
+    let data = read_shared_testdata_bytes("serialization/message_user.msgpack");
     let decoded: Message = rmp_serde::from_slice(&data).unwrap();
     
     // re-serialize
@@ -1199,7 +1229,7 @@ fn tx4_rust_serialize_preserves_go_tags() {
 
 #[test]
 fn tx5_kv_key_encoding_consistency() {
-    let keys_content = std::fs::read_to_string("../../testdata/memory/keys/conv_msg_keys.txt").unwrap();
+    let keys_content = read_shared_testdata_string("keys/conv_msg_keys.txt");
     let expected_keys: Vec<&str> = keys_content.lines().collect();
 
     let key1 = conv_msg_key("p1", "c1", 123456789);

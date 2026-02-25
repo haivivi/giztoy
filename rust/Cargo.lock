@@ -1179,7 +1179,6 @@ dependencies = [
 name = "giztoy-graph"
 version = "0.1.0"
 dependencies = [
- "giztoy-kv",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
@@ -1192,15 +1191,6 @@ dependencies = [
  "chrono",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "giztoy-kv"
-version = "0.1.0"
-dependencies = [
- "redb",
- "tempfile",
- "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -1241,7 +1231,6 @@ dependencies = [
  "giztoy-embed",
  "giztoy-genx",
  "giztoy-graph",
- "giztoy-kv",
  "giztoy-recall",
  "giztoy-vecstore",
  "rmp-serde",
@@ -1342,7 +1331,6 @@ dependencies = [
  "chrono",
  "giztoy-embed",
  "giztoy-graph",
- "giztoy-kv",
  "giztoy-vecstore",
  "rmp-serde",
  "serde",
@@ -2563,15 +2551,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f821338fddb99d089116342c46e9f1fbf3828dba077674613e734e01d6ea8677"
 dependencies = [
  "rustfft",
-]
-
-[[package]]
-name = "redb"
-version = "2.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8eca1e9d98d5a7e9002d0013e18d5a9b000aee942eb134883a82f06ebffb6c01"
-dependencies = [
- "libc",
 ]
 
 [[package]]

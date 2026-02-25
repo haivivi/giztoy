@@ -9,7 +9,6 @@ authors.workspace = true
 giztoy-embed = { workspace = true }
 giztoy-genx = { workspace = true }
 giztoy-graph = { workspace = true }
-giztoy-kv = { workspace = true }
 giztoy-recall = { workspace = true }
 giztoy-vecstore = { workspace = true }
 

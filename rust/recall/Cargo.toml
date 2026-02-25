@@ -9,7 +9,6 @@ authors.workspace = true
 chrono = { workspace = true }
 giztoy-embed = { workspace = true }
 giztoy-graph = { workspace = true }
-giztoy-kv = { workspace = true }
 giztoy-vecstore = { workspace = true }
 rmp-serde = "1"
 serde = { workspace = true }

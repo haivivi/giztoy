@@ -14,14 +14,8 @@ pub enum MemoryError {
     #[error("memory: embed model mismatch: stored {stored}, current {current}")]
     EmbedModelMismatch { stored: String, current: String },
 
-    #[error(
-        "memory: embed dimension mismatch for model {model}: stored {stored}, current {current}"
-    )]
-    EmbedDimensionMismatch {
-        model: String,
-        stored: usize,
-        current: usize,
-    },
+    #[error("memory: embed dimension mismatch for model {model}: stored {stored}, current {current}")]
+    EmbedDimensionMismatch { model: String, stored: usize, current: usize },
 
     #[error("memory: embedder dimension mismatch: host={host}, per_persona={per_persona}")]
     EmbedderDimensionMismatch { host: usize, per_persona: usize },
@@ -33,7 +27,7 @@ pub enum MemoryError {
     Graph(#[from] giztoy_graph::GraphError),
 
     #[error("memory: kv error: {0}")]
-    KV(#[from] giztoy_kv::KVError),
+    KV(#[from] openerp_kv::KVError),
 
     #[error("memory: serialization error: {0}")]
     Serialization(String),
