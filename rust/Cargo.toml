@@ -21,6 +21,7 @@ members = [
     "embed",
     "recall",
     "memory",
+    "kv",
     "cmd/dashscope",
     "cmd/minimax",
     "cmd/doubaospeech",
@@ -64,9 +65,9 @@ giztoy-vecstore = { path = "vecstore" }
 giztoy-embed = { path = "embed" }
 giztoy-recall = { path = "recall" }
 giztoy-memory = { path = "memory" }
+giztoy-kv = { path = "kv" }
 
-# External workspace crates
-openerp-kv = { path = "../../../openerp/main/rust/lib/kv" }
+
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }

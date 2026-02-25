@@ -1,23 +1,20 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
-    name = "graph",
-    crate_name = "giztoy_graph",
+    name = "kv",
+    crate_name = "giztoy_kv",
     srcs = glob(["src/**/*.rs"]),
     visibility = ["//visibility:public"],
     deps = [
-        "//rust/kv:kv",
-        "@crate_index//:serde_json",
+        "@crate_index//:redb",
         "@crate_index//:thiserror",
     ],
 )
 
 rust_test(
-    name = "graph_test",
-    crate = ":graph",
+    name = "kv_test",
+    crate = ":kv",
     deps = [
-        "//rust/kv:kv",
-        "@crate_index//:serde_json",
         "@crate_index//:tempfile",
     ],
 )

@@ -18,8 +18,8 @@ pub enum RecallError {
     Serialization(String),
 }
 
-impl From<openerp_kv::KVError> for RecallError {
-    fn from(e: openerp_kv::KVError) -> Self {
+impl From<giztoy_kv::KVError> for RecallError {
+    fn from(e: giztoy_kv::KVError) -> Self {
         RecallError::Storage(e.to_string())
     }
 }

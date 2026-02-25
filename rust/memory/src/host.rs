@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use openerp_kv::KVStore;
+use giztoy_kv::KVStore;
 
 use giztoy_embed::Embedder;
 use giztoy_recall::RecallIndex;
@@ -169,26 +169,23 @@ fn check_embed_meta(store: &dyn KVStore, emb: &dyn Embedder) -> Result<(), Memor
 struct SharedStore(Arc<dyn KVStore>);
 
 impl KVStore for SharedStore {
-    fn get(&self, key: &str) -> Result<Option<Vec<u8>>, openerp_kv::KVError> {
+    fn get(&self, key: &str) -> Result<Option<Vec<u8>>, giztoy_kv::KVError> {
         self.0.get(key)
     }
-    fn set(&self, key: &str, value: &[u8]) -> Result<(), openerp_kv::KVError> {
+    fn set(&self, key: &str, value: &[u8]) -> Result<(), giztoy_kv::KVError> {
         self.0.set(key, value)
     }
-    fn delete(&self, key: &str) -> Result<(), openerp_kv::KVError> {
+    fn delete(&self, key: &str) -> Result<(), giztoy_kv::KVError> {
         self.0.delete(key)
     }
-    fn scan(&self, prefix: &str) -> Result<Vec<(String, Vec<u8>)>, openerp_kv::KVError> {
+    fn scan(&self, prefix: &str) -> Result<Vec<(String, Vec<u8>)>, giztoy_kv::KVError> {
         self.0.scan(prefix)
     }
-    fn batch_set(&self, entries: &[(&str, &[u8])]) -> Result<(), openerp_kv::KVError> {
+    fn batch_set(&self, entries: &[(&str, &[u8])]) -> Result<(), giztoy_kv::KVError> {
         self.0.batch_set(entries)
     }
-    fn batch_delete(&self, keys: &[&str]) -> Result<(), openerp_kv::KVError> {
+    fn batch_delete(&self, keys: &[&str]) -> Result<(), giztoy_kv::KVError> {
         self.0.batch_delete(keys)
-    }
-    fn is_readonly(&self, key: &str) -> bool {
-        self.0.is_readonly(key)
     }
 }
 

@@ -19,7 +19,7 @@ use crate::types::{CompressResult, Compressor, EntityInput, EntityUpdate, Messag
 pub struct LLMCompressorConfig {
     /// Segmentor is the pattern of the registered segmentor to use
     /// (e.g., "seg/qwen-flash"). Required. Must be registered in
-    /// segmentors::DEFAULT_MUX (or the provided seg_mux).
+    /// the provided seg_mux.
     pub segmentor: String,
 
     /// Profiler is the pattern of the registered profiler to use
@@ -36,10 +36,11 @@ pub struct LLMCompressorConfig {
     /// Keyed by entity label (e.g., "person:小明") → attribute map.
     pub profiles: Option<HashMap<String, HashMap<String, serde_json::Value>>>,
 
-    /// SegmentorMux overrides the default segmentors mux. Optional.
-    pub seg_mux: Option<Arc<SegmentorMux>>,
+    /// SegmentorMux is the multiplexer used to resolve the segmentor. Required.
+    pub seg_mux: Arc<SegmentorMux>,
 
-    /// ProfilerMux overrides the default profilers mux. Optional.
+    /// ProfilerMux is the multiplexer used to resolve the profiler.
+    /// Required if profiler is set.
     pub prof_mux: Option<Arc<ProfilerMux>>,
 }
 
@@ -49,6 +50,11 @@ impl LLMCompressorConfig {
         if self.segmentor.is_empty() {
             return Err(MemoryError::General(
                 "memory: LLMCompressorConfig.segmentor is required".into(),
+            ));
+        }
+        if self.profiler.is_some() && self.prof_mux.is_none() {
+            return Err(MemoryError::General(
+                "memory: LLMCompressorConfig.prof_mux is required when profiler is set".into(),
             ));
         }
         Ok(())
@@ -62,7 +68,7 @@ impl std::fmt::Debug for LLMCompressorConfig {
             .field("profiler", &self.profiler)
             .field("schema", &self.schema)
             .field("profiles", &self.profiles)
-            .field("seg_mux", &if self.seg_mux.is_some() { "Some(Arc<SegmentorMux>)" } else { "None" })
+            .field("seg_mux", &"Arc<SegmentorMux>")
             .field("prof_mux", &if self.prof_mux.is_some() { "Some(Arc<ProfilerMux>)" } else { "None" })
             .finish()
     }
@@ -90,22 +96,7 @@ impl LLMCompressor {
 
     /// Run the segmentor.
     async fn run_segmentor(&self, input: segmentors::SegmentorInput) -> Result<SegmentorResult, MemoryError> {
-        let result = if let Some(mux) = &self.cfg.seg_mux {
-            mux.process(&self.cfg.segmentor, input).await
-        } else {
-            // Wait, we don't have DEFAULT_MUX exported in main's genx/segmentors
-            // or do we? I'll just rely on the provided seg_mux for now, or expect it to be
-            // provided in tests, because we removed the DEFAULT_MUX code I added.
-            // Oh wait, `genx`'s `segmentors` does have `DEFAULT_MUX` if it's aligned with Go.
-            // Let's assume there is a `DEFAULT_MUX` or a `process` function, or wait, `mux` is required if no global exists.
-            // I'll check if `genx::segmentors::process` exists later, if not, I'll fix it.
-            // Let's use the provided `seg_mux`. In Rust, we'll just require it if we don't have globals.
-            // Wait, if it's aligned with Go, Go has `segmentors.Process` and `segmentors.DefaultMux`.
-            // But I saw `SegmentorMux::new()` earlier in the read output and NO `DEFAULT_MUX`.
-            // I will use `seg_mux` and return an error if missing for now, or assume it's mandatory if not using a global.
-            // Let's assume `giztoy_genx::segmentors::process` exists. If it fails to compile, I will fix it.
-            return Err(MemoryError::General("memory: Global DEFAULT_MUX is not available, please provide seg_mux in config".into()));
-        };
+        let result = self.cfg.seg_mux.process(&self.cfg.segmentor, input).await;
         
         result.map_err(|e| MemoryError::General(e.to_string()))
     }
@@ -116,7 +107,7 @@ impl LLMCompressor {
         let result = if let Some(mux) = &self.cfg.prof_mux {
             mux.process(pattern, input).await
         } else {
-            return Err(MemoryError::General("memory: Global DEFAULT_MUX is not available, please provide prof_mux in config".into()));
+            return Err(MemoryError::General("memory: prof_mux is required".into()));
         };
         
         result.map_err(|e| MemoryError::General(e.to_string()))
