@@ -123,38 +123,22 @@ impl Host {
     /// Delete all data for a persona. Safe to call for non-existent IDs.
     pub fn delete(&self, id: &str) -> Result<(), MemoryError> {
         let persona_prefix = mem_prefix(id);
-        let entries = self.store.scan("mem:")?;
-        let keys: Vec<&str> = entries
-            .iter()
-            .filter_map(|(k, _)| {
-                if is_persona_data_key(k, &persona_prefix) {
-                    Some(k.as_str())
-                } else {
-                    None
-                }
-            })
-            .collect();
 
-        if !keys.is_empty() {
-            self.store.batch_delete(&keys)?;
+        // Delete known per-persona namespaces with scoped prefix scans to
+        // avoid scanning all personas and to keep strict key-boundary safety.
+        for ns_prefix in [":conv:", ":seg:", ":sid:", ":g:"] {
+            let scoped = format!("{persona_prefix}{ns_prefix}");
+            let entries = self.store.scan(&scoped)?;
+            if !entries.is_empty() {
+                let keys: Vec<&str> = entries.iter().map(|(k, _)| k.as_str()).collect();
+                self.store.batch_delete(&keys)?;
+            }
         }
 
         let mut memories = self.memories.lock().expect("lock poisoned");
         memories.remove(id);
         Ok(())
     }
-}
-
-fn is_persona_data_key(key: &str, persona_prefix: &str) -> bool {
-    if !key.starts_with(persona_prefix) {
-        return false;
-    }
-
-    let suffix = &key[persona_prefix.len()..];
-    suffix.starts_with(":conv:")
-        || suffix.starts_with(":seg:")
-        || suffix.starts_with(":sid:")
-        || suffix.starts_with(":g:")
 }
 
 fn check_embed_meta(store: &dyn KVStore, emb: &dyn Embedder) -> Result<(), MemoryError> {
