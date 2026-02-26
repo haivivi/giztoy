@@ -176,8 +176,9 @@ impl<'m> Conversation<'m> {
         self.scan_messages()
     }
 
-    /// Remove all messages and the revert point. Resets compression counters.
-    pub fn clear(&self) -> Result<(), MemoryError> {
+    /// Remove all messages and the revert point. Resets pending compression
+    /// counters and last compression error in this conversation handle.
+    pub fn clear(&mut self) -> Result<(), MemoryError> {
         let store = self.mem.kv_store();
         let mid = self.mem.id();
         let prefix = conv_msg_prefix(mid, &self.conv_id);
@@ -190,6 +191,10 @@ impl<'m> Conversation<'m> {
             let key_refs: Vec<&str> = keys.iter().map(|s| s.as_str()).collect();
             store.batch_delete(&key_refs)?;
         }
+
+        self.pending_chars = 0;
+        self.pending_msgs = 0;
+        self.last_compress_err = None;
 
         Ok(())
     }

@@ -140,7 +140,7 @@ impl Memory {
     /// 4. Clear the conversation
     pub async fn compress(
         &self,
-        conv: &Conversation<'_>,
+        conv: &mut Conversation<'_>,
         compressor: Option<&dyn Compressor>,
     ) -> Result<(), MemoryError> {
         let comp: &dyn Compressor = match compressor {

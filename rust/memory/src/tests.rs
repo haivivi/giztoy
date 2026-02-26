@@ -806,7 +806,7 @@ async fn tm8_compress_pipeline() {
     conv.append(user_msg("hello")).await.unwrap();
     conv.append(model_msg("hi there")).await.unwrap();
 
-    m.compress(&conv, None).await.unwrap();
+    m.compress(&mut conv, None).await.unwrap();
 
     assert_eq!(conv.count().unwrap(), 0, "conversation should be cleared after compress");
 
@@ -824,7 +824,7 @@ async fn tm9_compress_no_compressor_returns_error() {
     let mut conv = m.open_conversation("c1", &[]);
     conv.append(user_msg("hello")).await.unwrap();
 
-    let result = m.compress(&conv, None).await;
+    let result = m.compress(&mut conv, None).await;
     assert!(matches!(result, Err(MemoryError::NoCompressor)));
 }
 
@@ -1142,7 +1142,7 @@ async fn ti4_entity_from_compress_recall_with_graph() {
     conv.append(user_msg("hello")).await.unwrap();
     conv.append(model_msg("world")).await.unwrap();
 
-    m.compress(&conv, None).await.unwrap();
+    m.compress(&mut conv, None).await.unwrap();
 
     // The mock compressor creates "person:test" entity.
     let ent = m.graph().get_entity("person:test").unwrap();
@@ -1269,7 +1269,7 @@ async fn te1_single_person() {
         conv.append(msg).await.unwrap();
     }
 
-    m.compress(&conv, None).await.unwrap();
+    m.compress(&mut conv, None).await.unwrap();
 
     let ent = m.graph().get_entity("person:小明").unwrap();
     assert!(ent.is_some(), "TE.1: entity should be created");
@@ -1284,7 +1284,7 @@ async fn te2_two_siblings() {
     conv.append(user_msg("我是小明，这是小红，我们是兄妹")).await.unwrap();
     conv.append(model_msg("你们好！")).await.unwrap();
     
-    m.compress(&conv, None).await.unwrap();
+    m.compress(&mut conv, None).await.unwrap();
 
     let ents = m.graph().list_entities("person:").unwrap();
     assert!(ents.len() >= 2, "TE.2: should have at least 2 entities");
@@ -1302,7 +1302,7 @@ async fn te3_work_chat_english() {
     conv.append(user_msg("Alice is working as an engineer on the project")).await.unwrap();
     conv.append(model_msg("Got it.")).await.unwrap();
     
-    m.compress(&conv, None).await.unwrap();
+    m.compress(&mut conv, None).await.unwrap();
 
     let ent = m.graph().get_entity("person:Alice").unwrap();
     assert!(ent.is_some(), "TE.3: should have person:Alice");
@@ -1317,7 +1317,7 @@ async fn te4_cooking_multiple_people() {
     conv.append(user_msg("妈妈教小明 cooking")).await.unwrap();
     conv.append(model_msg("真不错")).await.unwrap();
     
-    m.compress(&conv, None).await.unwrap();
+    m.compress(&mut conv, None).await.unwrap();
 
     let ents = m.graph().list_entities("").unwrap();
     assert!(ents.len() >= 2, "TE.4: should have at least 2 entities");
@@ -1334,7 +1334,7 @@ async fn te5_family_week_100msg() {
         for j in 0..20 {
             conv.append(user_msg(&format!("小明 小红 兄妹 爸爸 妈妈 message {j} dinosaurs family"))).await.unwrap();
         }
-        m.compress(&conv, None).await.unwrap();
+        m.compress(&mut conv, None).await.unwrap();
     }
     m.compact().await.unwrap();
 
@@ -1361,7 +1361,7 @@ async fn te6_topic_drift_100msg() {
         for j in 0..20 {
             conv.append(user_msg(&format!("user1 talking about topic_a and topic_b {j}"))).await.unwrap();
         }
-        m.compress(&conv, None).await.unwrap();
+        m.compress(&mut conv, None).await.unwrap();
     }
     m.compact().await.unwrap();
 
@@ -1379,11 +1379,11 @@ async fn te7_corrections() {
     let mut conv1 = m.open_conversation("c1", &[]);
 
     conv1.append(user_msg("小明的小红")).await.unwrap();
-    m.compress(&conv1, None).await.unwrap();
+    m.compress(&mut conv1, None).await.unwrap();
 
     let mut conv2 = m.open_conversation("c2", &[]);
     conv2.append(user_msg("小明的 sushi")).await.unwrap();
-    m.compress(&conv2, None).await.unwrap();
+    m.compress(&mut conv2, None).await.unwrap();
 
     let ent = m.graph().get_entity("person:小明").unwrap().unwrap();
     assert_eq!(ent.attrs["favorite_food"], serde_json::json!("sushi"), "TE.7: correction should update attribute");
