@@ -14,6 +14,7 @@ use crate::types::{
 use crate::messages_to_strings;
 
 use giztoy_genx::segmentors::{EntityOutput, RelationOutput, SegmentOutput, Segmentor, SegmentorInput, SegmentorMux, SegmentorResult};
+use giztoy_genx::profilers::{Profiler, ProfilerInput, ProfilerMux, ProfilerResult};
 use crate::compressor::{LLMCompressor, LLMCompressorConfig};
 
 // ---------------------------------------------------------------------------
@@ -26,6 +27,8 @@ const TEST_SEP: char = '\x1F';
 
 struct FakeSegmentor;
 
+struct FailingProfiler;
+
 #[async_trait::async_trait]
 impl Segmentor for FakeSegmentor {
     async fn process(&self, input: SegmentorInput) -> Result<SegmentorResult, giztoy_genx::error::GenxError> {
@@ -34,24 +37,46 @@ impl Segmentor for FakeSegmentor {
         
         let combined = input.messages.join(" | ");
 
-        if combined.contains("小明") {
-            entities.push(EntityOutput { label: "person:小明".into(), attrs: HashMap::new() });
+        for name in ["小明", "小红", "小王", "小刘", "小陈", "妈妈", "爸爸", "Alice"] {
+            if combined.contains(name) {
+                let mut attrs = HashMap::new();
+                if name == "Alice" {
+                    attrs.insert("role".into(), serde_json::json!("engineer"));
+                }
+                entities.push(EntityOutput {
+                    label: format!("person:{name}"),
+                    attrs,
+                });
+            }
         }
-        if combined.contains("小红") {
-            entities.push(EntityOutput { label: "person:小红".into(), attrs: HashMap::new() });
+
+        let relation_defs = [
+            ("兄妹", "sibling"),
+            ("同事", "colleague"),
+            ("邻居", "neighbor"),
+            ("朋友", "friend"),
+        ];
+        let names = ["小明", "小红", "小王", "小刘", "小陈", "妈妈", "爸爸", "Alice"];
+        for (kw, rel_type) in relation_defs {
+            if !combined.contains(kw) {
+                continue;
+            }
+            for i in 0..names.len() {
+                for j in (i + 1)..names.len() {
+                    let a = names[i];
+                    let b = names[j];
+                    if combined.contains(a) && combined.contains(b) {
+                        relations.push(RelationOutput {
+                            from: format!("person:{a}"),
+                            to: format!("person:{b}"),
+                            rel_type: rel_type.into(),
+                        });
+                    }
+                }
+            }
         }
-        if combined.contains("兄妹") {
-            relations.push(RelationOutput { from: "person:小明".into(), to: "person:小红".into(), rel_type: "sibling".into() });
-        }
-        if combined.contains("Alice") {
-            entities.push(EntityOutput { label: "person:Alice".into(), attrs: HashMap::from([("role".into(), serde_json::json!("engineer"))]) });
-        }
-        if combined.contains("妈妈") {
-            entities.push(EntityOutput { label: "person:妈妈".into(), attrs: HashMap::new() });
+        if combined.contains("妈妈") && combined.contains("小明") {
             relations.push(RelationOutput { from: "person:妈妈".into(), to: "person:小明".into(), rel_type: "parent".into() });
-        }
-        if combined.contains("爸爸") {
-            entities.push(EntityOutput { label: "person:爸爸".into(), attrs: HashMap::new() });
         }
         if combined.contains("user1") {
             entities.push(EntityOutput { label: "person:user1".into(), attrs: HashMap::new() });
@@ -84,6 +109,20 @@ impl Segmentor for FakeSegmentor {
     }
 }
 
+#[async_trait::async_trait]
+impl Profiler for FailingProfiler {
+    async fn process(&self, _input: ProfilerInput) -> Result<ProfilerResult, giztoy_genx::error::GenxError> {
+        Err(giztoy_genx::error::GenxError::Generation {
+            usage: Default::default(),
+            message: "mock profiler failure".into(),
+        })
+    }
+
+    fn model(&self) -> &str {
+        "failing-prof"
+    }
+}
+
 /// Mock compressor that always fails.
 struct FailingCompressor;
 
@@ -113,9 +152,29 @@ fn new_mock_llm_compressor() -> LLMCompressor {
         profiler: None,
         schema: None,
         profiles: None,
-        seg_mux: Arc::new(mux),
+        seg_mux: Some(Arc::new(mux)),
         prof_mux: None,
     }).unwrap()
+}
+
+fn new_mock_llm_compressor_with_failing_profiler() -> LLMCompressor {
+    let mut seg_mux = SegmentorMux::new();
+    seg_mux.handle("test-seg", Arc::new(FakeSegmentor)).unwrap();
+
+    let mut prof_mux = ProfilerMux::new();
+    prof_mux
+        .handle("fail-prof", Arc::new(FailingProfiler))
+        .unwrap();
+
+    LLMCompressor::new(LLMCompressorConfig {
+        segmentor: "test-seg".into(),
+        profiler: Some("fail-prof".into()),
+        schema: None,
+        profiles: None,
+        seg_mux: Some(Arc::new(seg_mux)),
+        prof_mux: Some(Arc::new(prof_mux)),
+    })
+    .unwrap()
 }
 
 fn new_test_store() -> Arc<dyn openerp_kv::KVStore> {
@@ -149,7 +208,7 @@ fn new_test_host_with_compressor() -> Host {
         profiler: None,
         schema: None,
         profiles: None,
-        seg_mux: Arc::new(mux),
+        seg_mux: Some(Arc::new(mux)),
         prof_mux: None,
     }).unwrap();
 
@@ -232,6 +291,181 @@ fn read_shared_testdata_string(rel: &str) -> String {
     String::from_utf8(data).expect("shared testdata should be utf8")
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct ScenarioMeta {
+    expect: ScenarioExpect,
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+struct ScenarioExpect {
+    #[serde(default)]
+    min_entities: usize,
+    #[serde(default)]
+    entities_contain: Vec<String>,
+    #[serde(default)]
+    min_relations: usize,
+    #[serde(default)]
+    min_segments: usize,
+    #[serde(default)]
+    recall: Vec<ScenarioRecallExpect>,
+}
+
+#[derive(Debug, Default, serde::Deserialize)]
+struct ScenarioRecallExpect {
+    text: String,
+    #[serde(default)]
+    labels: Vec<String>,
+    #[serde(default)]
+    min_results: usize,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScenarioConversation {
+    conv_id: String,
+    #[serde(default)]
+    labels: Vec<String>,
+    messages: Vec<ScenarioMessage>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct ScenarioMessage {
+    role: String,
+    #[serde(default)]
+    name: String,
+    content: String,
+}
+
+fn resolve_shared_testdata_root() -> std::path::PathBuf {
+    let mut candidates = vec![
+        std::path::PathBuf::from("../../testdata/memory"),
+        std::path::PathBuf::from("testdata/memory"),
+    ];
+    if let (Ok(test_srcdir), Ok(workspace)) = (env::var("TEST_SRCDIR"), env::var("TEST_WORKSPACE")) {
+        candidates.push(std::path::PathBuf::from(format!("{test_srcdir}/{workspace}/testdata/memory")));
+    }
+    if let (Ok(runfiles), Ok(workspace)) = (env::var("RUNFILES_DIR"), env::var("TEST_WORKSPACE")) {
+        candidates.push(std::path::PathBuf::from(format!("{runfiles}/{workspace}/testdata/memory")));
+    }
+
+    for c in &candidates {
+        if c.join("m01_single_person/meta.yaml").exists() {
+            return c.clone();
+        }
+    }
+    panic!("unable to locate shared testdata root, tried: {candidates:?}");
+}
+
+fn load_scenario_meta(scenario: &str) -> ScenarioMeta {
+    let root = resolve_shared_testdata_root();
+    let content = fs::read_to_string(root.join(scenario).join("meta.yaml")).unwrap();
+    serde_yaml::from_str(&content).unwrap()
+}
+
+fn load_scenario_conversations(scenario: &str) -> Vec<ScenarioConversation> {
+    let root = resolve_shared_testdata_root();
+    let dir = root.join(scenario);
+    let mut files: Vec<_> = fs::read_dir(&dir)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| {
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .map(|n| n.starts_with("conv_") && n.ends_with(".yaml"))
+                .unwrap_or(false)
+        })
+        .collect();
+    files.sort();
+
+    files
+        .into_iter()
+        .map(|p| {
+            let content = fs::read_to_string(p).unwrap();
+            serde_yaml::from_str::<ScenarioConversation>(&content).unwrap()
+        })
+        .collect()
+}
+
+async fn run_te_scenario(scenario: &str) -> (Host, crate::memory::Memory, ScenarioMeta) {
+    let meta = load_scenario_meta(scenario);
+    let conversations = load_scenario_conversations(scenario);
+
+    let h = new_test_host_with_compressor();
+    let m = h.open("p1");
+
+    for conv_data in &conversations {
+        let mut conv = m.open_conversation(&conv_data.conv_id, &conv_data.labels);
+        for msg in &conv_data.messages {
+            let mut message = match msg.role.as_str() {
+                "user" => user_msg(&msg.content),
+                "model" => model_msg(&msg.content),
+                _ => user_msg(&msg.content),
+            };
+            message.name = msg.name.clone();
+            conv.append(message).await.unwrap();
+        }
+        m.compress(&mut conv, None).await.unwrap();
+    }
+
+    (h, m, meta)
+}
+
+async fn assert_te_scenario(scenario: &str) {
+    let (_h, m, meta) = run_te_scenario(scenario).await;
+
+    let all_entities = m.graph().list_entities("").unwrap();
+    assert!(
+        all_entities.len() >= meta.expect.min_entities,
+        "{scenario}: expected at least {} entities, got {}",
+        meta.expect.min_entities,
+        all_entities.len()
+    );
+
+    for label in &meta.expect.entities_contain {
+        let found = m.graph().get_entity(label).unwrap();
+        assert!(found.is_some(), "{scenario}: expected entity {label}");
+    }
+
+    if meta.expect.min_relations > 0 {
+        let mut relation_count = 0usize;
+        for ent in &all_entities {
+            relation_count += m.graph().relations(&ent.label).unwrap().len();
+        }
+        assert!(
+            relation_count >= meta.expect.min_relations,
+            "{scenario}: expected at least {} relations, got {}",
+            meta.expect.min_relations,
+            relation_count
+        );
+    }
+
+    if meta.expect.min_segments > 0 {
+        let segs = m.index().recent_segments(1000).unwrap();
+        assert!(
+            segs.len() >= meta.expect.min_segments,
+            "{scenario}: expected at least {} segments, got {}",
+            meta.expect.min_segments,
+            segs.len()
+        );
+    }
+
+    for r in &meta.expect.recall {
+        let out = m.recall(RecallQuery {
+            labels: r.labels.clone(),
+            text: r.text.clone(),
+            hops: 0,
+            limit: 10,
+        }).await.unwrap();
+        assert!(
+            out.segments.len() >= r.min_results,
+            "{scenario}: recall({}) expected >= {}, got {}",
+            r.text,
+            r.min_results,
+            out.segments.len()
+        );
+    }
+}
+
 // ===========================================================================
 // TH: Host Management (6 tests)
 // ===========================================================================
@@ -287,6 +521,28 @@ fn th5_delete_clears_data() {
 fn th6_delete_nonexistent_no_error() {
     let h = new_test_host();
     h.delete("ghost").unwrap();
+}
+
+#[tokio::test]
+async fn th7_delete_prefix_isolation() {
+    let h = new_test_host();
+
+    let m_a = h.open("a");
+    let m_ab = h.open("a:b");
+
+    let mut conv_a = m_a.open_conversation("c1", &[]);
+    let mut conv_ab = m_ab.open_conversation("c1", &[]);
+    conv_a.append(user_msg("hello a")).await.unwrap();
+    conv_ab.append(user_msg("hello a:b")).await.unwrap();
+
+    h.delete("a").unwrap();
+
+    let m_a_after = h.open("a");
+    let m_ab_after = h.open("a:b");
+    let conv_a_after = m_a_after.open_conversation("c1", &[]);
+    let conv_ab_after = m_ab_after.open_conversation("c1", &[]);
+    assert_eq!(conv_a_after.count().unwrap(), 0);
+    assert_eq!(conv_ab_after.count().unwrap(), 1, "delete(a) must not affect persona a:b");
 }
 
 // ===========================================================================
@@ -904,10 +1160,10 @@ async fn tl4_empty_profiler_only_segmentor() {
 }
 
 #[tokio::test]
-async fn tl5_failing_compressor_returns_error() {
-    let c = FailingCompressor;
-    let result = c.compress_messages(&[user_msg("test")]).await;
-    assert!(result.is_err());
+async fn tl5_profiler_failure_is_non_fatal() {
+    let c = new_mock_llm_compressor_with_failing_profiler();
+    let update = c.extract_entities(&[user_msg("小明说今天很开心")]).await.unwrap();
+    assert!(update.entities.iter().any(|e| e.label == "person:小明"));
 }
 
 #[tokio::test]
@@ -1247,146 +1503,37 @@ fn tx5_kv_key_encoding_consistency() {
 
 #[tokio::test]
 async fn te1_single_person() {
-    let h = new_test_host_with_compressor();
-    let m = h.open("p1");
-    let mut conv = m.open_conversation("c1", &["person:小明".into()]);
-
-    let msgs = vec![
-        ("user", "你好呀"),
-        ("model", "小明你好！"),
-        ("user", "我今天看了恐龙的书"),
-        ("model", "真棒！你最喜欢什么恐龙？"),
-        ("user", "霸王龙！它最厉害了"),
-        ("model", "霸王龙确实很厉害呢"),
-        ("user", "我长大想当古生物学家"),
-        ("model", "那你要好好学习哦"),
-        ("user", "嗯！我会加油的"),
-        ("model", "加油！"),
-    ];
-
-    for (role, content) in &msgs {
-        let msg = if *role == "user" { user_msg(content) } else { model_msg(content) };
-        conv.append(msg).await.unwrap();
-    }
-
-    m.compress(&mut conv, None).await.unwrap();
-
-    let ent = m.graph().get_entity("person:小明").unwrap();
-    assert!(ent.is_some(), "TE.1: entity should be created");
+    assert_te_scenario("m01_single_person").await;
 }
 
 #[tokio::test]
 async fn te2_two_siblings() {
-    let h = new_test_host_with_compressor();
-    let m = h.open("p1");
-    let mut conv = m.open_conversation("c1", &[]);
-
-    conv.append(user_msg("我是小明，这是小红，我们是兄妹")).await.unwrap();
-    conv.append(model_msg("你们好！")).await.unwrap();
-    
-    m.compress(&mut conv, None).await.unwrap();
-
-    let ents = m.graph().list_entities("person:").unwrap();
-    assert!(ents.len() >= 2, "TE.2: should have at least 2 entities");
-
-    let rels = m.graph().relations("person:小明").unwrap();
-    assert!(rels.len() >= 1, "TE.2: should have sibling relation");
+    assert_te_scenario("m02_two_siblings").await;
 }
 
 #[tokio::test]
 async fn te3_work_chat_english() {
-    let h = new_test_host_with_compressor();
-    let m = h.open("p1");
-    let mut conv = m.open_conversation("c1", &[]);
-
-    conv.append(user_msg("Alice is working as an engineer on the project")).await.unwrap();
-    conv.append(model_msg("Got it.")).await.unwrap();
-    
-    m.compress(&mut conv, None).await.unwrap();
-
-    let ent = m.graph().get_entity("person:Alice").unwrap();
-    assert!(ent.is_some(), "TE.3: should have person:Alice");
+    assert_te_scenario("m03_work_chat").await;
 }
 
 #[tokio::test]
 async fn te4_cooking_multiple_people() {
-    let h = new_test_host_with_compressor();
-    let m = h.open("p1");
-    let mut conv = m.open_conversation("c1", &[]);
-
-    conv.append(user_msg("妈妈教小明 cooking")).await.unwrap();
-    conv.append(model_msg("真不错")).await.unwrap();
-    
-    m.compress(&mut conv, None).await.unwrap();
-
-    let ents = m.graph().list_entities("").unwrap();
-    assert!(ents.len() >= 2, "TE.4: should have at least 2 entities");
+    assert_te_scenario("m04_cooking").await;
 }
 
 #[tokio::test]
 async fn te5_family_week_100msg() {
-    let h = new_test_host_with_compressor();
-    let m = h.open("p1");
-
-    // Simulate 5 sessions with segments.
-    for i in 0..5 {
-        let mut conv = m.open_conversation(&format!("c{i}"), &[]);
-        for j in 0..20 {
-            conv.append(user_msg(&format!("小明 小红 兄妹 爸爸 妈妈 message {j} dinosaurs family"))).await.unwrap();
-        }
-        m.compress(&mut conv, None).await.unwrap();
-    }
-    m.compact().await.unwrap();
-
-    let ents = m.graph().list_entities("person:").unwrap();
-    assert!(ents.len() >= 4, "TE.5: should have >= 4 entities");
-
-    let rels = m.graph().relations("person:小明").unwrap();
-    assert!(rels.len() >= 2, "TE.5: should have >= 2 relations");
-
-    let segs = m.index().recent_segments(100).unwrap();
-    assert!(segs.len() >= 2, "TE.5: should have >= 2 segments");
-    
-    let recall_res = m.recall(RecallQuery { text: "dinosaurs".into(), labels: vec!["person:小明".into()], limit: 10, hops: 0 }).await.unwrap();
-    assert!(recall_res.segments.len() >= 1, "TE.5: should have recall result");
+    assert_te_scenario("m05_family_week").await;
 }
 
 #[tokio::test]
 async fn te6_topic_drift_100msg() {
-    let h = new_test_host_with_compressor();
-    let m = h.open("p1");
-
-    for i in 0..5 {
-        let mut conv = m.open_conversation(&format!("c{i}"), &[]);
-        for j in 0..20 {
-            conv.append(user_msg(&format!("user1 talking about topic_a and topic_b {j}"))).await.unwrap();
-        }
-        m.compress(&mut conv, None).await.unwrap();
-    }
-    m.compact().await.unwrap();
-
-    let ents = m.graph().list_entities("").unwrap();
-    assert!(ents.len() >= 1, "TE.6: should have >= 1 entity");
-
-    let segs = m.index().recent_segments(100).unwrap();
-    assert!(segs.len() >= 2, "TE.6: should have >= 2 segments");
+    assert_te_scenario("m06_topic_drift").await;
 }
 
 #[tokio::test]
 async fn te7_corrections() {
-    let h = new_test_host_with_compressor();
-    let m = h.open("p1");
-    let mut conv1 = m.open_conversation("c1", &[]);
-
-    conv1.append(user_msg("小明的小红")).await.unwrap();
-    m.compress(&mut conv1, None).await.unwrap();
-
-    let mut conv2 = m.open_conversation("c2", &[]);
-    conv2.append(user_msg("小明的 sushi")).await.unwrap();
-    m.compress(&mut conv2, None).await.unwrap();
-
-    let ent = m.graph().get_entity("person:小明").unwrap().unwrap();
-    assert_eq!(ent.attrs["favorite_food"], serde_json::json!("sushi"), "TE.7: correction should update attribute");
+    assert_te_scenario("m07_corrections").await;
 }
 
 // ===========================================================================

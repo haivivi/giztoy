@@ -29,6 +29,7 @@ rust_test(
     deps = [
         "@openerp//rust/lib/kv:kv",
         "@crate_index//:rmpv",
+        "@crate_index//:serde_yaml",
         "@crate_index//:tempfile",
         "@crate_index//:tokio",
     ],

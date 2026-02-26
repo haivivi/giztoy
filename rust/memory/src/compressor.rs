@@ -36,11 +36,10 @@ pub struct LLMCompressorConfig {
     /// Keyed by entity label (e.g., "person:小明") → attribute map.
     pub profiles: Option<HashMap<String, HashMap<String, serde_json::Value>>>,
 
-    /// SegmentorMux is the multiplexer used to resolve the segmentor. Required.
-    pub seg_mux: Arc<SegmentorMux>,
+    /// SegmentorMux overrides the default segmentor mux. Optional.
+    pub seg_mux: Option<Arc<SegmentorMux>>,
 
-    /// ProfilerMux is the multiplexer used to resolve the profiler.
-    /// Required if profiler is set.
+    /// ProfilerMux overrides the default profiler mux. Optional.
     pub prof_mux: Option<Arc<ProfilerMux>>,
 }
 
@@ -50,11 +49,6 @@ impl LLMCompressorConfig {
         if self.segmentor.is_empty() {
             return Err(MemoryError::General(
                 "memory: LLMCompressorConfig.segmentor is required".into(),
-            ));
-        }
-        if self.profiler.is_some() && self.prof_mux.is_none() {
-            return Err(MemoryError::General(
-                "memory: LLMCompressorConfig.prof_mux is required when profiler is set".into(),
             ));
         }
         Ok(())
@@ -68,7 +62,7 @@ impl std::fmt::Debug for LLMCompressorConfig {
             .field("profiler", &self.profiler)
             .field("schema", &self.schema)
             .field("profiles", &self.profiles)
-            .field("seg_mux", &"Arc<SegmentorMux>")
+            .field("seg_mux", &if self.seg_mux.is_some() { "Some(Arc<SegmentorMux>)" } else { "None" })
             .field("prof_mux", &if self.prof_mux.is_some() { "Some(Arc<ProfilerMux>)" } else { "None" })
             .finish()
     }
@@ -96,7 +90,11 @@ impl LLMCompressor {
 
     /// Run the segmentor.
     async fn run_segmentor(&self, input: segmentors::SegmentorInput) -> Result<SegmentorResult, MemoryError> {
-        let result = self.cfg.seg_mux.process(&self.cfg.segmentor, input).await;
+        let result = if let Some(mux) = &self.cfg.seg_mux {
+            mux.process(&self.cfg.segmentor, input).await
+        } else {
+            default_segmentor_mux().process(&self.cfg.segmentor, input).await
+        };
         
         result.map_err(|e| MemoryError::General(e.to_string()))
     }
@@ -107,11 +105,21 @@ impl LLMCompressor {
         let result = if let Some(mux) = &self.cfg.prof_mux {
             mux.process(pattern, input).await
         } else {
-            return Err(MemoryError::General("memory: prof_mux is required".into()));
+            default_profiler_mux().process(pattern, input).await
         };
         
         result.map_err(|e| MemoryError::General(e.to_string()))
     }
+}
+
+fn default_segmentor_mux() -> &'static SegmentorMux {
+    static DEFAULT_SEG_MUX: std::sync::OnceLock<SegmentorMux> = std::sync::OnceLock::new();
+    DEFAULT_SEG_MUX.get_or_init(SegmentorMux::new)
+}
+
+fn default_profiler_mux() -> &'static ProfilerMux {
+    static DEFAULT_PROF_MUX: std::sync::OnceLock<ProfilerMux> = std::sync::OnceLock::new();
+    DEFAULT_PROF_MUX.get_or_init(ProfilerMux::new)
 }
 
 #[async_trait]
