@@ -60,18 +60,28 @@ impl Memory {
         let summaries: Vec<String> = to_compact.iter().map(|s| s.summary.clone()).collect();
         let result = compressor.compact_segments(&summaries).await?;
 
-        let first_ts = to_compact[0].timestamp;
-        let last_ts = to_compact[to_compact.len() - 1].timestamp;
-        let span = Duration::from_nanos((last_ts - first_ts) as u64);
+        // Compute span using min/max timestamps to avoid relying on scan order
+        // and to avoid signed->unsigned wrap when timestamps are unexpected.
+        let min_ts = to_compact
+            .iter()
+            .map(|s| s.timestamp)
+            .min()
+            .unwrap_or(0);
+        let max_ts = to_compact
+            .iter()
+            .map(|s| s.timestamp)
+            .max()
+            .unwrap_or(min_ts);
+        let span = Duration::from_nanos(max_ts.saturating_sub(min_ts) as u64);
         let target_bucket = ensure_coarser(bucket, &bucket_for_span(span));
 
-        let mut next_ts = last_ts;
+        let mut next_ts = max_ts;
         for (idx, seg_input) in result.segments.into_iter().enumerate() {
             // Segment storage key is keyed by bucket+timestamp.
             // Ensure each compacted segment has a distinct timestamp to avoid
             // key collisions when a compressor returns multiple segments.
             let seg_ts = if idx == 0 {
-                last_ts
+                max_ts
             } else {
                 next_ts
                     .checked_add(1)
