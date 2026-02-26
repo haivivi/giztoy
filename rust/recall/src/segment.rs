@@ -105,7 +105,7 @@ impl RecallIndex {
     /// Return all segments in a specific bucket in KV scan order.
     ///
     /// The underlying KV contract guarantees scan returns keys in sorted order.
-    /// With segment keys encoded as `{prefix}:seg:{bucket}:{ts}`, this is the
+    /// With segment keys encoded as `{prefix}:seg:{bucket}:{ts_20d}`, this is the
     /// effective ordering used by compaction.
     pub fn bucket_segments(&self, bucket: &Bucket) -> Result<Vec<Segment>, RecallError> {
         let prefix = bucket_prefix(&self.prefix, bucket.as_str());

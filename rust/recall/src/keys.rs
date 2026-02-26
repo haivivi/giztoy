@@ -1,7 +1,16 @@
 /// Build the KV key for a segment.
-/// Format: `{prefix}:seg:{bucket}:{ts_ns}`
+/// Format: `{prefix}:seg:{bucket}:{ts_ns_20d}`
+///
+/// Timestamp is zero-padded to 20 decimal digits for stable lexicographic
+/// ordering in KV scans.
 pub fn segment_key(prefix: &str, bucket: &str, ts: i64) -> String {
-    format!("{prefix}:seg:{bucket}:{ts}")
+    if ts >= 0 {
+        format!("{prefix}:seg:{bucket}:{ts:020}")
+    } else {
+        // Negative timestamps are not expected in normal usage, but keep the
+        // encoding parseable for robustness.
+        format!("{prefix}:seg:{bucket}:{ts}")
+    }
 }
 
 /// Return the KV prefix for listing all segments across all buckets.
@@ -34,10 +43,14 @@ pub fn parse_sid_value(data: &[u8]) -> Result<(String, i64), String> {
     let s = std::str::from_utf8(data).map_err(|e| e.to_string())?;
     if let Some(idx) = s.find(':') {
         let bucket = s[..idx].to_string();
-        let ts: i64 = s[idx + 1..].parse().map_err(|e: std::num::ParseIntError| e.to_string())?;
+        let ts: i64 = s[idx + 1..]
+            .parse()
+            .map_err(|e: std::num::ParseIntError| e.to_string())?;
         Ok((bucket, ts))
     } else {
-        let ts: i64 = s.parse().map_err(|e: std::num::ParseIntError| e.to_string())?;
+        let ts: i64 = s
+            .parse()
+            .map_err(|e: std::num::ParseIntError| e.to_string())?;
         Ok(("1h".to_string(), ts))
     }
 }
@@ -46,4 +59,22 @@ pub fn parse_sid_value(data: &[u8]) -> Result<(String, i64), String> {
 /// Format: `{prefix}:g`
 pub fn graph_prefix(prefix: &str) -> String {
     format!("{prefix}:g")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::segment_key;
+
+    #[test]
+    fn segment_key_is_zero_padded() {
+        let k = segment_key("mem:p1", "1h", 123);
+        assert!(k.ends_with(":00000000000000000123"));
+    }
+
+    #[test]
+    fn segment_key_keeps_lex_order_for_timestamps() {
+        let k9 = segment_key("mem:p1", "1h", 9);
+        let k10 = segment_key("mem:p1", "1h", 10);
+        assert!(k9 < k10);
+    }
 }
