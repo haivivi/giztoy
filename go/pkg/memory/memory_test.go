@@ -53,45 +53,45 @@ func newMockEmbedder() *mockEmbedder {
 			// --- Segment summaries (realistic conversations) ---
 
 			// Day 1: 小明 dinosaur session
-			"和小明聊了恐龙，他最喜欢霸王龙":           {0.9, 0, 0, 0, 0, 0, 0, 0},
-			"小明问了很多恐龙的问题，还画了一只三角龙":       {0.7, 0, 0, 0, 0.3, 0, 0, 0},
-			"和小明聊了恐龙":                      {0.9, 0.1, 0, 0, 0, 0, 0, 0},
-			"学到了太空知识":                       {0.1, 0.9, 0, 0, 0, 0, 0, 0},
-			"一起做了饭":                         {0.1, 0, 0.9, 0, 0, 0, 0, 0},
-			"played music":                   {0, 0, 0.1, 0.9, 0, 0, 0, 0},
-			"小明说长大想当古生物学家":                  {0.8, 0.1, 0, 0, 0, 0, 0, 0},
-			"给小明讲了恐龙灭绝的故事，他有点伤心":           {0.6, 0, 0, 0, 0, 0.3, 0, 0},
+			"和小明聊了恐龙，他最喜欢霸王龙":      {0.9, 0, 0, 0, 0, 0, 0, 0},
+			"小明问了很多恐龙的问题，还画了一只三角龙": {0.7, 0, 0, 0, 0.3, 0, 0, 0},
+			"和小明聊了恐龙":              {0.9, 0.1, 0, 0, 0, 0, 0, 0},
+			"学到了太空知识":              {0.1, 0.9, 0, 0, 0, 0, 0, 0},
+			"一起做了饭":                {0.1, 0, 0.9, 0, 0, 0, 0, 0},
+			"played music":         {0, 0, 0.1, 0.9, 0, 0, 0, 0},
+			"小明说长大想当古生物学家":         {0.8, 0.1, 0, 0, 0, 0, 0, 0},
+			"给小明讲了恐龙灭绝的故事，他有点伤心":   {0.6, 0, 0, 0, 0, 0.3, 0, 0},
 
 			// Day 2: 小红 drawing session
-			"小红画了一个公主城堡，涂了粉色和金色":           {0, 0, 0, 0, 0.8, 0.2, 0, 0},
-			"和小红一起编了一个公主和小猫的故事":            {0, 0, 0, 0, 0.2, 0.8, 0, 0},
-			"小红说她的公主会骑恐龙":                   {0.3, 0, 0, 0, 0.4, 0.3, 0, 0},
+			"小红画了一个公主城堡，涂了粉色和金色": {0, 0, 0, 0, 0.8, 0.2, 0, 0},
+			"和小红一起编了一个公主和小猫的故事":  {0, 0, 0, 0, 0.2, 0.8, 0, 0},
+			"小红说她的公主会骑恐龙":        {0.3, 0, 0, 0, 0.4, 0.3, 0, 0},
 
 			// Day 3: 妈妈 cooking
-			"妈妈教我们做了蛋炒饭，小明吃了两碗":            {0, 0, 0.9, 0, 0, 0, 0, 0},
-			"妈妈说周末要做恐龙形状的饼干":                {0.3, 0, 0.7, 0, 0, 0, 0, 0},
+			"妈妈教我们做了蛋炒饭，小明吃了两碗": {0, 0, 0.9, 0, 0, 0, 0, 0},
+			"妈妈说周末要做恐龙形状的饼干":    {0.3, 0, 0.7, 0, 0, 0, 0, 0},
 
 			// Day 4: 爸爸 music + Lego
-			"和爸爸一起听了古典音乐，小明跟着打节拍":          {0, 0, 0, 0.8, 0, 0, 0, 0.1},
-			"爸爸和小明一起拼了一个恐龙乐高模型":             {0.4, 0, 0, 0, 0, 0, 0, 0.6},
+			"和爸爸一起听了古典音乐，小明跟着打节拍": {0, 0, 0, 0.8, 0, 0, 0, 0.1},
+			"爸爸和小明一起拼了一个恐龙乐高模型":   {0.4, 0, 0, 0, 0, 0, 0, 0.6},
 
 			// Day 5: Outdoor + science
-			"全家去了自然博物馆看恐龙化石，小明超兴奋":          {0.7, 0.2, 0, 0, 0, 0, 0.1, 0},
-			"小红在博物馆里画了好多恐龙素描":               {0.4, 0, 0, 0, 0.6, 0, 0, 0},
-			"小明在天文馆看了星空投影，问了黑洞的问题":          {0, 0.9, 0, 0, 0, 0, 0, 0},
+			"全家去了自然博物馆看恐龙化石，小明超兴奋": {0.7, 0.2, 0, 0, 0, 0, 0.1, 0},
+			"小红在博物馆里画了好多恐龙素描":      {0.4, 0, 0, 0, 0.6, 0, 0, 0},
+			"小明在天文馆看了星空投影，问了黑洞的问题": {0, 0.9, 0, 0, 0, 0, 0, 0},
 
 			// Day 6: Bedtime stories
-			"给小明讲了宇宙探险的睡前故事":                {0, 0.5, 0, 0, 0, 0.5, 0, 0},
-			"给小红讲了小猫公主和恐龙的故事，她听得好开心":       {0.2, 0, 0, 0, 0, 0.7, 0, 0},
+			"给小明讲了宇宙探险的睡前故事":         {0, 0.5, 0, 0, 0, 0.5, 0, 0},
+			"给小红讲了小猫公主和恐龙的故事，她听得好开心": {0.2, 0, 0, 0, 0, 0.7, 0, 0},
 
 			// Day 7: 小红 art class
-			"小红今天美术课画了全家福，画里还有我":            {0, 0, 0, 0, 0.9, 0, 0, 0},
+			"小红今天美术课画了全家福，画里还有我": {0, 0, 0, 0, 0.9, 0, 0, 0},
 
 			// --- Search queries ---
-			"小明喜欢什么":                         {0.5, 0.2, 0, 0, 0, 0, 0, 0.3},
-			"小红喜欢什么":                         {0, 0, 0, 0, 0.5, 0.3, 0, 0},
-			"最近和家人做了什么":                      {0.2, 0.1, 0.2, 0.1, 0.1, 0.2, 0.1, 0.1},
-			"恐龙相关的回忆":                        {0.95, 0, 0, 0, 0, 0.05, 0, 0},
+			"小明喜欢什么":    {0.5, 0.2, 0, 0, 0, 0, 0, 0.3},
+			"小红喜欢什么":    {0, 0, 0, 0, 0.5, 0.3, 0, 0},
+			"最近和家人做了什么": {0.2, 0.1, 0.2, 0.1, 0.1, 0.2, 0.1, 0.1},
+			"恐龙相关的回忆":   {0.95, 0, 0, 0, 0, 0.05, 0, 0},
 		},
 	}
 }
@@ -1279,6 +1279,116 @@ func TestHostNoVecSearch(t *testing.T) {
 	// The segment should still be findable.
 	if len(result.Segments) == 0 {
 		t.Log("no segments returned without vector search (expected if no label/keyword match)")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Host Delete tests (equivalent to Rust TH.5, TH.6)
+// ---------------------------------------------------------------------------
+
+func TestHostDeleteClearsData(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	ctx := context.Background()
+
+	// Open a persona and add data.
+	m := mustOpen(t, h, "cat_girl")
+	conv := m.OpenConversation("dev1", nil)
+	if err := conv.Append(ctx, Message{Role: RoleUser, Content: "hello", Timestamp: 1000}); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+
+	// Verify data exists.
+	if count, err := conv.Count(ctx); err != nil {
+		t.Fatalf("Count: %v", err)
+	} else if count == 0 {
+		t.Fatal("expected data before delete")
+	}
+
+	// Delete the persona.
+	if err := h.Delete(ctx, "cat_girl"); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+
+	// Reopen the persona - data should be gone.
+	m2, err := h.Open("cat_girl")
+	if err != nil {
+		t.Fatalf("Open after delete: %v", err)
+	}
+	conv2 := m2.OpenConversation("dev1", nil)
+	if count, err := conv2.Count(ctx); err != nil {
+		t.Fatalf("Count after reopen: %v", err)
+	} else if count != 0 {
+		t.Fatalf("expected empty after delete, got %d", count)
+	}
+}
+
+func TestHostDeleteNonExistentNoError(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	ctx := context.Background()
+
+	// Delete non-existent ID should not error.
+	if err := h.Delete(ctx, "ghost"); err != nil {
+		t.Fatalf("Delete non-existent: %v", err)
+	}
+}
+
+func TestHostDeletePrefixIsolation(t *testing.T) {
+	h := newTestHost(t)
+	defer h.Close()
+	ctx := context.Background()
+
+	// Create two personas with similar names to test prefix isolation.
+	mA := mustOpen(t, h, "a")
+	mAB := mustOpen(t, h, "a:b")
+
+	// Add data to both.
+	if err := mA.StoreSegment(ctx, SegmentInput{
+		Summary: "persona a segment",
+		Labels:  []string{"test"},
+	}, recall.Bucket1H); err != nil {
+		t.Fatalf("StoreSegment for a: %v", err)
+	}
+	if err := mAB.StoreSegment(ctx, SegmentInput{
+		Summary: "persona a:b segment",
+		Labels:  []string{"test"},
+	}, recall.Bucket1H); err != nil {
+		t.Fatalf("StoreSegment for a:b: %v", err)
+	}
+
+	// Delete "a" - should NOT affect "a:b".
+	if err := h.Delete(ctx, "a"); err != nil {
+		t.Fatalf("Delete a: %v", err)
+	}
+
+	// Reopen "a:b" - data should still exist.
+	mAB2, err := h.Open("a:b")
+	if err != nil {
+		t.Fatalf("Open a:b after delete: %v", err)
+	}
+	segs, err := mAB2.Index().RecentSegments(ctx, 10)
+	if err != nil {
+		t.Fatalf("RecentSegments: %v", err)
+	}
+	if len(segs) == 0 {
+		t.Fatal("a:b data should exist after deleting a")
+	}
+	if segs[0].Summary != "persona a:b segment" {
+		t.Fatalf("expected a:b segment, got %q", segs[0].Summary)
+	}
+
+	// Reopen "a" - data should be gone.
+	mA2, err := h.Open("a")
+	if err != nil {
+		t.Fatalf("Open a after delete: %v", err)
+	}
+	segsA, err := mA2.Index().RecentSegments(ctx, 10)
+	if err != nil {
+		t.Fatalf("RecentSegments a: %v", err)
+	}
+	if len(segsA) != 0 {
+		t.Fatalf("a data should be gone, got %d segments", len(segsA))
 	}
 }
 

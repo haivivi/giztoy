@@ -203,6 +203,48 @@ func (h *Host) Close() error {
 	return nil
 }
 
+// Delete removes all data for a persona. Safe to call for non-existent IDs.
+// This removes the persona from the host's internal cache and deletes all
+// KV entries that start with the persona's prefix.
+func (h *Host) Delete(ctx context.Context, id string) error {
+	// Build prefix: mem{id} - List will automatically append separator
+	// to ensure "a" doesn't match "a:b".
+	prefix := memPrefix(id)
+
+	// List and delete all entries with this prefix.
+	entries, err := listEntries(ctx, h.cfg.Store, prefix)
+	if err != nil {
+		return fmt.Errorf("memory: delete %q: list entries: %w", id, err)
+	}
+	if len(entries) > 0 {
+		keys := make([]kv.Key, len(entries))
+		for i, e := range entries {
+			keys[i] = e.Key
+		}
+		if err := h.cfg.Store.BatchDelete(ctx, keys); err != nil {
+			return fmt.Errorf("memory: delete %q: batch delete: %w", id, err)
+		}
+	}
+
+	// Remove from internal cache.
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	delete(h.memories, id)
+	return nil
+}
+
+// listEntries returns all entries matching the given prefix.
+func listEntries(ctx context.Context, store kv.Store, prefix kv.Key) ([]kv.Entry, error) {
+	var results []kv.Entry
+	for entry, err := range store.List(ctx, prefix) {
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, entry)
+	}
+	return results, nil
+}
+
 // checkEmbedMeta verifies embedding model consistency. On first call it
 // persists the current model; on subsequent calls it validates the stored
 // model matches.
