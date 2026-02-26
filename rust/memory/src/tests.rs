@@ -28,6 +28,7 @@ const TEST_SEP: char = '\x1F';
 struct FakeSegmentor;
 
 struct FailingProfiler;
+struct DefaultMuxProfiler;
 
 #[async_trait::async_trait]
 impl Segmentor for FakeSegmentor {
@@ -123,6 +124,24 @@ impl Profiler for FailingProfiler {
     }
 }
 
+#[async_trait::async_trait]
+impl Profiler for DefaultMuxProfiler {
+    async fn process(&self, _input: ProfilerInput) -> Result<ProfilerResult, giztoy_genx::error::GenxError> {
+        Ok(ProfilerResult {
+            schema_changes: vec![],
+            profile_updates: HashMap::from([(
+                "person:小明".into(),
+                HashMap::from([("mood".into(), serde_json::json!("happy"))]),
+            )]),
+            relations: vec![],
+        })
+    }
+
+    fn model(&self) -> &str {
+        "default-prof"
+    }
+}
+
 /// Mock compressor that always fails.
 struct FailingCompressor;
 
@@ -173,6 +192,29 @@ fn new_mock_llm_compressor_with_failing_profiler() -> LLMCompressor {
         profiles: None,
         seg_mux: Some(Arc::new(seg_mux)),
         prof_mux: Some(Arc::new(prof_mux)),
+    })
+    .unwrap()
+}
+
+fn new_default_mux_llm_compressor(with_profiler: bool) -> LLMCompressor {
+    let seg_pattern = format!("test-seg-default-{}", now_nano());
+    giztoy_genx::segmentors::handle(&seg_pattern, Arc::new(FakeSegmentor)).unwrap();
+
+    let (profiler, prof_mux) = if with_profiler {
+        let prof_pattern = format!("test-prof-default-{}", now_nano());
+        giztoy_genx::profilers::handle(&prof_pattern, Arc::new(DefaultMuxProfiler)).unwrap();
+        (Some(prof_pattern), None)
+    } else {
+        (None, None)
+    };
+
+    LLMCompressor::new(LLMCompressorConfig {
+        segmentor: seg_pattern,
+        profiler,
+        schema: None,
+        profiles: None,
+        seg_mux: None,
+        prof_mux,
     })
     .unwrap()
 }
@@ -1196,6 +1238,24 @@ async fn tl6_messages_to_strings_format() {
     assert_eq!(strs.len(), 2);
     assert_eq!(strs[0], "user(Alice): hello");
     assert_eq!(strs[1], "model: hi");
+}
+
+#[tokio::test]
+async fn tl7_default_segmentor_mux_when_none() {
+    let c = new_default_mux_llm_compressor(false);
+    let msgs = vec![user_msg("小明今天很开心")];
+    let result = c.compress_messages(&msgs).await.unwrap();
+    assert_eq!(result.segments.len(), 1);
+    assert!(result.segments[0].summary.contains("小明"));
+}
+
+#[tokio::test]
+async fn tl8_default_profiler_mux_when_none() {
+    let c = new_default_mux_llm_compressor(true);
+    let msgs = vec![user_msg("小明今天很开心")];
+    let update = c.extract_entities(&msgs).await.unwrap();
+    let ent = update.entities.iter().find(|e| e.label == "person:小明").unwrap();
+    assert_eq!(ent.attrs.get("mood"), Some(&serde_json::json!("happy")));
 }
 
 // ===========================================================================

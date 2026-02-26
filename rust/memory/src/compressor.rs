@@ -93,7 +93,7 @@ impl LLMCompressor {
         let result = if let Some(mux) = &self.cfg.seg_mux {
             mux.process(&self.cfg.segmentor, input).await
         } else {
-            default_segmentor_mux().process(&self.cfg.segmentor, input).await
+            segmentors::process(&self.cfg.segmentor, input).await
         };
         
         result.map_err(|e| MemoryError::General(e.to_string()))
@@ -105,22 +105,13 @@ impl LLMCompressor {
         let result = if let Some(mux) = &self.cfg.prof_mux {
             mux.process(pattern, input).await
         } else {
-            default_profiler_mux().process(pattern, input).await
+            profilers::process(pattern, input).await
         };
         
         result.map_err(|e| MemoryError::General(e.to_string()))
     }
 }
 
-fn default_segmentor_mux() -> &'static SegmentorMux {
-    static DEFAULT_SEG_MUX: std::sync::OnceLock<SegmentorMux> = std::sync::OnceLock::new();
-    DEFAULT_SEG_MUX.get_or_init(SegmentorMux::new)
-}
-
-fn default_profiler_mux() -> &'static ProfilerMux {
-    static DEFAULT_PROF_MUX: std::sync::OnceLock<ProfilerMux> = std::sync::OnceLock::new();
-    DEFAULT_PROF_MUX.get_or_init(ProfilerMux::new)
-}
 
 #[async_trait]
 impl Compressor for LLMCompressor {

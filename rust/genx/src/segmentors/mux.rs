@@ -47,6 +47,15 @@ impl SegmentorMux {
             })
     }
 
+    pub fn get_arc(&self, pattern: &str) -> Result<Arc<dyn Segmentor>, GenxError> {
+        self.routes.get(pattern).cloned().ok_or_else(|| {
+            GenxError::Other(anyhow::anyhow!(
+                "segmentors: segmentor not found for {}",
+                pattern,
+            ))
+        })
+    }
+
     pub async fn process(
         &self,
         pattern: &str,
