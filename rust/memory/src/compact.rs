@@ -65,14 +65,27 @@ impl Memory {
         let span = Duration::from_nanos((last_ts - first_ts) as u64);
         let target_bucket = ensure_coarser(bucket, &bucket_for_span(span));
 
-        for seg_input in result.segments {
-            let ts = now_nano();
+        let mut next_ts = last_ts;
+        for (idx, seg_input) in result.segments.into_iter().enumerate() {
+            // Segment storage key is keyed by bucket+timestamp.
+            // Ensure each compacted segment has a distinct timestamp to avoid
+            // key collisions when a compressor returns multiple segments.
+            let seg_ts = if idx == 0 {
+                last_ts
+            } else {
+                next_ts
+                    .checked_add(1)
+                    .unwrap_or_else(now_nano)
+            };
+            next_ts = seg_ts;
+
+            let id_ts = now_nano();
             let new_seg = Segment {
-                id: format!("{}-{}", self.id(), ts),
+                id: format!("{}-{}", self.id(), id_ts),
                 summary: seg_input.summary,
                 keywords: seg_input.keywords,
                 labels: seg_input.labels,
-                timestamp: last_ts,
+                timestamp: seg_ts,
                 bucket: target_bucket.as_str().to_string(),
             };
             self.index().store_segment(&new_seg).await?;

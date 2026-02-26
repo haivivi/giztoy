@@ -687,9 +687,7 @@ func generateSerialization(outDir string) error {
 		}
 	}
 
-	// For keys, we don't necessarily need to generate them in Go, or if we do,
-	// we just write out some example keys. The task specifies `testdata/memory/keys/conv_msg_keys.txt`
-	// Wait, the task says `TX.5 KV key byte-exact 对比`. I can generate `conv_msg_keys.txt` here too.
+	// Generate shared KV key golden file used by TX.5 byte-exact checks.
 	keysDir := filepath.Join(filepath.Dir(outDir), "keys")
 	if err := os.MkdirAll(keysDir, 0755); err != nil {
 		return err
