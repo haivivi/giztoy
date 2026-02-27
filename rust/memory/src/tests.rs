@@ -587,6 +587,28 @@ async fn th7_delete_prefix_isolation() {
     assert_eq!(conv_ab_after.count().unwrap(), 1, "delete(a) must not affect persona a:b");
 }
 
+#[test]
+fn th8_delete_clears_graph_with_custom_separator() {
+    let h = new_test_host(); // uses TEST_SEP='\x1F'
+    let m = h.open("p1");
+
+    m.apply_entity_update(&EntityUpdate {
+        entities: vec![EntityInput {
+            label: "person:小明".into(),
+            attrs: HashMap::from([("age".into(), serde_json::json!(5))]),
+        }],
+        relations: vec![],
+    })
+    .unwrap();
+
+    assert!(m.graph().get_entity("person:小明").unwrap().is_some());
+
+    h.delete("p1").unwrap();
+
+    let m2 = h.open("p1");
+    assert!(m2.graph().get_entity("person:小明").unwrap().is_none());
+}
+
 // ===========================================================================
 // TK: Keys Encoding (4 tests)
 // ===========================================================================

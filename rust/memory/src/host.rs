@@ -126,7 +126,7 @@ impl Host {
 
         // Delete known per-persona namespaces with scoped prefix scans to
         // avoid scanning all personas and to keep strict key-boundary safety.
-        for ns_prefix in [":conv:", ":seg:", ":sid:", ":g:"] {
+        for ns_prefix in [":conv:", ":seg:", ":sid:", ":g"] {
             let scoped = format!("{persona_prefix}{ns_prefix}");
             let entries = self.store.scan(&scoped)?;
             if !entries.is_empty() {
