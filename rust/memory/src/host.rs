@@ -123,12 +123,21 @@ impl Host {
     /// Delete all data for a persona. Safe to call for non-existent IDs.
     pub fn delete(&self, id: &str) -> Result<(), MemoryError> {
         let persona_prefix = mem_prefix(id);
+        let sep = self.separator;
 
-        // Delete known per-persona namespaces with scoped prefix scans to
-        // avoid scanning all personas and to keep strict key-boundary safety.
-        for ns_prefix in [":conv:", ":seg:", ":sid:", ":g"] {
-            let scoped = format!("{persona_prefix}{ns_prefix}");
-            let entries = self.store.scan(&scoped)?;
+        // Delete known per-persona namespaces with scoped prefix scans.
+        // conv/seg/sid use ':' as namespace delimiter (fixed in key format).
+        // graph uses the configurable separator, so we append it explicitly
+        // to avoid matching unrelated personas (e.g. "a:goals" when deleting "a").
+        let ns_prefixes = vec![
+            format!("{persona_prefix}:conv:"),
+            format!("{persona_prefix}:seg:"),
+            format!("{persona_prefix}:sid:"),
+            format!("{persona_prefix}:g{sep}"),
+        ];
+
+        for scoped in &ns_prefixes {
+            let entries = self.store.scan(scoped)?;
             if !entries.is_empty() {
                 let keys: Vec<&str> = entries.iter().map(|(k, _)| k.as_str()).collect();
                 self.store.batch_delete(&keys)?;
