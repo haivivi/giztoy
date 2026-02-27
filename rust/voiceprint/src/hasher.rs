@@ -53,15 +53,25 @@ impl Hasher {
     /// compile time. Both Go and Rust use the same planes, ensuring
     /// cross-language hash consistency.
     pub fn default_512() -> Self {
-        static PLANES_JSON: &[u8] = include_bytes!("planes_512_16.json");
+        static PLANES_JSON: &[u8] = include_bytes!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../data/voiceprint/planes_512_16.json"
+        ));
         Self::from_json(PLANES_JSON).expect("embedded planes_512_16.json is valid")
     }
 
     /// Creates a Hasher with pre-computed planes.
     pub fn from_planes(dim: usize, bits: usize, planes: Vec<Vec<f32>>) -> Self {
-        assert!(bits > 0 && bits % 4 == 0, "voiceprint: bits must be a positive multiple of 4");
+        assert!(
+            bits > 0 && bits % 4 == 0,
+            "voiceprint: bits must be a positive multiple of 4"
+        );
         assert!(dim > 0, "voiceprint: dim must be positive");
-        assert_eq!(planes.len(), bits, "voiceprint: planes count must equal bits");
+        assert_eq!(
+            planes.len(),
+            bits,
+            "voiceprint: planes count must equal bits"
+        );
         for (i, p) in planes.iter().enumerate() {
             assert_eq!(p.len(), dim, "voiceprint: plane {i} has wrong dimension");
         }
@@ -76,7 +86,10 @@ impl Hasher {
     /// **Note**: For cross-language (Go/Rust) hash consistency, prefer
     /// [`Hasher::from_planes`] with shared pre-computed planes.
     pub fn new(dim: usize, bits: usize, seed: u64) -> Self {
-        assert!(bits > 0 && bits % 4 == 0, "voiceprint: bits must be a positive multiple of 4");
+        assert!(
+            bits > 0 && bits % 4 == 0,
+            "voiceprint: bits must be a positive multiple of 4"
+        );
         assert!(dim > 0, "voiceprint: dim must be positive");
 
         let mut rng = Xoshiro256ss::new(seed);
@@ -149,10 +162,7 @@ fn dot32(a: &[f32], b: &[f32]) -> f32 {
 }
 
 fn hex_encode_upper(bytes: &[u8]) -> String {
-    bytes
-        .iter()
-        .map(|b| format!("{b:02X}"))
-        .collect()
+    bytes.iter().map(|b| format!("{b:02X}")).collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -260,7 +270,8 @@ mod tests {
 
         assert_eq!(hash.len(), 4, "16 bits = 4 hex chars");
         assert!(
-            hash.chars().all(|c| c.is_ascii_hexdigit() && !c.is_lowercase()),
+            hash.chars()
+                .all(|c| c.is_ascii_hexdigit() && !c.is_lowercase()),
             "should be uppercase hex, got {hash}"
         );
     }
@@ -324,7 +335,10 @@ mod tests {
         let variance = sum_sq / n as f64 - mean * mean;
 
         assert!(mean.abs() < 0.1, "mean should be ~0, got {mean}");
-        assert!((variance - 1.0).abs() < 0.1, "variance should be ~1, got {variance}");
+        assert!(
+            (variance - 1.0).abs() < 0.1,
+            "variance should be ~1, got {variance}"
+        );
     }
 
     #[test]

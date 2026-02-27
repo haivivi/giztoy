@@ -35,6 +35,7 @@ mod error;
 pub mod fbank;
 mod hasher;
 mod model;
+#[cfg(feature = "ncnn")]
 mod model_ncnn;
 mod voiceprint;
 
@@ -43,5 +44,6 @@ pub use error::VoiceprintError;
 pub use fbank::{cmvn, compute_fbank, l2_normalize, FbankConfig};
 pub use hasher::Hasher;
 pub use model::VoiceprintModel;
+#[cfg(feature = "ncnn")]
 pub use model_ncnn::{NCNNModel, NCNNModelConfig};
 pub use voiceprint::{voice_label, SpeakerChunk, SpeakerStatus};

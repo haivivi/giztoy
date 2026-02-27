@@ -2,7 +2,7 @@
 
 use std::sync::RwLock;
 
-use giztoy_ncnn::{Mat, Net, NcnnOption};
+use giztoy_ncnn::{Mat, NcnnOption, Net};
 
 use crate::error::VoiceprintError;
 use crate::fbank::{cmvn, compute_fbank, l2_normalize, FbankConfig};
@@ -129,8 +129,8 @@ impl VoiceprintModel for NCNNModel {
         let net = inner.net.as_ref().ok_or(VoiceprintError::Closed)?;
 
         // Step 1: Compute fbank features.
-        let mut features = compute_fbank(audio, &inner.fbank_cfg)
-            .ok_or(VoiceprintError::AudioTooShort {
+        let mut features =
+            compute_fbank(audio, &inner.fbank_cfg).ok_or(VoiceprintError::AudioTooShort {
                 min_bytes: inner.fbank_cfg.frame_length * 2,
                 got_bytes: audio.len(),
             })?;
@@ -148,7 +148,13 @@ impl VoiceprintModel for NCNNModel {
         // Step 3: Segment-based extraction with averaging.
         let num_frames = features.len();
         if num_frames <= SEG_FRAMES {
-            let mut emb = extract_segment(net, &features, &inner.input_name, &inner.output_name, inner.dim)?;
+            let mut emb = extract_segment(
+                net,
+                &features,
+                &inner.input_name,
+                &inner.output_name,
+                inner.dim,
+            )?;
             l2_normalize(&mut emb);
             return Ok(emb);
         }
@@ -158,7 +164,13 @@ impl VoiceprintModel for NCNNModel {
         let mut last_start = 0;
         let mut start = 0;
         while start + SEG_FRAMES <= num_frames {
-            if let Ok(mut emb) = extract_segment(net, &features[start..start + SEG_FRAMES], &inner.input_name, &inner.output_name, inner.dim) {
+            if let Ok(mut emb) = extract_segment(
+                net,
+                &features[start..start + SEG_FRAMES],
+                &inner.input_name,
+                &inner.output_name,
+                inner.dim,
+            ) {
                 l2_normalize(&mut emb);
                 embeddings.push(emb);
             }
@@ -169,7 +181,13 @@ impl VoiceprintModel for NCNNModel {
         // Ensure the last segment covers the end of the audio.
         let tail = num_frames - SEG_FRAMES;
         if tail > last_start {
-            if let Ok(mut emb) = extract_segment(net, &features[tail..], &inner.input_name, &inner.output_name, inner.dim) {
+            if let Ok(mut emb) = extract_segment(
+                net,
+                &features[tail..],
+                &inner.input_name,
+                &inner.output_name,
+                inner.dim,
+            ) {
                 l2_normalize(&mut emb);
                 embeddings.push(emb);
             }
@@ -263,7 +281,11 @@ mod tests {
         assert_eq!(emb.len(), 512);
 
         // Should be L2-normalized (unit length).
-        let norm: f64 = emb.iter().map(|&x| (x as f64) * (x as f64)).sum::<f64>().sqrt();
+        let norm: f64 = emb
+            .iter()
+            .map(|&x| (x as f64) * (x as f64))
+            .sum::<f64>()
+            .sqrt();
         assert!(
             (norm - 1.0).abs() < 1e-4,
             "embedding should be unit length, got {norm}"

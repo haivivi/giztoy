@@ -11,6 +11,7 @@ giztoy-buffer = { workspace = true }
 giztoy-audio = { workspace = true }
 giztoy-dashscope = { workspace = true }
 giztoy-doubaospeech = { workspace = true }
+giztoy-voiceprint = { workspace = true }
 tokio = { workspace = true }
 tokio-stream = { workspace = true }
 serde = { workspace = true }
