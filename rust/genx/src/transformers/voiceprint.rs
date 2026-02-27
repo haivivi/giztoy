@@ -5,7 +5,8 @@ use giztoy_voiceprint::{Detector, DetectorConfig, Hasher, SpeakerStatus, Voicepr
 use tokio::sync::mpsc;
 
 use crate::error::GenxError;
-use crate::stream::{Stream, StreamResult};
+use crate::stream::Stream;
+use crate::stream_utils::channel_stream;
 use crate::transformer::Transformer;
 use crate::types::MessageChunk;
 
@@ -45,6 +46,17 @@ impl VoiceprintTransformer {
 
     fn segment_bytes(&self) -> usize {
         self.config.sample_rate * 2 * self.config.segment_duration_ms / 1000
+    }
+
+    fn validate_config(&self) -> Result<(), GenxError> {
+        if self.segment_bytes() == 0 {
+            return Err(GenxError::Other(anyhow::anyhow!(
+                "invalid voiceprint config: segment bytes is zero (sample_rate={}, segment_duration_ms={})",
+                self.config.sample_rate,
+                self.config.segment_duration_ms
+            )));
+        }
+        Ok(())
     }
 
     fn is_pcm_mime(mime: &str) -> bool {
@@ -88,6 +100,8 @@ impl Transformer for VoiceprintTransformer {
         _pattern: &str,
         input: Box<dyn Stream>,
     ) -> Result<Box<dyn Stream>, GenxError> {
+        self.validate_config()?;
+
         let (tx, rx) = mpsc::channel(128);
 
         let model = Arc::clone(&self.model);
@@ -174,36 +188,7 @@ impl Transformer for VoiceprintTransformer {
             }
         });
 
-        Ok(Box::new(ChannelStream { rx }))
-    }
-}
-
-struct ChannelStream {
-    rx: mpsc::Receiver<Result<MessageChunk, String>>,
-}
-
-#[async_trait]
-impl Stream for ChannelStream {
-    async fn next(&mut self) -> Result<Option<MessageChunk>, GenxError> {
-        match self.rx.recv().await {
-            Some(Ok(c)) => Ok(Some(c)),
-            Some(Err(e)) => Err(GenxError::Other(anyhow::anyhow!("{e}"))),
-            None => Ok(None),
-        }
-    }
-
-    fn result(&self) -> Option<StreamResult> {
-        None
-    }
-
-    async fn close(&mut self) -> Result<(), GenxError> {
-        self.rx.close();
-        Ok(())
-    }
-
-    async fn close_with_error(&mut self, _error: GenxError) -> Result<(), GenxError> {
-        self.rx.close();
-        Ok(())
+        Ok(channel_stream(rx))
     }
 }
 
@@ -249,7 +234,7 @@ mod tests {
                 }
             }
         });
-        Box::new(ChannelStream { rx })
+        channel_stream(rx)
     }
 
     fn make_transformer(model: Arc<dyn VoiceprintModel>) -> VoiceprintTransformer {
@@ -339,5 +324,28 @@ mod tests {
         let mut out = t.transform("", input).await.unwrap();
         let c = out.next().await.unwrap().unwrap();
         assert!(c.ctrl.as_ref().map(|v| v.label.is_empty()).unwrap_or(true));
+    }
+
+    #[tokio::test]
+    async fn t_voiceprint_reject_zero_segment_size() {
+        let t = VoiceprintTransformer::new(
+            Arc::new(MockModel {
+                dimension: 8,
+                fail: false,
+            }),
+            make_hasher(8),
+            VoiceprintConfig {
+                segment_duration_ms: 0,
+                sample_rate: 16_000,
+                detector_window_size: 2,
+                detector_min_ratio: 0.5,
+            },
+        );
+
+        let err = match t.transform("", make_input(vec![])).await {
+            Ok(_) => panic!("expected invalid config error"),
+            Err(e) => e,
+        };
+        assert!(err.to_string().contains("segment bytes is zero"));
     }
 }

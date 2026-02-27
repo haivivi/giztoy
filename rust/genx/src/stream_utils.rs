@@ -196,6 +196,10 @@ struct ChannelStream {
     rx: mpsc::Receiver<Result<MessageChunk, String>>,
 }
 
+pub(crate) fn channel_stream(rx: mpsc::Receiver<Result<MessageChunk, String>>) -> Box<dyn Stream> {
+    Box::new(ChannelStream { rx })
+}
+
 #[async_trait]
 impl Stream for ChannelStream {
     async fn next(&mut self) -> Result<Option<MessageChunk>, GenxError> {

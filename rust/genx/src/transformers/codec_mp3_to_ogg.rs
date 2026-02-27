@@ -6,7 +6,8 @@ use giztoy_audio::codec::{mp3, ogg, opus};
 use tokio::sync::mpsc;
 
 use crate::error::GenxError;
-use crate::stream::{Stream, StreamResult};
+use crate::stream::Stream;
+use crate::stream_utils::channel_stream;
 use crate::transformer::Transformer;
 use crate::types::MessageChunk;
 
@@ -161,11 +162,13 @@ impl Transformer for MP3ToOggTransformer {
             }
         });
 
-        Ok(Box::new(ChannelStream { rx }))
+        Ok(channel_stream(rx))
     }
 }
 
 fn convert_mp3_to_ogg(mp3_data: &[u8], cfg: &MP3ToOggConfig) -> Result<Vec<u8>, GenxError> {
+    const OPUS_20MS_DURATION_48K: i64 = 960;
+
     if mp3_data.is_empty() {
         return Ok(Vec::new());
     }
@@ -225,7 +228,7 @@ fn convert_mp3_to_ogg(mp3_data: &[u8], cfg: &MP3ToOggConfig) -> Result<Vec<u8>, 
                 .encode(&pcm_i16, frame_size)
                 .map_err(|e| GenxError::Other(anyhow::anyhow!("opus encode failed: {e}")))?;
             ogg_writer
-                .write_frame(frame.as_bytes(), i64::from(frame_size))
+                .write_frame(frame.as_bytes(), OPUS_20MS_DURATION_48K)
                 .map_err(|e| GenxError::Other(anyhow::anyhow!("write ogg frame failed: {e}")))?;
 
             pending.drain(..bytes_per_frame);
@@ -240,7 +243,7 @@ fn convert_mp3_to_ogg(mp3_data: &[u8], cfg: &MP3ToOggConfig) -> Result<Vec<u8>, 
             .encode(&pcm_i16, frame_size)
             .map_err(|e| GenxError::Other(anyhow::anyhow!("opus encode tail frame failed: {e}")))?;
         ogg_writer
-            .write_frame(frame.as_bytes(), i64::from(frame_size))
+            .write_frame(frame.as_bytes(), OPUS_20MS_DURATION_48K)
             .map_err(|e| GenxError::Other(anyhow::anyhow!("write ogg tail frame failed: {e}")))?;
     }
 
@@ -265,38 +268,10 @@ fn pcm_bytes_to_i16(bytes: &[u8]) -> Result<Vec<i16>, GenxError> {
     Ok(out)
 }
 
-struct ChannelStream {
-    rx: mpsc::Receiver<Result<MessageChunk, String>>,
-}
-
-#[async_trait]
-impl Stream for ChannelStream {
-    async fn next(&mut self) -> Result<Option<MessageChunk>, GenxError> {
-        match self.rx.recv().await {
-            Some(Ok(c)) => Ok(Some(c)),
-            Some(Err(e)) => Err(GenxError::Other(anyhow::anyhow!("{e}"))),
-            None => Ok(None),
-        }
-    }
-
-    fn result(&self) -> Option<StreamResult> {
-        None
-    }
-
-    async fn close(&mut self) -> Result<(), GenxError> {
-        self.rx.close();
-        Ok(())
-    }
-
-    async fn close_with_error(&mut self, _error: GenxError) -> Result<(), GenxError> {
-        self.rx.close();
-        Ok(())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stream::StreamResult;
     use crate::types::Role;
 
     fn make_input(chunks: Vec<MessageChunk>) -> Box<dyn Stream> {
@@ -308,7 +283,7 @@ mod tests {
                 }
             }
         });
-        Box::new(ChannelStream { rx })
+        channel_stream(rx)
     }
 
     fn fake_converter_ok() -> Arc<ConvertFn> {

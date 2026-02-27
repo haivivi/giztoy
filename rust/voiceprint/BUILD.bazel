@@ -15,6 +15,7 @@ rust_library(
     srcs = glob(["src/**/*.rs"]),
     compile_data = [":embed_planes"],
     crate_name = "giztoy_voiceprint",
+    crate_features = ["ncnn"],
     rustc_flags = ["--cfg=bazel_build"],
     deps = [
         "//rust/ncnn:giztoy_ncnn",
