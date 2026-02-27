@@ -120,7 +120,30 @@ crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate")
 crate.from_cargo(
     name = "crate_index",
     cargo_lockfile = "//rust:Cargo.lock",
-    manifests = ["//rust:Cargo.toml"],
+    manifests = [
+        "//rust:Cargo.toml",
+        "//rust/audio:Cargo.toml",
+        "//rust/buffer:Cargo.toml",
+        "//rust/genx:Cargo.toml",
+        "//rust/dashscope:Cargo.toml",
+        "//rust/minimax:Cargo.toml",
+        "//rust/mqtt0:Cargo.toml",
+
+        "//rust/luau:Cargo.toml",
+        "//rust/cmd/dashscope:Cargo.toml",
+        "//rust/cmd/minimax:Cargo.toml",
+        "//rust/ncnn:Cargo.toml",
+        "//rust/onnx:Cargo.toml",
+        "//rust/vecid:Cargo.toml",
+        "//rust/voiceprint:Cargo.toml",
+        "//rust/graph:Cargo.toml",
+        "//rust/vecstore:Cargo.toml",
+        "//rust/embed:Cargo.toml",
+        "//rust/recall:Cargo.toml",
+        "//examples/rust/audio:Cargo.toml",
+        "//examples/rust/minimax:Cargo.toml",
+        "//examples/rust/genx:Cargo.toml",
+    ],
 )
 use_repo(crate, "crate_index")
 
