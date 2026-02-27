@@ -3,9 +3,12 @@ use serde_json::json;
 
 #[test]
 fn t_e2e_voiceprint_rust_pipeline() {
-    let expected: serde_json::Value =
-        serde_json::from_str(include_str!("testdata/rust_e2e_expected.json"))
-            .expect("parse expected golden");
+    let expected = json!({
+        "hash_a": "82A9",
+        "warmup_status": "single",
+        "final_status": "single",
+        "label_changed": true,
+    });
 
     let hasher = Hasher::default_512();
     let emb_a: Vec<f32> = (0..512).map(|i| i as f32 * 0.01).collect();

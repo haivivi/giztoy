@@ -53,6 +53,9 @@ impl Hasher {
     /// compile time. Both Go and Rust use the same planes, ensuring
     /// cross-language hash consistency.
     pub fn default_512() -> Self {
+        #[cfg(bazel_build)]
+        static PLANES_JSON: &[u8] = include_bytes!("planes_512_16.json");
+        #[cfg(not(bazel_build))]
         static PLANES_JSON: &[u8] = include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../data/voiceprint/planes_512_16.json"
