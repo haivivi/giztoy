@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/haivivi/giztoy/go/pkg/genx/labelers"
 )
 
 func TestExpandEnv(t *testing.T) {
@@ -405,5 +407,68 @@ models:
 	}
 	if !found["prof/loader-test"] {
 		t.Error("prof/loader-test not registered")
+	}
+}
+
+func TestRegisterLabelerBySchema(t *testing.T) {
+	labelers.DefaultMux = labelers.NewMux()
+	cfg := ConfigFile{
+		Schema: "genx/labeler/v1",
+		Type:   "labeler",
+		Models: []Entry{{Name: "labeler/qwen-flash", Model: "qwen/flash"}},
+	}
+	names, err := registerLabelerBySchema(cfg)
+	if err != nil {
+		t.Fatalf("registerLabelerBySchema() error = %v", err)
+	}
+	if len(names) != 1 || names[0] != "labeler/qwen-flash" {
+		t.Fatalf("names = %v, want [labeler/qwen-flash]", names)
+	}
+
+	got, err := labelers.Get("labeler/qwen-flash")
+	if err != nil {
+		t.Fatalf("labelers.Get() error = %v", err)
+	}
+	if got.Model() != "qwen/flash" {
+		t.Fatalf("Model() = %q, want %q", got.Model(), "qwen/flash")
+	}
+}
+
+func TestRegisterLabelerBySchemaMissingModel(t *testing.T) {
+	labelers.DefaultMux = labelers.NewMux()
+	_, err := registerLabelerBySchema(ConfigFile{
+		Schema: "genx/labeler/v1",
+		Type:   "labeler",
+		Models: []Entry{{Name: "labeler/qwen-flash"}},
+	})
+	if err == nil {
+		t.Fatal("expected missing model error")
+	}
+}
+
+func TestLabelerConfigMissingName(t *testing.T) {
+	labelers.DefaultMux = labelers.NewMux()
+	_, err := registerLabelerBySchema(ConfigFile{
+		Schema: "genx/labeler/v1",
+		Type:   "labeler",
+		Models: []Entry{{Model: "qwen/flash"}},
+	})
+	if err == nil {
+		t.Fatal("expected missing name error")
+	}
+}
+
+func TestRegisterBySchemaLabelerType(t *testing.T) {
+	labelers.DefaultMux = labelers.NewMux()
+	names, err := registerBySchema(ConfigFile{
+		Schema: "genx/labeler/v1",
+		Type:   "labeler",
+		Models: []Entry{{Name: "labeler/demo", Model: "qwen/demo"}},
+	})
+	if err != nil {
+		t.Fatalf("registerBySchema() error = %v", err)
+	}
+	if len(names) != 1 || names[0] != "labeler/demo" {
+		t.Fatalf("names = %v, want [labeler/demo]", names)
 	}
 }

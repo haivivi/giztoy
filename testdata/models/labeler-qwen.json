@@ -1,0 +1,10 @@
+{
+    "schema": "genx/labeler/v1",
+    "type": "labeler",
+    "models": [
+        {
+            "name": "labeler/qwen-flash",
+            "model": "qwen/flash"
+        }
+    ]
+}
