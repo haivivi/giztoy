@@ -103,6 +103,9 @@ logs/
 .env.local
 .env.*.local
 
+# OpenCode task assets
+openteam/
+
 # Test coverage
 coverage/
 *.coverprofile

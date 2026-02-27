@@ -9,6 +9,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//rust/audio:giztoy_audio",
         "//rust/buffer:giztoy_buffer",
         "@crate_index//:anyhow",
         "@crate_index//:async-stream",
@@ -33,4 +34,5 @@ rust_library(
 rust_test(
     name = "genx_test",
     crate = ":genx",
+    data = ["//go/pkg/genx/input/opus:testdata/parity_cases.json"],
 )
