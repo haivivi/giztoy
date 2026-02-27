@@ -1,0 +1,14 @@
+name: asr_audio_eos_sequence
+input:
+  - type: audio
+    role: user
+    mime_type: audio/ogg
+    data: [1, 2, 3]
+    stream_id: "asr-s1"
+  - type: eos_audio
+expected:
+  - type: text
+    text: "你好"
+    stream_id: "asr-s1"
+  - type: eos_text
+    stream_id: "asr-s1"

@@ -1,0 +1,16 @@
+name: tts_text_eos_sequence
+input:
+  - type: text
+    role: model
+    text: "你好"
+    stream_id: "tts-s1"
+  - type: eos_text
+expected:
+  - type: bos
+    stream_id: "tts-s1"
+  - type: blob
+    mime_type: audio/mpeg
+    stream_id: "tts-s1"
+  - type: eos_blob
+    mime_type: audio/mpeg
+    stream_id: "tts-s1"

@@ -19,5 +19,14 @@
 //! - To cancel, drop the input Stream
 
 mod mux;
+mod tts_core;
+mod minimax_tts;
+mod doubao_tts_seed_v2;
+mod doubao_tts_icl_v2;
+mod doubao_asr_sauc;
 
 pub use mux::*;
+pub use minimax_tts::MinimaxTtsTransformer;
+pub use doubao_tts_seed_v2::DoubaoTtsSeedV2Transformer;
+pub use doubao_tts_icl_v2::DoubaoTtsIclV2Transformer;
+pub use doubao_asr_sauc::DoubaoAsrSaucTransformer;

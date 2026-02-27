@@ -13,22 +13,32 @@ import (
 func TestBlockBuffer(t *testing.T) {
 	t.Run("size=1", func(t *testing.T) {
 		rb := BlockN[int](1)
+		closed := make(chan struct{})
+		producerErr := make(chan error, 1)
 		go func() {
 			n, err := rb.Write([]int{1, 2, 3})
 			if err != nil {
-				t.Errorf("write [1,2,3,4] with error: %v", err)
+				producerErr <- fmt.Errorf("write [1,2,3] with error: %w", err)
+				return
 			}
 			if n != 3 {
-				t.Errorf("write [1,2,3,4] with n=%d", n)
+				producerErr <- fmt.Errorf("write [1,2,3] with n=%d", n)
+				return
 			}
 
+			<-closed
+
 			if _, err := rb.Write([]int{4}); err == nil {
-				t.Error("write [1] expected error, but got nil")
+				producerErr <- errors.New("write [4] expected error, but got nil")
+				return
 			}
 
 			if err := rb.Add(5); err == nil {
-				t.Error("add 5 expected error, but got nil")
+				producerErr <- errors.New("add 5 expected error, but got nil")
+				return
 			}
+
+			producerErr <- nil
 		}()
 
 		var got [1]int
@@ -62,26 +72,40 @@ func TestBlockBuffer(t *testing.T) {
 		if err := rb.CloseWrite(); err != nil {
 			t.Errorf("close write with error: %v", err)
 		}
+		close(closed)
+		if err := <-producerErr; err != nil {
+			t.Fatal(err)
+		}
 	})
 
 	t.Run("size=2", func(t *testing.T) {
 		rb := BlockN[int](2)
+		closed := make(chan struct{})
+		producerErr := make(chan error, 1)
 		go func() {
 			n, err := rb.Write([]int{1, 2, 3, 4})
 			if err != nil {
-				t.Errorf("write [1,2,3,4] with error: %v", err)
+				producerErr <- fmt.Errorf("write [1,2,3,4] with error: %w", err)
+				return
 			}
 			if n != 4 {
-				t.Errorf("write [1,2,3,4] with n=%d", n)
+				producerErr <- fmt.Errorf("write [1,2,3,4] with n=%d", n)
+				return
 			}
 
+			<-closed
+
 			if _, err := rb.Write([]int{5}); err == nil {
-				t.Error("write [1] expected error, but got nil")
+				producerErr <- errors.New("write [5] expected error, but got nil")
+				return
 			}
 
 			if err := rb.Add(5); err == nil {
-				t.Error("add 5 expected error, but got nil")
+				producerErr <- errors.New("add 5 expected error, but got nil")
+				return
 			}
+
+			producerErr <- nil
 		}()
 
 		var got [2]int
@@ -115,6 +139,10 @@ func TestBlockBuffer(t *testing.T) {
 		}
 		if err := rb.CloseWrite(); err != nil {
 			t.Errorf("close write with error: %v", err)
+		}
+		close(closed)
+		if err := <-producerErr; err != nil {
+			t.Fatal(err)
 		}
 	})
 

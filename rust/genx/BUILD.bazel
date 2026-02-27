@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 rust_library(
     name = "genx",
     srcs = glob(["src/**/*.rs"]),
+    compile_data = glob(["tests/parity/fixtures/*.yaml"]),
     crate_name = "giztoy_genx",
     proc_macro_deps = [
         "@crate_index//:async-trait",
@@ -11,6 +12,8 @@ rust_library(
     deps = [
         "//rust/audio:giztoy_audio",
         "//rust/buffer:giztoy_buffer",
+        "//rust/doubaospeech:giztoy_doubaospeech",
+        "//rust/minimax:giztoy_minimax",
         "@crate_index//:anyhow",
         "@crate_index//:async-stream",
         "@crate_index//:base64",
@@ -33,6 +36,12 @@ rust_library(
 
 rust_test(
     name = "genx_test",
+    crate = ":genx",
+    data = ["//go/pkg/genx/input/opus:testdata/parity_cases.json"],
+)
+
+rust_test(
+    name = "parity_test",
     crate = ":genx",
     data = ["//go/pkg/genx/input/opus:testdata/parity_cases.json"],
 )
