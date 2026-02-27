@@ -27,6 +27,8 @@ minijinja = { workspace = true }
 regex = { workspace = true }
 getrandom = { workspace = true }
 hex = { workspace = true }
+giztoy-minimax = { workspace = true }
+giztoy-doubaospeech = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

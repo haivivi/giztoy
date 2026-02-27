@@ -50,6 +50,12 @@ impl TransformerMux {
         t: Arc<dyn Transformer>,
     ) -> Result<(), GenxError> {
         let pattern = pattern.into();
+        if self.tts_routes.contains_key(&pattern) {
+            return Err(GenxError::Other(anyhow::anyhow!(
+                "transformers: TTS transformer already registered for {}",
+                pattern,
+            )));
+        }
         self.tts_routes.insert(pattern.clone(), t.clone());
         self.routes.entry(pattern).or_insert(t);
         Ok(())
@@ -62,6 +68,12 @@ impl TransformerMux {
         t: Arc<dyn Transformer>,
     ) -> Result<(), GenxError> {
         let pattern = pattern.into();
+        if self.asr_routes.contains_key(&pattern) {
+            return Err(GenxError::Other(anyhow::anyhow!(
+                "transformers: ASR transformer already registered for {}",
+                pattern,
+            )));
+        }
         self.asr_routes.insert(pattern.clone(), t.clone());
         self.routes.entry(pattern).or_insert(t);
         Ok(())
@@ -241,6 +253,9 @@ mod tests {
         assert!(mux.get_tts("tts/b").is_err());
         // Also registered in main routes
         assert!(mux.get("tts/a").is_ok());
+
+        let dup = mux.handle_tts("tts/a", Arc::new(EchoTransformer { tag: "B".into() }));
+        assert!(dup.is_err());
     }
 
     #[tokio::test]
@@ -250,5 +265,8 @@ mod tests {
             .unwrap();
         assert!(mux.get_asr("asr/zh").is_ok());
         assert!(mux.get_asr("asr/en").is_err());
+
+        let dup = mux.handle_asr("asr/zh", Arc::new(EchoTransformer { tag: "ASR2".into() }));
+        assert!(dup.is_err());
     }
 }

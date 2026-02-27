@@ -1162,6 +1162,8 @@ dependencies = [
  "getrandom 0.3.4",
  "giztoy-audio",
  "giztoy-buffer",
+ "giztoy-doubaospeech",
+ "giztoy-minimax",
  "hex",
  "minijinja",
  "regex",
