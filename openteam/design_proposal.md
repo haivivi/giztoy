@@ -1,0 +1,1 @@
+/Users/idy/Vibing/giztoy/main/openteam/design_proposal/wip/20260227-1246-rust-genx-transformers-realtime-parity.md
