@@ -9,6 +9,8 @@ description = "GenX - LLM universal interface for Rust"
 [dependencies]
 giztoy-buffer = { workspace = true }
 giztoy-audio = { workspace = true }
+giztoy-dashscope = { workspace = true }
+giztoy-doubaospeech = { workspace = true }
 tokio = { workspace = true }
 tokio-stream = { workspace = true }
 serde = { workspace = true }
@@ -28,7 +30,6 @@ regex = { workspace = true }
 getrandom = { workspace = true }
 hex = { workspace = true }
 giztoy-minimax = { workspace = true }
-giztoy-doubaospeech = { workspace = true }
 
 [dev-dependencies]
 tokio-test = { workspace = true }

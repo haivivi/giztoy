@@ -1,6 +1,7 @@
 # Bazel
 /bazel-*
 .bazelrc.user
+openteam/
 
 # Go
 go/vendor/
