@@ -4,7 +4,6 @@ go_library(
     name = "recall",
     srcs = [
         "index.go",
-        "infer.go",
         "keys.go",
         "search.go",
         "segment.go",
@@ -24,7 +23,6 @@ go_library(
 go_test(
     name = "recall_test",
     srcs = [
-        "infer_test.go",
         "recall_test.go",
     ],
     embed = [":recall"],

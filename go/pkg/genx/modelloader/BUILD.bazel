@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "asr.go",
         "config.go",
+        "labeler.go",
         "profiler.go",
         "realtime.go",
         "segmentor.go",
@@ -16,6 +17,7 @@ go_library(
         "//go/pkg/doubaospeech",
         "//go/pkg/genx",
         "//go/pkg/genx/generators",
+        "//go/pkg/genx/labelers",
         "//go/pkg/genx/profilers",
         "//go/pkg/genx/segmentors",
         "//go/pkg/genx/transformers",

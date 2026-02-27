@@ -1,0 +1,42 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+go_library(
+    name = "labeler_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/e2e/memory/labeler",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//go/pkg/genx/labelers",
+        "//go/pkg/genx/modelloader",
+        "//go/pkg/graph",
+        "//go/pkg/kv",
+        "//go/pkg/memory",
+        "//go/pkg/recall",
+    ],
+)
+
+go_binary(
+    name = "labeler",
+    embed = [":labeler_lib"],
+    visibility = ["//visibility:public"],
+)
+
+rust_binary(
+    name = "labeler_rust",
+    srcs = ["main_rust.rs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//rust/genx:genx",
+        "//rust/graph:graph",
+        "//rust/memory:memory",
+        "//rust/recall:recall",
+        "@openerp//rust/lib/kv:kv",
+        "@crate_index//:anyhow",
+        "@crate_index//:schemars",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:tempfile",
+        "@crate_index//:tokio",
+    ],
+)

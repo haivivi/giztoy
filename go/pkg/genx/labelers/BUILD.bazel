@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "labelers",
+    srcs = [
+        "genx.go",
+        "labelers.go",
+        "mux.go",
+        "prompt.go",
+    ],
+    importpath = "github.com/haivivi/giztoy/go/pkg/genx/labelers",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+        "//go/pkg/trie",
+    ],
+)
+
+go_test(
+    name = "labelers_test",
+    srcs = [
+        "genx_test.go",
+        "labelers_test.go",
+        "mux_test.go",
+    ],
+    embed = [":labelers"],
+    deps = [
+        "//go/pkg/genx",
+        "//go/pkg/genx/generators",
+    ],
+)

@@ -1,0 +1,33 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+go_library(
+    name = "labelers_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/haivivi/giztoy/e2e/genx/labelers",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//go/pkg/genx/labelers",
+        "//go/pkg/genx/modelloader",
+    ],
+)
+
+go_binary(
+    name = "labelers",
+    embed = [":labelers_lib"],
+    visibility = ["//visibility:public"],
+)
+
+rust_binary(
+    name = "labelers_rust",
+    srcs = ["main_rust.rs"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//rust/genx:genx",
+        "@crate_index//:anyhow",
+        "@crate_index//:schemars",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:tokio",
+    ],
+)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/haivivi/giztoy/go/pkg/genx/labelers"
 	"github.com/haivivi/giztoy/go/pkg/graph"
 	"github.com/haivivi/giztoy/go/pkg/kv"
 	"github.com/haivivi/giztoy/go/pkg/memory"
@@ -163,6 +164,24 @@ func runMemoryRecall(ctx context.Context, c *Cortex, task Document) (*RunResult,
 		}
 	}
 
+	labelerPattern := task.GetString("labeler")
+	if labelerPattern != "" {
+		candidates, err := collectCandidateLabels(ctx, mem.Graph())
+		if err != nil {
+			return nil, fmt.Errorf("memory recall: collect label candidates: %w", err)
+		}
+
+		result, err := labelers.Process(ctx, labelerPattern, labelers.Input{
+			Text:       text,
+			Candidates: candidates,
+			TopK:       task.GetInt("label_top_k"),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("memory recall: labeler process: %w", err)
+		}
+		q.Labels = mergeLabels(q.Labels, result)
+	}
+
 	result, err := mem.Recall(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("memory recall: %w", err)
@@ -171,7 +190,48 @@ func runMemoryRecall(ctx context.Context, c *Cortex, task Document) (*RunResult,
 	return &RunResult{Kind: task.Kind, Status: "ok", Data: map[string]any{
 		"entities_count": len(result.Entities),
 		"segments_count": len(result.Segments),
+		"labels":         q.Labels,
 	}}, nil
+}
+
+func collectCandidateLabels(ctx context.Context, g graph.Graph) ([]string, error) {
+	var labels []string
+	for ent, err := range g.ListEntities(ctx, "") {
+		if err != nil {
+			return nil, err
+		}
+		labels = append(labels, ent.Label)
+	}
+	return labels, nil
+}
+
+func mergeLabels(base []string, lr *labelers.Result) []string {
+	if lr == nil || len(lr.Matches) == 0 {
+		return base
+	}
+	seen := make(map[string]struct{}, len(base)+len(lr.Matches))
+	out := make([]string, 0, len(base)+len(lr.Matches))
+	for _, l := range base {
+		if l == "" {
+			continue
+		}
+		if _, ok := seen[l]; ok {
+			continue
+		}
+		seen[l] = struct{}{}
+		out = append(out, l)
+	}
+	for _, m := range lr.Matches {
+		if m.Label == "" {
+			continue
+		}
+		if _, ok := seen[m.Label]; ok {
+			continue
+		}
+		seen[m.Label] = struct{}{}
+		out = append(out, m.Label)
+	}
+	return out
 }
 
 func runMemoryEntitySet(ctx context.Context, c *Cortex, task Document) (*RunResult, error) {

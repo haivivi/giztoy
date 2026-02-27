@@ -2,9 +2,11 @@ package cortex
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/haivivi/giztoy/go/pkg/genx/labelers"
 	"github.com/haivivi/giztoy/go/pkg/kv"
 )
 
@@ -589,5 +591,175 @@ func TestSchemaValidateMaxTokensBad(t *testing.T) {
 	err := validateMaxTokens(map[string]any{"max_tokens": 0})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+type cortexMockLabeler struct {
+	result *labelers.Result
+	err    error
+}
+
+func (m *cortexMockLabeler) Process(_ context.Context, _ labelers.Input) (*labelers.Result, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.result, nil
+}
+
+func (m *cortexMockLabeler) Model() string { return "mock" }
+
+func TestCortexRecallWithLabeler(t *testing.T) {
+	labelers.DefaultMux = labelers.NewMux()
+	if err := labelers.Handle("labeler/test", &cortexMockLabeler{result: &labelers.Result{Matches: []labelers.Match{{Label: "topic:恐龙", Score: 0.9}}}}); err != nil {
+		t.Fatal(err)
+	}
+
+	c := newTestCortex(t)
+	ctx := context.Background()
+
+	_, err := c.Run(ctx, Document{Kind: "memory/create", Fields: map[string]any{"name": "p1"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.Run(ctx, Document{Kind: "memory/entity/set", Fields: map[string]any{"persona": "p1", "label": "person:小明"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.Run(ctx, Document{Kind: "memory/entity/set", Fields: map[string]any{"persona": "p1", "label": "topic:恐龙"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.Run(ctx, Document{Kind: "memory/relation/add", Fields: map[string]any{"persona": "p1", "from": "person:小明", "to": "topic:恐龙", "rel_type": "likes"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.Run(ctx, Document{Kind: "memory/add", Fields: map[string]any{"persona": "p1", "text": "和小明聊了恐龙", "labels": []any{"person:小明", "topic:恐龙"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := c.Run(ctx, Document{Kind: "memory/recall", Fields: map[string]any{"persona": "p1", "text": "聊恐龙", "labeler": "labeler/test"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	labels, ok := res.Data["labels"].([]string)
+	if !ok {
+		t.Fatalf("labels type = %T, want []string", res.Data["labels"])
+	}
+	if len(labels) == 0 || labels[0] != "topic:恐龙" {
+		t.Fatalf("labels = %v, want contains topic:恐龙", labels)
+	}
+}
+
+func TestCortexLabelerResultPassedToRecall(t *testing.T) {
+	labelers.DefaultMux = labelers.NewMux()
+	if err := labelers.Handle("labeler/passthrough", &cortexMockLabeler{result: &labelers.Result{Matches: []labelers.Match{{Label: "topic:恐龙", Score: 0.9}}}}); err != nil {
+		t.Fatal(err)
+	}
+
+	c := newTestCortex(t)
+	ctx := context.Background()
+	_, _ = c.Run(ctx, Document{Kind: "memory/create", Fields: map[string]any{"name": "p4"}})
+	_, _ = c.Run(ctx, Document{Kind: "memory/entity/set", Fields: map[string]any{"persona": "p4", "label": "person:小明"}})
+	_, _ = c.Run(ctx, Document{Kind: "memory/entity/set", Fields: map[string]any{"persona": "p4", "label": "topic:恐龙"}})
+
+	res, err := c.Run(ctx, Document{Kind: "memory/recall", Fields: map[string]any{
+		"persona": "p4",
+		"text":    "聊恐龙",
+		"labels":  []any{"person:小明"},
+		"labeler": "labeler/passthrough",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	labels, ok := res.Data["labels"].([]string)
+	if !ok {
+		t.Fatalf("labels type = %T, want []string", res.Data["labels"])
+	}
+	hasPerson := false
+	hasTopic := false
+	for _, l := range labels {
+		if l == "person:小明" {
+			hasPerson = true
+		}
+		if l == "topic:恐龙" {
+			hasTopic = true
+		}
+	}
+	if !hasPerson || !hasTopic {
+		t.Fatalf("labels = %v, want merged [person:小明, topic:恐龙]", labels)
+	}
+}
+
+func TestCortexRecallWithGraphExpansion(t *testing.T) {
+	labelers.DefaultMux = labelers.NewMux()
+	if err := labelers.Handle("labeler/graph", &cortexMockLabeler{result: &labelers.Result{Matches: []labelers.Match{{Label: "person:小明", Score: 0.95}}}}); err != nil {
+		t.Fatal(err)
+	}
+
+	c := newTestCortex(t)
+	ctx := context.Background()
+	_, _ = c.Run(ctx, Document{Kind: "memory/create", Fields: map[string]any{"name": "p5"}})
+	_, _ = c.Run(ctx, Document{Kind: "memory/entity/set", Fields: map[string]any{"persona": "p5", "label": "person:小明"}})
+	_, _ = c.Run(ctx, Document{Kind: "memory/entity/set", Fields: map[string]any{"persona": "p5", "label": "topic:恐龙"}})
+	_, _ = c.Run(ctx, Document{Kind: "memory/relation/add", Fields: map[string]any{"persona": "p5", "from": "person:小明", "to": "topic:恐龙", "rel_type": "likes"}})
+	_, _ = c.Run(ctx, Document{Kind: "memory/add", Fields: map[string]any{"persona": "p5", "text": "和小明聊了恐龙", "labels": []any{"person:小明", "topic:恐龙"}}})
+
+	res, err := c.Run(ctx, Document{Kind: "memory/recall", Fields: map[string]any{"persona": "p5", "text": "恐龙", "labeler": "labeler/graph"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entitiesCount, ok := res.Data["entities_count"].(int)
+	if !ok {
+		t.Fatalf("entities_count type = %T, want int", res.Data["entities_count"])
+	}
+	if entitiesCount < 2 {
+		t.Fatalf("entities_count = %d, want >= 2 to prove graph expansion", entitiesCount)
+	}
+}
+
+func TestCortexRecallWithoutLabeler(t *testing.T) {
+	c := newTestCortex(t)
+	ctx := context.Background()
+
+	_, err := c.Run(ctx, Document{Kind: "memory/create", Fields: map[string]any{"name": "p2"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.Run(ctx, Document{Kind: "memory/add", Fields: map[string]any{"persona": "p2", "text": "聊恐龙"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := c.Run(ctx, Document{Kind: "memory/recall", Fields: map[string]any{"persona": "p2", "text": "恐龙"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	labels, ok := res.Data["labels"].([]string)
+	if !ok {
+		t.Fatalf("labels type = %T, want []string", res.Data["labels"])
+	}
+	if len(labels) != 0 {
+		t.Fatalf("labels = %v, want empty", labels)
+	}
+}
+
+func TestCortexLabelerErrorHandling(t *testing.T) {
+	labelers.DefaultMux = labelers.NewMux()
+	expected := errors.New("mock labeler failure")
+	if err := labelers.Handle("labeler/fail", &cortexMockLabeler{err: expected}); err != nil {
+		t.Fatal(err)
+	}
+
+	c := newTestCortex(t)
+	ctx := context.Background()
+	_, _ = c.Run(ctx, Document{Kind: "memory/create", Fields: map[string]any{"name": "p3"}})
+
+	_, err := c.Run(ctx, Document{Kind: "memory/recall", Fields: map[string]any{"persona": "p3", "text": "恐龙", "labeler": "labeler/fail"}})
+	if !errors.Is(err, expected) {
+		t.Fatalf("error = %v, want %v", err, expected)
 	}
 }

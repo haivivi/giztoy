@@ -63,17 +63,17 @@ type ConfigFile struct {
 	Models []Entry `json:"models,omitzero" yaml:"models,omitzero"`
 
 	// TTS specific
-	AppID         string            `json:"app_id,omitzero" yaml:"app_id,omitzero"`
-	Token         string            `json:"token,omitzero" yaml:"token,omitzero"`
-	Cluster       string            `json:"cluster,omitzero" yaml:"cluster,omitzero"`
-	Model         string            `json:"model,omitzero" yaml:"model,omitzero"` // For TTS model like "speech-02-hd"
-	Voices        []VoiceEntry      `json:"voices,omitzero" yaml:"voices,omitzero"`
-	DefaultParams map[string]any    `json:"default_params,omitzero" yaml:"default_params,omitzero"`
+	AppID         string         `json:"app_id,omitzero" yaml:"app_id,omitzero"`
+	Token         string         `json:"token,omitzero" yaml:"token,omitzero"`
+	Cluster       string         `json:"cluster,omitzero" yaml:"cluster,omitzero"`
+	Model         string         `json:"model,omitzero" yaml:"model,omitzero"` // For TTS model like "speech-02-hd"
+	Voices        []VoiceEntry   `json:"voices,omitzero" yaml:"voices,omitzero"`
+	DefaultParams map[string]any `json:"default_params,omitzero" yaml:"default_params,omitzero"`
 }
 
 // VoiceEntry represents a TTS voice configuration.
 type VoiceEntry struct {
-	Name    string `json:"name" yaml:"name"`       // Registration name, e.g., "doubao/cancan"
+	Name    string `json:"name" yaml:"name"`         // Registration name, e.g., "doubao/cancan"
 	VoiceID string `json:"voice_id" yaml:"voice_id"` // Actual voice ID, e.g., "zh_female_cancan"
 	Desc    string `json:"desc,omitzero" yaml:"desc,omitzero"`
 	Cluster string `json:"cluster,omitzero" yaml:"cluster,omitzero"` // Override cluster for this voice
@@ -91,9 +91,9 @@ type Entry struct {
 	ExtraFields       map[string]any    `json:"extra_fields,omitzero" yaml:"extra_fields,omitzero"`
 
 	// ASR/Realtime specific fields
-	Voice      string `json:"voice,omitzero" yaml:"voice,omitzero"`           // Voice ID for realtime
+	Voice      string `json:"voice,omitzero" yaml:"voice,omitzero"`             // Voice ID for realtime
 	ResourceID string `json:"resource_id,omitzero" yaml:"resource_id,omitzero"` // Resource ID for ASR
-	Desc       string `json:"desc,omitzero" yaml:"desc,omitzero"`             // Description
+	Desc       string `json:"desc,omitzero" yaml:"desc,omitzero"`               // Description
 }
 
 // LoadFromDir loads model configs from dir recursively and registers generators.
@@ -194,6 +194,8 @@ func registerBySchema(cfg ConfigFile) ([]string, error) {
 		return registerRealtimeBySchema(cfg)
 	case "segmentor":
 		return registerSegmentorBySchema(cfg)
+	case "labeler":
+		return registerLabelerBySchema(cfg)
 	case "profiler":
 		return registerProfilerBySchema(cfg)
 	default:

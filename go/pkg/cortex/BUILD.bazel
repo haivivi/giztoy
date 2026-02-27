@@ -22,6 +22,7 @@ go_library(
     deps = [
         "//go/pkg/dashscope",
         "//go/pkg/doubaospeech",
+        "//go/pkg/genx/labelers",
         "//go/pkg/graph",
         "//go/pkg/kv",
         "//go/pkg/memory",
