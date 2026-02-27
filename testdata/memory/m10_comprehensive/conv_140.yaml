@@ -1,0 +1,54 @@
+conv_id: session-140
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近音乐有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 妈妈跟我说过，他最大的爱好就是设计师
+- role: model
+  content: 妈妈爱好设计师挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 等等，爸爸应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爸爸
+  content: 最近过年有什么新动态吗
+- role: model
+  content: 我听说过年方面有不少变化
+- role: user
+  name: 爸爸
+  content: 爸爸去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 爸爸
+  content: 爸爸今天跟我说了运动的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爸爸
+  content: 爸爸说运动最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 爸爸
+  content: 小胖和小明是同学
+- role: model
+  content: 原来小胖和小明是同学关系
+- role: user
+  name: 爸爸
+  content: 小明有没有什么计划？
+- role: model
+  content: 小明应该有一些计划

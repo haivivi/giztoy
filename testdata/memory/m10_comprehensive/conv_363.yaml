@@ -1,0 +1,54 @@
+conv_id: session-363
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于运动的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 等等，妈妈应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 妈妈
+  content: 妈妈打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 妈妈
+  content: 过年太好玩了！
+- role: model
+  content: 是呀，过年确实很有趣！
+- role: user
+  name: 妈妈
+  content: 妈妈今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 等等，妈妈应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 妈妈
+  content: 妈妈和小明是同学
+- role: model
+  content: 原来妈妈和小明是同学关系
+- role: user
+  name: 妈妈
+  content: 妈妈和爷爷是兄妹
+- role: model
+  content: 原来妈妈和爷爷是兄妹关系
+- role: user
+  name: 妈妈
+  content: 妈妈平时有什么爱好？
+- role: model
+  content: 妈妈的爱好挺多的

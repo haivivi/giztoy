@@ -1,0 +1,54 @@
+conv_id: session-033
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 最近工作有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小美
+  content: 我对美食很感兴趣
+- role: model
+  content: 美食是个好话题
+- role: user
+  name: 小美
+  content: 我对健康很感兴趣
+- role: model
+  content: 健康是个好话题
+- role: user
+  name: 小美
+  content: 老张和小何是同学
+- role: model
+  content: 原来老张和小何是同学关系
+- role: user
+  name: 小美
+  content: 小美去过西湖
+- role: model
+  content: 西湖挺美的
+- role: user
+  name: 小美
+  content: 老张喜欢吃什么？
+- role: model
+  content: 老张口味挺好的
+- role: user
+  name: 小美
+  content: 小美打算去西湖玩
+- role: model
+  content: 西湖是个好地方
+- role: user
+  name: 小美
+  content: 小何平时有什么爱好？
+- role: model
+  content: 小何的爱好挺多的
+- role: user
+  name: 小美
+  content: 说到工作，我觉得挺有意思的
+- role: model
+  content: 是啊，工作确实值得聊聊
+- role: user
+  name: 小美
+  content: 小美和小何是朋友
+- role: model
+  content: 原来小美和小何是朋友关系

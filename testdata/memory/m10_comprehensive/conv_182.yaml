@@ -1,0 +1,54 @@
+conv_id: session-182
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 奶奶
+  content: 说到恐龙，我觉得挺有意思的
+- role: model
+  content: 是啊，恐龙确实值得聊聊
+- role: user
+  name: 奶奶
+  content: 奶奶打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 爷爷平时有什么爱好？
+- role: model
+  content: 爷爷的爱好挺多的
+- role: user
+  name: 奶奶
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的
+- role: user
+  name: 奶奶
+  content: 奶奶最近怎么样？
+- role: model
+  content: 奶奶最近挺好的
+- role: user
+  name: 奶奶
+  content: 小胖和妈妈是兄妹
+- role: model
+  content: 原来小胖和妈妈是兄妹关系
+- role: user
+  name: 奶奶
+  content: 爷爷有没有什么计划？
+- role: model
+  content: 爷爷应该有一些计划

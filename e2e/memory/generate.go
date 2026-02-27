@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/haivivi/giztoy/go/pkg/memory"
+	msgpack "github.com/vmihailenco/msgpack/v5"
 )
 
 // ---------------------------------------------------------------------------
@@ -18,21 +20,21 @@ import (
 
 // Meta is written to meta.yaml in each test case directory.
 type Meta struct {
-	Name    string       `yaml:"name"`
-	Desc    string       `yaml:"desc"`
-	Persona string       `yaml:"persona"`
-	Total   int          `yaml:"total_messages"`
-	Convs   int          `yaml:"conversations"`
-	Expect  MetaExpect   `yaml:"expect"`
+	Name    string     `yaml:"name"`
+	Desc    string     `yaml:"desc"`
+	Persona string     `yaml:"persona"`
+	Total   int        `yaml:"total_messages"`
+	Convs   int        `yaml:"conversations"`
+	Expect  MetaExpect `yaml:"expect"`
 }
 
 // MetaExpect holds pass/fail criteria checked after all conversations.
 type MetaExpect struct {
-	MinEntities     int              `yaml:"min_entities"`
-	EntitiesContain []string         `yaml:"entities_contain,omitempty"`
-	MinRelations    int              `yaml:"min_relations,omitempty"`
-	MinSegments     int              `yaml:"min_segments,omitempty"`
-	Recall          []RecallExpect   `yaml:"recall,omitempty"`
+	MinEntities     int            `yaml:"min_entities"`
+	EntitiesContain []string       `yaml:"entities_contain,omitempty"`
+	MinRelations    int            `yaml:"min_relations,omitempty"`
+	MinSegments     int            `yaml:"min_segments,omitempty"`
+	Recall          []RecallExpect `yaml:"recall,omitempty"`
 }
 
 // RecallExpect specifies a recall query and minimum results.
@@ -61,16 +63,16 @@ type ConvMsg struct {
 // ---------------------------------------------------------------------------
 
 type scenario struct {
-	Name      string
-	Desc      string
-	Persona   string
-	Total     int // total messages across all conversations
-	ConvSize  int // messages per conversation
-	Personas  []genPersona
-	Topics    []string
-	Places    []string
-	Purpose   string
-	Expect    MetaExpect
+	Name     string
+	Desc     string
+	Persona  string
+	Total    int // total messages across all conversations
+	ConvSize int // messages per conversation
+	Personas []genPersona
+	Topics   []string
+	Places   []string
+	Purpose  string
+	Expect   MetaExpect
 }
 
 type genPersona struct {
@@ -87,7 +89,7 @@ func buildScenarios() []scenario {
 			Name: "m01_single_person", Desc: "Single person, basic facts", Persona: "cat_girl",
 			Total: 10, ConvSize: 10,
 			Personas: []genPersona{{Name: "小明", Type: "person", Age: 8, Attrs: map[string]string{"hobby": "恐龙"}}},
-			Topics: []string{"恐龙", "学校"}, Places: []string{"北京"},
+			Topics:   []string{"恐龙", "学校"}, Places: []string{"北京"},
 			Purpose: "basic",
 			Expect:  MetaExpect{MinEntities: 1, EntitiesContain: []string{"person:小明"}, MinSegments: 1},
 		},
@@ -109,7 +111,7 @@ func buildScenarios() []scenario {
 			},
 			Topics: []string{"project", "deadline", "code review"}, Places: []string{"office"},
 			Purpose: "basic",
-			Expect: MetaExpect{MinEntities: 1, EntitiesContain: []string{"person:Alice"}, MinSegments: 1},
+			Expect:  MetaExpect{MinEntities: 1, EntitiesContain: []string{"person:Alice"}, MinSegments: 1},
 		},
 		{
 			Name: "m04_cooking", Desc: "Mom teaches cooking", Persona: "cat_girl",
@@ -147,7 +149,7 @@ func buildScenarios() []scenario {
 			},
 			Topics: []string{"旅行", "美食", "电影", "运动", "摄影", "读书"}, Places: []string{"上海", "成都", "广州", "东京"},
 			Purpose: "topic_drift",
-			Expect: MetaExpect{MinEntities: 1, EntitiesContain: []string{"person:小王"}, MinSegments: 2},
+			Expect:  MetaExpect{MinEntities: 1, EntitiesContain: []string{"person:小王"}, MinSegments: 2},
 		},
 		{
 			Name: "m07_corrections", Desc: "Facts get corrected and updated across 5 sessions", Persona: "assistant",
@@ -158,7 +160,7 @@ func buildScenarios() []scenario {
 			},
 			Topics: []string{"工作", "跳槽", "面试", "项目"}, Places: []string{"北京", "上海", "深圳"},
 			Purpose: "info_correction",
-			Expect: MetaExpect{MinEntities: 2, MinSegments: 2},
+			Expect:  MetaExpect{MinEntities: 2, MinSegments: 2},
 		},
 
 		// 2 x 1000 messages
@@ -173,8 +175,8 @@ func buildScenarios() []scenario {
 				{Name: "哥哥", Type: "person", Age: 20, Attrs: map[string]string{"school": "清华大学"}},
 				{Name: "妹妹", Type: "person", Age: 15, Attrs: map[string]string{"hobby": "钢琴"}},
 			},
-			Topics: []string{"家庭", "过年", "生日", "旅行", "学校", "健康", "做饭"},
-			Places: []string{"老家", "北京", "学校", "医院"},
+			Topics:  []string{"家庭", "过年", "生日", "旅行", "学校", "健康", "做饭"},
+			Places:  []string{"老家", "北京", "学校", "医院"},
 			Purpose: "relation_accumulation",
 			Expect: MetaExpect{
 				MinEntities: 5, MinRelations: 4, MinSegments: 8,
@@ -237,6 +239,10 @@ func buildScenarios() []scenario {
 func generateMemoryCases(outDir string) error {
 	if err := os.MkdirAll(outDir, 0755); err != nil {
 		return err
+	}
+
+	if err := generateSerialization(filepath.Join(outDir, "serialization")); err != nil {
+		return fmt.Errorf("generate serialization: %w", err)
 	}
 
 	scenarios := buildScenarios()
@@ -634,4 +640,67 @@ func hashStr(s string) uint32 {
 		h *= 16777619
 	}
 	return h
+}
+
+// ---------------------------------------------------------------------------
+// Serialization Generation
+// ---------------------------------------------------------------------------
+
+func generateSerialization(outDir string) error {
+	if err := os.MkdirAll(outDir, 0755); err != nil {
+		return err
+	}
+
+	msgs := map[string]memory.Message{
+		"message_user": {
+			Role:      "user",
+			Name:      "",
+			Content:   "hello",
+			Timestamp: 100,
+		},
+		"message_model": {
+			Role:      "model",
+			Name:      "",
+			Content:   "response",
+			Timestamp: 200,
+		},
+		"message_tool": {
+			Role:         "tool",
+			Name:         "",
+			Content:      "result",
+			Timestamp:    300,
+			ToolCallID:   "tc1",
+			ToolCallName: "fn1",
+			ToolCallArgs: "{}",
+			ToolResultID: "tr1",
+		},
+	}
+
+	for name, msg := range msgs {
+		data, err := msgpack.Marshal(&msg)
+		if err != nil {
+			return err
+		}
+		path := filepath.Join(outDir, name+".msgpack")
+		if err := os.WriteFile(path, data, 0644); err != nil {
+			return err
+		}
+	}
+
+	// Generate shared KV key golden file used by TX.5 byte-exact checks.
+	keysDir := filepath.Join(filepath.Dir(outDir), "keys")
+	if err := os.MkdirAll(keysDir, 0755); err != nil {
+		return err
+	}
+
+	keysFile := filepath.Join(keysDir, "conv_msg_keys.txt")
+	var keyLines []string
+	keyLines = append(keyLines, fmt.Sprintf("mem:p1:conv:c1:msg:%020d", 123456789))
+	keyLines = append(keyLines, fmt.Sprintf("mem:p1:conv:c1:msg:%020d", 987654321))
+
+	if err := os.WriteFile(keysFile, []byte(strings.Join(keyLines, "\n")), 0644); err != nil {
+		return err
+	}
+
+	return nil
 }

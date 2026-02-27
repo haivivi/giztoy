@@ -1,0 +1,54 @@
+conv_id: session-006
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 跟你说个关于工作的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小美
+  content: 老张说他特别喜欢mentor
+- role: model
+  content: 原来老张喜欢mentor呀
+- role: user
+  name: 小美
+  content: 小美平时有什么爱好？
+- role: model
+  content: 小美的爱好挺多的
+- role: user
+  name: 小美
+  content: 小美喜欢跑步
+- role: model
+  content: 是吗，小美确实挺喜欢跑步的
+- role: user
+  name: 小美
+  content: 上周小美去了苏州
+- role: model
+  content: 苏州不错呢
+- role: user
+  name: 小美
+  content: 小美跟我说过，他最大的爱好就是跑步
+- role: model
+  content: 小美爱好跑步挺好的
+- role: user
+  name: 小美
+  content: 小美在苏州住过一段时间
+- role: model
+  content: 在苏州生活应该很有意思
+- role: user
+  name: 小美
+  content: 小美最近在忙跑步
+- role: model
+  content: 小美忙跑步一定很充实
+- role: user
+  name: 小美
+  content: 老张和小何是兄妹
+- role: model
+  content: 原来老张和小何是兄妹关系
+- role: user
+  name: 小美
+  content: 上周小美去了西湖
+- role: model
+  content: 西湖不错呢

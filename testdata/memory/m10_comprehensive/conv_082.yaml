@@ -1,0 +1,54 @@
+conv_id: session-082
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近恐龙有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 老师和小红是朋友
+- role: model
+  content: 原来老师和小红是朋友关系
+- role: user
+  name: 小红
+  content: 小红说他特别喜欢画画
+- role: model
+  content: 原来小红喜欢画画呀
+- role: user
+  name: 小红
+  content: 小明和妈妈是姐弟
+- role: model
+  content: 原来小明和妈妈是姐弟关系
+- role: user
+  name: 小红
+  content: 爷爷周末一般做什么？
+- role: model
+  content: 爷爷周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小红和爷爷是邻居
+- role: model
+  content: 原来小红和爷爷是邻居关系
+- role: user
+  name: 小红
+  content: 上周小红去了图书馆
+- role: model
+  content: 图书馆不错呢
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小红是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，小红是在上海工作的，我记错了
+- role: model
+  content: 没关系

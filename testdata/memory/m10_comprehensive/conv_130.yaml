@@ -1,0 +1,54 @@
+conv_id: session-130
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近宠物有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 爸爸和爷爷是朋友
+- role: model
+  content: 原来爸爸和爷爷是朋友关系
+- role: user
+  name: 小红
+  content: 小红最近在忙画画
+- role: model
+  content: 小红忙画画一定很充实
+- role: user
+  name: 小红
+  content: 小红和爸爸是姐弟
+- role: model
+  content: 原来小红和爸爸是姐弟关系
+- role: user
+  name: 小红
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 小红
+  content: 小红打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 小红
+  content: 小红平时有什么爱好？
+- role: model
+  content: 小红的爱好挺多的
+- role: user
+  name: 小红
+  content: 老师和妈妈是邻居
+- role: model
+  content: 原来老师和妈妈是邻居关系
+- role: user
+  name: 小红
+  content: 小红平时有什么爱好？
+- role: model
+  content: 小红的爱好挺多的
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的

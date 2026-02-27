@@ -1,0 +1,54 @@
+conv_id: session-359
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 妈妈和爷爷是同学
+- role: model
+  content: 原来妈妈和爷爷是同学关系
+- role: user
+  name: 老师
+  content: 上周妈妈去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 老师
+  content: 小红和爷爷是亲戚
+- role: model
+  content: 原来小红和爷爷是亲戚关系
+- role: user
+  name: 老师
+  content: 上周小红去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 老师
+  content: 我对乐高很感兴趣
+- role: model
+  content: 乐高是个好话题
+- role: user
+  name: 老师
+  content: 老师在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 老师
+  content: 老师是在北京工作的
+- role: model
+  content: 好的

@@ -1,0 +1,54 @@
+conv_id: session-045
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 跟你说个关于健康的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小美
+  content: 你了解旅行吗
+- role: model
+  content: 了解一些，旅行挺热门的
+- role: user
+  name: 小美
+  content: 小美最近在忙跑步
+- role: model
+  content: 小美忙跑步一定很充实
+- role: user
+  name: 小美
+  content: 有一次小美因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小美
+  content: 就是小美在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小美
+  content: 上周小美去了杭州
+- role: model
+  content: 杭州不错呢
+- role: user
+  name: 小美
+  content: 小美和老张是同学
+- role: model
+  content: 原来小美和老张是同学关系
+- role: user
+  name: 小美
+  content: 有一次小美因为爱好闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小美
+  content: 就是小美在爱好的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小美
+  content: 上次小何跟我说了一件关于健康的事
+- role: model
+  content: 什么事？

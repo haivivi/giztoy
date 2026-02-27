@@ -1,0 +1,54 @@
+conv_id: session-002
+labels:
+- person:小王
+messages:
+- role: user
+  name: 小王
+  content: 今天想聊聊电影的事
+- role: model
+  content: 好的，电影怎么了？
+- role: user
+  name: 小王
+  content: 最近电影有什么新动态吗
+- role: model
+  content: 我听说电影方面有不少变化
+- role: user
+  name: 小王
+  content: 我对读书很感兴趣
+- role: model
+  content: 读书是个好话题
+- role: user
+  name: 小王
+  content: 小王今天跟我说了摄影的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小王
+  content: 小王说摄影最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小王
+  content: 小王喜欢设计师
+- role: model
+  content: 是吗，小王确实挺喜欢设计师的
+- role: user
+  name: 小王
+  content: 小王最近怎么样？
+- role: model
+  content: 小王最近挺好的
+- role: user
+  name: 小王
+  content: 小王去过上海
+- role: model
+  content: 上海挺美的
+- role: user
+  name: 小王
+  content: 上周小王去了广州
+- role: model
+  content: 广州不错呢
+- role: user
+  name: 小王
+  content: 你了解美食吗
+- role: model
+  content: 了解一些，美食挺热门的

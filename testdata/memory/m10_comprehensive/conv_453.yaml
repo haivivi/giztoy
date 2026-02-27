@@ -1,0 +1,54 @@
+conv_id: session-453
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 今天想聊聊乐高的事
+- role: model
+  content: 好的，乐高怎么了？
+- role: user
+  name: 爷爷
+  content: 爷爷在博物馆住过一段时间
+- role: model
+  content: 在博物馆生活应该很有意思
+- role: user
+  name: 爷爷
+  content: 爷爷已经70岁了
+- role: model
+  content: 爷爷70岁了呀
+- role: user
+  name: 爷爷
+  content: 爷爷在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 爷爷
+  content: 上周爷爷去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 爷爷
+  content: 爷爷今年70岁了
+- role: model
+  content: 原来爷爷70岁
+- role: user
+  name: 爷爷
+  content: 说到学校，我觉得挺有意思的
+- role: model
+  content: 是啊，学校确实值得聊聊
+- role: user
+  name: 爷爷
+  content: 爷爷今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 等等，爷爷应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爷爷
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的

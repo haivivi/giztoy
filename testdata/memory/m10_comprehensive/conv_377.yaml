@@ -1,0 +1,54 @@
+conv_id: session-377
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近宠物有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 爸爸和小明是亲戚
+- role: model
+  content: 原来爸爸和小明是亲戚关系
+- role: user
+  name: 小明
+  content: 小红平时有什么爱好？
+- role: model
+  content: 小红的爱好挺多的
+- role: user
+  name: 小明
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 小明
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实
+- role: user
+  name: 小明
+  content: 小明今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 等等，小明应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小明
+  content: 小明在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 小明
+  content: 你了解考试吗
+- role: model
+  content: 了解一些，考试挺热门的
+- role: user
+  name: 小明
+  content: 宠物太好玩了！
+- role: model
+  content: 是呀，宠物确实很有趣！

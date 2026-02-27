@@ -1,0 +1,54 @@
+conv_id: session-028
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊家庭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 妈妈在北京住过一段时间
+- role: model
+  content: 在北京生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢护士
+- role: model
+  content: 是吗，妈妈确实挺喜欢护士的
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢护士
+- role: model
+  content: 原来妈妈喜欢护士呀
+- role: user
+  name: 妈妈
+  content: 妈妈跟我说过，他最大的爱好就是护士
+- role: model
+  content: 妈妈爱好护士挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙护士
+- role: model
+  content: 妈妈忙护士一定很充实
+- role: user
+  name: 妈妈
+  content: 妈妈去过北京
+- role: model
+  content: 北京挺美的
+- role: user
+  name: 妈妈
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题
+- role: user
+  name: 妈妈
+  content: 说到学校，我觉得挺有意思的
+- role: model
+  content: 是啊，学校确实值得聊聊

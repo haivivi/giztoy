@@ -1,0 +1,54 @@
+conv_id: session-103
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊恐龙的事
+- role: model
+  content: 好的，恐龙怎么了？
+- role: user
+  name: 老师
+  content: 爸爸和妈妈是朋友
+- role: model
+  content: 原来爸爸和妈妈是朋友关系
+- role: user
+  name: 老师
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 老师
+  content: 老师打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 老师
+  content: 老师去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 老师
+  content: 老师打算去图书馆玩
+- role: model
+  content: 图书馆是个好地方
+- role: user
+  name: 老师
+  content: 有一次老师因为做饭闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 老师
+  content: 就是老师在做饭的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 老师
+  content: 老师今天跟我说了旅行的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说旅行最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

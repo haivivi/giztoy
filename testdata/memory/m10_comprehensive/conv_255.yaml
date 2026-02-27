@@ -1,0 +1,54 @@
+conv_id: session-255
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于过年的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题
+- role: user
+  name: 老师
+  content: 最近画画有什么新动态吗
+- role: model
+  content: 我听说画画方面有不少变化
+- role: user
+  name: 老师
+  content: 爷爷平时有什么爱好？
+- role: model
+  content: 爷爷的爱好挺多的
+- role: user
+  name: 老师
+  content: 最近生日有什么新动态吗
+- role: model
+  content: 我听说生日方面有不少变化
+- role: user
+  name: 老师
+  content: 老师今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，老师应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 小红平时有什么爱好？
+- role: model
+  content: 小红的爱好挺多的
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划
+- role: user
+  name: 老师
+  content: 小明和老师是姐弟
+- role: model
+  content: 原来小明和老师是姐弟关系

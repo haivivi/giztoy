@@ -1,0 +1,54 @@
+conv_id: session-223
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊运动的事
+- role: model
+  content: 好的，运动怎么了？
+- role: user
+  name: 老师
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 老师
+  content: 上周小明去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 老师
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 小红和老师是兄妹
+- role: model
+  content: 原来小红和老师是兄妹关系
+- role: user
+  name: 老师
+  content: 老师打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 老师
+  content: 爸爸和妈妈是同学
+- role: model
+  content: 原来爸爸和妈妈是同学关系
+- role: user
+  name: 老师
+  content: 妈妈和奶奶是姐弟
+- role: model
+  content: 原来妈妈和奶奶是姐弟关系
+- role: user
+  name: 老师
+  content: 老师今天跟我说了做饭的事
+- role: model
+  content: 说了什么？

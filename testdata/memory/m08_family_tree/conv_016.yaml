@@ -1,0 +1,54 @@
+conv_id: session-016
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于健康的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙护士
+- role: model
+  content: 妈妈忙护士一定很充实
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢护士
+- role: model
+  content: 是吗，妈妈确实挺喜欢护士的
+- role: user
+  name: 妈妈
+  content: 妈妈跟我说过，他最大的爱好就是护士
+- role: model
+  content: 妈妈爱好护士挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈打算去老家玩
+- role: model
+  content: 老家是个好地方
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了老家
+- role: model
+  content: 老家不错呢
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢护士
+- role: model
+  content: 是吗，妈妈确实挺喜欢护士的
+- role: user
+  name: 妈妈
+  content: 有一次妈妈因为家庭闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 妈妈
+  content: 就是妈妈在家庭的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 妈妈
+  content: 最近旅行有什么新动态吗
+- role: model
+  content: 我听说旅行方面有不少变化

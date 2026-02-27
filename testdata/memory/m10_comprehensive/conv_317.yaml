@@ -1,0 +1,54 @@
+conv_id: session-317
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近考试有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 爷爷
+  content: 你了解过年吗
+- role: model
+  content: 了解一些，过年挺热门的
+- role: user
+  name: 爷爷
+  content: 小胖和老师是朋友
+- role: model
+  content: 原来小胖和老师是朋友关系
+- role: user
+  name: 爷爷
+  content: 老师和爸爸是亲戚
+- role: model
+  content: 原来老师和爸爸是亲戚关系
+- role: user
+  name: 爷爷
+  content: 爷爷今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 等等，爷爷应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爷爷
+  content: 最近恐龙有什么新动态吗
+- role: model
+  content: 我听说恐龙方面有不少变化
+- role: user
+  name: 爷爷
+  content: 妈妈今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 等等，妈妈应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐

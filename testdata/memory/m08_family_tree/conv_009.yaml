@@ -1,0 +1,54 @@
+conv_id: session-009
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊家庭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 爸爸去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 爸爸
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触家庭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得家庭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 哥哥打算去北京玩
+- role: model
+  content: 北京是个好地方
+- role: user
+  name: 爸爸
+  content: 爸爸周末一般做什么？
+- role: model
+  content: 爸爸周末过得挺充实的
+- role: user
+  name: 爸爸
+  content: 家庭太好玩了！
+- role: model
+  content: 是呀，家庭确实很有趣！
+- role: user
+  name: 爸爸
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题
+- role: user
+  name: 爸爸
+  content: 爸爸跟我说过，他最大的爱好就是教师
+- role: model
+  content: 爸爸爱好教师挺好的

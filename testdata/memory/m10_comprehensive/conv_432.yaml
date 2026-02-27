@@ -1,0 +1,54 @@
+conv_id: session-432
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 小胖
+  content: 音乐太好玩了！
+- role: model
+  content: 是呀，音乐确实很有趣！
+- role: user
+  name: 小胖
+  content: 有一次老师因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是老师在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 爸爸去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 小胖
+  content: 小胖喜欢足球
+- role: model
+  content: 是吗，小胖确实挺喜欢足球的
+- role: user
+  name: 小胖
+  content: 我对音乐很感兴趣
+- role: model
+  content: 音乐是个好话题
+- role: user
+  name: 小胖
+  content: 有一次小胖因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖最近在忙足球
+- role: model
+  content: 小胖忙足球一定很充实

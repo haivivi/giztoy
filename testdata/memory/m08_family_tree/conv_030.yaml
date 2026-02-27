@@ -1,0 +1,54 @@
+conv_id: session-030
+labels:
+- person:妹妹
+messages:
+- role: user
+  name: 妹妹
+  content: 最近过年有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妹妹
+  content: 上周爸爸去了医院
+- role: model
+  content: 医院不错呢
+- role: user
+  name: 妹妹
+  content: 妹妹打算去老家玩
+- role: model
+  content: 老家是个好地方
+- role: user
+  name: 妹妹
+  content: 妹妹说他特别喜欢钢琴
+- role: model
+  content: 原来妹妹喜欢钢琴呀
+- role: user
+  name: 妹妹
+  content: 爸爸说他特别喜欢教师
+- role: model
+  content: 原来爸爸喜欢教师呀
+- role: user
+  name: 妹妹
+  content: 妹妹今天跟我说了家庭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妹妹
+  content: 妹妹说家庭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 妹妹
+  content: 妹妹今天跟我说了健康的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妹妹
+  content: 妹妹说健康最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 妹妹
+  content: 妹妹喜欢钢琴
+- role: model
+  content: 是吗，妹妹确实挺喜欢钢琴的

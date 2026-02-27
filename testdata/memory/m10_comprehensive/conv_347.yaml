@@ -1,0 +1,54 @@
+conv_id: session-347
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于运动的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 妈妈
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 妈妈
+  content: 妈妈最近怎么样？
+- role: model
+  content: 妈妈最近挺好的
+- role: user
+  name: 妈妈
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢设计师
+- role: model
+  content: 原来妈妈喜欢设计师呀
+- role: user
+  name: 妈妈
+  content: 老师和小红是亲戚
+- role: model
+  content: 原来老师和小红是亲戚关系
+- role: user
+  name: 妈妈
+  content: 奶奶和小明是亲戚
+- role: model
+  content: 原来奶奶和小明是亲戚关系
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 我对乐高很感兴趣
+- role: model
+  content: 乐高是个好话题

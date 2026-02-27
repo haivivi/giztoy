@@ -1,0 +1,54 @@
+conv_id: session-081
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 小明学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，小明学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 小明今天跟我说了做饭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 小明说做饭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小明
+  content: 小明学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，小明学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 你了解运动吗
+- role: model
+  content: 了解一些，运动挺热门的
+- role: user
+  name: 小明
+  content: 爷爷今天跟我说了做饭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 爷爷说做饭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

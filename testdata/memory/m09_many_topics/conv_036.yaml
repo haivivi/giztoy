@@ -1,0 +1,54 @@
+conv_id: session-036
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 今天想聊聊新闻的事
+- role: model
+  content: 好的，新闻怎么了？
+- role: user
+  name: 小美
+  content: 我记得小美第一次接触美食的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小美
+  content: 小美当时觉得美食特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小美
+  content: 小美打算去西湖玩
+- role: model
+  content: 西湖是个好地方
+- role: user
+  name: 小美
+  content: 小美周末一般做什么？
+- role: model
+  content: 小美周末过得挺充实的
+- role: user
+  name: 小美
+  content: 小美有没有什么计划？
+- role: model
+  content: 小美应该有一些计划
+- role: user
+  name: 小美
+  content: 小美最近在忙跑步
+- role: model
+  content: 小美忙跑步一定很充实
+- role: user
+  name: 小美
+  content: 小美和小何是兄妹
+- role: model
+  content: 原来小美和小何是兄妹关系
+- role: user
+  name: 小美
+  content: 小美在杭州住过一段时间
+- role: model
+  content: 在杭州生活应该很有意思
+- role: user
+  name: 小美
+  content: 小美去过杭州
+- role: model
+  content: 杭州挺美的

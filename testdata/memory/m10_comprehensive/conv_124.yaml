@@ -1,0 +1,54 @@
+conv_id: session-124
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近旅行有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 有一次爸爸因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爸爸
+  content: 就是爸爸在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爸爸
+  content: 小明今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 等等，小明应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于考试的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说考试让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 爸爸
+  content: 我记得小胖第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 小胖当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛

@@ -1,0 +1,54 @@
+conv_id: session-279
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 最近乐高有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老师
+  content: 老师喜欢吃什么？
+- role: model
+  content: 老师口味挺好的
+- role: user
+  name: 老师
+  content: 老师在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 老师
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 老师
+  content: 小红和小胖是同学
+- role: model
+  content: 原来小红和小胖是同学关系
+- role: user
+  name: 老师
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 老师
+  content: 老师去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触音乐的时候
+- role: model
+  content: 然后呢？

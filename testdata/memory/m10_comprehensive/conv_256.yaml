@@ -1,0 +1,54 @@
+conv_id: session-256
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于生日的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，小胖学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小胖
+  content: 最近过年有什么新动态吗
+- role: model
+  content: 我听说过年方面有不少变化
+- role: user
+  name: 小胖
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小胖
+  content: 你了解音乐吗
+- role: model
+  content: 了解一些，音乐挺热门的
+- role: user
+  name: 小胖
+  content: 画画太好玩了！
+- role: model
+  content: 是呀，画画确实很有趣！
+- role: user
+  name: 小胖
+  content: 小胖最近在忙足球
+- role: model
+  content: 小胖忙足球一定很充实
+- role: user
+  name: 小胖
+  content: 我对生日很感兴趣
+- role: model
+  content: 生日是个好话题

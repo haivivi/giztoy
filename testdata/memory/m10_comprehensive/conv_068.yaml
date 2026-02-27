@@ -1,0 +1,54 @@
+conv_id: session-068
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 爸爸
+  content: 爸爸平时有什么爱好？
+- role: model
+  content: 爸爸的爱好挺多的
+- role: user
+  name: 爸爸
+  content: 爸爸今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 等等，爸爸应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爸爸
+  content: 爸爸去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 爸爸
+  content: 妈妈和奶奶是朋友
+- role: model
+  content: 原来妈妈和奶奶是朋友关系
+- role: user
+  name: 爸爸
+  content: 有一次爸爸因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爸爸
+  content: 就是爸爸在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爸爸
+  content: 爸爸最近在忙音乐
+- role: model
+  content: 爸爸忙音乐一定很充实
+- role: user
+  name: 爸爸
+  content: 老师和爷爷是邻居
+- role: model
+  content: 原来老师和爷爷是邻居关系

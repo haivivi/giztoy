@@ -1,0 +1,54 @@
+conv_id: session-110
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 最近做饭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 奶奶
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 奶奶在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 奶奶
+  content: 其实奶奶自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 奶奶
+  content: 奶奶周末一般做什么？
+- role: model
+  content: 奶奶周末过得挺充实的
+- role: user
+  name: 奶奶
+  content: 奶奶去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 奶奶
+  content: 宠物太好玩了！
+- role: model
+  content: 是呀，宠物确实很有趣！
+- role: user
+  name: 奶奶
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题
+- role: user
+  name: 奶奶
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的

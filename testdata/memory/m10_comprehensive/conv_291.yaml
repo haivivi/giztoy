@@ -1,0 +1,54 @@
+conv_id: session-291
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊考试的事
+- role: model
+  content: 好的，考试怎么了？
+- role: user
+  name: 妈妈
+  content: 最近乐高有什么新动态吗
+- role: model
+  content: 我听说乐高方面有不少变化
+- role: user
+  name: 妈妈
+  content: 妈妈平时有什么爱好？
+- role: model
+  content: 妈妈的爱好挺多的
+- role: user
+  name: 妈妈
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妈妈
+  content: 妈妈在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实妈妈自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 爷爷和奶奶是姐弟
+- role: model
+  content: 原来爷爷和奶奶是姐弟关系
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢做饭
+- role: model
+  content: 是吗，妈妈确实挺喜欢做饭的
+- role: user
+  name: 妈妈
+  content: 小红有没有什么计划？
+- role: model
+  content: 小红应该有一些计划

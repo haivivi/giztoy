@@ -1,0 +1,54 @@
+conv_id: session-234
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近画画有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的
+- role: user
+  name: 小红
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小红
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小红
+  content: 爸爸和小明是兄妹
+- role: model
+  content: 原来爸爸和小明是兄妹关系
+- role: user
+  name: 小红
+  content: 小红打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 小红
+  content: 小明周末一般做什么？
+- role: model
+  content: 小明周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小红今天跟我说了旅行的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小红
+  content: 小红说旅行最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小红
+  content: 小红说他特别喜欢画画
+- role: model
+  content: 原来小红喜欢画画呀

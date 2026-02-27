@@ -1,0 +1,54 @@
+conv_id: session-097
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊旅行的事
+- role: model
+  content: 好的，旅行怎么了？
+- role: user
+  name: 小明
+  content: 上次小明跟我说了一件关于乐高的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小明
+  content: 小明说乐高让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小明
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 小明
+  content: 上次小明跟我说了一件关于生日的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小明
+  content: 小明说生日让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小明
+  content: 老师和爷爷是姐弟
+- role: model
+  content: 原来老师和爷爷是姐弟关系
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是古生物学家
+- role: model
+  content: 小明爱好古生物学家挺好的
+- role: user
+  name: 小明
+  content: 小红和小胖是亲戚
+- role: model
+  content: 原来小红和小胖是亲戚关系
+- role: user
+  name: 小明
+  content: 有一次小明因为考试闹了个笑话
+- role: model
+  content: 哈哈什么笑话

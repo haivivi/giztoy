@@ -1,0 +1,54 @@
+conv_id: session-095
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 最近考试有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老师
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 老师
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 老师
+  content: 老师今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，老师应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 老师周末一般做什么？
+- role: model
+  content: 老师周末过得挺充实的
+- role: user
+  name: 老师
+  content: 有一次老师因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 老师
+  content: 就是老师在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 老师
+  content: 我对过年很感兴趣
+- role: model
+  content: 过年是个好话题

@@ -1,0 +1,54 @@
+conv_id: session-342
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于乐高的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 奶奶去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 奶奶
+  content: 最近画画有什么新动态吗
+- role: model
+  content: 我听说画画方面有不少变化
+- role: user
+  name: 奶奶
+  content: 说到做饭，我觉得挺有意思的
+- role: model
+  content: 是啊，做饭确实值得聊聊
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触乐高的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得乐高特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 奶奶
+  content: 爸爸今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 等等，爸爸应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 奶奶
+  content: 爷爷和老师是邻居
+- role: model
+  content: 原来爷爷和老师是邻居关系
+- role: user
+  name: 奶奶
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题

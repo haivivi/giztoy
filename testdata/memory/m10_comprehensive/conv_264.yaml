@@ -1,0 +1,54 @@
+conv_id: session-264
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊旅行的事
+- role: model
+  content: 好的，旅行怎么了？
+- role: user
+  name: 小胖
+  content: 最近画画有什么新动态吗
+- role: model
+  content: 我听说画画方面有不少变化
+- role: user
+  name: 小胖
+  content: 妈妈和爸爸是兄妹
+- role: model
+  content: 原来妈妈和爸爸是兄妹关系
+- role: user
+  name: 小胖
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小胖
+  content: 小胖和小红是兄妹
+- role: model
+  content: 原来小胖和小红是兄妹关系
+- role: user
+  name: 小胖
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 小胖
+  content: 说到旅行，我觉得挺有意思的
+- role: model
+  content: 是啊，旅行确实值得聊聊
+- role: user
+  name: 小胖
+  content: 有一次小胖因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣

@@ -1,0 +1,54 @@
+conv_id: session-418
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小红
+  content: 我记得奶奶第一次接触运动的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 奶奶当时觉得运动特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 奶奶和爷爷是姐弟
+- role: model
+  content: 原来奶奶和爷爷是姐弟关系
+- role: user
+  name: 小红
+  content: 小红在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 小红
+  content: 爸爸今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 等等，爸爸应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 小红
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 小红
+  content: 小红平时有什么爱好？
+- role: model
+  content: 小红的爱好挺多的
+- role: user
+  name: 小红
+  content: 最近旅行有什么新动态吗
+- role: model
+  content: 我听说旅行方面有不少变化

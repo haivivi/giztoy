@@ -1,0 +1,54 @@
+conv_id: session-087
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 老师去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 老师
+  content: 上次奶奶跟我说了一件关于画画的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老师
+  content: 奶奶说画画让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 老师
+  content: 最近考试有什么新动态吗
+- role: model
+  content: 我听说考试方面有不少变化
+- role: user
+  name: 老师
+  content: 我记得小胖第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 小胖当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 老师
+  content: 上次妈妈跟我说了一件关于学校的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老师
+  content: 妈妈说学校让他学到了很多
+- role: model
+  content: 这样啊

@@ -1,0 +1,54 @@
+conv_id: session-042
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 想跟你聊聊旅行
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小美
+  content: 小何喜欢自由职业
+- role: model
+  content: 是吗，小何确实挺喜欢自由职业的
+- role: user
+  name: 小美
+  content: 小何和小美是兄妹
+- role: model
+  content: 原来小何和小美是兄妹关系
+- role: user
+  name: 小美
+  content: 小美跟我说过，他最大的爱好就是跑步
+- role: model
+  content: 小美爱好跑步挺好的
+- role: user
+  name: 小美
+  content: 小美和小何是同事
+- role: model
+  content: 原来小美和小何是同事关系
+- role: user
+  name: 小美
+  content: 小美跟我说过，他最大的爱好就是跑步
+- role: model
+  content: 小美爱好跑步挺好的
+- role: user
+  name: 小美
+  content: 小美跟我说过，他最大的爱好就是跑步
+- role: model
+  content: 小美爱好跑步挺好的
+- role: user
+  name: 小美
+  content: 最近电影有什么新动态吗
+- role: model
+  content: 我听说电影方面有不少变化
+- role: user
+  name: 小美
+  content: 小美喜欢吃什么？
+- role: model
+  content: 小美口味挺好的
+- role: user
+  name: 小美
+  content: 上次小美跟我说了一件关于理财的事
+- role: model
+  content: 什么事？

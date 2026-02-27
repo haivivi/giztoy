@@ -1,0 +1,54 @@
+conv_id: session-401
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近旅行有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小明
+  content: 爸爸最近在忙工程师
+- role: model
+  content: 爸爸忙工程师一定很充实
+- role: user
+  name: 小明
+  content: 小明周末一般做什么？
+- role: model
+  content: 小明周末过得挺充实的
+- role: user
+  name: 小明
+  content: 说到音乐，我觉得挺有意思的
+- role: model
+  content: 是啊，音乐确实值得聊聊
+- role: user
+  name: 小明
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化
+- role: user
+  name: 小明
+  content: 爸爸打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 小明
+  content: 小明学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，小明学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的

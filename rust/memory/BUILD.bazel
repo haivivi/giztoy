@@ -1,0 +1,36 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "memory",
+    crate_name = "giztoy_memory",
+    srcs = glob(["src/**/*.rs"]),
+    proc_macro_deps = [
+        "@crate_index//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//rust/embed:embed",
+        "//rust/genx:genx",
+        "//rust/graph:graph",
+        "//rust/recall:recall",
+        "//rust/vecstore:vecstore",
+        "@openerp//rust/lib/kv:kv",
+        "@crate_index//:rmp-serde",
+        "@crate_index//:serde",
+        "@crate_index//:serde_json",
+        "@crate_index//:thiserror",
+    ],
+)
+
+rust_test(
+    name = "memory_test",
+    crate = ":memory",
+    data = ["//testdata/memory:memory_data"],
+    deps = [
+        "@openerp//rust/lib/kv:kv",
+        "@crate_index//:rmpv",
+        "@crate_index//:serde_yaml",
+        "@crate_index//:tempfile",
+        "@crate_index//:tokio",
+    ],
+)

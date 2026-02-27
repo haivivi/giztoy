@@ -1,0 +1,54 @@
+conv_id: session-201
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊乐高
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 上次小胖跟我说了一件关于乐高的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小明
+  content: 小胖说乐高让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小明
+  content: 小明最近在忙恐龙
+- role: model
+  content: 小明忙恐龙一定很充实
+- role: user
+  name: 小明
+  content: 妈妈和小胖是邻居
+- role: model
+  content: 原来妈妈和小胖是邻居关系
+- role: user
+  name: 小明
+  content: 小明在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小明自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的

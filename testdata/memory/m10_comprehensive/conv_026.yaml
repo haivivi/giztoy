@@ -1,0 +1,54 @@
+conv_id: session-026
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 想跟你聊聊考试
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小红
+  content: 上周小红去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 小红
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 小红
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小红
+  content: 其实小红自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小红
+  content: 小红在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 小红
+  content: 小明打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 小红
+  content: 小红是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，小红是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小红
+  content: 小胖和小明是亲戚
+- role: model
+  content: 原来小胖和小明是亲戚关系

@@ -1,0 +1,54 @@
+conv_id: session-071
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于旅行的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 妈妈今天跟我说了做饭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 妈妈说做饭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 小明学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，小明学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 老师
+  content: 宠物太好玩了！
+- role: model
+  content: 是呀，宠物确实很有趣！
+- role: user
+  name: 老师
+  content: 爸爸打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 老师
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划
+- role: user
+  name: 老师
+  content: 你了解宠物吗
+- role: model
+  content: 了解一些，宠物挺热门的

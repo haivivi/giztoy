@@ -1,0 +1,54 @@
+conv_id: session-226
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 跟你说个关于过年的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小红
+  content: 最近宠物有什么新动态吗
+- role: model
+  content: 我听说宠物方面有不少变化
+- role: user
+  name: 小红
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 小红
+  content: 小胖是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，小胖是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小红
+  content: 妈妈打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 小红
+  content: 说到恐龙，我觉得挺有意思的
+- role: model
+  content: 是啊，恐龙确实值得聊聊
+- role: user
+  name: 小红
+  content: 上次小红跟我说了一件关于画画的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小红
+  content: 小红说画画让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小红
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的

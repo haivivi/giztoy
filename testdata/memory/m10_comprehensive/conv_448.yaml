@@ -1,0 +1,54 @@
+conv_id: session-448
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于音乐的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 最近考试有什么新动态吗
+- role: model
+  content: 我听说考试方面有不少变化
+- role: user
+  name: 小胖
+  content: 老师和小胖是同学
+- role: model
+  content: 原来老师和小胖是同学关系
+- role: user
+  name: 小胖
+  content: 妈妈和小胖是同事
+- role: model
+  content: 原来妈妈和小胖是同事关系
+- role: user
+  name: 小胖
+  content: 乐高太好玩了！
+- role: model
+  content: 是呀，乐高确实很有趣！
+- role: user
+  name: 小胖
+  content: 小胖今天跟我说了乐高的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小胖
+  content: 小胖说乐高最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小胖
+  content: 小胖今天跟我说了画画的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小胖
+  content: 小胖说画画最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小胖
+  content: 说到旅行，我觉得挺有意思的
+- role: model
+  content: 是啊，旅行确实值得聊聊

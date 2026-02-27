@@ -1,0 +1,54 @@
+conv_id: session-261
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爷爷
+  content: 爷爷在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实爷爷自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爷爷
+  content: 爷爷在博物馆住过一段时间
+- role: model
+  content: 在博物馆生活应该很有意思
+- role: user
+  name: 爷爷
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 爷爷
+  content: 小明和小胖是亲戚
+- role: model
+  content: 原来小明和小胖是亲戚关系
+- role: user
+  name: 爷爷
+  content: 爷爷周末一般做什么？
+- role: model
+  content: 爷爷周末过得挺充实的
+- role: user
+  name: 爷爷
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 爷爷
+  content: 妈妈最近在忙做饭
+- role: model
+  content: 妈妈忙做饭一定很充实
+- role: user
+  name: 爷爷
+  content: 爷爷今年25岁
+- role: model
+  content: 好的

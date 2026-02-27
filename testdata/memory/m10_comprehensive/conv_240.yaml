@@ -1,0 +1,54 @@
+conv_id: session-240
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小胖
+  content: 爸爸和小胖是邻居
+- role: model
+  content: 原来爸爸和小胖是邻居关系
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，小胖学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小胖
+  content: 妈妈喜欢做饭
+- role: model
+  content: 是吗，妈妈确实挺喜欢做饭的
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，小胖学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小胖
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的
+- role: user
+  name: 小胖
+  content: 我记得小胖第一次接触学校的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 小胖当时觉得学校特别新奇
+- role: model
+  content: 每个人都有第一次嘛

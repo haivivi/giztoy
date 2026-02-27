@@ -1,0 +1,54 @@
+conv_id: session-298
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 小红
+  content: 小红打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 小红
+  content: 老师在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 小红
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 小红
+  content: 小红去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小红最近在忙画画
+- role: model
+  content: 小红忙画画一定很充实
+- role: user
+  name: 小红
+  content: 小明最近在忙恐龙
+- role: model
+  content: 小明忙恐龙一定很充实
+- role: user
+  name: 小红
+  content: 小红说他特别喜欢画画
+- role: model
+  content: 原来小红喜欢画画呀
+- role: user
+  name: 小红
+  content: 奶奶去过奶奶家
+- role: model
+  content: 奶奶家挺美的

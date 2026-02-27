@@ -1,0 +1,54 @@
+conv_id: session-033
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊恐龙的事
+- role: model
+  content: 好的，恐龙怎么了？
+- role: user
+  name: 小明
+  content: 小明和爷爷是朋友
+- role: model
+  content: 原来小明和爷爷是朋友关系
+- role: user
+  name: 小明
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 小明去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小胖和老师是同学
+- role: model
+  content: 原来小胖和老师是同学关系
+- role: user
+  name: 小明
+  content: 小明喜欢古生物学家
+- role: model
+  content: 是吗，小明确实挺喜欢古生物学家的
+- role: user
+  name: 小明
+  content: 妈妈和小红是姐弟
+- role: model
+  content: 原来妈妈和小红是姐弟关系
+- role: user
+  name: 小明
+  content: 有一次小明因为恐龙闹了个笑话
+- role: model
+  content: 哈哈什么笑话

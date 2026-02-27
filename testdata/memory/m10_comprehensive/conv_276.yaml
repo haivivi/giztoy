@@ -1,0 +1,54 @@
+conv_id: session-276
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爸爸
+  content: 爸爸今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 等等，爸爸应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爸爸
+  content: 奶奶和妈妈是兄妹
+- role: model
+  content: 原来奶奶和妈妈是兄妹关系
+- role: user
+  name: 爸爸
+  content: 爸爸学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，爸爸学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢吃什么？
+- role: model
+  content: 爸爸口味挺好的

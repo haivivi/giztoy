@@ -1,0 +1,54 @@
+conv_id: session-227
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊运动的事
+- role: model
+  content: 好的，运动怎么了？
+- role: user
+  name: 妈妈
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢做饭
+- role: model
+  content: 原来妈妈喜欢做饭呀
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢做饭
+- role: model
+  content: 原来妈妈喜欢做饭呀
+- role: user
+  name: 妈妈
+  content: 我对乐高很感兴趣
+- role: model
+  content: 乐高是个好话题
+- role: user
+  name: 妈妈
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实妈妈自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 小胖和小明是亲戚
+- role: model
+  content: 原来小胖和小明是亲戚关系

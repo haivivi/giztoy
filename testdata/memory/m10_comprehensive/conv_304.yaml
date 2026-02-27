@@ -1,0 +1,54 @@
+conv_id: session-304
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 我记得妈妈第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 妈妈当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小胖
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小胖
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小胖
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的
+- role: user
+  name: 小胖
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 小胖
+  content: 小胖去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 小胖
+  content: 小胖平时有什么爱好？
+- role: model
+  content: 小胖的爱好挺多的
+- role: user
+  name: 小胖
+  content: 小胖在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思

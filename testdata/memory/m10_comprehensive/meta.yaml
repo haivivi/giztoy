@@ -1,0 +1,20 @@
+name: m10_comprehensive
+desc: "Comprehensive stress test: 8 personas, 500 sessions, all patterns"
+persona: cat_girl
+total_messages: 10000
+conversations: 500
+expect:
+  min_entities: 6
+  min_relations: 5
+  min_segments: 50
+  recall:
+  - text: 恐龙
+    labels:
+    - person:小明
+    min_results: 2
+  - text: 画画
+    labels:
+    - person:小红
+    min_results: 1
+  - text: 做饭
+    min_results: 1

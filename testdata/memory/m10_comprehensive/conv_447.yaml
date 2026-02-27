@@ -1,0 +1,54 @@
+conv_id: session-447
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 老师
+  content: 老师最近在忙数学
+- role: model
+  content: 老师忙数学一定很充实
+- role: user
+  name: 老师
+  content: 运动太好玩了！
+- role: model
+  content: 是呀，运动确实很有趣！
+- role: user
+  name: 老师
+  content: 我记得小胖第一次接触音乐的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 小胖当时觉得音乐特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 老师和小胖是同事
+- role: model
+  content: 原来老师和小胖是同事关系
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划
+- role: user
+  name: 老师
+  content: 老师是在北京工作的
+- role: model
+  content: 好的

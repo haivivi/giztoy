@@ -1,0 +1,54 @@
+conv_id: session-476
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 爸爸
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爸爸
+  content: 爷爷和爸爸是同事
+- role: model
+  content: 原来爷爷和爸爸是同事关系
+- role: user
+  name: 爸爸
+  content: 做饭太好玩了！
+- role: model
+  content: 是呀，做饭确实很有趣！
+- role: user
+  name: 爸爸
+  content: 老师和小胖是兄妹
+- role: model
+  content: 原来老师和小胖是兄妹关系
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢工程师
+- role: model
+  content: 是吗，爸爸确实挺喜欢工程师的
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实

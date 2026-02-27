@@ -1,0 +1,54 @@
+conv_id: session-194
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的
+- role: user
+  name: 小红
+  content: 老师今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小红
+  content: 老师说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小红
+  content: 小红打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 小红
+  content: 有一次小红因为画画闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小红
+  content: 就是小红在画画的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小红
+  content: 小红平时有什么爱好？
+- role: model
+  content: 小红的爱好挺多的
+- role: user
+  name: 小红
+  content: 上周爷爷去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 小红
+  content: 小红喜欢画画
+- role: model
+  content: 是吗，小红确实挺喜欢画画的

@@ -1,0 +1,54 @@
+conv_id: session-286
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 想跟你聊聊旅行
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 奶奶
+  content: 小红和奶奶是姐弟
+- role: model
+  content: 原来小红和奶奶是姐弟关系
+- role: user
+  name: 奶奶
+  content: 妈妈是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，妈妈是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 小红说他特别喜欢画画
+- role: model
+  content: 原来小红喜欢画画呀
+- role: user
+  name: 奶奶
+  content: 小明学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 奶奶
+  content: 不对，小明学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触画画的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得画画特别新奇
+- role: model
+  content: 每个人都有第一次嘛

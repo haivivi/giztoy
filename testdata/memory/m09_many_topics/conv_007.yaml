@@ -1,0 +1,54 @@
+conv_id: session-007
+labels:
+- person:小何
+messages:
+- role: user
+  name: 小何
+  content: 今天想聊聊新闻的事
+- role: model
+  content: 好的，新闻怎么了？
+- role: user
+  name: 小何
+  content: 小美和老张是邻居
+- role: model
+  content: 原来小美和老张是邻居关系
+- role: user
+  name: 小何
+  content: 小何在西湖住过一段时间
+- role: model
+  content: 在西湖生活应该很有意思
+- role: user
+  name: 小何
+  content: 小何去过苏州
+- role: model
+  content: 苏州挺美的
+- role: user
+  name: 小何
+  content: 小何在西湖住过一段时间
+- role: model
+  content: 在西湖生活应该很有意思
+- role: user
+  name: 小何
+  content: 小何和小美是姐弟
+- role: model
+  content: 原来小何和小美是姐弟关系
+- role: user
+  name: 小何
+  content: 你了解工作吗
+- role: model
+  content: 了解一些，工作挺热门的
+- role: user
+  name: 小何
+  content: 小何喜欢自由职业
+- role: model
+  content: 是吗，小何确实挺喜欢自由职业的
+- role: user
+  name: 小何
+  content: 最近美食有什么新动态吗
+- role: model
+  content: 我听说美食方面有不少变化
+- role: user
+  name: 小何
+  content: 最近健康有什么新动态吗
+- role: model
+  content: 我听说健康方面有不少变化

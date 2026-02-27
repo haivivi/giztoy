@@ -1,0 +1,54 @@
+conv_id: session-300
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 爸爸
+  content: 爸爸在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 上次小胖跟我说了一件关于运动的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 小胖说运动让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于运动的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说运动让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，爸爸学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爸爸
+  content: 小明和老师是同事
+- role: model
+  content: 原来小明和老师是同事关系
+- role: user
+  name: 爸爸
+  content: 爸爸有没有什么计划？
+- role: model
+  content: 爸爸应该有一些计划

@@ -1,0 +1,54 @@
+conv_id: session-148
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊学校的事
+- role: model
+  content: 好的，学校怎么了？
+- role: user
+  name: 爸爸
+  content: 妈妈打算去图书馆玩
+- role: model
+  content: 图书馆是个好地方
+- role: user
+  name: 爸爸
+  content: 爸爸学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，爸爸学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爸爸
+  content: 说到音乐，我觉得挺有意思的
+- role: model
+  content: 是啊，音乐确实值得聊聊
+- role: user
+  name: 爸爸
+  content: 爸爸学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，爸爸学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爸爸
+  content: 爸爸去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 爸爸
+  content: 小红和妈妈是同事
+- role: model
+  content: 原来小红和妈妈是同事关系
+- role: user
+  name: 爸爸
+  content: 老师学的是数学
+- role: model
+  content: 数学不错

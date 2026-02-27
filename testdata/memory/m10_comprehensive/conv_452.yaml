@@ -1,0 +1,54 @@
+conv_id: session-452
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 跟你说个关于画画的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爸爸
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 小明说他特别喜欢恐龙
+- role: model
+  content: 原来小明喜欢恐龙呀
+- role: user
+  name: 爸爸
+  content: 小红打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 爸爸
+  content: 奶奶和爸爸是同学
+- role: model
+  content: 原来奶奶和爸爸是同学关系
+- role: user
+  name: 爸爸
+  content: 最近画画有什么新动态吗
+- role: model
+  content: 我听说画画方面有不少变化
+- role: user
+  name: 爸爸
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 爸爸
+  content: 我对音乐很感兴趣
+- role: model
+  content: 音乐是个好话题
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀

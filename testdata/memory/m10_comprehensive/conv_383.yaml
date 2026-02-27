@@ -1,0 +1,54 @@
+conv_id: session-383
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于过年的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 爷爷和妈妈是邻居
+- role: model
+  content: 原来爷爷和妈妈是邻居关系
+- role: user
+  name: 老师
+  content: 你了解恐龙吗
+- role: model
+  content: 了解一些，恐龙挺热门的
+- role: user
+  name: 老师
+  content: 爸爸在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思
+- role: user
+  name: 老师
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 老师
+  content: 爸爸和小胖是同学
+- role: model
+  content: 原来爸爸和小胖是同学关系
+- role: user
+  name: 老师
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划

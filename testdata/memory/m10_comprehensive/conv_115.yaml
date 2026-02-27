@@ -1,0 +1,54 @@
+conv_id: session-115
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊音乐
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 最近乐高有什么新动态吗
+- role: model
+  content: 我听说乐高方面有不少变化
+- role: user
+  name: 妈妈
+  content: 爷爷打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 妈妈
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 妈妈
+  content: 奶奶在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实奶奶自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 妈妈当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妈妈
+  content: 妈妈今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 等等，妈妈应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐

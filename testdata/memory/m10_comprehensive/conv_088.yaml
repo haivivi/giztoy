@@ -1,0 +1,54 @@
+conv_id: session-088
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小胖
+  content: 奶奶在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 小胖
+  content: 妈妈和老师是邻居
+- role: model
+  content: 原来妈妈和老师是邻居关系
+- role: user
+  name: 小胖
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化
+- role: user
+  name: 小胖
+  content: 爸爸喜欢吃什么？
+- role: model
+  content: 爸爸口味挺好的
+- role: user
+  name: 小胖
+  content: 小胖在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 小胖
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小胖
+  content: 我记得小胖第一次接触运动的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 小胖当时觉得运动特别新奇
+- role: model
+  content: 每个人都有第一次嘛

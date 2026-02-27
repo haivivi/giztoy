@@ -1,0 +1,54 @@
+conv_id: session-487
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊考试
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实小红自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 老师
+  content: 上周老师去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 老师
+  content: 有一次老师因为生日闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 老师
+  content: 就是老师在生日的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 老师
+  content: 老师今天跟我说了旅行的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说旅行最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 我对乐高很感兴趣
+- role: model
+  content: 乐高是个好话题
+- role: user
+  name: 老师
+  content: 说到乐高，我觉得挺有意思的
+- role: model
+  content: 是啊，乐高确实值得聊聊

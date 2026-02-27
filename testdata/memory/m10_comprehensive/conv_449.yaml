@@ -1,0 +1,54 @@
+conv_id: session-449
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 跟你说个关于考试的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小明
+  content: 小明在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小明自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 小明去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 小明
+  content: 最近宠物有什么新动态吗
+- role: model
+  content: 我听说宠物方面有不少变化
+- role: user
+  name: 小明
+  content: 你了解过年吗
+- role: model
+  content: 了解一些，过年挺热门的
+- role: user
+  name: 小明
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 小明在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 小明
+  content: 上周小胖去了博物馆
+- role: model
+  content: 博物馆不错呢

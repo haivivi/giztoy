@@ -1,0 +1,54 @@
+conv_id: session-139
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于过年的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢设计师
+- role: model
+  content: 原来妈妈喜欢设计师呀
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢做饭
+- role: model
+  content: 原来妈妈喜欢做饭呀
+- role: user
+  name: 妈妈
+  content: 小红打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 妈妈
+  content: 老师和妈妈是同事
+- role: model
+  content: 原来老师和妈妈是同事关系
+- role: user
+  name: 妈妈
+  content: 妈妈去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 妈妈
+  content: 妈妈在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 妈妈和爷爷是同学
+- role: model
+  content: 原来妈妈和爷爷是同学关系
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触运动的时候
+- role: model
+  content: 然后呢？

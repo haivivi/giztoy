@@ -1,0 +1,54 @@
+conv_id: session-116
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 上周老师去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 爸爸
+  content: 爸爸在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爸爸
+  content: 其实爸爸自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爸爸
+  content: 奶奶和小明是亲戚
+- role: model
+  content: 原来奶奶和小明是亲戚关系
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于过年的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说过年让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 有一次爸爸因为过年闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爸爸
+  content: 就是爸爸在过年的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爸爸
+  content: 小红和小胖是同学
+- role: model
+  content: 原来小红和小胖是同学关系

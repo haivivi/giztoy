@@ -1,0 +1,54 @@
+conv_id: session-348
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近音乐有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 爸爸平时有什么爱好？
+- role: model
+  content: 爸爸的爱好挺多的
+- role: user
+  name: 爸爸
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 爸爸
+  content: 小胖今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 等等，小胖应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 爸爸
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 老师和妈妈是兄妹
+- role: model
+  content: 原来老师和妈妈是兄妹关系
+- role: user
+  name: 爸爸
+  content: 爸爸去过博物馆
+- role: model
+  content: 博物馆挺美的

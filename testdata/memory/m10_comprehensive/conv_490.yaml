@@ -1,0 +1,54 @@
+conv_id: session-490
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小红
+  content: 我记得老师第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 老师当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 最近宠物有什么新动态吗
+- role: model
+  content: 我听说宠物方面有不少变化
+- role: user
+  name: 小红
+  content: 小红和小明是亲戚
+- role: model
+  content: 原来小红和小明是亲戚关系
+- role: user
+  name: 小红
+  content: 小红有没有什么计划？
+- role: model
+  content: 小红应该有一些计划
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的
+- role: user
+  name: 小红
+  content: 小红是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小红
+  content: 哦不对，小红是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小红
+  content: 小红在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思

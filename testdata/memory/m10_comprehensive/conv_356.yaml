@@ -1,0 +1,54 @@
+conv_id: session-356
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近运动有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 你了解考试吗
+- role: model
+  content: 了解一些，考试挺热门的
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触运动的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得运动特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢吃什么？
+- role: model
+  content: 爸爸口味挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢音乐
+- role: model
+  content: 是吗，爸爸确实挺喜欢音乐的
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了公园
+- role: model
+  content: 公园不错呢
+- role: user
+  name: 爸爸
+  content: 爸爸和老师是朋友
+- role: model
+  content: 原来爸爸和老师是朋友关系
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 爸爸
+  content: 爸爸今年25岁
+- role: model
+  content: 好的

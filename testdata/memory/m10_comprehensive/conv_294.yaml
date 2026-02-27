@@ -1,0 +1,54 @@
+conv_id: session-294
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 爷爷和老师是同学
+- role: model
+  content: 原来爷爷和老师是同学关系
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触乐高的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得乐高特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 奶奶
+  content: 我记得爸爸第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 爸爸当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 小胖和小明是同学
+- role: model
+  content: 原来小胖和小明是同学关系

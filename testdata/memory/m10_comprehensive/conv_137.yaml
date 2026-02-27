@@ -1,0 +1,54 @@
+conv_id: session-137
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小明
+  content: 说到旅行，我觉得挺有意思的
+- role: model
+  content: 是啊，旅行确实值得聊聊
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 小明在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 小明
+  content: 小明去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 小明
+  content: 画画太好玩了！
+- role: model
+  content: 是呀，画画确实很有趣！
+- role: user
+  name: 小明
+  content: 上周小明去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 小明
+  content: 小红和小明是朋友
+- role: model
+  content: 原来小红和小明是朋友关系
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 小明在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思

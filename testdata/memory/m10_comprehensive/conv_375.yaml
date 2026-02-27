@@ -1,0 +1,54 @@
+conv_id: session-375
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 最近运动有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老师
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 老师
+  content: 小明和小胖是姐弟
+- role: model
+  content: 原来小明和小胖是姐弟关系
+- role: user
+  name: 老师
+  content: 有一次老师因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 老师
+  content: 就是老师在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 老师
+  content: 小明和爷爷是兄妹
+- role: model
+  content: 原来小明和爷爷是兄妹关系
+- role: user
+  name: 老师
+  content: 老师在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 老师
+  content: 老师今天跟我说了音乐的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说音乐最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 恐龙太好玩了！
+- role: model
+  content: 是呀，恐龙确实很有趣！

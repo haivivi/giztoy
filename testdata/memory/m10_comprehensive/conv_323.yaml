@@ -1,0 +1,54 @@
+conv_id: session-323
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近生日有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 妈妈今天跟我说了旅行的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妈妈
+  content: 妈妈说旅行最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢设计师
+- role: model
+  content: 是吗，妈妈确实挺喜欢设计师的
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触运动的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 妈妈当时觉得运动特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妈妈
+  content: 妈妈最近怎么样？
+- role: model
+  content: 妈妈最近挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢做饭
+- role: model
+  content: 是吗，妈妈确实挺喜欢做饭的
+- role: user
+  name: 妈妈
+  content: 妈妈是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，妈妈是在上海工作的，我记错了
+- role: model
+  content: 没关系

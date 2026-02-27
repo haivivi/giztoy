@@ -1,0 +1,54 @@
+conv_id: session-167
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊考试
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触学校的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 老师当时觉得学校特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 爸爸和老师是邻居
+- role: model
+  content: 原来爸爸和老师是邻居关系
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触音乐的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老师
+  content: 老师当时觉得音乐特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老师
+  content: 上次老师跟我说了一件关于考试的事
+- role: model
+  content: 什么事？

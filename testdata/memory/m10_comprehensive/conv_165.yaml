@@ -1,0 +1,54 @@
+conv_id: session-165
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近生日有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 说到乐高，我觉得挺有意思的
+- role: model
+  content: 是啊，乐高确实值得聊聊
+- role: user
+  name: 爷爷
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 爷爷
+  content: 爷爷今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 等等，爷爷应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爷爷
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爷爷
+  content: 爷爷去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 爷爷
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系

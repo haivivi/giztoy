@@ -1,0 +1,54 @@
+conv_id: session-046
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 今天想聊聊运动的事
+- role: model
+  content: 好的，运动怎么了？
+- role: user
+  name: 奶奶
+  content: 小胖和小红是同学
+- role: model
+  content: 原来小胖和小红是同学关系
+- role: user
+  name: 奶奶
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 奶奶
+  content: 小胖和小红是邻居
+- role: model
+  content: 原来小胖和小红是邻居关系
+- role: user
+  name: 奶奶
+  content: 奶奶打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 奶奶
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶和小红是同事
+- role: model
+  content: 原来奶奶和小红是同事关系
+- role: user
+  name: 奶奶
+  content: 有一次奶奶因为恐龙闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 奶奶
+  content: 就是奶奶在恐龙的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 奶奶
+  content: 奶奶在一家大公司
+- role: model
+  content: 挺好的

@@ -1,0 +1,54 @@
+conv_id: session-367
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊运动的事
+- role: model
+  content: 好的，运动怎么了？
+- role: user
+  name: 老师
+  content: 考试太好玩了！
+- role: model
+  content: 是呀，考试确实很有趣！
+- role: user
+  name: 老师
+  content: 上周老师去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 老师
+  content: 老师喜欢吃什么？
+- role: model
+  content: 老师口味挺好的
+- role: user
+  name: 老师
+  content: 你了解画画吗
+- role: model
+  content: 了解一些，画画挺热门的
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化
+- role: user
+  name: 老师
+  content: 小明和小胖是姐弟
+- role: model
+  content: 原来小明和小胖是姐弟关系
+- role: user
+  name: 老师
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 老师
+  content: 小明和老师是姐弟
+- role: model
+  content: 原来小明和老师是姐弟关系

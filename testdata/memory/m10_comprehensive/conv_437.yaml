@@ -1,0 +1,54 @@
+conv_id: session-437
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 今天想聊聊恐龙的事
+- role: model
+  content: 好的，恐龙怎么了？
+- role: user
+  name: 爷爷
+  content: 爷爷已经70岁了
+- role: model
+  content: 爷爷70岁了呀
+- role: user
+  name: 爷爷
+  content: 上周爷爷去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 爷爷
+  content: 小明说他特别喜欢古生物学家
+- role: model
+  content: 原来小明喜欢古生物学家呀
+- role: user
+  name: 爷爷
+  content: 你了解音乐吗
+- role: model
+  content: 了解一些，音乐挺热门的
+- role: user
+  name: 爷爷
+  content: 爷爷学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爷爷
+  content: 不对，爷爷学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爷爷
+  content: 上次爷爷跟我说了一件关于过年的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爷爷
+  content: 爷爷说过年让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爷爷
+  content: 有一次爷爷因为乐高闹了个笑话
+- role: model
+  content: 哈哈什么笑话

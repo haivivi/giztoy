@@ -1,0 +1,54 @@
+conv_id: session-362
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近考试有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 小红说他特别喜欢画画
+- role: model
+  content: 原来小红喜欢画画呀
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的
+- role: user
+  name: 小红
+  content: 上周小胖去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 小红
+  content: 小红喜欢画画
+- role: model
+  content: 是吗，小红确实挺喜欢画画的
+- role: user
+  name: 小红
+  content: 你了解画画吗
+- role: model
+  content: 了解一些，画画挺热门的
+- role: user
+  name: 小红
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 小红
+  content: 我记得小红第一次接触画画的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 小红当时觉得画画特别新奇
+- role: model
+  content: 每个人都有第一次嘛

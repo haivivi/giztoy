@@ -1,0 +1,54 @@
+conv_id: session-231
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊恐龙的事
+- role: model
+  content: 好的，恐龙怎么了？
+- role: user
+  name: 老师
+  content: 小明和爸爸是同学
+- role: model
+  content: 原来小明和爸爸是同学关系
+- role: user
+  name: 老师
+  content: 说到考试，我觉得挺有意思的
+- role: model
+  content: 是啊，考试确实值得聊聊
+- role: user
+  name: 老师
+  content: 老师喜欢吃什么？
+- role: model
+  content: 老师口味挺好的
+- role: user
+  name: 老师
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 老师
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 老师
+  content: 老师和爷爷是兄妹
+- role: model
+  content: 原来老师和爷爷是兄妹关系
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好

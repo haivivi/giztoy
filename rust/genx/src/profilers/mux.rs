@@ -47,6 +47,15 @@ impl ProfilerMux {
             })
     }
 
+    pub fn get_arc(&self, pattern: &str) -> Result<Arc<dyn Profiler>, GenxError> {
+        self.routes.get(pattern).cloned().ok_or_else(|| {
+            GenxError::Other(anyhow::anyhow!(
+                "profilers: profiler not found for {}",
+                pattern,
+            ))
+        })
+    }
+
     pub async fn process(
         &self,
         pattern: &str,

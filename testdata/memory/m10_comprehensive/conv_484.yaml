@@ -1,0 +1,54 @@
+conv_id: session-484
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊生日
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 爸爸去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 爸爸
+  content: 爸爸在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爸爸
+  content: 其实爸爸自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 爸爸
+  content: 小红和奶奶是兄妹
+- role: model
+  content: 原来小红和奶奶是兄妹关系
+- role: user
+  name: 爸爸
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化
+- role: user
+  name: 爸爸
+  content: 有一次妈妈因为做饭闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爸爸
+  content: 就是妈妈在做饭的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爸爸
+  content: 爸爸打算去公园玩
+- role: model
+  content: 公园是个好地方

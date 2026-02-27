@@ -1,0 +1,54 @@
+conv_id: session-019
+labels:
+- person:小何
+messages:
+- role: user
+  name: 小何
+  content: 今天想聊聊新闻的事
+- role: model
+  content: 好的，新闻怎么了？
+- role: user
+  name: 小何
+  content: 老张喜欢吃什么？
+- role: model
+  content: 老张口味挺好的
+- role: user
+  name: 小何
+  content: 小何和小美是亲戚
+- role: model
+  content: 原来小何和小美是亲戚关系
+- role: user
+  name: 小何
+  content: 上次小何跟我说了一件关于学习的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小何
+  content: 小何说学习让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小何
+  content: 小何喜欢自由职业
+- role: model
+  content: 是吗，小何确实挺喜欢自由职业的
+- role: user
+  name: 小何
+  content: 老张和小美是同事
+- role: model
+  content: 原来老张和小美是同事关系
+- role: user
+  name: 小何
+  content: 小何平时有什么爱好？
+- role: model
+  content: 小何的爱好挺多的
+- role: user
+  name: 小何
+  content: 小何在苏州住过一段时间
+- role: model
+  content: 在苏州生活应该很有意思
+- role: user
+  name: 小何
+  content: 小何喜欢自由职业
+- role: model
+  content: 是吗，小何确实挺喜欢自由职业的

@@ -1,0 +1,54 @@
+conv_id: session-020
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 跟你说个关于旅行的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爸爸
+  content: 你了解做饭吗
+- role: model
+  content: 了解一些，做饭挺热门的
+- role: user
+  name: 爸爸
+  content: 爷爷在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢音乐
+- role: model
+  content: 是吗，爸爸确实挺喜欢音乐的
+- role: user
+  name: 爸爸
+  content: 我对过年很感兴趣
+- role: model
+  content: 过年是个好话题
+- role: user
+  name: 爸爸
+  content: 爸爸在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 有一次爸爸因为运动闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爸爸
+  content: 就是爸爸在运动的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爸爸
+  content: 小明和小红是朋友
+- role: model
+  content: 原来小明和小红是朋友关系
+- role: user
+  name: 爸爸
+  content: 我对过年很感兴趣
+- role: model
+  content: 过年是个好话题

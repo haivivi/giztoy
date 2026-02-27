@@ -1,0 +1,54 @@
+conv_id: session-436
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊运动的事
+- role: model
+  content: 好的，运动怎么了？
+- role: user
+  name: 爸爸
+  content: 爸爸今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 等等，爸爸应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于过年的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说过年让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 说到运动，我觉得挺有意思的
+- role: model
+  content: 是啊，运动确实值得聊聊
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 爸爸在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 小明和小红是邻居
+- role: model
+  content: 原来小明和小红是邻居关系

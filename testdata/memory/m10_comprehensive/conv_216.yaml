@@ -1,0 +1,54 @@
+conv_id: session-216
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于生日的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 小胖在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 小胖
+  content: 小胖说他特别喜欢足球
+- role: model
+  content: 原来小胖喜欢足球呀
+- role: user
+  name: 小胖
+  content: 恐龙太好玩了！
+- role: model
+  content: 是呀，恐龙确实很有趣！
+- role: user
+  name: 小胖
+  content: 有一次小胖因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 你了解宠物吗
+- role: model
+  content: 了解一些，宠物挺热门的
+- role: user
+  name: 小胖
+  content: 奶奶和爷爷是邻居
+- role: model
+  content: 原来奶奶和爷爷是邻居关系
+- role: user
+  name: 小胖
+  content: 小胖是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小胖
+  content: 哦不对，小胖是在上海工作的，我记错了
+- role: model
+  content: 没关系

@@ -1,0 +1,54 @@
+conv_id: session-039
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 想跟你聊聊学习
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小美
+  content: 小美最近在忙跑步
+- role: model
+  content: 小美忙跑步一定很充实
+- role: user
+  name: 小美
+  content: 我记得小美第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小美
+  content: 小美当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小美
+  content: 小何打算去西湖玩
+- role: model
+  content: 西湖是个好地方
+- role: user
+  name: 小美
+  content: 小美在苏州住过一段时间
+- role: model
+  content: 在苏州生活应该很有意思
+- role: user
+  name: 小美
+  content: 有一次小美因为理财闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小美
+  content: 就是小美在理财的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小美
+  content: 小美在南京住过一段时间
+- role: model
+  content: 在南京生活应该很有意思
+- role: user
+  name: 小美
+  content: 老张和小美是姐弟
+- role: model
+  content: 原来老张和小美是姐弟关系

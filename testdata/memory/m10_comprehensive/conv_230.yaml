@@ -1,0 +1,54 @@
+conv_id: session-230
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 想跟你聊聊运动
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 奶奶
+  content: 小红在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 奶奶
+  content: 爷爷和奶奶是姐弟
+- role: model
+  content: 原来爷爷和奶奶是姐弟关系
+- role: user
+  name: 奶奶
+  content: 有一次奶奶因为考试闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 奶奶
+  content: 就是奶奶在考试的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 奶奶
+  content: 考试太好玩了！
+- role: model
+  content: 是呀，考试确实很有趣！
+- role: user
+  name: 奶奶
+  content: 上周爷爷去了公园
+- role: model
+  content: 公园不错呢
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 有一次妈妈因为学校闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 奶奶
+  content: 就是妈妈在学校的时候出了个糗
+- role: model
+  content: 听起来很有趣

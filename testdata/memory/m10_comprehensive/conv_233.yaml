@@ -1,0 +1,54 @@
+conv_id: session-233
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 跟你说个关于学校的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小明
+  content: 有一次小明因为乐高闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小明
+  content: 就是小明在乐高的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小明
+  content: 奶奶今天跟我说了宠物的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 奶奶说宠物最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小明
+  content: 音乐太好玩了！
+- role: model
+  content: 是呀，音乐确实很有趣！
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小明在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 小明
+  content: 奶奶和小红是邻居
+- role: model
+  content: 原来奶奶和小红是邻居关系
+- role: user
+  name: 小明
+  content: 我记得小明第一次接触做饭的时候
+- role: model
+  content: 然后呢？

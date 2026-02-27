@@ -1,0 +1,54 @@
+conv_id: session-269
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近考试有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题
+- role: user
+  name: 爷爷
+  content: 爷爷今年70岁了
+- role: model
+  content: 原来爷爷70岁
+- role: user
+  name: 爷爷
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 爷爷
+  content: 小红最近在忙画画
+- role: model
+  content: 小红忙画画一定很充实
+- role: user
+  name: 爷爷
+  content: 爷爷去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 爷爷
+  content: 爷爷平时有什么爱好？
+- role: model
+  content: 爷爷的爱好挺多的
+- role: user
+  name: 爷爷
+  content: 说到学校，我觉得挺有意思的
+- role: model
+  content: 是啊，学校确实值得聊聊
+- role: user
+  name: 爷爷
+  content: 妈妈在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实妈妈自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的

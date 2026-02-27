@@ -1,0 +1,54 @@
+conv_id: session-489
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近音乐有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 爷爷和小明是朋友
+- role: model
+  content: 原来爷爷和小明是朋友关系
+- role: user
+  name: 小明
+  content: 爸爸今天跟我说了学校的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 爸爸说学校最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小明
+  content: 最近运动有什么新动态吗
+- role: model
+  content: 我听说运动方面有不少变化
+- role: user
+  name: 小明
+  content: 小明打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 小明
+  content: 小明去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 小明
+  content: 小明喜欢古生物学家
+- role: model
+  content: 是吗，小明确实挺喜欢古生物学家的
+- role: user
+  name: 小明
+  content: 爸爸跟我说过，他最大的爱好就是音乐
+- role: model
+  content: 爸爸爱好音乐挺好的
+- role: user
+  name: 小明
+  content: 奶奶在博物馆住过一段时间
+- role: model
+  content: 在博物馆生活应该很有意思

@@ -1,0 +1,54 @@
+conv_id: session-386
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 今天想聊聊音乐的事
+- role: model
+  content: 好的，音乐怎么了？
+- role: user
+  name: 小红
+  content: 上次小红跟我说了一件关于过年的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小红
+  content: 小红说过年让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小红
+  content: 小红打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 小红
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小红
+  content: 其实小红自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小红
+  content: 小红在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 小红
+  content: 我记得小红第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 小红当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 小红今天跟我说了学校的事
+- role: model
+  content: 说了什么？

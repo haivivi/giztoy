@@ -1,0 +1,54 @@
+conv_id: session-024
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 最近音乐有什么新动态吗
+- role: model
+  content: 我听说音乐方面有不少变化
+- role: user
+  name: 小胖
+  content: 有一次小胖因为音乐闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在音乐的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小胖
+  content: 不对，小胖学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小胖
+  content: 有一次小胖因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 有一次妈妈因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话

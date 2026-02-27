@@ -1,0 +1,54 @@
+conv_id: session-305
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 跟你说个关于宠物的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小明
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 小明
+  content: 小明喜欢恐龙
+- role: model
+  content: 是吗，小明确实挺喜欢恐龙的
+- role: user
+  name: 小明
+  content: 小明和老师是邻居
+- role: model
+  content: 原来小明和老师是邻居关系
+- role: user
+  name: 小明
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的
+- role: user
+  name: 小明
+  content: 老师和小红是朋友
+- role: model
+  content: 原来老师和小红是朋友关系
+- role: user
+  name: 小明
+  content: 爷爷和老师是姐弟
+- role: model
+  content: 原来爷爷和老师是姐弟关系
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是古生物学家
+- role: model
+  content: 小明爱好古生物学家挺好的
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小明打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方

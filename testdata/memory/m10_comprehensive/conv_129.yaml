@@ -1,0 +1,54 @@
+conv_id: session-129
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊旅行的事
+- role: model
+  content: 好的，旅行怎么了？
+- role: user
+  name: 小明
+  content: 妈妈最近在忙设计师
+- role: model
+  content: 妈妈忙设计师一定很充实
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 奶奶在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实奶奶自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 小明
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 小明
+  content: 小明在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小明自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 小明打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方

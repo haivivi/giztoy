@@ -1,0 +1,54 @@
+conv_id: session-340
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近乐高有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于考试的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说考试让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 我对考试很感兴趣
+- role: model
+  content: 考试是个好话题
+- role: user
+  name: 爸爸
+  content: 老师打算去游乐场玩
+- role: model
+  content: 游乐场是个好地方
+- role: user
+  name: 爸爸
+  content: 爸爸周末一般做什么？
+- role: model
+  content: 爸爸周末过得挺充实的
+- role: user
+  name: 爸爸
+  content: 爸爸学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，爸爸学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了游乐场
+- role: model
+  content: 游乐场不错呢

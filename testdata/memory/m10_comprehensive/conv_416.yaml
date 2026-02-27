@@ -1,0 +1,54 @@
+conv_id: session-416
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于乐高的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 过年太好玩了！
+- role: model
+  content: 是呀，过年确实很有趣！
+- role: user
+  name: 小胖
+  content: 有一次小胖因为考试闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在考试的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖打算去图书馆玩
+- role: model
+  content: 图书馆是个好地方
+- role: user
+  name: 小胖
+  content: 我记得妈妈第一次接触乐高的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 妈妈当时觉得乐高特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小胖
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 小胖
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小胖
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的

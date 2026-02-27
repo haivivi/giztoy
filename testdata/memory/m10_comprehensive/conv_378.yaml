@@ -1,0 +1,54 @@
+conv_id: session-378
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 今天想聊聊过年的事
+- role: model
+  content: 好的，过年怎么了？
+- role: user
+  name: 小红
+  content: 上次小红跟我说了一件关于生日的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小红
+  content: 小红说生日让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小红
+  content: 爷爷喜欢吃什么？
+- role: model
+  content: 爷爷口味挺好的
+- role: user
+  name: 小红
+  content: 小明和小胖是亲戚
+- role: model
+  content: 原来小明和小胖是亲戚关系
+- role: user
+  name: 小红
+  content: 说到恐龙，我觉得挺有意思的
+- role: model
+  content: 是啊，恐龙确实值得聊聊
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的
+- role: user
+  name: 小红
+  content: 小红在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小红
+  content: 其实小红自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小红
+  content: 小红喜欢吃什么？
+- role: model
+  content: 小红口味挺好的

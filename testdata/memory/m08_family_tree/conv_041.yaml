@@ -1,0 +1,54 @@
+conv_id: session-041
+labels:
+- person:哥哥
+messages:
+- role: user
+  name: 哥哥
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 哥哥
+  content: 妹妹打算去医院玩
+- role: model
+  content: 医院是个好地方
+- role: user
+  name: 哥哥
+  content: 哥哥最近怎么样？
+- role: model
+  content: 哥哥最近挺好的
+- role: user
+  name: 哥哥
+  content: 哥哥周末一般做什么？
+- role: model
+  content: 哥哥周末过得挺充实的
+- role: user
+  name: 哥哥
+  content: 说到生日，我觉得挺有意思的
+- role: model
+  content: 是啊，生日确实值得聊聊
+- role: user
+  name: 哥哥
+  content: 你了解健康吗
+- role: model
+  content: 了解一些，健康挺热门的
+- role: user
+  name: 哥哥
+  content: 我记得哥哥第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 哥哥
+  content: 哥哥当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 哥哥
+  content: 哥哥今天跟我说了做饭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 哥哥
+  content: 哥哥说做饭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

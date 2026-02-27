@@ -1,0 +1,54 @@
+conv_id: session-135
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于生日的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 老师
+  content: 小胖打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 老师
+  content: 上周奶奶去了奶奶家
+- role: model
+  content: 奶奶家不错呢
+- role: user
+  name: 老师
+  content: 我对考试很感兴趣
+- role: model
+  content: 考试是个好话题
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 老师
+  content: 奶奶和小红是兄妹
+- role: model
+  content: 原来奶奶和小红是兄妹关系
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 小明和爷爷是邻居
+- role: model
+  content: 原来小明和爷爷是邻居关系

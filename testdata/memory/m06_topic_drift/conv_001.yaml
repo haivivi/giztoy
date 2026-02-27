@@ -1,0 +1,54 @@
+conv_id: session-001
+labels:
+- person:小王
+messages:
+- role: user
+  name: 小王
+  content: 最近运动有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小王
+  content: 小王说他特别喜欢设计师
+- role: model
+  content: 原来小王喜欢设计师呀
+- role: user
+  name: 小王
+  content: 小王在上海住过一段时间
+- role: model
+  content: 在上海生活应该很有意思
+- role: user
+  name: 小王
+  content: 小王今天跟我说了美食的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小王
+  content: 小王说美食最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小王
+  content: 小王喜欢设计师
+- role: model
+  content: 是吗，小王确实挺喜欢设计师的
+- role: user
+  name: 小王
+  content: 小王最近在忙设计师
+- role: model
+  content: 小王忙设计师一定很充实
+- role: user
+  name: 小王
+  content: 小王平时有什么爱好？
+- role: model
+  content: 小王的爱好挺多的
+- role: user
+  name: 小王
+  content: 小王说他特别喜欢设计师
+- role: model
+  content: 原来小王喜欢设计师呀
+- role: user
+  name: 小王
+  content: 小王在上海住过一段时间
+- role: model
+  content: 在上海生活应该很有意思

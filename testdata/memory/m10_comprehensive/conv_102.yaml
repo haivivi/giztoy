@@ -1,0 +1,54 @@
+conv_id: session-102
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 奶奶
+  content: 上周奶奶去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 奶奶
+  content: 我对宠物很感兴趣
+- role: model
+  content: 宠物是个好话题
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 爷爷和妈妈是兄妹
+- role: model
+  content: 原来爷爷和妈妈是兄妹关系
+- role: user
+  name: 奶奶
+  content: 小胖说他特别喜欢足球
+- role: model
+  content: 原来小胖喜欢足球呀
+- role: user
+  name: 奶奶
+  content: 最近音乐有什么新动态吗
+- role: model
+  content: 我听说音乐方面有不少变化
+- role: user
+  name: 奶奶
+  content: 最近学校有什么新动态吗
+- role: model
+  content: 我听说学校方面有不少变化
+- role: user
+  name: 奶奶
+  content: 奶奶打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 奶奶
+  content: 奶奶去过公园
+- role: model
+  content: 公园挺美的

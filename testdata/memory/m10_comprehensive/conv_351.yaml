@@ -1,0 +1,54 @@
+conv_id: session-351
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 爸爸打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 老师
+  content: 爸爸喜欢工程师
+- role: model
+  content: 是吗，爸爸确实挺喜欢工程师的
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 老师今天跟我说了过年的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说过年最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 小胖喜欢吃什么？
+- role: model
+  content: 小胖口味挺好的
+- role: user
+  name: 老师
+  content: 妈妈今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，妈妈应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 奶奶周末一般做什么？
+- role: model
+  content: 奶奶周末过得挺充实的

@@ -1,0 +1,54 @@
+conv_id: session-046
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于健康的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙护士
+- role: model
+  content: 妈妈忙护士一定很充实
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的
+- role: user
+  name: 妈妈
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妈妈
+  content: 妈妈在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 奶奶和爸爸是朋友
+- role: model
+  content: 原来奶奶和爸爸是朋友关系
+- role: user
+  name: 妈妈
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触健康的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 妈妈当时觉得健康特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妈妈
+  content: 妈妈跟我说过，他最大的爱好就是护士
+- role: model
+  content: 妈妈爱好护士挺好的

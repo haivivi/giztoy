@@ -1,0 +1,54 @@
+conv_id: session-033
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近做饭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 妈妈和奶奶是兄妹
+- role: model
+  content: 原来妈妈和奶奶是兄妹关系
+- role: user
+  name: 爸爸
+  content: 爷爷打算去学校玩
+- role: model
+  content: 学校是个好地方
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢教师
+- role: model
+  content: 是吗，爸爸确实挺喜欢教师的
+- role: user
+  name: 爸爸
+  content: 妹妹和哥哥是姐弟
+- role: model
+  content: 原来妹妹和哥哥是姐弟关系
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢教师
+- role: model
+  content: 是吗，爸爸确实挺喜欢教师的
+- role: user
+  name: 爸爸
+  content: 爸爸跟我说过，他最大的爱好就是教师
+- role: model
+  content: 爸爸爱好教师挺好的
+- role: user
+  name: 爸爸
+  content: 爷爷今年75岁了
+- role: model
+  content: 原来爷爷75岁
+- role: user
+  name: 爸爸
+  content: 上周爸爸去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 爸爸
+  content: 妹妹喜欢钢琴
+- role: model
+  content: 是吗，妹妹确实挺喜欢钢琴的

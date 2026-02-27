@@ -1,0 +1,54 @@
+conv_id: session-236
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 爸爸
+  content: 爸爸平时有什么爱好？
+- role: model
+  content: 爸爸的爱好挺多的
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触画画的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得画画特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说旅行让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸和妈妈是同学
+- role: model
+  content: 原来爸爸和妈妈是同学关系
+- role: user
+  name: 爸爸
+  content: 你了解宠物吗
+- role: model
+  content: 了解一些，宠物挺热门的
+- role: user
+  name: 爸爸
+  content: 小红和妈妈是同学
+- role: model
+  content: 原来小红和妈妈是同学关系
+- role: user
+  name: 爸爸
+  content: 妈妈跟我说过，他最大的爱好就是做饭
+- role: model
+  content: 妈妈爱好做饭挺好的

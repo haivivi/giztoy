@@ -1,0 +1,54 @@
+conv_id: session-309
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近过年有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 爷爷最近怎么样？
+- role: model
+  content: 爷爷最近挺好的
+- role: user
+  name: 爷爷
+  content: 有一次老师因为画画闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是老师在画画的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爷爷
+  content: 有一次小胖因为生日闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是小胖在生日的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爷爷
+  content: 有一次爷爷因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是爷爷在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爷爷
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 爷爷
+  content: 小胖今天跟我说了恐龙的事
+- role: model
+  content: 说了什么？

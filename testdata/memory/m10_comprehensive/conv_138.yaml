@@ -1,0 +1,54 @@
+conv_id: session-138
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 今天想聊聊运动的事
+- role: model
+  content: 好的，运动怎么了？
+- role: user
+  name: 小红
+  content: 我记得小红第一次接触考试的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 小红当时觉得考试特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 你了解旅行吗
+- role: model
+  content: 了解一些，旅行挺热门的
+- role: user
+  name: 小红
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 小红
+  content: 小明和爷爷是姐弟
+- role: model
+  content: 原来小明和爷爷是姐弟关系
+- role: user
+  name: 小红
+  content: 我记得小红第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小红
+  content: 小红当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小红
+  content: 学校太好玩了！
+- role: model
+  content: 是呀，学校确实很有趣！
+- role: user
+  name: 小红
+  content: 爷爷和爸爸是姐弟
+- role: model
+  content: 原来爷爷和爸爸是姐弟关系

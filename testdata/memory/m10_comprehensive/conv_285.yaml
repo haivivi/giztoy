@@ -1,0 +1,54 @@
+conv_id: session-285
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 跟你说个关于音乐的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爷爷
+  content: 有一次妈妈因为乐高闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是妈妈在乐高的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爷爷
+  content: 老师在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实老师自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爷爷
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 爷爷
+  content: 说到宠物，我觉得挺有意思的
+- role: model
+  content: 是啊，宠物确实值得聊聊
+- role: user
+  name: 爷爷
+  content: 你了解旅行吗
+- role: model
+  content: 了解一些，旅行挺热门的
+- role: user
+  name: 爷爷
+  content: 妈妈说他特别喜欢做饭
+- role: model
+  content: 原来妈妈喜欢做饭呀
+- role: user
+  name: 爷爷
+  content: 爷爷打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方

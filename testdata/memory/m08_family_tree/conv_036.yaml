@@ -1,0 +1,54 @@
+conv_id: session-036
+labels:
+- person:妹妹
+messages:
+- role: user
+  name: 妹妹
+  content: 今天想聊聊旅行的事
+- role: model
+  content: 好的，旅行怎么了？
+- role: user
+  name: 妹妹
+  content: 我记得妹妹第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妹妹
+  content: 妹妹当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妹妹
+  content: 妹妹去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 妹妹
+  content: 最近生日有什么新动态吗
+- role: model
+  content: 我听说生日方面有不少变化
+- role: user
+  name: 妹妹
+  content: 妹妹最近在忙钢琴
+- role: model
+  content: 妹妹忙钢琴一定很充实
+- role: user
+  name: 妹妹
+  content: 爷爷去过老家
+- role: model
+  content: 老家挺美的
+- role: user
+  name: 妹妹
+  content: 妹妹在医院住过一段时间
+- role: model
+  content: 在医院生活应该很有意思
+- role: user
+  name: 妹妹
+  content: 有一次奶奶因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 妹妹
+  content: 就是奶奶在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣

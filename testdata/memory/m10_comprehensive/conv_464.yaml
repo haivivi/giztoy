@@ -1,0 +1,54 @@
+conv_id: session-464
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊乐高的事
+- role: model
+  content: 好的，乐高怎么了？
+- role: user
+  name: 小胖
+  content: 小胖跟我说过，他最大的爱好就是足球
+- role: model
+  content: 小胖爱好足球挺好的
+- role: user
+  name: 小胖
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 小胖
+  content: 你了解运动吗
+- role: model
+  content: 了解一些，运动挺热门的
+- role: user
+  name: 小胖
+  content: 小胖喜欢吃什么？
+- role: model
+  content: 小胖口味挺好的
+- role: user
+  name: 小胖
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 小胖
+  content: 乐高太好玩了！
+- role: model
+  content: 是呀，乐高确实很有趣！
+- role: user
+  name: 小胖
+  content: 我记得小明第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小胖
+  content: 小明当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小胖
+  content: 上周老师去了奶奶家
+- role: model
+  content: 奶奶家不错呢

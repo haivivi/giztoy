@@ -1,0 +1,54 @@
+conv_id: session-143
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于恐龙的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 妈妈说他特别喜欢设计师
+- role: model
+  content: 原来妈妈喜欢设计师呀
+- role: user
+  name: 老师
+  content: 老师今天跟我说了音乐的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说音乐最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 老师去过奶奶家
+- role: model
+  content: 奶奶家挺美的
+- role: user
+  name: 老师
+  content: 小明在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实小明自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 老师
+  content: 考试太好玩了！
+- role: model
+  content: 是呀，考试确实很有趣！
+- role: user
+  name: 老师
+  content: 我记得老师第一次接触学校的时候
+- role: model
+  content: 然后呢？

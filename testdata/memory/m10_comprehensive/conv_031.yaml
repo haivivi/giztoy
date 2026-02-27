@@ -1,0 +1,54 @@
+conv_id: session-031
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊生日
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 小胖在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 老师
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 老师
+  content: 老师去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 老师
+  content: 老师和爸爸是姐弟
+- role: model
+  content: 原来老师和爸爸是姐弟关系
+- role: user
+  name: 老师
+  content: 老师和奶奶是同学
+- role: model
+  content: 原来老师和奶奶是同学关系
+- role: user
+  name: 老师
+  content: 老师是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，老师是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化

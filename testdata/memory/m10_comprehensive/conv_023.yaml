@@ -1,0 +1,54 @@
+conv_id: session-023
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于音乐的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 老师
+  content: 妈妈打算去公园玩
+- role: model
+  content: 公园是个好地方
+- role: user
+  name: 老师
+  content: 老师最近在忙数学
+- role: model
+  content: 老师忙数学一定很充实
+- role: user
+  name: 老师
+  content: 最近做饭有什么新动态吗
+- role: model
+  content: 我听说做饭方面有不少变化
+- role: user
+  name: 老师
+  content: 你了解学校吗
+- role: model
+  content: 了解一些，学校挺热门的
+- role: user
+  name: 老师
+  content: 爷爷和奶奶是同事
+- role: model
+  content: 原来爷爷和奶奶是同事关系
+- role: user
+  name: 老师
+  content: 老师今天跟我说了宠物的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说宠物最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

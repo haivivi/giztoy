@@ -1,0 +1,54 @@
+conv_id: session-426
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 想跟你聊聊运动
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小红
+  content: 旅行太好玩了！
+- role: model
+  content: 是呀，旅行确实很有趣！
+- role: user
+  name: 小红
+  content: 小红喜欢吃什么？
+- role: model
+  content: 小红口味挺好的
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小红
+  content: 有一次小红因为画画闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小红
+  content: 就是小红在画画的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小红
+  content: 小红说他特别喜欢画画
+- role: model
+  content: 原来小红喜欢画画呀
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的
+- role: user
+  name: 小红
+  content: 小红周末一般做什么？
+- role: model
+  content: 小红周末过得挺充实的
+- role: user
+  name: 小红
+  content: 有一次小明因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话

@@ -1,0 +1,54 @@
+conv_id: session-158
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 最近做饭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 奶奶
+  content: 奶奶在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 奶奶
+  content: 其实奶奶自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 奶奶
+  content: 小胖今天跟我说了考试的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 奶奶
+  content: 小胖说考试最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 奶奶
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划
+- role: user
+  name: 奶奶
+  content: 小红和老师是朋友
+- role: model
+  content: 原来小红和老师是朋友关系
+- role: user
+  name: 奶奶
+  content: 上周奶奶去了图书馆
+- role: model
+  content: 图书馆不错呢
+- role: user
+  name: 奶奶
+  content: 老师打算去图书馆玩
+- role: model
+  content: 图书馆是个好地方
+- role: user
+  name: 奶奶
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的

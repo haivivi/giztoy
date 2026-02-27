@@ -1,0 +1,54 @@
+conv_id: session-057
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的
+- role: user
+  name: 小明
+  content: 做饭太好玩了！
+- role: model
+  content: 是呀，做饭确实很有趣！
+- role: user
+  name: 小明
+  content: 小红和妈妈是姐弟
+- role: model
+  content: 原来小红和妈妈是姐弟关系
+- role: user
+  name: 小明
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划
+- role: user
+  name: 小明
+  content: 小胖平时有什么爱好？
+- role: model
+  content: 小胖的爱好挺多的
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的
+- role: user
+  name: 小明
+  content: 小明最近怎么样？
+- role: model
+  content: 小明最近挺好的
+- role: user
+  name: 小明
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的

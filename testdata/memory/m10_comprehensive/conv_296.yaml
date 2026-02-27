@@ -1,0 +1,54 @@
+conv_id: session-296
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于做饭的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 小红和妈妈是兄妹
+- role: model
+  content: 原来小红和妈妈是兄妹关系
+- role: user
+  name: 小胖
+  content: 小明和老师是同事
+- role: model
+  content: 原来小明和老师是同事关系
+- role: user
+  name: 小胖
+  content: 我对宠物很感兴趣
+- role: model
+  content: 宠物是个好话题
+- role: user
+  name: 小胖
+  content: 小胖去过公园
+- role: model
+  content: 公园挺美的
+- role: user
+  name: 小胖
+  content: 小明和老师是同事
+- role: model
+  content: 原来小明和老师是同事关系
+- role: user
+  name: 小胖
+  content: 奶奶去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 小胖
+  content: 恐龙太好玩了！
+- role: model
+  content: 是呀，恐龙确实很有趣！
+- role: user
+  name: 小胖
+  content: 小胖喜欢吃什么？
+- role: model
+  content: 小胖口味挺好的
+- role: user
+  name: 小胖
+  content: 小胖周末一般做什么？
+- role: model
+  content: 小胖周末过得挺充实的

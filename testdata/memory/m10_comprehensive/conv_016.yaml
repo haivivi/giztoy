@@ -1,0 +1,54 @@
+conv_id: session-016
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 跟你说个关于过年的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小胖
+  content: 上次小胖跟我说了一件关于做饭的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 小胖
+  content: 小胖说做饭让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 小胖
+  content: 旅行太好玩了！
+- role: model
+  content: 是呀，旅行确实很有趣！
+- role: user
+  name: 小胖
+  content: 小胖和妈妈是同学
+- role: model
+  content: 原来小胖和妈妈是同学关系
+- role: user
+  name: 小胖
+  content: 有一次小胖因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小胖
+  content: 就是小胖在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小胖
+  content: 小胖最近在忙足球
+- role: model
+  content: 小胖忙足球一定很充实
+- role: user
+  name: 小胖
+  content: 最近运动有什么新动态吗
+- role: model
+  content: 我听说运动方面有不少变化
+- role: user
+  name: 小胖
+  content: 上次小胖跟我说了一件关于画画的事
+- role: model
+  content: 什么事？

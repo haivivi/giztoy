@@ -1,0 +1,54 @@
+conv_id: session-064
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 想跟你聊聊生日
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小胖
+  content: 爷爷和小明是邻居
+- role: model
+  content: 原来爷爷和小明是邻居关系
+- role: user
+  name: 小胖
+  content: 奶奶和爷爷是兄妹
+- role: model
+  content: 原来奶奶和爷爷是兄妹关系
+- role: user
+  name: 小胖
+  content: 我对音乐很感兴趣
+- role: model
+  content: 音乐是个好话题
+- role: user
+  name: 小胖
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀
+- role: user
+  name: 小胖
+  content: 奶奶在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 小胖
+  content: 小胖今天跟我说了生日的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小胖
+  content: 小胖说生日最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小胖
+  content: 说到宠物，我觉得挺有意思的
+- role: model
+  content: 是啊，宠物确实值得聊聊
+- role: user
+  name: 小胖
+  content: 小胖去过学校
+- role: model
+  content: 学校挺美的

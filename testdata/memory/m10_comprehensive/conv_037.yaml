@@ -1,0 +1,54 @@
+conv_id: session-037
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近恐龙有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 爷爷最近怎么样？
+- role: model
+  content: 爷爷最近挺好的
+- role: user
+  name: 爷爷
+  content: 你了解音乐吗
+- role: model
+  content: 了解一些，音乐挺热门的
+- role: user
+  name: 爷爷
+  content: 我记得爷爷第一次接触恐龙的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 爷爷当时觉得恐龙特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 爷爷
+  content: 小明去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 爷爷
+  content: 小明和妈妈是姐弟
+- role: model
+  content: 原来小明和妈妈是姐弟关系
+- role: user
+  name: 爷爷
+  content: 爷爷今天跟我说了过年的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爷爷
+  content: 爷爷说过年最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

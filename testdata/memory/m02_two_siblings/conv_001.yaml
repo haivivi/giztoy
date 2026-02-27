@@ -1,0 +1,29 @@
+conv_id: session-001
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近画画有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 小红和小明是朋友
+- role: model
+  content: 原来小红和小明是朋友关系
+- role: user
+  name: 小明
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 小明
+  content: 我对恐龙很感兴趣
+- role: model
+  content: 恐龙是个好话题
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的

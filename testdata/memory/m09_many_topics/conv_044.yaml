@@ -1,0 +1,54 @@
+conv_id: session-044
+labels:
+- person:老张
+messages:
+- role: user
+  name: 老张
+  content: 最近新闻有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老张
+  content: 老张今天跟我说了理财的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老张
+  content: 老张说理财最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老张
+  content: 我记得老张第一次接触电影的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 老张
+  content: 老张当时觉得电影特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 老张
+  content: 老张喜欢mentor
+- role: model
+  content: 是吗，老张确实挺喜欢mentor的
+- role: user
+  name: 老张
+  content: 小美今天跟我说了工作的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老张
+  content: 小美说工作最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老张
+  content: 你了解电影吗
+- role: model
+  content: 了解一些，电影挺热门的
+- role: user
+  name: 老张
+  content: 有一次小何因为爱好闹了个笑话
+- role: model
+  content: 哈哈什么笑话

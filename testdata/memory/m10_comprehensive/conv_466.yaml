@@ -1,0 +1,54 @@
+conv_id: session-466
+labels:
+- person:小红
+messages:
+- role: user
+  name: 小红
+  content: 最近乐高有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小红
+  content: 说到过年，我觉得挺有意思的
+- role: model
+  content: 是啊，过年确实值得聊聊
+- role: user
+  name: 小红
+  content: 最近生日有什么新动态吗
+- role: model
+  content: 我听说生日方面有不少变化
+- role: user
+  name: 小红
+  content: 小红最近怎么样？
+- role: model
+  content: 小红最近挺好的
+- role: user
+  name: 小红
+  content: 小红今天跟我说了做饭的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小红
+  content: 小红说做饭最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小红
+  content: 最近考试有什么新动态吗
+- role: model
+  content: 我听说考试方面有不少变化
+- role: user
+  name: 小红
+  content: 小红今天跟我说了画画的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小红
+  content: 小红说画画最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 小红
+  content: 小明周末一般做什么？
+- role: model
+  content: 小明周末过得挺充实的

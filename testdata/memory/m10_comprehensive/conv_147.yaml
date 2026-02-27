@@ -1,0 +1,54 @@
+conv_id: session-147
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊旅行
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 小胖跟我说过，他最大的爱好就是足球
+- role: model
+  content: 小胖爱好足球挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 老师和小明是兄妹
+- role: model
+  content: 原来老师和小明是兄妹关系
+- role: user
+  name: 妈妈
+  content: 老师和奶奶是朋友
+- role: model
+  content: 原来老师和奶奶是朋友关系
+- role: user
+  name: 妈妈
+  content: 奶奶和妈妈是邻居
+- role: model
+  content: 原来奶奶和妈妈是邻居关系
+- role: user
+  name: 妈妈
+  content: 爷爷和老师是朋友
+- role: model
+  content: 原来爷爷和老师是朋友关系
+- role: user
+  name: 妈妈
+  content: 妈妈在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 说到生日，我觉得挺有意思的
+- role: model
+  content: 是啊，生日确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 妈妈周末一般做什么？
+- role: model
+  content: 妈妈周末过得挺充实的

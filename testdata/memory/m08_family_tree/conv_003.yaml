@@ -1,0 +1,54 @@
+conv_id: session-003
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 爸爸跟我说过，他最大的爱好就是教师
+- role: model
+  content: 爸爸爱好教师挺好的
+- role: user
+  name: 爸爸
+  content: 爸爸去过北京
+- role: model
+  content: 北京挺美的
+- role: user
+  name: 爸爸
+  content: 你了解健康吗
+- role: model
+  content: 了解一些，健康挺热门的
+- role: user
+  name: 爸爸
+  content: 爸爸有没有什么计划？
+- role: model
+  content: 爸爸应该有一些计划
+- role: user
+  name: 爸爸
+  content: 上次爸爸跟我说了一件关于家庭的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 爸爸说家庭让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢教师
+- role: model
+  content: 原来爸爸喜欢教师呀
+- role: user
+  name: 爸爸
+  content: 说到学校，我觉得挺有意思的
+- role: model
+  content: 是啊，学校确实值得聊聊
+- role: user
+  name: 爸爸
+  content: 爷爷在医院住过一段时间
+- role: model
+  content: 在医院生活应该很有意思

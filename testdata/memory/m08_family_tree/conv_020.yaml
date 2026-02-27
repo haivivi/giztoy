@@ -1,0 +1,54 @@
+conv_id: session-020
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 今天想聊聊家庭的事
+- role: model
+  content: 好的，家庭怎么了？
+- role: user
+  name: 奶奶
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的
+- role: user
+  name: 奶奶
+  content: 爸爸打算去北京玩
+- role: model
+  content: 北京是个好地方
+- role: user
+  name: 奶奶
+  content: 上周奶奶去了北京
+- role: model
+  content: 北京不错呢
+- role: user
+  name: 奶奶
+  content: 奶奶去过北京
+- role: model
+  content: 北京挺美的
+- role: user
+  name: 奶奶
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 奶奶
+  content: 奶奶已经73岁了
+- role: model
+  content: 奶奶73岁了呀
+- role: user
+  name: 奶奶
+  content: 上次奶奶跟我说了一件关于家庭的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 奶奶
+  content: 奶奶说家庭让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 奶奶
+  content: 爸爸有没有什么计划？
+- role: model
+  content: 爸爸应该有一些计划

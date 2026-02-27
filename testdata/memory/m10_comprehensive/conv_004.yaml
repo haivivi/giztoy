@@ -1,0 +1,54 @@
+conv_id: session-004
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近宠物有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢音乐
+- role: model
+  content: 是吗，爸爸确实挺喜欢音乐的
+- role: user
+  name: 爸爸
+  content: 我记得老师第一次接触生日的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 老师当时觉得生日特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢工程师
+- role: model
+  content: 原来爸爸喜欢工程师呀
+- role: user
+  name: 爸爸
+  content: 小胖喜欢足球
+- role: model
+  content: 是吗，小胖确实挺喜欢足球的
+- role: user
+  name: 爸爸
+  content: 爸爸和小胖是同学
+- role: model
+  content: 原来爸爸和小胖是同学关系
+- role: user
+  name: 爸爸
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实
+- role: user
+  name: 爸爸
+  content: 爸爸最近在忙音乐
+- role: model
+  content: 爸爸忙音乐一定很充实
+- role: user
+  name: 爸爸
+  content: 老师平时有什么爱好？
+- role: model
+  content: 老师的爱好挺多的

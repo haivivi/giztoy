@@ -1,0 +1,54 @@
+conv_id: session-427
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于过年的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈今天跟我说了过年的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妈妈
+  content: 妈妈说过年最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙设计师
+- role: model
+  content: 妈妈忙设计师一定很充实
+- role: user
+  name: 妈妈
+  content: 我对画画很感兴趣
+- role: model
+  content: 画画是个好话题
+- role: user
+  name: 妈妈
+  content: 奶奶和爷爷是兄妹
+- role: model
+  content: 原来奶奶和爷爷是兄妹关系
+- role: user
+  name: 妈妈
+  content: 妈妈和奶奶是兄妹
+- role: model
+  content: 原来妈妈和奶奶是兄妹关系
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙做饭
+- role: model
+  content: 妈妈忙做饭一定很充实
+- role: user
+  name: 妈妈
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 妈妈
+  content: 有一次妈妈因为恐龙闹了个笑话
+- role: model
+  content: 哈哈什么笑话

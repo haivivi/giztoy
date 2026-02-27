@@ -5,7 +5,7 @@ pub enum GraphError {
     #[error("graph: not found")]
     NotFound,
 
-    #[error("graph: label contains separator: {0:?} contains ':'")]
+    #[error("graph: label contains separator: {0:?}")]
     InvalidLabel(String),
 
     #[error("graph: storage error: {0}")]

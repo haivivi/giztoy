@@ -1,0 +1,54 @@
+conv_id: session-013
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 想跟你聊聊健康
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爷爷
+  content: 爷爷平时有什么爱好？
+- role: model
+  content: 爷爷的爱好挺多的
+- role: user
+  name: 爷爷
+  content: 爷爷平时有什么爱好？
+- role: model
+  content: 爷爷的爱好挺多的
+- role: user
+  name: 爷爷
+  content: 奶奶和哥哥是同学
+- role: model
+  content: 原来奶奶和哥哥是同学关系
+- role: user
+  name: 爷爷
+  content: 爷爷和爸爸是同事
+- role: model
+  content: 原来爷爷和爸爸是同事关系
+- role: user
+  name: 爷爷
+  content: 爷爷打算去北京玩
+- role: model
+  content: 北京是个好地方
+- role: user
+  name: 爷爷
+  content: 你了解过年吗
+- role: model
+  content: 了解一些，过年挺热门的
+- role: user
+  name: 爷爷
+  content: 上次爷爷跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爷爷
+  content: 爷爷说旅行让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爷爷
+  content: 生日太好玩了！
+- role: model
+  content: 是呀，生日确实很有趣！

@@ -1,0 +1,54 @@
+conv_id: session-237
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 想跟你聊聊乐高
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爷爷
+  content: 爷爷有没有什么计划？
+- role: model
+  content: 爷爷应该有一些计划
+- role: user
+  name: 爷爷
+  content: 小红打算去奶奶家玩
+- role: model
+  content: 奶奶家是个好地方
+- role: user
+  name: 爷爷
+  content: 最近过年有什么新动态吗
+- role: model
+  content: 我听说过年方面有不少变化
+- role: user
+  name: 爷爷
+  content: 妈妈跟我说过，他最大的爱好就是设计师
+- role: model
+  content: 妈妈爱好设计师挺好的
+- role: user
+  name: 爷爷
+  content: 爷爷已经70岁了
+- role: model
+  content: 爷爷70岁了呀
+- role: user
+  name: 爷爷
+  content: 上周爷爷去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 爷爷
+  content: 爸爸今天跟我说了恐龙的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 爷爷
+  content: 爸爸说恐龙最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 爷爷
+  content: 爷爷学的是数学
+- role: model
+  content: 数学不错

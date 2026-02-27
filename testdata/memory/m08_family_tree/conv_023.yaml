@@ -1,0 +1,54 @@
+conv_id: session-023
+labels:
+- person:哥哥
+messages:
+- role: user
+  name: 哥哥
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 哥哥
+  content: 奶奶和妈妈是朋友
+- role: model
+  content: 原来奶奶和妈妈是朋友关系
+- role: user
+  name: 哥哥
+  content: 哥哥说他特别喜欢清华大学
+- role: model
+  content: 原来哥哥喜欢清华大学呀
+- role: user
+  name: 哥哥
+  content: 妹妹和爸爸是姐弟
+- role: model
+  content: 原来妹妹和爸爸是姐弟关系
+- role: user
+  name: 哥哥
+  content: 哥哥和妈妈是同事
+- role: model
+  content: 原来哥哥和妈妈是同事关系
+- role: user
+  name: 哥哥
+  content: 奶奶去过老家
+- role: model
+  content: 老家挺美的
+- role: user
+  name: 哥哥
+  content: 哥哥有没有什么计划？
+- role: model
+  content: 哥哥应该有一些计划
+- role: user
+  name: 哥哥
+  content: 哥哥去过医院
+- role: model
+  content: 医院挺美的
+- role: user
+  name: 哥哥
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题
+- role: user
+  name: 哥哥
+  content: 哥哥喜欢清华大学
+- role: model
+  content: 是吗，哥哥确实挺喜欢清华大学的

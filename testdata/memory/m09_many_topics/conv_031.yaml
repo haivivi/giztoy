@@ -1,0 +1,54 @@
+conv_id: session-031
+labels:
+- person:小何
+messages:
+- role: user
+  name: 小何
+  content: 最近学习有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小何
+  content: 小何在杭州住过一段时间
+- role: model
+  content: 在杭州生活应该很有意思
+- role: user
+  name: 小何
+  content: 小何去过南京
+- role: model
+  content: 南京挺美的
+- role: user
+  name: 小何
+  content: 有一次小何因为电影闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 小何
+  content: 就是小何在电影的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 小何
+  content: 小何说他特别喜欢自由职业
+- role: model
+  content: 原来小何喜欢自由职业呀
+- role: user
+  name: 小何
+  content: 最近电影有什么新动态吗
+- role: model
+  content: 我听说电影方面有不少变化
+- role: user
+  name: 小何
+  content: 健康太好玩了！
+- role: model
+  content: 是呀，健康确实很有趣！
+- role: user
+  name: 小何
+  content: 小何喜欢吃什么？
+- role: model
+  content: 小何口味挺好的
+- role: user
+  name: 小何
+  content: 老张和小何是兄妹
+- role: model
+  content: 原来老张和小何是兄妹关系

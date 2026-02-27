@@ -1,0 +1,54 @@
+conv_id: session-284
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 最近生日有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爸爸
+  content: 爸爸是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 爸爸
+  content: 哦不对，爸爸是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢工程师
+- role: model
+  content: 是吗，爸爸确实挺喜欢工程师的
+- role: user
+  name: 爸爸
+  content: 爸爸说他特别喜欢音乐
+- role: model
+  content: 原来爸爸喜欢音乐呀
+- role: user
+  name: 爸爸
+  content: 上次奶奶跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爸爸
+  content: 奶奶说旅行让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爸爸
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 爸爸
+  content: 我记得小胖第一次接触学校的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 小胖当时觉得学校特别新奇
+- role: model
+  content: 每个人都有第一次嘛

@@ -1,0 +1,54 @@
+conv_id: session-457
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 最近生日有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 小明
+  content: 你了解音乐吗
+- role: model
+  content: 了解一些，音乐挺热门的
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 小明在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 小明
+  content: 其实小明自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 小明
+  content: 爸爸跟我说过，他最大的爱好就是工程师
+- role: model
+  content: 爸爸爱好工程师挺好的
+- role: user
+  name: 小明
+  content: 我记得小红第一次接触画画的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小明
+  content: 小红当时觉得画画特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小明
+  content: 上周小明去了游乐场
+- role: model
+  content: 游乐场不错呢
+- role: user
+  name: 小明
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的

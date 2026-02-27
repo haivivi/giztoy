@@ -1,0 +1,10 @@
+name: m06_topic_drift
+desc: Topics shift gradually across 5 sessions
+persona: assistant
+total_messages: 100
+conversations: 5
+expect:
+  min_entities: 1
+  entities_contain:
+  - person:小王
+  min_segments: 2

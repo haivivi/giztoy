@@ -1,0 +1,54 @@
+conv_id: session-055
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 跟你说个关于学校的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划
+- role: user
+  name: 老师
+  content: 老师今天跟我说了画画的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说画画最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 小胖在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 老师
+  content: 不对，老师学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 老师
+  content: 老师学的是数学
+- role: model
+  content: 数学不错

@@ -1,0 +1,54 @@
+conv_id: session-379
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近考试有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢设计师
+- role: model
+  content: 是吗，妈妈确实挺喜欢设计师的
+- role: user
+  name: 妈妈
+  content: 爷爷是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 妈妈
+  content: 哦不对，爷爷是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 妈妈
+  content: 妈妈在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 妈妈最近在忙设计师
+- role: model
+  content: 妈妈忙设计师一定很充实
+- role: user
+  name: 妈妈
+  content: 上次妈妈跟我说了一件关于乐高的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 妈妈
+  content: 妈妈说乐高让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 妈妈
+  content: 说到乐高，我觉得挺有意思的
+- role: model
+  content: 是啊，乐高确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了博物馆
+- role: model
+  content: 博物馆不错呢

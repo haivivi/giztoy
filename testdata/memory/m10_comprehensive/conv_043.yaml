@@ -1,0 +1,54 @@
+conv_id: session-043
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 跟你说个关于过年的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 妈妈
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 妈妈
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 妈妈
+  content: 妈妈在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢做饭
+- role: model
+  content: 是吗，妈妈确实挺喜欢做饭的
+- role: user
+  name: 妈妈
+  content: 奶奶喜欢吃什么？
+- role: model
+  content: 奶奶口味挺好的
+- role: user
+  name: 妈妈
+  content: 小明和小红是兄妹
+- role: model
+  content: 原来小明和小红是兄妹关系
+- role: user
+  name: 妈妈
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 妈妈
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 妈妈
+  content: 上次小明跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？

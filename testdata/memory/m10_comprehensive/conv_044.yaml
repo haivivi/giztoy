@@ -1,0 +1,54 @@
+conv_id: session-044
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 爸爸
+  content: 乐高太好玩了！
+- role: model
+  content: 是呀，乐高确实很有趣！
+- role: user
+  name: 爸爸
+  content: 爸爸在奶奶家住过一段时间
+- role: model
+  content: 在奶奶家生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 宠物太好玩了！
+- role: model
+  content: 是呀，宠物确实很有趣！
+- role: user
+  name: 爸爸
+  content: 上周奶奶去了图书馆
+- role: model
+  content: 图书馆不错呢
+- role: user
+  name: 爸爸
+  content: 最近生日有什么新动态吗
+- role: model
+  content: 我听说生日方面有不少变化
+- role: user
+  name: 爸爸
+  content: 小明在学校住过一段时间
+- role: model
+  content: 在学校生活应该很有意思
+- role: user
+  name: 爸爸
+  content: 我记得爸爸第一次接触学校的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爸爸
+  content: 爸爸当时觉得学校特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爸爸
+  content: 爸爸去过游乐场
+- role: model
+  content: 游乐场挺美的

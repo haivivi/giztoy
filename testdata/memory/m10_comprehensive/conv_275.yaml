@@ -1,0 +1,54 @@
+conv_id: session-275
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近画画有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 妈妈去过博物馆
+- role: model
+  content: 博物馆挺美的
+- role: user
+  name: 妈妈
+  content: 爸爸和小红是亲戚
+- role: model
+  content: 原来爸爸和小红是亲戚关系
+- role: user
+  name: 妈妈
+  content: 奶奶和小红是亲戚
+- role: model
+  content: 原来奶奶和小红是亲戚关系
+- role: user
+  name: 妈妈
+  content: 爷爷和小明是兄妹
+- role: model
+  content: 原来爷爷和小明是兄妹关系
+- role: user
+  name: 妈妈
+  content: 妈妈平时有什么爱好？
+- role: model
+  content: 妈妈的爱好挺多的
+- role: user
+  name: 妈妈
+  content: 奶奶在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 妈妈
+  content: 其实奶奶自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 妈妈
+  content: 爷爷和奶奶是同事
+- role: model
+  content: 原来爷爷和奶奶是同事关系
+- role: user
+  name: 妈妈
+  content: 上次老师跟我说了一件关于乐高的事
+- role: model
+  content: 什么事？

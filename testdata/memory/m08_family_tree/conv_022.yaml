@@ -1,0 +1,54 @@
+conv_id: session-022
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊家庭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 上次爸爸跟我说了一件关于健康的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 妈妈
+  content: 爸爸说健康让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 妈妈
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 妈妈
+  content: 哥哥有没有什么计划？
+- role: model
+  content: 哥哥应该有一些计划
+- role: user
+  name: 妈妈
+  content: 妈妈说他特别喜欢护士
+- role: model
+  content: 原来妈妈喜欢护士呀
+- role: user
+  name: 妈妈
+  content: 妈妈平时有什么爱好？
+- role: model
+  content: 妈妈的爱好挺多的
+- role: user
+  name: 妈妈
+  content: 上周妈妈去了老家
+- role: model
+  content: 老家不错呢
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 妈妈当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛

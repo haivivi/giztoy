@@ -1,0 +1,29 @@
+conv_id: session-001
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 最近蛋炒饭有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妈妈
+  content: 小明和妈妈是朋友
+- role: model
+  content: 原来小明和妈妈是朋友关系
+- role: user
+  name: 妈妈
+  content: 小明和妈妈是同学
+- role: model
+  content: 原来小明和妈妈是同学关系
+- role: user
+  name: 妈妈
+  content: 妈妈今天跟我说了饼干的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 妈妈
+  content: 妈妈说饼干最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

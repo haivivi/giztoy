@@ -1,0 +1,54 @@
+conv_id: session-431
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 老师说他特别喜欢数学
+- role: model
+  content: 原来老师喜欢数学呀
+- role: user
+  name: 老师
+  content: 老师今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，老师应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划
+- role: user
+  name: 老师
+  content: 老师周末一般做什么？
+- role: model
+  content: 老师周末过得挺充实的
+- role: user
+  name: 老师
+  content: 老师今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，老师应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 老师
+  content: 小红今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 老师
+  content: 等等，小红应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐

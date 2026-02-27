@@ -1,0 +1,54 @@
+conv_id: session-247
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊做饭
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 上次老师跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老师
+  content: 老师说旅行让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 老师
+  content: 有一次老师因为旅行闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 老师
+  content: 就是老师在旅行的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 老师
+  content: 学校太好玩了！
+- role: model
+  content: 是呀，学校确实很有趣！
+- role: user
+  name: 老师
+  content: 老师周末一般做什么？
+- role: model
+  content: 老师周末过得挺充实的
+- role: user
+  name: 老师
+  content: 上次老师跟我说了一件关于做饭的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 老师
+  content: 老师说做饭让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 老师
+  content: 说到音乐，我觉得挺有意思的
+- role: model
+  content: 是啊，音乐确实值得聊聊

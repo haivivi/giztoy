@@ -1,0 +1,54 @@
+conv_id: session-374
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 跟你说个关于恐龙的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 奶奶
+  content: 奶奶已经68岁了
+- role: model
+  content: 奶奶68岁了呀
+- role: user
+  name: 奶奶
+  content: 爸爸和小明是同学
+- role: model
+  content: 原来爸爸和小明是同学关系
+- role: user
+  name: 奶奶
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 奶奶
+  content: 爷爷已经70岁了
+- role: model
+  content: 爷爷70岁了呀
+- role: user
+  name: 奶奶
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 奶奶
+  content: 小胖和小红是姐弟
+- role: model
+  content: 原来小胖和小红是姐弟关系
+- role: user
+  name: 奶奶
+  content: 奶奶去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 奶奶
+  content: 妈妈在游乐场住过一段时间
+- role: model
+  content: 在游乐场生活应该很有意思
+- role: user
+  name: 奶奶
+  content: 小胖平时有什么爱好？
+- role: model
+  content: 小胖的爱好挺多的

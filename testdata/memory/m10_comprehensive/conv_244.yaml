@@ -1,0 +1,54 @@
+conv_id: session-244
+labels:
+- person:爸爸
+messages:
+- role: user
+  name: 爸爸
+  content: 想跟你聊聊学校
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 爸爸
+  content: 爸爸学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 爸爸
+  content: 不对，爸爸学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 爸爸
+  content: 上周妈妈去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 爸爸
+  content: 爸爸喜欢吃什么？
+- role: model
+  content: 爸爸口味挺好的
+- role: user
+  name: 爸爸
+  content: 有一次爸爸因为宠物闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爸爸
+  content: 就是爸爸在宠物的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 爸爸
+  content: 我对做饭很感兴趣
+- role: model
+  content: 做饭是个好话题
+- role: user
+  name: 爸爸
+  content: 爷爷和小红是邻居
+- role: model
+  content: 原来爷爷和小红是邻居关系
+- role: user
+  name: 爸爸
+  content: 最近考试有什么新动态吗
+- role: model
+  content: 我听说考试方面有不少变化

@@ -1,0 +1,54 @@
+conv_id: session-149
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 今天想聊聊宠物的事
+- role: model
+  content: 好的，宠物怎么了？
+- role: user
+  name: 爷爷
+  content: 爷爷今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 等等，爷爷应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爷爷
+  content: 上次爷爷跟我说了一件关于考试的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爷爷
+  content: 爷爷说考试让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爷爷
+  content: 我记得爷爷第一次接触考试的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 爷爷
+  content: 爷爷当时觉得考试特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 爷爷
+  content: 考试太好玩了！
+- role: model
+  content: 是呀，考试确实很有趣！
+- role: user
+  name: 爷爷
+  content: 音乐太好玩了！
+- role: model
+  content: 是呀，音乐确实很有趣！
+- role: user
+  name: 爷爷
+  content: 妈妈是在北京工作的
+- role: model
+  content: 好的

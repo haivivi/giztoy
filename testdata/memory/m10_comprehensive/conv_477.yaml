@@ -1,0 +1,54 @@
+conv_id: session-477
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 最近画画有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 爷爷
+  content: 老师喜欢数学
+- role: model
+  content: 是吗，老师确实挺喜欢数学的
+- role: user
+  name: 爷爷
+  content: 说到考试，我觉得挺有意思的
+- role: model
+  content: 是啊，考试确实值得聊聊
+- role: user
+  name: 爷爷
+  content: 爸爸平时有什么爱好？
+- role: model
+  content: 爸爸的爱好挺多的
+- role: user
+  name: 爷爷
+  content: 小胖和爸爸是姐弟
+- role: model
+  content: 原来小胖和爸爸是姐弟关系
+- role: user
+  name: 爷爷
+  content: 奶奶有没有什么计划？
+- role: model
+  content: 奶奶应该有一些计划
+- role: user
+  name: 爷爷
+  content: 上次爷爷跟我说了一件关于运动的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 爷爷
+  content: 爷爷说运动让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 爷爷
+  content: 有一次爷爷因为运动闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 爷爷
+  content: 就是爷爷在运动的时候出了个糗
+- role: model
+  content: 听起来很有趣

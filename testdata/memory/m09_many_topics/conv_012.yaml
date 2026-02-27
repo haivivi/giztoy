@@ -1,0 +1,54 @@
+conv_id: session-012
+labels:
+- person:小美
+messages:
+- role: user
+  name: 小美
+  content: 跟你说个关于美食的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 小美
+  content: 小美周末一般做什么？
+- role: model
+  content: 小美周末过得挺充实的
+- role: user
+  name: 小美
+  content: 小美说他特别喜欢跑步
+- role: model
+  content: 原来小美喜欢跑步呀
+- role: user
+  name: 小美
+  content: 说到理财，我觉得挺有意思的
+- role: model
+  content: 是啊，理财确实值得聊聊
+- role: user
+  name: 小美
+  content: 小美去过西湖
+- role: model
+  content: 西湖挺美的
+- role: user
+  name: 小美
+  content: 你了解理财吗
+- role: model
+  content: 了解一些，理财挺热门的
+- role: user
+  name: 小美
+  content: 小美跟我说过，他最大的爱好就是跑步
+- role: model
+  content: 小美爱好跑步挺好的
+- role: user
+  name: 小美
+  content: 上周小美去了苏州
+- role: model
+  content: 苏州不错呢
+- role: user
+  name: 小美
+  content: 我记得小美第一次接触新闻的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小美
+  content: 小美当时觉得新闻特别新奇
+- role: model
+  content: 每个人都有第一次嘛

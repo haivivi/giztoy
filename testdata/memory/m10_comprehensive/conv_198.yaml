@@ -1,0 +1,54 @@
+conv_id: session-198
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 最近乐高有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 奶奶
+  content: 奶奶周末一般做什么？
+- role: model
+  content: 奶奶周末过得挺充实的
+- role: user
+  name: 奶奶
+  content: 最近过年有什么新动态吗
+- role: model
+  content: 我听说过年方面有不少变化
+- role: user
+  name: 奶奶
+  content: 奶奶今年68岁了
+- role: model
+  content: 原来奶奶68岁
+- role: user
+  name: 奶奶
+  content: 上次奶奶跟我说了一件关于乐高的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 奶奶
+  content: 奶奶说乐高让他学到了很多
+- role: model
+  content: 这样啊
+- role: user
+  name: 奶奶
+  content: 奶奶和小胖是同学
+- role: model
+  content: 原来奶奶和小胖是同学关系
+- role: user
+  name: 奶奶
+  content: 我对考试很感兴趣
+- role: model
+  content: 考试是个好话题
+- role: user
+  name: 奶奶
+  content: 上次奶奶跟我说了一件关于旅行的事
+- role: model
+  content: 什么事？
+- role: user
+  name: 奶奶
+  content: 奶奶说旅行让他学到了很多
+- role: model
+  content: 这样啊

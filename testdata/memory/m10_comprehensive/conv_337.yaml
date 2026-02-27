@@ -1,0 +1,54 @@
+conv_id: session-337
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 今天想聊聊乐高的事
+- role: model
+  content: 好的，乐高怎么了？
+- role: user
+  name: 小明
+  content: 画画太好玩了！
+- role: model
+  content: 是呀，画画确实很有趣！
+- role: user
+  name: 小明
+  content: 小明喜欢古生物学家
+- role: model
+  content: 是吗，小明确实挺喜欢古生物学家的
+- role: user
+  name: 小明
+  content: 爷爷和小胖是朋友
+- role: model
+  content: 原来爷爷和小胖是朋友关系
+- role: user
+  name: 小明
+  content: 最近宠物有什么新动态吗
+- role: model
+  content: 我听说宠物方面有不少变化
+- role: user
+  name: 小明
+  content: 小明在公园住过一段时间
+- role: model
+  content: 在公园生活应该很有意思
+- role: user
+  name: 小明
+  content: 小明平时有什么爱好？
+- role: model
+  content: 小明的爱好挺多的
+- role: user
+  name: 小明
+  content: 小明跟我说过，他最大的爱好就是恐龙
+- role: model
+  content: 小明爱好恐龙挺好的
+- role: user
+  name: 小明
+  content: 小明今天跟我说了旅行的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 小明
+  content: 小明说旅行最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的

@@ -1,0 +1,54 @@
+conv_id: session-263
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 想跟你聊聊画画
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 老师
+  content: 我对乐高很感兴趣
+- role: model
+  content: 乐高是个好话题
+- role: user
+  name: 老师
+  content: 老师今天跟我说了学校的事
+- role: model
+  content: 说了什么？
+- role: user
+  name: 老师
+  content: 老师说学校最近变化挺大的
+- role: model
+  content: 是嘛，那挺好的
+- role: user
+  name: 老师
+  content: 说到考试，我觉得挺有意思的
+- role: model
+  content: 是啊，考试确实值得聊聊
+- role: user
+  name: 老师
+  content: 我对考试很感兴趣
+- role: model
+  content: 考试是个好话题
+- role: user
+  name: 老师
+  content: 上周爷爷去了图书馆
+- role: model
+  content: 图书馆不错呢
+- role: user
+  name: 老师
+  content: 我对运动很感兴趣
+- role: model
+  content: 运动是个好话题
+- role: user
+  name: 老师
+  content: 老师去过游乐场
+- role: model
+  content: 游乐场挺美的
+- role: user
+  name: 老师
+  content: 老师喜欢数学
+- role: model
+  content: 是吗，老师确实挺喜欢数学的

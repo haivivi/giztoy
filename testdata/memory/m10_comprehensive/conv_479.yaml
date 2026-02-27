@@ -1,0 +1,54 @@
+conv_id: session-479
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 今天想聊聊画画的事
+- role: model
+  content: 好的，画画怎么了？
+- role: user
+  name: 老师
+  content: 爸爸最近怎么样？
+- role: model
+  content: 爸爸最近挺好的
+- role: user
+  name: 老师
+  content: 生日太好玩了！
+- role: model
+  content: 是呀，生日确实很有趣！
+- role: user
+  name: 老师
+  content: 奶奶和妈妈是兄妹
+- role: model
+  content: 原来奶奶和妈妈是兄妹关系
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 老师最近怎么样？
+- role: model
+  content: 老师最近挺好的
+- role: user
+  name: 老师
+  content: 爸爸和老师是同学
+- role: model
+  content: 原来爸爸和老师是同学关系
+- role: user
+  name: 老师
+  content: 说到乐高，我觉得挺有意思的
+- role: model
+  content: 是啊，乐高确实值得聊聊
+- role: user
+  name: 老师
+  content: 老师有没有什么计划？
+- role: model
+  content: 老师应该有一些计划
+- role: user
+  name: 老师
+  content: 有一次老师因为画画闹了个笑话
+- role: model
+  content: 哈哈什么笑话

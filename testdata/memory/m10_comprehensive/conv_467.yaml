@@ -1,0 +1,54 @@
+conv_id: session-467
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 想跟你聊聊恐龙
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 妈妈
+  content: 学校太好玩了！
+- role: model
+  content: 是呀，学校确实很有趣！
+- role: user
+  name: 妈妈
+  content: 奶奶平时有什么爱好？
+- role: model
+  content: 奶奶的爱好挺多的
+- role: user
+  name: 妈妈
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 妈妈
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 妈妈
+  content: 小红去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 妈妈
+  content: 有一次小胖因为乐高闹了个笑话
+- role: model
+  content: 哈哈什么笑话
+- role: user
+  name: 妈妈
+  content: 就是小胖在乐高的时候出了个糗
+- role: model
+  content: 听起来很有趣
+- role: user
+  name: 妈妈
+  content: 我记得妈妈第一次接触乐高的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妈妈
+  content: 妈妈当时觉得乐高特别新奇
+- role: model
+  content: 每个人都有第一次嘛

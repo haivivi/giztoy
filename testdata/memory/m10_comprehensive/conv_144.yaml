@@ -1,0 +1,54 @@
+conv_id: session-144
+labels:
+- person:小胖
+messages:
+- role: user
+  name: 小胖
+  content: 今天想聊聊音乐的事
+- role: model
+  content: 好的，音乐怎么了？
+- role: user
+  name: 小胖
+  content: 小胖去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 小胖
+  content: 小红和爸爸是兄妹
+- role: model
+  content: 原来小红和爸爸是兄妹关系
+- role: user
+  name: 小胖
+  content: 小胖有没有什么计划？
+- role: model
+  content: 小胖应该有一些计划
+- role: user
+  name: 小胖
+  content: 小胖平时有什么爱好？
+- role: model
+  content: 小胖的爱好挺多的
+- role: user
+  name: 小胖
+  content: 爸爸跟我说过，他最大的爱好就是工程师
+- role: model
+  content: 爸爸爱好工程师挺好的
+- role: user
+  name: 小胖
+  content: 小胖去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 小胖
+  content: 爸爸跟我说过，他最大的爱好就是音乐
+- role: model
+  content: 爸爸爱好音乐挺好的
+- role: user
+  name: 小胖
+  content: 小胖和老师是同学
+- role: model
+  content: 原来小胖和老师是同学关系
+- role: user
+  name: 小胖
+  content: 小胖学的是数学
+- role: model
+  content: 数学不错

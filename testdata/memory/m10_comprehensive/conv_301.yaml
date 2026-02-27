@@ -1,0 +1,54 @@
+conv_id: session-301
+labels:
+- person:爷爷
+messages:
+- role: user
+  name: 爷爷
+  content: 跟你说个关于学校的事
+- role: model
+  content: 什么事呀？
+- role: user
+  name: 爷爷
+  content: 老师和爷爷是兄妹
+- role: model
+  content: 原来老师和爷爷是兄妹关系
+- role: user
+  name: 爷爷
+  content: 爸爸和奶奶是同学
+- role: model
+  content: 原来爸爸和奶奶是同学关系
+- role: user
+  name: 爷爷
+  content: 上周爷爷去了学校
+- role: model
+  content: 学校不错呢
+- role: user
+  name: 爷爷
+  content: 爷爷在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 爷爷
+  content: 其实爷爷自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的
+- role: user
+  name: 爷爷
+  content: 爷爷在图书馆住过一段时间
+- role: model
+  content: 在图书馆生活应该很有意思
+- role: user
+  name: 爷爷
+  content: 爷爷今年25岁
+- role: model
+  content: 好的
+- role: user
+  name: 爷爷
+  content: 等等，爷爷应该是26岁，上个月刚过生日
+- role: model
+  content: 生日快乐
+- role: user
+  name: 爷爷
+  content: 爷爷有没有什么计划？
+- role: model
+  content: 爷爷应该有一些计划

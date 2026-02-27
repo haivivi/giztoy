@@ -1,0 +1,54 @@
+conv_id: session-185
+labels:
+- person:小明
+messages:
+- role: user
+  name: 小明
+  content: 想跟你聊聊宠物
+- role: model
+  content: 好呀，说吧！
+- role: user
+  name: 小明
+  content: 小明是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 小明
+  content: 哦不对，小明是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 小明
+  content: 小明最近在忙古生物学家
+- role: model
+  content: 小明忙古生物学家一定很充实
+- role: user
+  name: 小明
+  content: 小明喜欢吃什么？
+- role: model
+  content: 小明口味挺好的
+- role: user
+  name: 小明
+  content: 我记得奶奶第一次接触做饭的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 小明
+  content: 奶奶当时觉得做饭特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 小明
+  content: 爸爸和老师是同事
+- role: model
+  content: 原来爸爸和老师是同事关系
+- role: user
+  name: 小明
+  content: 奶奶和小胖是同学
+- role: model
+  content: 原来奶奶和小胖是同学关系
+- role: user
+  name: 小明
+  content: 老师最近在忙数学
+- role: model
+  content: 老师忙数学一定很充实

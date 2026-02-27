@@ -1,0 +1,54 @@
+conv_id: session-075
+labels:
+- person:妈妈
+messages:
+- role: user
+  name: 妈妈
+  content: 今天想聊聊生日的事
+- role: model
+  content: 好的，生日怎么了？
+- role: user
+  name: 妈妈
+  content: 说到运动，我觉得挺有意思的
+- role: model
+  content: 是啊，运动确实值得聊聊
+- role: user
+  name: 妈妈
+  content: 妈妈去过学校
+- role: model
+  content: 学校挺美的
+- role: user
+  name: 妈妈
+  content: 小红跟我说过，他最大的爱好就是画画
+- role: model
+  content: 小红爱好画画挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈喜欢吃什么？
+- role: model
+  content: 妈妈口味挺好的
+- role: user
+  name: 妈妈
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 妈妈
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 妈妈
+  content: 妈妈和小红是朋友
+- role: model
+  content: 原来妈妈和小红是朋友关系
+- role: user
+  name: 妈妈
+  content: 妈妈去过图书馆
+- role: model
+  content: 图书馆挺美的
+- role: user
+  name: 妈妈
+  content: 妈妈平时有什么爱好？
+- role: model
+  content: 妈妈的爱好挺多的

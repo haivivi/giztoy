@@ -1,0 +1,54 @@
+conv_id: session-047
+labels:
+- person:老师
+messages:
+- role: user
+  name: 老师
+  content: 最近音乐有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 老师
+  content: 说到乐高，我觉得挺有意思的
+- role: model
+  content: 是啊，乐高确实值得聊聊
+- role: user
+  name: 老师
+  content: 你了解生日吗
+- role: model
+  content: 了解一些，生日挺热门的
+- role: user
+  name: 老师
+  content: 老师打算去博物馆玩
+- role: model
+  content: 博物馆是个好地方
+- role: user
+  name: 老师
+  content: 我对音乐很感兴趣
+- role: model
+  content: 音乐是个好话题
+- role: user
+  name: 老师
+  content: 奶奶和老师是朋友
+- role: model
+  content: 原来奶奶和老师是朋友关系
+- role: user
+  name: 老师
+  content: 老师跟我说过，他最大的爱好就是数学
+- role: model
+  content: 老师爱好数学挺好的
+- role: user
+  name: 老师
+  content: 上周老师去了博物馆
+- role: model
+  content: 博物馆不错呢
+- role: user
+  name: 老师
+  content: 小胖在一家大公司
+- role: model
+  content: 挺好的
+- role: user
+  name: 老师
+  content: 其实小胖自己创业了，上周才跟我说的
+- role: model
+  content: 创业挺勇敢的

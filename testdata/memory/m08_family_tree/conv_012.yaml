@@ -1,0 +1,54 @@
+conv_id: session-012
+labels:
+- person:妹妹
+messages:
+- role: user
+  name: 妹妹
+  content: 最近学校有什么新鲜事吗
+- role: model
+  content: 你说说看！
+- role: user
+  name: 妹妹
+  content: 妈妈有没有什么计划？
+- role: model
+  content: 妈妈应该有一些计划
+- role: user
+  name: 妹妹
+  content: 妹妹跟我说过，他最大的爱好就是钢琴
+- role: model
+  content: 妹妹爱好钢琴挺好的
+- role: user
+  name: 妹妹
+  content: 妹妹喜欢钢琴
+- role: model
+  content: 是吗，妹妹确实挺喜欢钢琴的
+- role: user
+  name: 妹妹
+  content: 做饭太好玩了！
+- role: model
+  content: 是呀，做饭确实很有趣！
+- role: user
+  name: 妹妹
+  content: 我记得哥哥第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 妹妹
+  content: 哥哥当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛
+- role: user
+  name: 妹妹
+  content: 你了解过年吗
+- role: model
+  content: 了解一些，过年挺热门的
+- role: user
+  name: 妹妹
+  content: 说到生日，我觉得挺有意思的
+- role: model
+  content: 是啊，生日确实值得聊聊
+- role: user
+  name: 妹妹
+  content: 我对旅行很感兴趣
+- role: model
+  content: 旅行是个好话题

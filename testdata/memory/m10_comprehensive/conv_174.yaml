@@ -1,0 +1,54 @@
+conv_id: session-174
+labels:
+- person:奶奶
+messages:
+- role: user
+  name: 奶奶
+  content: 今天想聊聊音乐的事
+- role: model
+  content: 好的，音乐怎么了？
+- role: user
+  name: 奶奶
+  content: 小胖跟我说过，他最大的爱好就是足球
+- role: model
+  content: 小胖爱好足球挺好的
+- role: user
+  name: 奶奶
+  content: 爸爸和小胖是邻居
+- role: model
+  content: 原来爸爸和小胖是邻居关系
+- role: user
+  name: 奶奶
+  content: 老师和小胖是朋友
+- role: model
+  content: 原来老师和小胖是朋友关系
+- role: user
+  name: 奶奶
+  content: 妈妈学的是数学
+- role: model
+  content: 数学不错
+- role: user
+  name: 奶奶
+  content: 不对，妈妈学的是物理，我搞混了
+- role: model
+  content: 物理也很好
+- role: user
+  name: 奶奶
+  content: 奶奶是在北京工作的
+- role: model
+  content: 好的
+- role: user
+  name: 奶奶
+  content: 哦不对，奶奶是在上海工作的，我记错了
+- role: model
+  content: 没关系
+- role: user
+  name: 奶奶
+  content: 我记得奶奶第一次接触旅行的时候
+- role: model
+  content: 然后呢？
+- role: user
+  name: 奶奶
+  content: 奶奶当时觉得旅行特别新奇
+- role: model
+  content: 每个人都有第一次嘛
