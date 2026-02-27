@@ -85,3 +85,29 @@
   1. PR 描述仍与实际改动冲突（仍写“无代码改动”）。位置：PR #93 `Testing`。
   2. `.gitignore` 新增 `openteam/` 为仓库级策略改动，需说明必要性或回退。位置：`.gitignore:4`。
 - **要求 Developer 修改**：见 `openteam/plan.md` 中“Reviewer 三轮要求修改”章节
+
+### 2026-02-27 17:30 - Bugbot Review（四轮）
+- **审查范围**：
+  - `rust/genx/src/transformers/doubao_realtime.rs`
+  - `rust/genx/src/transformers/dashscope_realtime.rs`
+  - `openteam/` 目录文件
+- **发现问题（需修复）**：
+  1. **High - Doubao ASR chunks get random unpersisted stream IDs**
+     - 位置：`doubao_realtime.rs#L219-236`, `#L168-175`
+     - 问题：`AsrResponse` 在 `AsrEnded` 分配 `stream_id` 之前调用 `current_response_stream_id()`，生成随机 ID 但未保存，导致每个 ASR chunk 的 stream_id 都不同
+     - 修复建议：参考 DashScope 的 `ensure_response_stream_id_for_turn()` 机制，在首次 ASR 事件时分配并持久化 stream_id
+  
+  2. **Medium - Missing session close on forward_input error causes task leak**
+     - 位置：`doubao_realtime.rs#L120-127`, `dashscope_realtime.rs#L132-144`
+     - 问题：`forward_input` 返回错误时发送错误到输出通道后 break，但未调用 `session.close()`，导致内部任务可能阻塞，`events_done.await` 会挂起，造成任务泄漏
+     - 修复建议：在错误路径也调用 `session.close()`
+  
+  3. **Medium - Working documents with local paths committed**
+     - 位置：`openteam/worklog.md`, `openteam/plan.md`, `openteam/example_e2e_doubao_basic.rs`
+     - 问题：`openteam/` 目录已存在于 `.gitignore`（line 108），但整个目录仍被提交；`worklog.md` 暴露本地绝对路径
+     - 修复建议：从提交中移除 `openteam/` 目录或使用 `git update-index --assume-unchanged`
+  
+  4. **High - DashScope SDK session mutex held across recv blocks**
+     - 位置：`dashscope_realtime.rs#L552-554`, `#L501-504`
+     - 问题：`DashScopeSdkSession::recv()` 持有 `tokio::sync::Mutex` guard 跨越长时间 `.recv().await` 调用，导致输入转发任务被阻塞，形成死锁
+     - 修复建议：移除不必要的 `Arc<Mutex<>>` 包装，利用 `giztoy_dashscope::RealtimeSession` 已有分离的 send/recv 通道
