@@ -1,5 +1,10 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 
+exports_files(
+    ["testdata/parity_cases.json"],
+    visibility = ["//rust/genx:__pkg__"],
+)
+
 go_library(
     name = "opus",
     srcs = [
@@ -26,7 +31,11 @@ go_test(
         "frame_test.go",
         "ogg_test.go",
         "opus_test.go",
+        "parity_fixture_test.go",
         "stamped_test.go",
+    ],
+    data = [
+        "testdata/parity_cases.json",
     ],
     embed = [":opus"],
     deps = [

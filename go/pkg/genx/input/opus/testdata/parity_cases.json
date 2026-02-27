@@ -1,0 +1,62 @@
+{
+  "cases": [
+    {
+      "name": "ordered",
+      "max_loss_ms": 5000,
+      "inputs": [
+        { "kind": "stamped", "stamp_ms": 1000, "opus_hex": "f811" },
+        { "kind": "stamped", "stamp_ms": 1020, "opus_hex": "f822" },
+        { "kind": "stamped", "stamp_ms": 1040, "opus_hex": "f833" }
+      ],
+      "expected_opus_hex": ["f811", "f822", "f833"]
+    },
+    {
+      "name": "out_of_order",
+      "max_loss_ms": 5000,
+      "inputs": [
+        { "kind": "stamped", "stamp_ms": 1040, "opus_hex": "f8c3" },
+        { "kind": "stamped", "stamp_ms": 1000, "opus_hex": "f8c1" },
+        { "kind": "stamped", "stamp_ms": 1020, "opus_hex": "f8c2" }
+      ],
+      "expected_opus_hex": ["f8c1", "f8c2", "f8c3"]
+    },
+    {
+      "name": "duplicate_timestamp_keep_order",
+      "max_loss_ms": 5000,
+      "inputs": [
+        { "kind": "stamped", "stamp_ms": 1000, "opus_hex": "f8d1" },
+        { "kind": "stamped", "stamp_ms": 1000, "opus_hex": "f8d2" },
+        { "kind": "stamped", "stamp_ms": 1020, "opus_hex": "f8d3" }
+      ],
+      "expected_opus_hex": ["f8d1", "f8d2", "f8d3"]
+    },
+    {
+      "name": "invalid_and_gap_silence",
+      "max_loss_ms": 5000,
+      "inputs": [
+        { "kind": "stamped", "stamp_ms": 1000, "opus_hex": "f8fffe" },
+        { "kind": "raw", "raw_hex": "0001" },
+        { "kind": "stamped", "stamp_ms": 1060, "opus_hex": "f8fffe" }
+      ],
+      "expected_opus_hex": ["f8fffe", "f8fffe", "f8fffe", "f8fffe"]
+    },
+    {
+      "name": "large_gap_resync",
+      "max_loss_ms": 100,
+      "inputs": [
+        { "kind": "stamped", "stamp_ms": 1000, "opus_hex": "f8fffe" },
+        { "kind": "stamped", "stamp_ms": 1300, "opus_hex": "f8fffe" }
+      ],
+      "expected_opus_hex": ["f8fffe", "f8fffe"]
+    },
+    {
+      "name": "u56_boundary",
+      "max_loss_ms": 5000,
+      "inputs": [
+        { "kind": "stamped", "stamp_ms": 72057594037927915, "opus_hex": "f8aa" },
+        { "kind": "stamped", "stamp_ms": 72057594037927935, "opus_hex": "f8bb" }
+      ],
+      "expected_opus_hex": ["f8aa", "f8bb"]
+    }
+  ]
+}
