@@ -1162,6 +1162,7 @@ dependencies = [
  "getrandom 0.3.4",
  "giztoy-audio",
  "giztoy-buffer",
+ "giztoy-dashscope",
  "giztoy-doubaospeech",
  "giztoy-minimax",
  "hex",

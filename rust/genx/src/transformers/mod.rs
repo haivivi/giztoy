@@ -24,9 +24,34 @@ mod minimax_tts;
 mod doubao_tts_seed_v2;
 mod doubao_tts_icl_v2;
 mod doubao_asr_sauc;
+mod doubao_realtime;
+mod dashscope_realtime;
 
 pub use mux::*;
 pub use minimax_tts::MinimaxTtsTransformer;
 pub use doubao_tts_seed_v2::DoubaoTtsSeedV2Transformer;
 pub use doubao_tts_icl_v2::DoubaoTtsIclV2Transformer;
 pub use doubao_asr_sauc::DoubaoAsrSaucTransformer;
+pub use doubao_realtime::*;
+pub use dashscope_realtime::*;
+
+use std::sync::Arc;
+
+use crate::error::GenxError;
+use crate::transformer::Transformer;
+
+/// Register Doubao realtime transformer into mux using canonical route name.
+pub fn register_doubao_realtime(
+    mux: &mut TransformerMux,
+    transformer: Arc<dyn Transformer>,
+) -> Result<(), GenxError> {
+    mux.handle("doubao/realtime", transformer)
+}
+
+/// Register DashScope realtime transformer into mux using canonical route name.
+pub fn register_dashscope_realtime(
+    mux: &mut TransformerMux,
+    transformer: Arc<dyn Transformer>,
+) -> Result<(), GenxError> {
+    mux.handle("dashscope/realtime", transformer)
+}

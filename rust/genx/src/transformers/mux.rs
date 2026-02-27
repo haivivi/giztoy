@@ -139,6 +139,7 @@ impl Transformer for TransformerMux {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::transformers::{register_dashscope_realtime, register_doubao_realtime};
     use crate::stream::StreamResult;
     use crate::types::{MessageChunk, Role};
     use tokio::sync::mpsc;
@@ -268,5 +269,42 @@ mod tests {
 
         let dup = mux.handle_asr("asr/zh", Arc::new(EchoTransformer { tag: "ASR2".into() }));
         assert!(dup.is_err());
+    }
+
+    #[tokio::test]
+    async fn t14_5_realtime_route_names() {
+        let mut mux = TransformerMux::new();
+        mux.handle(
+            "doubao/realtime",
+            Arc::new(EchoTransformer { tag: "DBRT".into() }),
+        )
+        .unwrap();
+        mux.handle(
+            "dashscope/realtime",
+            Arc::new(EchoTransformer { tag: "DSRT".into() }),
+        )
+        .unwrap();
+
+        let input = make_input(vec![MessageChunk::text(Role::User, "ping")]);
+        let mut out1 = mux.transform("doubao/realtime", input).await.unwrap();
+        let c1 = out1.next().await.unwrap().unwrap();
+        assert_eq!(c1.part.unwrap().as_text().unwrap(), "[DBRT]ping");
+
+        let input = make_input(vec![MessageChunk::text(Role::User, "pong")]);
+        let mut out2 = mux.transform("dashscope/realtime", input).await.unwrap();
+        let c2 = out2.next().await.unwrap().unwrap();
+        assert_eq!(c2.part.unwrap().as_text().unwrap(), "[DSRT]pong");
+    }
+
+    #[tokio::test]
+    async fn t14_6_realtime_route_register_helpers() {
+        let mut mux = TransformerMux::new();
+        register_doubao_realtime(&mut mux, Arc::new(EchoTransformer { tag: "DB".into() }))
+            .unwrap();
+        register_dashscope_realtime(&mut mux, Arc::new(EchoTransformer { tag: "DS".into() }))
+            .unwrap();
+
+        assert!(mux.get("doubao/realtime").is_ok());
+        assert!(mux.get("dashscope/realtime").is_ok());
     }
 }
