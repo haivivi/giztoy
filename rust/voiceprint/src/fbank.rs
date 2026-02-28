@@ -35,12 +35,12 @@ impl Default for FbankConfig {
         Self {
             sample_rate: 16000,
             num_mels: 80,
-            frame_length: 400,  // 25ms @ 16kHz
-            frame_shift: 160,   // 10ms @ 16kHz
+            frame_length: 400, // 25ms @ 16kHz
+            frame_shift: 160,  // 10ms @ 16kHz
             pre_emphasis: 0.97,
             energy_floor: 1e-10,
-            low_freq: 20.0,     // Kaldi default
-            high_freq: -400.0,  // Nyquist - 400 = 7600 Hz for 16kHz
+            low_freq: 20.0,    // Kaldi default
+            high_freq: -400.0, // Nyquist - 400 = 7600 Hz for 16kHz
             remove_dc: true,
             povey_window: true,
             normalize_pcm: true,
@@ -103,7 +103,13 @@ pub fn compute_fbank(audio: &[u8], cfg: &FbankConfig) -> Option<Vec<Vec<f32>>> {
     };
 
     // Pre-compute mel filterbank.
-    let filterbank = mel_filterbank(cfg.num_mels, fft_size, cfg.sample_rate, cfg.low_freq, high_freq);
+    let filterbank = mel_filterbank(
+        cfg.num_mels,
+        fft_size,
+        cfg.sample_rate,
+        cfg.low_freq,
+        high_freq,
+    );
 
     let mut result = Vec::with_capacity(num_frames);
     let mut fft_buf = vec![(0.0f64, 0.0f64); fft_size];
@@ -246,7 +252,13 @@ fn mel_to_hz(mel: f64) -> f64 {
 
 /// Computes triangular mel filterbank weights.
 /// Returns `[num_mels][half_fft]` weights.
-fn mel_filterbank(num_mels: usize, fft_size: usize, sample_rate: usize, low_freq: f64, high_freq: f64) -> Vec<Vec<f64>> {
+fn mel_filterbank(
+    num_mels: usize,
+    fft_size: usize,
+    sample_rate: usize,
+    low_freq: f64,
+    high_freq: f64,
+) -> Vec<Vec<f64>> {
     let half_fft = fft_size / 2 + 1;
     let mel_low = hz_to_mel(low_freq);
     let mel_high = hz_to_mel(high_freq);
@@ -420,7 +432,11 @@ mod tests {
     fn l2_normalize_unit() {
         let mut v = vec![3.0f32, 4.0];
         l2_normalize(&mut v);
-        let norm: f64 = v.iter().map(|&x| (x as f64) * (x as f64)).sum::<f64>().sqrt();
+        let norm: f64 = v
+            .iter()
+            .map(|&x| (x as f64) * (x as f64))
+            .sum::<f64>()
+            .sqrt();
         assert!((norm - 1.0).abs() < 1e-6);
     }
 
@@ -469,7 +485,10 @@ mod tests {
         for &hz in &[0.0, 100.0, 440.0, 1000.0, 8000.0] {
             let mel = hz_to_mel(hz);
             let back = mel_to_hz(mel);
-            assert!((hz - back).abs() < 1e-6, "roundtrip failed for {hz}: got {back}");
+            assert!(
+                (hz - back).abs() < 1e-6,
+                "roundtrip failed for {hz}: got {back}"
+            );
         }
     }
 
@@ -515,12 +534,19 @@ mod tests {
         let cfg = FbankConfig::default();
         let rust_features = compute_fbank(&audio, &cfg).expect("fbank should succeed");
 
-        assert_eq!(rust_features.len(), go_ref.num_frames,
-            "frame count mismatch: Rust {} vs Go {}", rust_features.len(), go_ref.num_frames);
+        assert_eq!(
+            rust_features.len(),
+            go_ref.num_frames,
+            "frame count mismatch: Rust {} vs Go {}",
+            rust_features.len(),
+            go_ref.num_frames
+        );
 
         let mut max_diff: f32 = 0.0;
         let mut total_checked = 0;
-        for (f, (rust_frame, go_frame)) in rust_features.iter().zip(go_ref.features.iter()).enumerate() {
+        for (f, (rust_frame, go_frame)) in
+            rust_features.iter().zip(go_ref.features.iter()).enumerate()
+        {
             assert_eq!(rust_frame.len(), go_ref.num_mels);
             for (m, (&rv, &gv)) in rust_frame.iter().zip(go_frame.iter()).enumerate() {
                 let diff = (rv - gv).abs();
@@ -533,8 +559,6 @@ mod tests {
                 total_checked += 1;
             }
         }
-        eprintln!(
-            "fbank cross-lang: {total_checked} values checked, max_diff={max_diff:.2e}"
-        );
+        eprintln!("fbank cross-lang: {total_checked} values checked, max_diff={max_diff:.2e}");
     }
 }

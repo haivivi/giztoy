@@ -9,7 +9,7 @@
 //! - Doubao Realtime (`doubao-realtime` feature)
 //! - DashScope Realtime (`dashscope-realtime` feature)
 //! - MP3→OGG codec
-//! - Voiceprint (`voiceprint` feature)
+//! - Voiceprint
 //!
 //! # Lifecycle
 //!
@@ -26,6 +26,8 @@ mod doubao_tts_icl_v2;
 mod doubao_asr_sauc;
 mod doubao_realtime;
 mod dashscope_realtime;
+mod codec_mp3_to_ogg;
+mod voiceprint;
 
 pub use mux::*;
 pub use minimax_tts::MinimaxTtsTransformer;
@@ -34,6 +36,8 @@ pub use doubao_tts_icl_v2::DoubaoTtsIclV2Transformer;
 pub use doubao_asr_sauc::DoubaoAsrSaucTransformer;
 pub use doubao_realtime::*;
 pub use dashscope_realtime::*;
+pub use codec_mp3_to_ogg::*;
+pub use voiceprint::*;
 
 use std::sync::Arc;
 

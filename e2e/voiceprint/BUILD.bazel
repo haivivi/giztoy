@@ -1,7 +1,17 @@
 load("@rules_go//go:def.bzl", "go_binary")
+load("@rules_rust//rust:defs.bzl", "rust_test")
 
 go_binary(
     name = "voiceprint",
     srcs = ["main.go"],
     visibility = ["//visibility:public"],
+)
+
+rust_test(
+    name = "voiceprint_rust_e2e_test",
+    srcs = ["rust_e2e_test.rs"],
+    deps = [
+        "//rust/voiceprint:giztoy_voiceprint",
+        "@crate_index//:serde_json",
+    ],
 )

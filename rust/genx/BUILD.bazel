@@ -15,6 +15,7 @@ rust_library(
         "//rust/dashscope:giztoy_dashscope",
         "//rust/doubaospeech:giztoy_doubaospeech",
         "//rust/minimax:giztoy_minimax",
+        "//rust/voiceprint:giztoy_voiceprint",
         "@crate_index//:anyhow",
         "@crate_index//:async-stream",
         "@crate_index//:base64",

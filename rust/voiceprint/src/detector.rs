@@ -48,7 +48,11 @@ impl Detector {
 
     /// Creates a Detector with the given configuration.
     pub fn with_config(cfg: DetectorConfig) -> Self {
-        let window_size = if cfg.window_size > 0 { cfg.window_size } else { 5 };
+        let window_size = if cfg.window_size > 0 {
+            cfg.window_size
+        } else {
+            5
+        };
         let min_ratio = if cfg.min_ratio > 0.0 && cfg.min_ratio <= 1.0 {
             cfg.min_ratio
         } else {
@@ -160,7 +164,10 @@ mod tests {
     #[test]
     fn detector_needs_minimum_samples() {
         let mut det = Detector::new();
-        assert!(det.feed("A3F8").is_none(), "first sample should return None");
+        assert!(
+            det.feed("A3F8").is_none(),
+            "first sample should return None"
+        );
     }
 
     #[test]
